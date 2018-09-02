@@ -148,13 +148,7 @@
 
 /* Define for activating assertions.  */
 
-#if defined(x86) && defined(SOLARIS)
-#define GC_ASSERTIONS 1
-#endif
-
 /* Check for references to stack-allocated objects.  */
-
-#ifdef GC_ASSERTIONS
 
 static void *invalid_stack_start, *invalid_stack_end;
 
@@ -214,17 +208,19 @@ check_escaped_stack_object(lispobj * where, lispobj obj)
 #endif
 }
 
-#endif /* GC_ASSERTIONS */
 
+#if defined(x86) && defined(SOLARIS)
+#define DEFAULT_GC_ASSERT_LEVEL 1
+#else
+#define DEFAULT_GC_ASSERT_LEVEL 0
+#endif
 
-#ifdef GC_ASSERTIONS
+int gc_assert_level = DEFAULT_GC_ASSERT_LEVEL;
+
 #define gc_assert(ex)		\
   do {				\
     if (!(ex)) gc_abort ();     \
   } while (0)
-#else
-#define gc_assert(ex)  (void) (ex)
-#endif
 
 
 /*
@@ -690,7 +686,6 @@ count_dont_move_pages(void)
  * Work through the pages and add up the number of bytes used for the
  * given generation.
  */
-#ifdef GC_ASSERTIONS
 static int
 generation_bytes_allocated(int generation)
 {
@@ -707,7 +702,6 @@ generation_bytes_allocated(int generation)
     }
     return bytes_allocated;
 }
-#endif
 
 /*
  * Return the average age of the memory in a generation.
@@ -810,10 +804,11 @@ print_generation_stats(int verbose)
 	    }
 	}
 
-#ifdef GC_ASSERTIONS
-	gc_assert(generations[i].bytes_allocated ==
-		  generation_bytes_allocated(i));
-#endif
+        if (gc_assert_level > 0) {
+            gc_assert(generations[i].bytes_allocated ==
+                      generation_bytes_allocated(i));
+        }
+
 	fprintf(stderr, " %5d: %5d %5d %5d %5d %10d %6d %10d %4d %3d %7.4f\n",
 		i, boxed_cnt, unboxed_cnt, large_boxed_cnt, large_unboxed_cnt,
 		generations[i].bytes_allocated,
@@ -1070,9 +1065,11 @@ gc_alloc_new_region(int nbytes, int unboxed, struct alloc_region *alloc_region)
 #endif
 
     /* Check that the region is in a reset state. */
-    gc_assert(alloc_region->first_page == 0
-	      && alloc_region->last_page == -1
-	      && alloc_region->free_pointer == alloc_region->end_addr);
+    if (gc_assert_level > 0) {
+        gc_assert(alloc_region->first_page == 0
+                  && alloc_region->last_page == -1
+                  && alloc_region->free_pointer == alloc_region->end_addr);
+    }
 
     if (unboxed)
 	restart_page =
@@ -1120,7 +1117,9 @@ gc_alloc_new_region(int nbytes, int unboxed, struct alloc_region *alloc_region)
 #endif
 	}
 
-	gc_assert(!PAGE_WRITE_PROTECTED(first_page));
+        if (gc_assert_level > 0) {
+            gc_assert(!PAGE_WRITE_PROTECTED(first_page));
+        }
 
 #if 0
 	fprintf(stderr, "  first_page=%d bytes_used=%d\n",
@@ -1142,14 +1141,17 @@ gc_alloc_new_region(int nbytes, int unboxed, struct alloc_region *alloc_region)
 	    last_page++;
 	    num_pages++;
 	    bytes_found += GC_PAGE_SIZE;
-	    gc_assert(!PAGE_WRITE_PROTECTED(last_page));
+            if (gc_assert_level > 0) {
+                gc_assert(!PAGE_WRITE_PROTECTED(last_page));
+            }
 	}
 
 	region_size = (GC_PAGE_SIZE - page_table[first_page].bytes_used)
 	    + GC_PAGE_SIZE * (last_page - first_page);
 
-	gc_assert(bytes_found == region_size);
-
+        if (gc_assert_level > 0) {
+            gc_assert(bytes_found == region_size);
+        }
 #if 0
 	fprintf(stderr, "  last_page=%d bytes_found=%d num_pages=%d\n",
 		last_page, bytes_found, num_pages);
@@ -1209,11 +1211,13 @@ gc_alloc_new_region(int nbytes, int unboxed, struct alloc_region *alloc_region)
 	page_table[first_page].first_object_offset = 0;
     }
 
-    gc_assert(PAGE_ALLOCATED(first_page));
-    gc_assert(PAGE_UNBOXED_VAL(first_page) == unboxed);
-    gc_assert(PAGE_GENERATION(first_page) == gc_alloc_generation);
-    gc_assert(!PAGE_LARGE_OBJECT(first_page));
-
+    if (gc_assert_level > 0) {
+        gc_assert(PAGE_ALLOCATED(first_page));
+        gc_assert(PAGE_UNBOXED_VAL(first_page) == unboxed);
+        gc_assert(PAGE_GENERATION(first_page) == gc_alloc_generation);
+        gc_assert(!PAGE_LARGE_OBJECT(first_page));
+    }
+    
     for (i = first_page + 1; i <= last_page; i++) {
 	PAGE_FLAGS_UPDATE(i, PAGE_ALLOCATED_MASK | PAGE_LARGE_OBJECT_MASK
 			  | PAGE_UNBOXED_MASK | PAGE_GENERATION_MASK,
@@ -1371,8 +1375,10 @@ gc_alloc_update_page_tables(int unboxed, struct alloc_region *alloc_region)
     if (alloc_region->free_pointer != alloc_region->start_addr) {
 	orig_first_page_bytes_used = page_table[first_page].bytes_used;
 
-	gc_assert(alloc_region->start_addr == page_address(first_page) +
-		  page_table[first_page].bytes_used);
+        if (gc_assert_level > 0) {
+            gc_assert(alloc_region->start_addr == page_address(first_page) +
+                      page_table[first_page].bytes_used);
+        }
 
 	/* All the pages used need to be updated */
 
@@ -1383,13 +1389,18 @@ gc_alloc_update_page_tables(int unboxed, struct alloc_region *alloc_region)
 #endif
 
 	/* If the page was free then setup the gen, and first_object_offset. */
-	if (page_table[first_page].bytes_used == 0)
-	    gc_assert(page_table[first_page].first_object_offset == 0);
+	if (page_table[first_page].bytes_used == 0) {
+            if (gc_assert_level > 0) {
+                gc_assert(page_table[first_page].first_object_offset == 0);
+            }
+        }
 
-	gc_assert(PAGE_ALLOCATED(first_page));
-	gc_assert(PAGE_UNBOXED_VAL(first_page) == unboxed);
-	gc_assert(PAGE_GENERATION(first_page) == gc_alloc_generation);
-	gc_assert(!PAGE_LARGE_OBJECT(first_page));
+        if (gc_assert_level > 0) {
+            gc_assert(PAGE_ALLOCATED(first_page));
+            gc_assert(PAGE_UNBOXED_VAL(first_page) == unboxed);
+            gc_assert(PAGE_GENERATION(first_page) == gc_alloc_generation);
+            gc_assert(!PAGE_LARGE_OBJECT(first_page));
+        }
 
 	byte_cnt = 0;
 
@@ -1415,14 +1426,15 @@ gc_alloc_update_page_tables(int unboxed, struct alloc_region *alloc_region)
 #if 0
 	    fprintf(stderr, "+");
 #endif
-	    gc_assert(PAGE_ALLOCATED(next_page));
-	    gc_assert(PAGE_UNBOXED_VAL(next_page) == unboxed);
-	    gc_assert(page_table[next_page].bytes_used == 0);
-	    gc_assert(PAGE_GENERATION(next_page) == gc_alloc_generation);
-	    gc_assert(!PAGE_LARGE_OBJECT(next_page));
-
-	    gc_assert(page_table[next_page].first_object_offset ==
-		      alloc_region->start_addr - page_address(next_page));
+            if (gc_assert_level > 0) {
+                gc_assert(PAGE_ALLOCATED(next_page));
+                gc_assert(PAGE_UNBOXED_VAL(next_page) == unboxed);
+                gc_assert(page_table[next_page].bytes_used == 0);
+                gc_assert(PAGE_GENERATION(next_page) == gc_alloc_generation);
+                gc_assert(!PAGE_LARGE_OBJECT(next_page));
+                gc_assert(page_table[next_page].first_object_offset ==
+                          alloc_region->start_addr - page_address(next_page));
+            }
 
 	    /* Calc. the number of bytes used in this page. */
 	    more = 0;
@@ -1441,7 +1453,9 @@ gc_alloc_update_page_tables(int unboxed, struct alloc_region *alloc_region)
 	bytes_allocated += region_size;
 	generations[gc_alloc_generation].bytes_allocated += region_size;
 
-	gc_assert(byte_cnt - orig_first_page_bytes_used == region_size);
+        if (gc_assert_level > 0) {
+            gc_assert(byte_cnt - orig_first_page_bytes_used == region_size);
+        }
 
 	/*
 	 * Set the generations alloc restart page to the last page of
@@ -1471,7 +1485,9 @@ gc_alloc_update_page_tables(int unboxed, struct alloc_region *alloc_region)
 
     /* Unallocate any unused pages. */
     while (next_page <= alloc_region->last_page) {
-	gc_assert(page_table[next_page].bytes_used == 0);
+        if (gc_assert_level > 0) {
+            gc_assert(page_table[next_page].bytes_used == 0);
+        }
 	page_table[next_page].flags &= ~PAGE_ALLOCATED_MASK;
 	next_page++;
     }
@@ -1591,7 +1607,9 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
 	    break;
 #endif
 	}
-	gc_assert(!PAGE_WRITE_PROTECTED(first_page));
+        if (gc_assert_level > 0) {
+            gc_assert(!PAGE_WRITE_PROTECTED(first_page));
+        }
 
 #if 0
 	fprintf(stderr, "  first_page=%d bytes_used=%d\n",
@@ -1607,13 +1625,17 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
 	    last_page++;
 	    num_pages++;
 	    bytes_found += GC_PAGE_SIZE;
-	    gc_assert(!PAGE_WRITE_PROTECTED(last_page));
+            if (gc_assert_level > 0) {
+                gc_assert(!PAGE_WRITE_PROTECTED(last_page));
+            }
 	}
 
 	region_size = (GC_PAGE_SIZE - page_table[first_page].bytes_used)
 	    + GC_PAGE_SIZE * (last_page - first_page);
 
-	gc_assert(bytes_found == region_size);
+        if (gc_assert_level > 0) {
+            gc_assert(bytes_found == region_size);
+        }
 
 #if 0
 	fprintf(stderr, "  last_page=%d bytes_found=%d num_pages=%d\n",
@@ -1641,7 +1663,9 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
 		page_address(first_page));
 #endif
 
-    gc_assert(first_page > alloc_region->last_page);
+        if (gc_assert_level > 0) {
+            gc_assert(first_page > alloc_region->last_page);
+        }
     if (unboxed)
 	generations[gc_alloc_generation].alloc_large_unboxed_start_page =
 	    last_page;
@@ -1669,10 +1693,12 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
 	page_table[first_page].first_object_offset = 0;
     }
 
-    gc_assert(PAGE_ALLOCATED(first_page));
-    gc_assert(PAGE_UNBOXED_VAL(first_page) == unboxed);
-    gc_assert(PAGE_GENERATION(first_page) == gc_alloc_generation);
-    gc_assert(PAGE_LARGE_OBJECT_VAL(first_page) == large);
+    if (gc_assert_level > 0) {
+        gc_assert(PAGE_ALLOCATED(first_page));
+        gc_assert(PAGE_UNBOXED_VAL(first_page) == unboxed);
+        gc_assert(PAGE_GENERATION(first_page) == gc_alloc_generation);
+        gc_assert(PAGE_LARGE_OBJECT_VAL(first_page) == large);
+    }
 
     byte_cnt = 0;
 
@@ -1701,8 +1727,10 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
 	fprintf(stderr, "+");
 #endif
 
-	gc_assert(!PAGE_ALLOCATED(next_page));
-	gc_assert(page_table[next_page].bytes_used == 0);
+        if (gc_assert_level > 0) {
+            gc_assert(!PAGE_ALLOCATED(next_page));
+            gc_assert(page_table[next_page].bytes_used == 0);
+        }
 
         if ((gencgc_unmap_zero == MODE_MADVISE)
             || (gencgc_unmap_zero == MODE_LAZY)) {
@@ -1727,7 +1755,9 @@ gc_alloc_large(int nbytes, int unboxed, struct alloc_region *alloc_region)
 	next_page++;
     }
 
-    gc_assert(byte_cnt - orig_first_page_bytes_used == nbytes);
+    if (gc_assert_level > 0) {
+        gc_assert(byte_cnt - orig_first_page_bytes_used == nbytes);
+    }
 
     bytes_allocated += nbytes;
     generations[gc_alloc_generation].bytes_allocated += nbytes;
@@ -1934,7 +1964,9 @@ gc_alloc_region(int nbytes, struct alloc_region *region, int unboxed, struct all
     }
 
     /* Shouldn't happen? */
-    gc_assert(0);
+    if (gc_assert_level > 0) {
+        gc_assert(0);
+    }
     return 0;
 }
 
@@ -2244,9 +2276,11 @@ copy_object(lispobj object, int nwords)
     lispobj *new;
     lispobj *source, *dest;
 
-    gc_assert(Pointerp(object));
-    gc_assert(from_space_p(object));
-    gc_assert((nwords & 0x01) == 0);
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+        gc_assert(from_space_p(object));
+        gc_assert((nwords & 0x01) == 0);
+    }
 
     /* get tag of object */
     tag = LowtagOf(object);
@@ -2286,9 +2320,11 @@ copy_large_object(lispobj object, int nwords)
     lispobj *source, *dest;
     int first_page;
 
-    gc_assert(Pointerp(object));
-    gc_assert(from_space_p(object));
-    gc_assert((nwords & 0x01) == 0);
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+        gc_assert(from_space_p(object));
+        gc_assert((nwords & 0x01) == 0);
+    }
 
     if (gencgc_verbose && nwords > 1024 * 1024)
 	fprintf(stderr, "** copy_large_object: %lu\n",
@@ -2296,7 +2332,9 @@ copy_large_object(lispobj object, int nwords)
 
     /* Check if it's a large object. */
     first_page = find_page_index((void *) object);
-    gc_assert(first_page >= 0);
+    if (gc_assert_level > 0) {
+        gc_assert(first_page >= 0);
+    }
 
     if (PAGE_LARGE_OBJECT(first_page)) {
 	/* Promote the object. */
@@ -2314,18 +2352,22 @@ copy_large_object(lispobj object, int nwords)
 	 * anyway?).
 	 */
 
-	gc_assert(page_table[first_page].first_object_offset == 0);
+        if (gc_assert_level > 0) {
+            gc_assert(page_table[first_page].first_object_offset == 0);
+        }
 
 	next_page = first_page;
 	remaining_bytes = nwords * sizeof(lispobj);
 	while (remaining_bytes > GC_PAGE_SIZE) {
-	    gc_assert(PAGE_GENERATION(next_page) == from_space);
-	    gc_assert(PAGE_ALLOCATED(next_page));
-	    gc_assert(!PAGE_UNBOXED(next_page));
-	    gc_assert(PAGE_LARGE_OBJECT(next_page));
-	    gc_assert(page_table[next_page].first_object_offset ==
-		      GC_PAGE_SIZE * (first_page - next_page));
-	    gc_assert(page_table[next_page].bytes_used == GC_PAGE_SIZE);
+            if (gc_assert_level > 0) {
+                gc_assert(PAGE_GENERATION(next_page) == from_space);
+                gc_assert(PAGE_ALLOCATED(next_page));
+                gc_assert(!PAGE_UNBOXED(next_page));
+                gc_assert(PAGE_LARGE_OBJECT(next_page));
+                gc_assert(page_table[next_page].first_object_offset ==
+                          GC_PAGE_SIZE * (first_page - next_page));
+                gc_assert(page_table[next_page].bytes_used == GC_PAGE_SIZE);
+            }
 
 	    PAGE_FLAGS_UPDATE(next_page, PAGE_GENERATION_MASK, new_space);
 
@@ -2348,11 +2390,15 @@ copy_large_object(lispobj object, int nwords)
 	 */
 
 	/* Object may have shrunk but shouldn't have grown - check. */
-	gc_assert(page_table[next_page].bytes_used >= remaining_bytes);
+        if (gc_assert_level > 0) {
+            gc_assert(page_table[next_page].bytes_used >= remaining_bytes);
+        }
 
 	PAGE_FLAGS_UPDATE(next_page, PAGE_GENERATION_MASK, new_space);
-	gc_assert(PAGE_ALLOCATED(next_page));
-	gc_assert(!PAGE_UNBOXED(next_page));
+        if (gc_assert_level > 0) {
+            gc_assert(PAGE_ALLOCATED(next_page));
+            gc_assert(!PAGE_UNBOXED(next_page));
+        }
 
 	/* Adjust the bytes_used. */
 	old_bytes_used = page_table[next_page].bytes_used;
@@ -2376,7 +2422,9 @@ copy_large_object(lispobj object, int nwords)
 	     * object. These pages shouldn't be write protected as they
 	     * should be zero filled.
 	     */
-	    gc_assert(!PAGE_WRITE_PROTECTED(next_page));
+            if (gc_assert_level > 0) {
+                gc_assert(!PAGE_WRITE_PROTECTED(next_page));
+            }
 
 	    old_bytes_used = page_table[next_page].bytes_used;
 	    page_table[next_page].flags &= ~PAGE_ALLOCATED_MASK;
@@ -2429,9 +2477,11 @@ copy_unboxed_object(lispobj object, int nwords)
     lispobj *new;
     lispobj *source, *dest;
 
-    gc_assert(Pointerp(object));
-    gc_assert(from_space_p(object));
-    gc_assert((nwords & 0x01) == 0);
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+        gc_assert(from_space_p(object));
+        gc_assert((nwords & 0x01) == 0);
+    }
 
     /* get tag of object */
     tag = LowtagOf(object);
@@ -2472,9 +2522,11 @@ copy_large_unboxed_object(lispobj object, int nwords)
     lispobj *source, *dest;
     int first_page;
 
-    gc_assert(Pointerp(object));
-    gc_assert(from_space_p(object));
-    gc_assert((nwords & 0x01) == 0);
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+        gc_assert(from_space_p(object));
+        gc_assert((nwords & 0x01) == 0);
+    }
 
     if (gencgc_verbose && nwords > 1024 * 1024)
 	fprintf(stderr, "** copy_large_unboxed_object: %lu\n",
@@ -2482,7 +2534,9 @@ copy_large_unboxed_object(lispobj object, int nwords)
 
     /* Check if it's a large object. */
     first_page = find_page_index((void *) object);
-    gc_assert(first_page >= 0);
+    if (gc_assert_level > 0) {
+        gc_assert(first_page >= 0);
+    }
 
     if (PAGE_LARGE_OBJECT(first_page)) {
 	/*
@@ -2496,17 +2550,21 @@ copy_large_unboxed_object(lispobj object, int nwords)
 	int old_bytes_used;
 	int mmask, mflags;
 
-	gc_assert(page_table[first_page].first_object_offset == 0);
+        if (gc_assert_level > 0) {
+            gc_assert(page_table[first_page].first_object_offset == 0);
+        }
 
 	next_page = first_page;
 	remaining_bytes = nwords * sizeof(lispobj);
 	while (remaining_bytes > GC_PAGE_SIZE) {
-	    gc_assert(PAGE_GENERATION(next_page) == from_space);
-	    gc_assert(PAGE_ALLOCATED(next_page));
-	    gc_assert(PAGE_LARGE_OBJECT(next_page));
-	    gc_assert(page_table[next_page].first_object_offset ==
-		      GC_PAGE_SIZE * (first_page - next_page));
-	    gc_assert(page_table[next_page].bytes_used == GC_PAGE_SIZE);
+            if (gc_assert_level > 0) {
+                gc_assert(PAGE_GENERATION(next_page) == from_space);
+                gc_assert(PAGE_ALLOCATED(next_page));
+                gc_assert(PAGE_LARGE_OBJECT(next_page));
+                gc_assert(page_table[next_page].first_object_offset ==
+                          GC_PAGE_SIZE * (first_page - next_page));
+                gc_assert(page_table[next_page].bytes_used == GC_PAGE_SIZE);
+            }
 
 	    PAGE_FLAGS_UPDATE(next_page,
 			      PAGE_UNBOXED_MASK | PAGE_GENERATION_MASK,
@@ -2521,7 +2579,9 @@ copy_large_unboxed_object(lispobj object, int nwords)
 	 */
 
 	/* Object may have shrunk but shouldn't have grown - check. */
-	gc_assert(page_table[next_page].bytes_used >= remaining_bytes);
+        if (gc_assert_level > 0) {
+            gc_assert(page_table[next_page].bytes_used >= remaining_bytes);
+        }
 
 	PAGE_FLAGS_UPDATE(next_page, PAGE_ALLOCATED_MASK | PAGE_UNBOXED_MASK
 			  | PAGE_GENERATION_MASK,
@@ -2549,7 +2609,9 @@ copy_large_unboxed_object(lispobj object, int nwords)
 	     * object. These pages shouldn't be write protected, even if
 	     * boxed they should be zero filled.
 	     */
-	    gc_assert(!PAGE_WRITE_PROTECTED(next_page));
+            if (gc_assert_level > 0) {
+                gc_assert(!PAGE_WRITE_PROTECTED(next_page));
+            }
 
 	    old_bytes_used = page_table[next_page].bytes_used;
 	    page_table[next_page].flags &= ~PAGE_ALLOCATED_MASK;
@@ -2667,15 +2729,17 @@ scavenge(void *start_obj, long nwords)
 
 	object = *start;
 	/* Not a forwarding pointer. */
-	gc_assert(object != 0x01);
+        if (gc_assert_level > 0) {
+            gc_assert(object != 0x01);
+        }
 
 #if DIRECT_SCAV
 	words_scavenged = scavtab[TypeOf(object)] (start, object);
 #else /* not DIRECT_SCAV */
 	if (Pointerp(object)) {
-#ifdef GC_ASSERTIONS
-	    check_escaped_stack_object(start, object);
-#endif
+            if (gc_assert_level > 0) {
+                check_escaped_stack_object(start, object);
+            }
 
 	    if (from_space_p(object)) {
 		lispobj *ptr = (lispobj *) PTR(object);
@@ -2739,7 +2803,9 @@ scavenge(void *start_obj, long nwords)
 	nwords -= words_scavenged;
     }
 
-    gc_assert(nwords == 0);
+    if (gc_assert_level > 0) {
+        gc_assert(nwords == 0);
+    }
 }
 
 
@@ -2943,7 +3009,9 @@ static lispobj trans_boxed(lispobj object);
 static int
 scav_function_pointer(lispobj * where, lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
 
     if (from_space_p(object)) {
 	lispobj first, *first_pointer;
@@ -2989,8 +3057,10 @@ scav_function_pointer(lispobj * where, lispobj object)
 	    first = copy;
 	}
 
-	gc_assert(Pointerp(first));
-	gc_assert(!from_space_p(first));
+        if (gc_assert_level > 0) {
+            gc_assert(Pointerp(first));
+            gc_assert(!from_space_p(first));
+        }
 
 	*where = first;
     }
@@ -3003,7 +3073,9 @@ scav_function_pointer(lispobj * where, lispobj object)
     lispobj *first_pointer;
     lispobj copy;
 
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
 
     /* Object is a pointer into from space - no a FP. */
     first_pointer = (lispobj *) PTR(object);
@@ -3029,8 +3101,10 @@ scav_function_pointer(lispobj * where, lispobj object)
 	first_pointer[1] = copy;
     }
 
-    gc_assert(Pointerp(copy));
-    gc_assert(!from_space_p(copy));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(copy));
+        gc_assert(!from_space_p(copy));
+    }
 
     *where = copy;
 
@@ -3407,7 +3481,9 @@ trans_code(struct code *code)
     }
 
 
-    gc_assert(TypeOf(code->header) == type_CodeHeader);
+    if (gc_assert_level > 0) {
+        gc_assert(TypeOf(code->header) == type_CodeHeader);
+    }
 
     /* prepare to transport the code vector */
     l_code = (lispobj) code | type_OtherPointer;
@@ -3449,7 +3525,9 @@ trans_code(struct code *code)
 	lispobj nfheaderl;
 
 	fheaderp = (struct function *) PTR(fheaderl);
-	gc_assert(TypeOf(fheaderp->header) == type_FunctionHeader);
+        if (gc_assert_level > 0) {
+            gc_assert(TypeOf(fheaderp->header) == type_FunctionHeader);
+        }
 
 	/*
 	 * Calcuate the new function pointer and the new function header.
@@ -3510,7 +3588,9 @@ scav_code_header(lispobj * where, lispobj object)
     fheaderl = code->entry_points;
     while (fheaderl != NIL) {
 	fheaderp = (struct function *) PTR(fheaderl);
-	gc_assert(TypeOf(fheaderp->header) == type_FunctionHeader);
+        if (gc_assert_level > 0) {
+            gc_assert(TypeOf(fheaderp->header) == type_FunctionHeader);
+        }
 
 	scavenge(&fheaderp->name, 1);
 	scavenge(&fheaderp->arglist, 1);
@@ -3693,7 +3773,9 @@ scav_instance_pointer(lispobj * where, lispobj object)
 	    first = first_pointer[1];
 	else {
 	    first = trans_boxed(object);
-	    gc_assert(first != object);
+            if (gc_assert_level > 0) {
+                gc_assert(first != object);
+            }
 	    /* Set forwarding pointer */
 	    first_pointer[0] = 0x01;
 	    first_pointer[1] = first;
@@ -3711,7 +3793,9 @@ scav_instance_pointer(lispobj * where, lispobj object)
     /* Object is a pointer into from space - not a FP */
     copy = trans_boxed(object);
 
-    gc_assert(copy != object);
+    if (gc_assert_level > 0) {
+        gc_assert(copy != object);
+    }
 
     first_pointer = (lispobj *) PTR(object);
 
@@ -3733,7 +3817,9 @@ static lispobj trans_list(lispobj object);
 static int
 scav_list_pointer(lispobj * where, lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
 
     if (from_space_p(object)) {
 	lispobj first, *first_pointer;
@@ -3756,8 +3842,11 @@ scav_list_pointer(lispobj * where, lispobj object)
 	    first_pointer[1] = first;
 	}
 
-	gc_assert(Pointerp(first));
-	gc_assert(!from_space_p(first));
+        if (gc_assert_level > 0) {
+            gc_assert(Pointerp(first));
+            gc_assert(!from_space_p(first));
+        }
+
 	*where = first;
     }
     return 1;
@@ -3768,12 +3857,16 @@ scav_list_pointer(lispobj * where, lispobj object)
 {
     lispobj first, *first_pointer;
 
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
 
     /* Object is a pointer into from space - not FP */
 
     first = trans_list(object);
-    gc_assert(first != object);
+    if (gc_assert_level > 0) {
+        gc_assert(first != object);
+    }
 
     first_pointer = (lispobj *) PTR(object);
 
@@ -3781,8 +3874,11 @@ scav_list_pointer(lispobj * where, lispobj object)
     first_pointer[0] = 0x01;
     first_pointer[1] = first;
 
-    gc_assert(Pointerp(first));
-    gc_assert(!from_space_p(first));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(first));
+        gc_assert(!from_space_p(first));
+    }
+
     *where = first;
     return 1;
 }
@@ -3795,7 +3891,9 @@ trans_list(lispobj object)
     struct cons *cons, *new_cons;
     lispobj cdr;
 
-    gc_assert(from_space_p(object));
+    if (gc_assert_level > 0) {
+        gc_assert(from_space_p(object));
+    }
 
     cons = (struct cons *) PTR(object);
 
@@ -3857,7 +3955,9 @@ trans_list(lispobj object)
 static int
 scav_other_pointer(lispobj * where, lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
 
     if (from_space_p(object)) {
 	lispobj first, *first_pointer;
@@ -3884,8 +3984,10 @@ scav_other_pointer(lispobj * where, lispobj object)
 	    }
 	}
 
-	gc_assert(Pointerp(first));
-	gc_assert(!from_space_p(first));
+        if (gc_assert_level > 0) {
+            gc_assert(Pointerp(first));
+            gc_assert(!from_space_p(first));
+        }
     }
     return 1;
 }
@@ -3895,7 +3997,9 @@ scav_other_pointer(lispobj * where, lispobj object)
 {
     lispobj first, *first_pointer;
 
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
 
     /* Object is a pointer into from space - not FP */
     first_pointer = (lispobj *) PTR(object);
@@ -3909,8 +4013,10 @@ scav_other_pointer(lispobj * where, lispobj object)
 	*where = first;
     }
 
-    gc_assert(Pointerp(first));
-    gc_assert(!from_space_p(first));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(first));
+        gc_assert(!from_space_p(first));
+    }
 
     return 1;
 }
@@ -3958,7 +4064,9 @@ trans_boxed(lispobj object)
     lispobj header;
     unsigned long length;
 
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
 
     header = *((lispobj *) PTR(object));
     length = HeaderValue(header) + 1;
@@ -3973,7 +4081,9 @@ trans_boxed_large(lispobj object)
     lispobj header;
     unsigned long length;
 
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
 
     header = *((lispobj *) PTR(object));
     length = HeaderValue(header) + 1;
@@ -4035,7 +4145,9 @@ trans_unboxed(lispobj object)
     unsigned long length;
 
 
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
 
     header = *((lispobj *) PTR(object));
     length = HeaderValue(header) + 1;
@@ -4051,7 +4163,9 @@ trans_unboxed_large(lispobj object)
     unsigned long length;
 
 
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
 
     header = *((lispobj *) PTR(object));
     length = HeaderValue(header) + 1;
@@ -4116,7 +4230,9 @@ scav_string(lispobj * where, lispobj object)
 static lispobj
 trans_string(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_string((lispobj *) PTR(object)));
 }
@@ -4212,7 +4328,9 @@ free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
     unsigned *next_vector = u32_vector(hash_table->next_vector, 0);
     int free_p = 1;
     
-    gc_assert(length != UINT_MAX);
+    if (gc_assert_level > 0) {
+        gc_assert(length != UINT_MAX);
+    }
 
     if (index_vector[hash_index] == kv_index)
 	/* The entry is the first in the collinion chain.
@@ -4239,7 +4357,10 @@ free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
         unsigned hash_index;
         lispobj empty_symbol;
         
-	gc_assert(count > 0);
+        if (gc_assert_level > 0) {
+            gc_assert(count > 0);
+        }
+
 	hash_table->number_entries = make_fixnum(count - 1);
 	next_vector[kv_index] = fixnum_value(hash_table->next_free_kv);
 	hash_table->next_free_kv = make_fixnum(kv_index);
@@ -4420,11 +4541,13 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
     next_vector = u32_vector(hash_table->next_vector, &next_vector_length);
     hash_vector = u32_vector(hash_table->hash_vector, 0);
 
-    gc_assert(length != UINT_MAX);
-    gc_assert(next_vector_length != UINT_MAX);
+    if (gc_assert_level > 0) {
+        gc_assert(length != UINT_MAX);
+        gc_assert(next_vector_length != UINT_MAX);
     
-    gc_assert(index_vector && next_vector);
-    gc_assert(next_vector_length * 2 == kv_length);
+        gc_assert(index_vector && next_vector);
+        gc_assert(next_vector_length * 2 == kv_length);
+    }
 
     for (i = 1; i < next_vector_length; i++) {
 	lispobj old_key = kv_vector[2 * i];
@@ -4499,8 +4622,10 @@ scav_weak_entries(struct hash_table *hash_table)
     u32_vector(hash_table->next_vector, &next_vector_length);
     hash_vector = u32_vector(hash_table->hash_vector, 0);
 
-    gc_assert(length != UINT_MAX);
-    gc_assert(next_vector_length != UINT_MAX);
+    if (gc_assert_level > 0) {
+        gc_assert(length != UINT_MAX);
+        gc_assert(next_vector_length != UINT_MAX);
+    }
     
     for (i = 1; i < next_vector_length; i++) {
 	lispobj old_key = kv_vector[2 * i];
@@ -4637,8 +4762,10 @@ scav_hash_vector(lispobj * where, lispobj object)
 
     scavenge(kv_vector, 2);
 
-    gc_assert(Pointerp(kv_vector[0]));
-    gc_assert(Pointerp(kv_vector[1]));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(kv_vector[0]));
+        gc_assert(Pointerp(kv_vector[1]));
+    }
 
     hash_table_obj = kv_vector[0];
     hash_table = (struct hash_table *) PTR(hash_table_obj);
@@ -4666,10 +4793,14 @@ scav_hash_vector(lispobj * where, lispobj object)
 #endif
 
 #if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
-    gc_assert(where == (lispobj *) PTR(hash_table->table));
+    if (gc_assert_level > 0) {
+        gc_assert(where == (lispobj *) PTR(hash_table->table));
+    }
 #endif
-    gc_assert(TypeOf(hash_table->instance_header) == type_InstanceHeader);
-    gc_assert(TypeOf(*(lispobj *) PTR(empty_symbol)) == type_SymbolHeader);
+    if (gc_assert_level > 0) {
+        gc_assert(TypeOf(hash_table->instance_header) == type_InstanceHeader);
+        gc_assert(TypeOf(*(lispobj *) PTR(empty_symbol)) == type_SymbolHeader);
+    }
 
     /* Scavenging the hash table which fix the positions of the other
        needed objects.  */
@@ -4679,8 +4810,7 @@ scav_hash_vector(lispobj * where, lispobj object)
     }
 #endif
     
-#ifdef GC_ASSERTIONS
-    {
+    if (gc_assert_level > 0) {
         /*
          * Check to see that hash-table-rehash-threshold is a single
          * float in the range (0, 1]
@@ -4690,7 +4820,6 @@ scav_hash_vector(lispobj * where, lispobj object)
         float threshold = raw_slots[2];
         gc_assert(threshold > 0 && threshold <= 1);
     }
-#endif
     
     scavenge((lispobj *) hash_table, HASH_TABLE_SIZE);
 
@@ -4725,7 +4854,9 @@ size_vector(lispobj * where)
 static lispobj
 trans_vector(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_object(object, size_vector((lispobj *) PTR(object)));
 }
 
@@ -4755,7 +4886,9 @@ scav_vector_bit(lispobj * where, lispobj object)
 static lispobj
 trans_vector_bit(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_bit((lispobj *) PTR(object)));
 }
@@ -4786,7 +4919,9 @@ scav_vector_unsigned_byte_2(lispobj * where, lispobj object)
 static lispobj
 trans_vector_unsigned_byte_2(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_unsigned_byte_2((lispobj *)
 								 PTR(object)));
@@ -4818,7 +4953,9 @@ scav_vector_unsigned_byte_4(lispobj * where, lispobj object)
 static lispobj
 trans_vector_unsigned_byte_4(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_unsigned_byte_4((lispobj *)
 								 PTR(object)));
@@ -4850,7 +4987,9 @@ scav_vector_unsigned_byte_8(lispobj * where, lispobj object)
 static lispobj
 trans_vector_unsigned_byte_8(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_unsigned_byte_8((lispobj *)
 								 PTR(object)));
@@ -4882,7 +5021,9 @@ scav_vector_unsigned_byte_16(lispobj * where, lispobj object)
 static lispobj
 trans_vector_unsigned_byte_16(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_unsigned_byte_16((lispobj *)
 								  PTR(object)));
@@ -4914,7 +5055,9 @@ scav_vector_unsigned_byte_32(lispobj * where, lispobj object)
 static lispobj
 trans_vector_unsigned_byte_32(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_unsigned_byte_32((lispobj *)
 								  PTR(object)));
@@ -4946,7 +5089,9 @@ scav_vector_single_float(lispobj * where, lispobj object)
 static lispobj
 trans_vector_single_float(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_single_float((lispobj *)
 							      PTR(object)));
@@ -4978,7 +5123,9 @@ scav_vector_double_float(lispobj * where, lispobj object)
 static lispobj
 trans_vector_double_float(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_double_float((lispobj *)
 							      PTR(object)));
@@ -5011,7 +5158,9 @@ scav_vector_long_float(lispobj * where, lispobj object)
 static lispobj
 trans_vector_long_float(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_long_float((lispobj *)
 							    PTR(object)));
@@ -5041,7 +5190,9 @@ scav_vector_double_double_float(lispobj * where, lispobj object)
 static lispobj
 trans_vector_double_double_float(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_double_double_float((lispobj *)
 							    PTR(object)));
@@ -5074,7 +5225,9 @@ scav_vector_complex_single_float(lispobj * where, lispobj object)
 static lispobj
 trans_vector_complex_single_float(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_complex_single_float(
 								      (lispobj
@@ -5110,7 +5263,9 @@ scav_vector_complex_double_float(lispobj * where, lispobj object)
 static lispobj
 trans_vector_complex_double_float(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_complex_double_float(
 								      (lispobj
@@ -5147,7 +5302,9 @@ scav_vector_complex_long_float(lispobj * where, lispobj object)
 static lispobj
 trans_vector_complex_long_float(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_complex_long_float((lispobj *)
 								    PTR
@@ -5178,7 +5335,9 @@ scav_vector_complex_double_double_float(lispobj * where, lispobj object)
 static lispobj
 trans_vector_complex_double_double_float(lispobj object)
 {
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     return copy_large_unboxed_object(object,
 				     size_vector_complex_double_double_float((lispobj *)
 									     PTR
@@ -5219,7 +5378,9 @@ trans_weak_pointer(lispobj object)
 {
     lispobj copy;
 
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
     copy = copy_object(object, WEAK_POINTER_NWORDS);
 #if 0
     fprintf(stderr, "Transport weak pointer %p to %p\n", object, copy);
@@ -5303,7 +5464,9 @@ trans_scavenger_hook(lispobj object)
 {
     lispobj copy;
 
-    gc_assert(Pointerp(object));
+    if (gc_assert_level > 0) {
+        gc_assert(Pointerp(object));
+    }
 #if 0
     printf("Transporting scav pointer from 0x%08x\n", object);
 #endif
@@ -6034,7 +6197,9 @@ maybe_adjust_large_object(lispobj * where)
     nwords = (sizetab[TypeOf(where[0])]) (where);
 
     first_page = find_page_index((void *) where);
-    gc_assert(first_page >= 0);
+    if (gc_assert_level > 0) {
+        gc_assert(first_page >= 0);
+    }
 
     /*
      * Note: Any page write protection must be removed, else a later
@@ -6043,17 +6208,21 @@ maybe_adjust_large_object(lispobj * where)
      * lets do it for them all (they'll probably be written anyway?).
      */
 
-    gc_assert(page_table[first_page].first_object_offset == 0);
+    if (gc_assert_level > 0) {
+        gc_assert(page_table[first_page].first_object_offset == 0);
+    }
 
     next_page = first_page;
     remaining_bytes = nwords * sizeof(lispobj);
     while (remaining_bytes > GC_PAGE_SIZE) {
-	gc_assert(PAGE_GENERATION(next_page) == from_space);
-	gc_assert(PAGE_ALLOCATED(next_page));
-	gc_assert(PAGE_LARGE_OBJECT(next_page));
-	gc_assert(page_table[next_page].first_object_offset ==
-		  GC_PAGE_SIZE * (first_page - next_page));
-	gc_assert(page_table[next_page].bytes_used == GC_PAGE_SIZE);
+	if (gc_assert_level > 0) {
+	    gc_assert(PAGE_GENERATION(next_page) == from_space);
+	    gc_assert(PAGE_ALLOCATED(next_page));
+	    gc_assert(PAGE_LARGE_OBJECT(next_page));
+	    gc_assert(page_table[next_page].first_object_offset ==
+		      GC_PAGE_SIZE * (first_page - next_page));
+	    gc_assert(page_table[next_page].bytes_used == GC_PAGE_SIZE);
+	}
 
 	PAGE_FLAGS_UPDATE(next_page, PAGE_UNBOXED_MASK,
 			  unboxed << PAGE_UNBOXED_SHIFT);
@@ -6062,7 +6231,9 @@ maybe_adjust_large_object(lispobj * where)
 	 * Shouldn't be write protected at this stage. Essential that the
 	 * pages aren't.
 	 */
-	gc_assert(!PAGE_WRITE_PROTECTED(next_page));
+	if (gc_assert_level > 0) {
+	    gc_assert(!PAGE_WRITE_PROTECTED(next_page));
+	}
 	remaining_bytes -= GC_PAGE_SIZE;
 	next_page++;
     }
@@ -6073,12 +6244,16 @@ maybe_adjust_large_object(lispobj * where)
      */
 
     /* Object may have shrunk but shouldn't have grown - check. */
-    gc_assert(page_table[next_page].bytes_used >= remaining_bytes);
+    if (gc_assert_level > 0) {
+	gc_assert(page_table[next_page].bytes_used >= remaining_bytes);
+    }
 
     page_table[next_page].flags |= PAGE_ALLOCATED_MASK;
     PAGE_FLAGS_UPDATE(next_page, PAGE_UNBOXED_MASK,
 		      unboxed << PAGE_UNBOXED_SHIFT);
-    gc_assert(PAGE_UNBOXED(next_page) == PAGE_UNBOXED(first_page));
+    if (gc_assert_level > 0) {
+	gc_assert(PAGE_UNBOXED(next_page) == PAGE_UNBOXED(first_page));
+    }
 
     /* Adjust the bytes_used. */
     old_bytes_used = page_table[next_page].bytes_used;
@@ -6103,7 +6278,9 @@ maybe_adjust_large_object(lispobj * where)
 	 * object. These pages shouldn't be write protected as they should
 	 * be zero filled.
 	 */
-	gc_assert(!PAGE_WRITE_PROTECTED(next_page));
+	if (gc_assert_level > 0) {
+	    gc_assert(!PAGE_WRITE_PROTECTED(next_page));
+	}
 
 	old_bytes_used = page_table[next_page].bytes_used;
 	page_table[next_page].flags &= ~PAGE_ALLOCATED_MASK;
@@ -6177,10 +6354,12 @@ preserve_pointer(void *addr)
     while (page_table[first_page].first_object_offset != 0) {
 	first_page--;
 	/* Do some checks */
-	gc_assert(page_table[first_page].bytes_used == GC_PAGE_SIZE);
-	gc_assert(PAGE_GENERATION(first_page) == from_space);
-	gc_assert(PAGE_ALLOCATED(first_page));
-	gc_assert(PAGE_UNBOXED(first_page) == region_unboxed);
+	if (gc_assert_level > 0) {
+	    gc_assert(page_table[first_page].bytes_used == GC_PAGE_SIZE);
+	    gc_assert(PAGE_GENERATION(first_page) == from_space);
+	    gc_assert(PAGE_ALLOCATED(first_page));
+	    gc_assert(PAGE_UNBOXED(first_page) == region_unboxed);
+	}
     }
 
     /*
@@ -6212,8 +6391,10 @@ preserve_pointer(void *addr)
      * marking all pages as dont_move.
      */
     for (i = first_page;; i++) {
-	gc_assert(PAGE_ALLOCATED(i));
-	gc_assert(PAGE_UNBOXED(i) == region_unboxed);
+	if (gc_assert_level > 0) {
+	    gc_assert(PAGE_ALLOCATED(i));
+	    gc_assert(PAGE_UNBOXED(i) == region_unboxed);
+	}
 
 	/* Mark the page static */
 	page_table[i].flags |= PAGE_DONT_MOVE_MASK;
@@ -6236,7 +6417,9 @@ preserve_pointer(void *addr)
 	 * have pointers into the old-space which need
 	 * scavenging. Shouldn't be write protected at this stage.
 	 */
-	gc_assert(!PAGE_WRITE_PROTECTED(i));
+	if (gc_assert_level > 0) {
+	    gc_assert(!PAGE_WRITE_PROTECTED(i));
+	}
 
 	/* Check if this is the last page in this contiguous block */
 	if (page_table[i].bytes_used < GC_PAGE_SIZE
@@ -6249,7 +6432,9 @@ preserve_pointer(void *addr)
     }
 
     /* Check that the page is now static */
-    gc_assert(PAGE_DONT_MOVE(addr_page_index));
+    if (gc_assert_level > 0) {
+	gc_assert(PAGE_DONT_MOVE(addr_page_index));
+    }
 
     return;
 }
@@ -6341,8 +6526,10 @@ update_page_write_prot(unsigned page)
     int num_words = page_table[page].bytes_used / sizeof(lispobj);
 
     /* Shouldn't be a free page. */
-    gc_assert(PAGE_ALLOCATED(page));
-    gc_assert(page_table[page].bytes_used != 0);
+    if (gc_assert_level > 0) {
+	gc_assert(PAGE_ALLOCATED(page));
+	gc_assert(page_table[page].bytes_used != 0);
+    }
 
     /* Skip if it's already write protected or an unboxed page. */
     if (PAGE_WRITE_PROTECTED(page) || PAGE_UNBOXED(page))
@@ -6445,7 +6632,9 @@ scavenge_generation(int generation)
 	    int last_page;
 
 	    /* This should be the start of a contiguous block */
-	    gc_assert(page_table[i].first_object_offset == 0);
+	    if (gc_assert_level > 0) {
+		gc_assert(page_table[i].first_object_offset == 0);
+	    }
 
 	    /*
 	     * Need to find the full extent of this contiguous block in case
@@ -6827,7 +7016,9 @@ scavenge_newspace_generation(int generation)
 		int offset = (*previous_new_areas)[i].offset;
 		int size = (*previous_new_areas)[i].size / sizeof(lispobj);
 
-		gc_assert((*previous_new_areas)[i].size % 4 == 0);
+		if (gc_assert_level > 0) {
+		    gc_assert((*previous_new_areas)[i].size % 4 == 0);
+		}
 
 #if 0
 		fprintf(stderr, "*S page %d offset %d size %d\n", page, offset,
@@ -7234,8 +7425,10 @@ verify_space(lispobj * start, size_t words)
 		      fheaderl = code->entry_points;
 		      while (fheaderl != NIL) {
 			  fheaderp = (struct function *) PTR(fheaderl);
-			  gc_assert(TypeOf(fheaderp->header) ==
-				    type_FunctionHeader);
+			  if (gc_assert_level > 0) {
+			      gc_assert(TypeOf(fheaderp->header) ==
+					type_FunctionHeader);
+			  }
 			  verify_space(&fheaderp->name, 1);
 			  verify_space(&fheaderp->arglist, 1);
 			  verify_space(&fheaderp->type, 1);
@@ -7350,7 +7543,9 @@ verify_generation(int generation)
 	    int region_unboxed = PAGE_UNBOXED(i);
 
 	    /* This should be the start of a contiguous block */
-	    gc_assert(page_table[i].first_object_offset == 0);
+	    if (gc_assert_level > 0) {
+		gc_assert(page_table[i].first_object_offset == 0);
+	    }
 
 	    /*
 	     * Need to find the full extent of this contiguous block in case
@@ -7454,7 +7649,9 @@ write_protect_generation_pages(int generation)
 {
     int i;
 
-    gc_assert(generation < NUM_GENERATIONS);
+    if (gc_assert_level > 0) {
+	gc_assert(generation < NUM_GENERATIONS);
+    }
 
     for (i = 0; i < last_free_page; i++)
 	if (PAGE_ALLOCATED(i) && !PAGE_UNBOXED(i)
@@ -7528,7 +7725,6 @@ garbage_collect_generation(int generation, int raise)
     unsigned long i;
     unsigned long read_only_space_size, static_space_size;
 
-#ifdef GC_ASSERTIONS
 #if defined(i386) || defined(__x86_64)
     invalid_stack_start = (void *) control_stack;
     invalid_stack_end = (void *) &raise;
@@ -7536,12 +7732,13 @@ garbage_collect_generation(int generation, int raise)
     invalid_stack_start = (void *) &raise;
     invalid_stack_end = (void *) control_stack_end;
 #endif /* not i386 */
-#endif /* GC_ASSERTIONS */
 
-    gc_assert(generation <= NUM_GENERATIONS - 1);
+    if (gc_assert_level > 0) {
+	gc_assert(generation <= NUM_GENERATIONS - 1);
+	/* The oldest generation can't be raised. */
+	gc_assert(generation != NUM_GENERATIONS - 1 || raise == 0);
+    }
 
-    /* The oldest generation can't be raised. */
-    gc_assert(generation != NUM_GENERATIONS - 1 || raise == 0);
 
     /* Initialise the weak pointer list. */
     weak_pointers = NULL;
@@ -7553,8 +7750,11 @@ garbage_collect_generation(int generation, int raise)
      * done. Setup this new generation. There should be no pages
      * allocated to it yet.
      */
-    if (!raise)
-	gc_assert(generations[NUM_GENERATIONS].bytes_allocated == 0);
+    if (!raise) {
+	if (gc_assert_level > 0) {
+	    gc_assert(generations[NUM_GENERATIONS].bytes_allocated == 0);
+	}
+    }
 
     /* Set the global src and dest. generations */
     from_space = generation;
@@ -7615,7 +7815,9 @@ garbage_collect_generation(int generation, int raise)
 	 * There shouldn't be any non-movable pages because we don't have
 	 * any conservative pointers!
 	 */
-	gc_assert(num_dont_move_pages == 0);
+	if (gc_assert_level > 0) {
+	    gc_assert(num_dont_move_pages == 0);
+	}
 #endif
     }
 
@@ -7742,7 +7944,9 @@ garbage_collect_generation(int generation, int raise)
 	    if (page_table[i].bytes_used != 0
 		&& PAGE_GENERATION(i) == NUM_GENERATIONS)
 		    PAGE_FLAGS_UPDATE(i, PAGE_GENERATION_MASK, generation);
-	gc_assert(generations[generation].bytes_allocated == 0);
+	if (gc_assert_level > 0) {
+	    gc_assert(generations[generation].bytes_allocated == 0);
+	}
 	generations[generation].bytes_allocated =
 	    generations[NUM_GENERATIONS].bytes_allocated;
 	generations[NUM_GENERATIONS].bytes_allocated = 0;
@@ -7918,7 +8122,9 @@ collect_garbage(unsigned last_gen)
      * Set gc_alloc back to generation 0. The current regions should be
      * flushed after the above GCs.
      */
-    gc_assert(boxed_region.free_pointer - boxed_region.start_addr == 0);
+    if (gc_assert_level > 0) {
+	gc_assert(boxed_region.free_pointer - boxed_region.start_addr == 0);
+    }
     gc_alloc_generation = 0;
 
     update_dynamic_space_free_pointer();
@@ -8012,8 +8218,10 @@ gc_free_heap(void)
 	    /*
              * Double check that the page is zero filled.
              */
-	    gc_assert(!PAGE_ALLOCATED(page));
-	    gc_assert(page_table[page].bytes_used == 0);
+	    if (gc_assert_level > 0) {
+		gc_assert(!PAGE_ALLOCATED(page));
+		gc_assert(page_table[page].bytes_used == 0);
+	    }
 
             page_start = (int *) page_address(page);
 
@@ -8212,10 +8420,14 @@ alloc(int nbytes)
      * current_dynamic_space_free_pointer) and therefore contains the
      * pseudo-atomic bits.
      */
-    gc_assert(((unsigned) get_current_region_free() & lowtag_Mask) == 0);
+    if (gc_assert_level > 0) {
+	gc_assert(((unsigned) get_current_region_free() & lowtag_Mask) == 0);
+    }
 #endif
-    gc_assert((nbytes & lowtag_Mask) == 0);
-    gc_assert(get_pseudo_atomic_atomic());
+    if (gc_assert_level > 0) {
+	gc_assert((nbytes & lowtag_Mask) == 0);
+	gc_assert(get_pseudo_atomic_atomic());
+    }
 
     bytes_allocated_sum += nbytes;
 
