@@ -4813,12 +4813,12 @@ scav_hash_vector(lispobj * where, lispobj object)
     if (gc_assert_level > 0) {
         /*
          * Check to see that hash-table-rehash-threshold is a single
-         * float in the range (0, 1]
+         * float in the range [0.1, 1]
          */
         lispobj threshold_obj = (lispobj) hash_table->rehash_threshold;
-        float* raw_slots = PTR(threshold_obj);
-        float threshold = raw_slots[2];
-        gc_assert(threshold > 0 && threshold <= 1);
+        struct single_float* float_slot = (struct single_float*) PTR(threshold_obj);
+        float threshold = float_slot->value;
+        gc_assert(threshold >= 0.1 && threshold <= 1);
     }
     
     scavenge((lispobj *) hash_table, HASH_TABLE_SIZE);
