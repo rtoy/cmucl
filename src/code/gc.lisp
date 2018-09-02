@@ -72,7 +72,11 @@
 (progn
   (alien:def-alien-routine get_bytes_allocated_lower c-call:int)
   (alien:def-alien-routine get_bytes_allocated_upper c-call:int)
-
+  ;; Controls GC assertions that are enabled in the runtime.  A value
+  ;; of 0 disables all assertions (the normal default).
+  (alien:def-alien-variable gc_assert_level c-call:int)
+  (setf (documentation 'gc-assert-level 'variable)
+	"Current GC assertion level.  Higher values enable more GC assertions")
   (defun dynamic-usage ()
     (dfixnum:dfixnum-pair-integer
      (get_bytes_allocated_upper) (get_bytes_allocated_lower))))
