@@ -72,14 +72,39 @@
 (progn
   (alien:def-alien-routine get_bytes_allocated_lower c-call:int)
   (alien:def-alien-routine get_bytes_allocated_upper c-call:int)
-  ;; Controls GC assertions that are enabled in the runtime.  A value
-  ;; of 0 disables all assertions (the normal default).
-  (alien:def-alien-variable gc_assert_level c-call:int)
-  (setf (documentation 'gc-assert-level 'variable)
-	"Current GC assertion level.  Higher values enable more GC assertions")
   (defun dynamic-usage ()
     (dfixnum:dfixnum-pair-integer
-     (get_bytes_allocated_upper) (get_bytes_allocated_lower))))
+     (get_bytes_allocated_upper) (get_bytes_allocated_lower)))
+
+  ;; Controls GC assertions that are enabled in the runtime.  A value
+  ;; of 0 disables all assertions (the normal default).
+  (alien:def-alien-variable ("gc_assert_level" gc-assert-level) c-call:int)
+  (alien:def-alien-variable ("verify_after_free_heap" gc-verify-after-free-heap) c-call:int)
+  (alien:def-alien-variable ("pre_verify_gen_0" gc-verify-new-objects) c-call:int)
+  (alien:def-alien-variable ("verify_gens" gc-verify-generations) c-call:int)
+  (defun get-gc-assertions ()
+    (list :assert-level gc-assert-level
+	  :verify-after-free-heap (not (zerop gc-verify-after-free-heap))
+	  :verify-generations gc-verify-generations
+	  :verify-new-objects (not (zerop gc-verify-new-objects))))
+  (defun set-gc-assertions (&key (assert-level 0 assert-level-p)
+			      (verify-after-free-heap nil verify-after-free-heap-p)
+			      (verify-generations 6 verify-generations-p)
+			      (verify-new-objects nil verify-new-objects-p))
+    (declare (type (and fixnum unsigned-byte) assert-level)
+	     (type boolean verify-after-free-heap)
+	     (type (integer 0 6) verify-generation)
+	     (type boolean verify-new-objects))
+    (when assert-level-p
+      (setf gc-assert-level assert-level))
+    (when verify-after-free-heap-p
+      (setf gc-verify-after-free-heap (if verify-after-free-heap 1 0)))
+    (when verify-generations-p
+      (setf gc-verify-generations verify-generations))
+    (when verify-new-objects-p
+      (setf gc-verify-new-objects (if verify-new-objects 1 0)))
+    (values))
+  )
 
 #+cgc
 (c-var-frob dynamic-usage "bytes_allocated")

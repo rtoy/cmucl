@@ -260,15 +260,15 @@ int verify_gens = NUM_GENERATIONS;
  * makes GC very, very slow, so don't enable this unless you really
  * need it!)
  */
-boolean pre_verify_gen_0 = FALSE;
+int pre_verify_gen_0 = FALSE;
 
 /*
  * Enable checking for bad pointers after gc_free_heap called from purify.
  */
 #if 0 && defined(DARWIN)
-boolean verify_after_free_heap = TRUE;
+int verify_after_free_heap = TRUE;
 #else
-boolean verify_after_free_heap = FALSE;
+int verify_after_free_heap = FALSE;
 #endif
 
 /*
@@ -8031,7 +8031,9 @@ collect_garbage(unsigned last_gen)
 
     /* Verify the new objects created by lisp code. */
     if (pre_verify_gen_0) {
-	fprintf(stderr, "Pre-Checking generation 0\n");
+	if (gencgc_verbose > 0) {
+	    fprintf(stderr, "Pre-Checking generation 0\n");
+	}
 	verify_generation(0);
     }
 
