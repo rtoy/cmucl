@@ -83,6 +83,13 @@
   (alien:def-alien-variable ("pre_verify_gen_0" gc-verify-new-objects) c-call:int)
   (alien:def-alien-variable ("verify_gens" gc-verify-generations) c-call:int)
   (defun get-gc-assertions ()
+    "Returns a list of the current GC assertion settings. The list is
+    in the same format as the keyword arguments to SET-GC-ASSERTIONS,
+    i.e.,
+
+      (apply #'set-gc-assertions (get-gc-assertions))
+
+   See SET-GC-ASSERTIONS for more information."
     (list :assert-level gc-assert-level
 	  :verify-after-free-heap (not (zerop gc-verify-after-free-heap))
 	  :verify-generations gc-verify-generations
@@ -91,6 +98,23 @@
 			      (verify-after-free-heap nil verify-after-free-heap-p)
 			      (verify-generations 6 verify-generations-p)
 			      (verify-new-objects nil verify-new-objects-p))
+    "Set GC assertion to the specified value:
+       :ASSERT-LEVEL-
+           Defaults to 0, higher values indicate more assertions are enabled.
+
+       :VERIFY-AFTER-FREE-HEAP
+           If non-NIL, the heap is verified for consistency whenever
+           part of the heap is collected.
+
+       :VERIFY-GENERATIONS
+           Set to generation number.  When GC occurs, generations
+           equal to or higher than this value are checked for
+           consistency.
+
+       :VERIFY-NEW-OBJECTS
+           When GC occurs for the newest generation, the heap for this
+           generation is checked for validity.
+"
     (declare (type (and fixnum unsigned-byte) assert-level)
 	     (type boolean verify-after-free-heap)
 	     (type (integer 0 6) verify-generation)
