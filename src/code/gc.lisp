@@ -117,7 +117,7 @@
 "
     (declare (type (and fixnum unsigned-byte) assert-level)
 	     (type boolean verify-after-free-heap)
-	     (type (integer 0 6) verify-generation)
+	     (type (integer 0 6) verify-generations)
 	     (type boolean verify-new-objects))
     (when assert-level-p
       (setf gc-assert-level assert-level))
