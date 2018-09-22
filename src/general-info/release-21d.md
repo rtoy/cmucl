@@ -37,6 +37,7 @@ public domain.
     * ~~#58~~ Bogus type error in comparison of complex number with `THE` form
     * ~~#61~~ Segfault when compiling call to `ARRAY-HAS-FILL-POINTER-P` on bit vector constant
     * ~~#62~~ Segfault when compiling `ARRAY-DISPLACEMENT` on a string constant
+    * ~~#69~~ GC assertions compiled in and allow user to enable them.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
