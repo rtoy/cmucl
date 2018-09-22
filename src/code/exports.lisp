@@ -1566,6 +1566,10 @@
 	     "*TRUST-DYNAMIC-EXTENT-DECLARATIONS*"
 
 	     "INVALID-FASL")
+  ;; gencgc features
+  #+gencgc
+  (:export "GET-GC-ASSERTIONS"
+	   "SET-GC-ASSERTIONS")
 
   ;; run-program
   (:export "RUN-PROGRAM" "PROCESS-ALIVE-P" "PROCESS-CLOSE"
