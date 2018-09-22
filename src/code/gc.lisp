@@ -22,7 +22,9 @@
 	  *bytes-consed-between-gcs* *gc-verbose* *gc-inhibit-hook*
 	  *gc-notify-before* *gc-notify-after* get-bytes-consed
 	  *gc-run-time* bytes-consed-between-gcs
-	  get-bytes-consed-dfixnum))
+	  get-bytes-consed-dfixnum
+	  get-gc-assertions
+	  set-gc-assertions))
 
 (in-package "LISP")
 (export '(room))
@@ -99,7 +101,7 @@
 			      (verify-generations 6 verify-generations-p)
 			      (verify-new-objects nil verify-new-objects-p))
     "Set GC assertion to the specified value:
-       :ASSERT-LEVEL-
+       :ASSERT-LEVEL
            Defaults to 0, higher values indicate more assertions are enabled.
 
        :VERIFY-AFTER-FREE-HEAP
