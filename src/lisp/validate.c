@@ -118,17 +118,12 @@ validate_stacks()
 #ifdef CONTROL_STACK_START
     /* Map the control stack at a fixed location */
     control_stack = (lispobj *) CONTROL_STACK_START;
-#if (defined(i386) || defined(__x86_64))
     control_stack_end = (lispobj *) (CONTROL_STACK_START + control_stack_size);
-#endif
     ensure_space(control_stack, control_stack_size);
 #else
     /* Map the conrol stack wherever we have space */
     control_stack = (lispobj*) os_validate(NULL, control_stack_size);
-
-#if (defined(i386) || defined(__x86_64))
     control_stack_end = (void*)control_stack + control_stack_size;
-#endif
 #endif
 
     /* Binding Stack */

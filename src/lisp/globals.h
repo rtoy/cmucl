@@ -37,9 +37,7 @@ extern unsigned long binding_stack_size;
 extern unsigned long static_space_size;
 extern unsigned long control_stack_size;
 
-#if (defined(i386) || defined(__x86_64))
 extern lispobj *control_stack_end;
-#endif
 extern lispobj *current_dynamic_space;
 
 #if !defined(ibmrt) && !defined(i386)
