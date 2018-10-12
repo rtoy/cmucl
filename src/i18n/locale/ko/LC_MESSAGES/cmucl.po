@@ -6419,6 +6419,38 @@ msgid ""
 msgstr ""
 
 #: src/code/gc.lisp
+msgid ""
+"Returns a list of the current GC assertion settings. The list is\n"
+"    in the same format as the keyword arguments to SET-GC-ASSERTIONS,\n"
+"    i.e.,\n"
+"\n"
+"      (apply #'set-gc-assertions (get-gc-assertions))\n"
+"\n"
+"   See SET-GC-ASSERTIONS for more information."
+msgstr ""
+
+#: src/code/gc.lisp
+msgid ""
+"Set GC assertion to the specified value:\n"
+"       :ASSERT-LEVEL\n"
+"           Defaults to 0, higher values indicate more assertions are "
+"enabled.\n"
+"\n"
+"       :VERIFY-AFTER-FREE-HEAP\n"
+"           If non-NIL, the heap is verified for consistency whenever\n"
+"           part of the heap is collected.\n"
+"\n"
+"       :VERIFY-GENERATIONS\n"
+"           Set to generation number.  When GC occurs, generations\n"
+"           equal to or higher than this value are checked for\n"
+"           consistency.\n"
+"\n"
+"       :VERIFY-NEW-OBJECTS\n"
+"           When GC occurs for the newest generation, the heap for this\n"
+"           generation is checked for validity.\n"
+msgstr ""
+
+#: src/code/gc.lisp
 msgid "Oh no.  The current dynamic space is missing!"
 msgstr ""
 
