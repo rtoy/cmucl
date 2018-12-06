@@ -27,6 +27,7 @@ public domain.
       * The new function `KERNEL:RANDOM-STATE-JUMP` modifies the given state to jump 2^64 samples ahead, allowing 2^64 non-overlapping sequences.
     * Updated CLX to telent clx version 06e39a0d.
     * New functions `SET-GC-ASSERTIONS` and `GET-GC-ASSERTIONS`.  See the docstrings for more information and also ~~#69~~.
+    * `MACHINE-TYPE` and `MACHINE-VERSION` return more information about thep rocessor cmucl is running on, using information from the `cpuid` instruction.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:

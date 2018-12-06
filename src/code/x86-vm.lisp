@@ -60,14 +60,56 @@
 #-cross-compiler
 (defun machine-type ()
   _N"Returns a string describing the type of the local machine."
-  "X86")
+  ;; Use cpuid to get the processor type.
+  (with-output-to-string (s)
+    (multiple-value-bind (max-input ebx ecx edx)
+	(x86::cpuid 0)
+      (declare (ignore max-input))
+      (flet ((int-to-string (int)
+	       (dotimes (k 4)
+		 (let ((code (ldb (byte 8 (* 8 k)) int)))
+		   ;; Don't print out null chars.  We're
+		   ;; assuming this only happens at the end
+		   ;; of the brand string.
+		   (unless (zerop code)
+		     (write-char (code-char code) s))))))
+	(int-to-string ebx)
+	(int-to-string edx)
+	(int-to-string ecx)))))
 
 
 #-cross-compiler
 (defun machine-version ()
   _N"Returns a string describing the version of the local machine."
-  "X86")
-
+  ;; UWe use the processor brand string method to get more detailed
+  ;; information about the processor.  If it's not available, just
+  ;; give up, even though we could use the brand index (CPUID with
+  ;; EAX=1) to get an identifier.
+  (let ((max-cpuid (x86::cpuid #x80000000)))
+    (cond ((or (not (logbitp 31 max-cpuid))
+	       (< max-cpuid #x80000004))
+	   ;; Processor brand string not supported, just give up.
+	   "X86")
+	  (t
+	   (with-output-to-string (s)
+	     (labels ((int-to-string (int)
+			(dotimes (k 4)
+			  (let ((code (ldb (byte 8 (* 8 k)) int)))
+			    ;; Don't print out null chars.  We're
+			    ;; assuming this only happens at the end
+			    ;; of the brand string.
+			    (unless (zerop code)
+			      (write-char (code-char code) s)))))
+		      (cpuid-to-string (input)
+			(multiple-value-bind (eax ebx ecx edx)
+			    (x86::cpuid input)
+			  (int-to-string eax)
+			  (int-to-string ebx)
+			  (int-to-string ecx)
+			  (int-to-string edx))))
+	       (cpuid-to-string #x80000002)
+	       (cpuid-to-string #x80000003)
+	       (cpuid-to-string #x80000004)))))))
 
 
 ;;; Fixup-Code-Object -- Interface
