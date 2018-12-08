@@ -1,6 +1,7 @@
 variables:
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2018/03"
-  version: "2018-03-x86"
+  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2018/10"
+  version: "2018-10-x86"
+  bootstrap: "-B boot-21d.lisp"
 
 linux-runner:
   image: ubuntu:16.04
@@ -13,7 +14,7 @@ linux-runner:
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
   script:
-    - bin/build.sh -C "" -o snapshot/bin/lisp
+    - bin/build.sh $bootstrap -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist linux-4
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
@@ -25,6 +26,6 @@ osx-runner:
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
   script:
-    - bin/build.sh -C "" -o snapshot/bin/lisp
+    - bin/build.sh $bootstrap -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist darwin-4
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log

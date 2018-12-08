@@ -1,4 +1,3 @@
-** Work in Progress **
 # CMUCL 21d
 
 The CMUCL project is pleased to announce the release of CMUCL 21c.
@@ -31,6 +30,8 @@ public domain.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
+    * ~~#48~~ Update RNG from MT19937 to xoroshiro128+
+    * ~~#45~~ Handling of relative paths in `EXT:RUN-PROGRAM`
     * ~~#50~~ CLX (Hemlock) fails to run.
     * ~~#49~~ CLM crashes
     * ~~#47~~ Backquate and multiple splices
@@ -40,6 +41,7 @@ public domain.
     * ~~#61~~ Segfault when compiling call to `ARRAY-HAS-FILL-POINTER-P` on bit vector constant
     * ~~#62~~ Segfault when compiling `ARRAY-DISPLACEMENT` on a string constant
     * ~~#69~~ GC assertions compiled in and allow user to enable them.
+    * ~~#71~~ More info for `MACHINE-TYPE` and `MACHINE-VERSION` for x86
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
