@@ -1,7 +1,7 @@
 variables:
   download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2018/10"
   version: "2018-10-x86"
-  bootstrap: "-B boot-21b.lisp"
+  bootstrap: "-B boot-21d.lisp"
 
 linux-runner:
   image: ubuntu:16.04
