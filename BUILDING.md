@@ -48,17 +48,20 @@ Setting up a build environment
 ------------------------------
 
 1. Create a base directory and change to it
-
+```
     mkdir cmucl ; cd cmucl
-
+```
 2. Fetch the sources and put them into the base directory
 ```
     tar xzf /tmp/cmucl-source.tar.gz
 ```
+
     or, if you want to use the git sources directly:
+
 ```
     git clone https://gitlab.common-lisp.net/cmucl/cmucl.git
 ```
+
     Whatever you do, the sources must be in a directory named src
     inside the base directory.  Since the build tools keep all
     generated files in separate target directories, the src directory
@@ -81,7 +84,9 @@ quick guide.
    Use this to build from a version of CMUCL that is very close to the
    sources you are trying to build now:
 
+```
    bin/build.sh -C "" -o "<name-of-old-lisp> <options-to-lisp>"
+```
 
    This will build CMUCL 3 times, each time with the result of the
    previous build.  The last time, the additional libraries like CLX,
@@ -100,7 +105,9 @@ quick guide.
 
    For these, you can use this:
 
+```
    bin/build.sh -C "" -o "<old-lisp>" -B boot1.lisp -B boot2.lisp
+```
 
    The bootstrap files listed with the -B option (as many as needed)
    are loaded in order, so be sure to get them right.
@@ -121,9 +128,9 @@ file date of a boot file is later than the version of CMUCL you are
 building from, then you need to use b) or c) above.  You may need to
 read the bootfiles for additional instructions, if any.  
 
-If there are no bootfiles, then you can use a) above.
+If there are no bootfiles, then you can use 1. above.
 
-The build.sh script supports other options, and bin/build.sh -?
+The `build.sh` script supports other options, and `bin/build.sh -?`
 will give a quick summary.  Read bin/build.sh for more
 information. 
 
@@ -373,10 +380,12 @@ Overview of the included build scripts
 
     The remaining arguments used to create the name of the tarfiles.  The
     names will have the form:
+
 ```
    cmucl-<version>-<arch>-<os>.tar.bz2
    cmucl-<version>-<arch>-<os>.extras.tar.bz2
 ```
+
     Of course, the "bz2" will be "gz" if you specified gzip compression
     instead of bzip.
 
@@ -695,4 +704,4 @@ In particular steps 3, 4, and 5 can be combined into one by using the
 -c, -r, and -l options for cross-build-world.sh.  The -c option cleans
 out the targe and cross directories; -r does step 4; and -l does step
 5.
-===============
+
