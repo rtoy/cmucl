@@ -1,4 +1,3 @@
--*- Mode: text -*-
 Building CMU CL
 ===============
 
@@ -13,13 +12,13 @@ General Requirements
 
 In order to build CMU CL, you will need:
 
-a) A working CMU CL binary.  There is no way around this requirement!
+a. A working CMU CL binary.  There is no way around this requirement!
 
    This binary can either be for the platform you want to target, in
    that case you can either recompile or cross-compile, or for another
    supported platform, in that case you must cross-compile, obviously.
 
-b) A supported C compiler for the C runtime code.
+a. A supported C compiler for the C runtime code.
 
    Most of the time, this means GNU gcc, though for some ports it
    means the vendor-supplied C compiler.  The compiler must be
@@ -28,13 +27,13 @@ b) A supported C compiler for the C runtime code.
    Note for FreeBSD 10 and above: The build requires gcc (Clang will
    not work) and the lib32 compatiblity package.
 
-c) GNU make
+a. GNU make
 
    This has to be available either as gmake or make in your PATH, or
    the MAKE environment variable has to be set to point to the correct
    binary.
 
-d) The CMU CL source code
+a. The CMU CL source code
 
    Here you can either use one of the release source tarballs, or
    check out the source code directly from the public CMUCL git
@@ -48,7 +47,7 @@ though recompilation against 2.x Motif probably works as well.
 Setting up a build environment
 ------------------------------
 
-1.) Create a base directory and change to it
+1. Create a base directory and change to it
 
     mkdir cmucl ; cd cmucl
 
@@ -77,7 +76,7 @@ want to do that and in case you know, somehow, that the version of
 CMUCL you are building from will build the sources you have, here is a
 quick guide.
 
-a) Simple builds
+1. Simple builds
 
    Use this to build from a version of CMUCL that is very close to the
    sources you are trying to build now:
@@ -93,7 +92,7 @@ a) Simple builds
    load-world.sh three times.  See below for descriptions of these
    scripts.
    
-b) Slightly more complicated builds
+1. Slightly more complicated builds
 
    For slightly more complicated builds, you may need to use some
    bootstrap files.  See below for more information about these
@@ -109,7 +108,7 @@ b) Slightly more complicated builds
    As in a) above, three builds are done, and the result is in the
    directory build-4.
 
-c) More complicated builds
+1. More complicated builds
 
    If you have more complicated builds, this script probably will not
    work, and definitely does not handle cross-compiles.  In this case,
@@ -136,7 +135,7 @@ and cross-compilation.  We'll first look at normal recompilation:
 
 The recompilation process basically consists of 4 phases/parts:
 
-a) Compiling the lisp files that make up the standard kernel.
+1. Compiling the lisp files that make up the standard kernel.
 
    This happens in your current CMU CL process, using your current
    CMU CL's normal file compiler.  This phase currently consists of 3
@@ -148,7 +147,7 @@ a) Compiling the lisp files that make up the standard kernel.
    or "compiling up a world", based on the name of the first
    sub-phase.
 
-b) Building a new kernel.core file out of the so created files
+1. Building a new kernel.core file out of the so created files
 
    This process, which is generally called genesis, and which is
    controlled by src/tools/worldbuild.lisp, uses the newly compiled
@@ -190,7 +189,7 @@ b) Building a new kernel.core file out of the so created files
    If it doesn't inform you of this, you can skip directly to the last
    phase d).
 
-c) Recompiling the C runtime code, producing the "lisp" binary file
+1. Recompiling the C runtime code, producing the "lisp" binary file
 
    This step is only needed if you haven't yet got a suitable lisp
    binary, or if the internals.h file has changed during genesis (of
@@ -206,7 +205,7 @@ c) Recompiling the C runtime code, producing the "lisp" binary file
    the C sources and recompile because of this, you can do that before
    Phase b), so that you don't have to perform that phase twice.
 
-d) Populating the kernel.core, and dumping a new lisp.core file.
+1. Populating the kernel.core, and dumping a new lisp.core file.
 
    In this phase, which is controlled by src/tools/worldload.lisp, and
    hence often called world-load, the kernel.core file is started up
@@ -218,11 +217,11 @@ We're not quite done yet.  This produces just a basic lisp.core.
 To complete the build so that you something similar to what the
 releases of CMUCL do, there are a few more steps:
 
-e) Build the utilities like Gray streams, simple streams, CLX, CLM,
+1. Build the utilities like Gray streams, simple streams, CLX, CLM,
    and Hemlock.  Use the bin/build-utils.sh script for this, as
    described below
 
-f) Create tarfiles using the bin/make-dist.sh script, as
+1. Create tarfiles using the bin/make-dist.sh script, as
    explained below.
 
 With these tarfiles, you can install them anywhere.  The contents of
@@ -504,7 +503,7 @@ binaries built from earlier sources can compile the sources containing
 that change.  There are two forms of boostrapping that can be
 required:
 
-a) Bootfiles
+1. Bootfiles
 
    The maintainers try to make bootfiles available, that allow going
    from an old release to the next release.  These are located in the
@@ -525,7 +524,7 @@ a) Bootfiles
    Alternatively, the bootstrap file can just "load" the individual
    bootfiles as needed.
 
-b) Cross-compiling
+1. Cross-compiling
 
    Under some circumstances, bootstrap code will not be sufficient,
    and a cross-compilation is needed.  In that case you will have to
