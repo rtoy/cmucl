@@ -20,9 +20,6 @@
 
 ;;; Created 04/09/87 14:30:41 by LaMott G. OREN
 
-#+cmu
-(ext:file-comment "$Id: util.lisp,v 1.3 2009/06/17 18:22:46 rtoy Rel $")
-
 (in-package :xlib)
 
 (export '(display-root
