@@ -81,7 +81,8 @@
 ;; Any event-code greater than 34 is for an extension
 (defparameter *first-extension-event-code* 35)
 
-(defvar *extensions* nil) ;; alist of (extension-name-symbol events errors)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *extensions* nil)) ;; alist of (extension-name-symbol events errors)
 
 (defmacro define-extension (name &key events errors)
   ;; Define extension NAME with EVENTS and ERRORS.
@@ -106,10 +107,11 @@
     (declare (clx-values event-key))
     (kintern event)))
 
-(defun extension-event-key-p (key)
-  (dolist (extension *extensions* nil)
-    (when (member key (second extension))
-      (return t))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun extension-event-key-p (key)
+    (dolist (extension *extensions* nil)
+      (when (member key (second extension))
+        (return t)))))
     
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun allocate-extension-event-code (name)
@@ -1194,7 +1196,7 @@
 		"Server Error: event with unknown event code ~d received."
 		event-code)))))
 
-(defun make-event-handlers (&key (type 'array) default)
+(defun make-event-handlers (&key (type 'vector) default)
   (declare (type t type)			;Sequence type specifier
 	   (type (or null function) default)
 	   (clx-values sequence))			;Default handler for initial content

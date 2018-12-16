@@ -2,10 +2,6 @@
  * Allegro CL dependent C helper routines for CLX
  */
 
-/* 
- * $Id: excldep.c,v 1.4 2009/06/17 18:22:46 rtoy Rel $
- */
-
 /*
  * This code requires select and interval timers.
  * This means you probably need BSD, or a version
