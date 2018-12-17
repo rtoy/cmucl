@@ -1,5 +1,3 @@
-$Id: exclREADME,v 1.5 2009/06/17 18:22:46 rtoy Rel $
-
      This file contains instructions on how to make CLX work with Franz
 Common Lisp.  CLX should work on any machine that supports Allegro Common
 Lisp version 3.0.1 or greater.  It also works under ExCL version 2.0.10.

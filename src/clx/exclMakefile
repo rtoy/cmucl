@@ -2,8 +2,6 @@
 #  Makefile for CLX
 #  (X11 R4.4 release, Franz Allegro Common Lisp version)
 #
-# $Id: exclMakefile,v 1.5 2009/06/17 18:22:46 rtoy Rel $
-#
 
 # *************************************************************************
 # * Change the next line to point to where you have Common Lisp installed *
@@ -90,7 +88,6 @@ compile-no-clos-CLX:	$(C_OBJS)
 	$(ECHO) " \
 	(set-case-mode :case-sensitive-lower) \
 	(proclaim '(optimize (speed $(SPEED)) (safety $(SAFETY)))) \
-	#+(version>= 4 0) (pushnew :clx-ansi-common-lisp *features*) \
 	(load \"defsystem\") \
 	#+allegro (compile-system :clx) \
 	#-allegro (compile-clx) \
@@ -109,7 +106,6 @@ compile-partial-clos-CLX:	$(C_OBJS)
 	    (provide :pcl) \
 	    (gc) (gc) \
 	    (setf (sys:gsgc-parameter :generation-spread) spread))) \
-	#+(version>= 4 0) (pushnew :clx-ansi-common-lisp *features*) \
 	(load \"defsystem\") \
 	(load \"package\") \
 	(setq xlib::*def-clx-class-use-defclass* '(xlib:window xlib:pixmap xlib:drawable)) \
@@ -130,7 +126,6 @@ compile-full-clos-CLX:	$(C_OBJS)
 	    (provide :pcl) \
 	    (gc) (gc) \
 	    (setf (sys:gsgc-parameter :generation-spread) spread))) \
-	#+(version>= 4 0) (pushnew :clx-ansi-common-lisp *features*) \
 	(load \"defsystem\") \
 	(load \"package\") \
 	(setq xlib::*def-clx-class-use-defclass* t) \
