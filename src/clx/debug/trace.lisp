@@ -32,9 +32,6 @@
 
 ;;; Created 09/14/87 by LaMott G. OREN
 
-#+cmu
-(ext:file-comment "$Id: trace.lisp,v 1.3 2009/06/17 18:22:46 rtoy Rel $")
-
 (in-package :xlib)
 
 (eval-when (load eval)
