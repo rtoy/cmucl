@@ -252,29 +252,32 @@
 		:ref-known (flushable foldable)
 		:set-trans (setf %array-fill-pointer)
 		:set-known (unsafe))
+  ;; Don't let these ref-trans to be constant-folded because these
+  ;; might get called on arrays that don't have these slots. (Because
+  ;; the lisp functions might be inlined.)
   (fill-pointer-p :type (member t nil)
 		  :ref-trans %array-fill-pointer-p
-		  :ref-known (flushable foldable)
+		  :ref-known (flushable)
 		  :set-trans (setf %array-fill-pointer-p)
 		  :set-known (unsafe))
   (elements :type index
 	    :ref-trans %array-available-elements
-	    :ref-known (flushable foldable)
+	    :ref-known (flushable)
 	    :set-trans (setf %array-available-elements)
 	    :set-known (unsafe))
   (data :type array
 	:ref-trans %array-data-vector
-	:ref-known (flushable foldable)
+	:ref-known (flushable)
 	:set-trans (setf %array-data-vector)
 	:set-known (unsafe))
   (displacement :type (or index null)
 		:ref-trans %array-displacement
-		:ref-known (flushable foldable)
+		:ref-known (flushable)
 		:set-trans (setf %array-displacement)
 		:set-known (unsafe))
   (displaced-p :type (member t nil)
 	       :ref-trans %array-displaced-p
-	       :ref-known (flushable foldable)
+	       :ref-known (flushable)
 	       :set-trans (setf %array-displaced-p)
 	       :set-known (unsafe))
   (dimensions :rest-p t))

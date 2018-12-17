@@ -1,4 +1,3 @@
--*- Mode: text -*-
 Building CMU CL
 ===============
 
@@ -13,13 +12,13 @@ General Requirements
 
 In order to build CMU CL, you will need:
 
-a) A working CMU CL binary.  There is no way around this requirement!
+1. A working CMU CL binary.  There is no way around this requirement!
 
    This binary can either be for the platform you want to target, in
    that case you can either recompile or cross-compile, or for another
    supported platform, in that case you must cross-compile, obviously.
 
-b) A supported C compiler for the C runtime code.
+1. A supported C compiler for the C runtime code.
 
    Most of the time, this means GNU gcc, though for some ports it
    means the vendor-supplied C compiler.  The compiler must be
@@ -28,13 +27,13 @@ b) A supported C compiler for the C runtime code.
    Note for FreeBSD 10 and above: The build requires gcc (Clang will
    not work) and the lib32 compatiblity package.
 
-c) GNU make
+1. GNU make
 
    This has to be available either as gmake or make in your PATH, or
    the MAKE environment variable has to be set to point to the correct
    binary.
 
-d) The CMU CL source code
+1. The CMU CL source code
 
    Here you can either use one of the release source tarballs, or
    check out the source code directly from the public CMUCL git
@@ -48,17 +47,20 @@ though recompilation against 2.x Motif probably works as well.
 Setting up a build environment
 ------------------------------
 
-1.) Create a base directory and change to it
-
+1. Create a base directory and change to it
+```
     mkdir cmucl ; cd cmucl
-
-2.) Fetch the sources and put them into the base directory
-
+```
+2. Fetch the sources and put them into the base directory
+```
     tar xzf /tmp/cmucl-source.tar.gz
+```
 
     or, if you want to use the git sources directly:
 
+```
     git clone https://gitlab.common-lisp.net/cmucl/cmucl.git
+```
 
     Whatever you do, the sources must be in a directory named src
     inside the base directory.  Since the build tools keep all
@@ -77,12 +79,14 @@ want to do that and in case you know, somehow, that the version of
 CMUCL you are building from will build the sources you have, here is a
 quick guide.
 
-a) Simple builds
+1. Simple builds
 
    Use this to build from a version of CMUCL that is very close to the
    sources you are trying to build now:
 
+```
    bin/build.sh -C "" -o "<name-of-old-lisp> <options-to-lisp>"
+```
 
    This will build CMUCL 3 times, each time with the result of the
    previous build.  The last time, the additional libraries like CLX,
@@ -93,7 +97,7 @@ a) Simple builds
    load-world.sh three times.  See below for descriptions of these
    scripts.
    
-b) Slightly more complicated builds
+1. Slightly more complicated builds
 
    For slightly more complicated builds, you may need to use some
    bootstrap files.  See below for more information about these
@@ -101,7 +105,9 @@ b) Slightly more complicated builds
 
    For these, you can use this:
 
+```
    bin/build.sh -C "" -o "<old-lisp>" -B boot1.lisp -B boot2.lisp
+```
 
    The bootstrap files listed with the -B option (as many as needed)
    are loaded in order, so be sure to get them right.
@@ -109,7 +115,7 @@ b) Slightly more complicated builds
    As in a) above, three builds are done, and the result is in the
    directory build-4.
 
-c) More complicated builds
+1. More complicated builds
 
    If you have more complicated builds, this script probably will not
    work, and definitely does not handle cross-compiles.  In this case,
@@ -122,9 +128,9 @@ file date of a boot file is later than the version of CMUCL you are
 building from, then you need to use b) or c) above.  You may need to
 read the bootfiles for additional instructions, if any.  
 
-If there are no bootfiles, then you can use a) above.
+If there are no bootfiles, then you can use 1. above.
 
-The build.sh script supports other options, and bin/build.sh -?
+The `build.sh` script supports other options, and `bin/build.sh -?`
 will give a quick summary.  Read bin/build.sh for more
 information. 
 
@@ -136,7 +142,7 @@ and cross-compilation.  We'll first look at normal recompilation:
 
 The recompilation process basically consists of 4 phases/parts:
 
-a) Compiling the lisp files that make up the standard kernel.
+1. Compiling the lisp files that make up the standard kernel.
 
    This happens in your current CMU CL process, using your current
    CMU CL's normal file compiler.  This phase currently consists of 3
@@ -148,7 +154,7 @@ a) Compiling the lisp files that make up the standard kernel.
    or "compiling up a world", based on the name of the first
    sub-phase.
 
-b) Building a new kernel.core file out of the so created files
+1. Building a new kernel.core file out of the so created files
 
    This process, which is generally called genesis, and which is
    controlled by src/tools/worldbuild.lisp, uses the newly compiled
@@ -190,7 +196,7 @@ b) Building a new kernel.core file out of the so created files
    If it doesn't inform you of this, you can skip directly to the last
    phase d).
 
-c) Recompiling the C runtime code, producing the "lisp" binary file
+1. Recompiling the C runtime code, producing the "lisp" binary file
 
    This step is only needed if you haven't yet got a suitable lisp
    binary, or if the internals.h file has changed during genesis (of
@@ -206,7 +212,7 @@ c) Recompiling the C runtime code, producing the "lisp" binary file
    the C sources and recompile because of this, you can do that before
    Phase b), so that you don't have to perform that phase twice.
 
-d) Populating the kernel.core, and dumping a new lisp.core file.
+1. Populating the kernel.core, and dumping a new lisp.core file.
 
    In this phase, which is controlled by src/tools/worldload.lisp, and
    hence often called world-load, the kernel.core file is started up
@@ -218,11 +224,11 @@ We're not quite done yet.  This produces just a basic lisp.core.
 To complete the build so that you something similar to what the
 releases of CMUCL do, there are a few more steps:
 
-e) Build the utilities like Gray streams, simple streams, CLX, CLM,
+1. Build the utilities like Gray streams, simple streams, CLX, CLM,
    and Hemlock.  Use the bin/build-utils.sh script for this, as
    described below
 
-f) Create tarfiles using the bin/make-dist.sh script, as
+1. Create tarfiles using the bin/make-dist.sh script, as
    explained below.
 
 With these tarfiles, you can install them anywhere.  The contents of
@@ -248,195 +254,197 @@ Overview of the included build scripts
 
 * bin/build.sh [-123obvuBCU?]
 
-This is the main build script.  It essentially calls the other build
-scripts described below in the proper sequence to build cmucl from an
-existing binary of cmucl.
+    This is the main build script.  It essentially calls the other build
+    scripts described below in the proper sequence to build cmucl from an
+    existing binary of cmucl.
 
 * bin/create-target.sh target-directory [lisp-variant [motif-variant]]
 
-This script creates a new target directory, which is a shadow of the
-source directory, that will contain all the files that are created by
-the build process.  Thus, each target's files are completely separate
-from the src directory, which could, in fact, be read-only.  Hence you
-can simultaneously build CMUCL for different targets from the same
-source directory.
+    This script creates a new target directory, which is a shadow of the
+    source directory, that will contain all the files that are created by
+    the build process.  Thus, each target's files are completely separate
+    from the src directory, which could, in fact, be read-only.  Hence you
+    can simultaneously build CMUCL for different targets from the same
+    source directory.
 
-The first argument is the name of the target directory to create.  The
-remaining arguments are optional.  If they are not given, the script
-tries to determine the lisp variant and motif variant from the system
-the script is running on.
+    The first argument is the name of the target directory to create.  The
+    remaining arguments are optional.  If they are not given, the script
+    tries to determine the lisp variant and motif variant from the system
+    the script is running on.
 
-The lisp-variant (i.e. the suffix of the src/lisp/Config.* to use as
-the target's Config file), and optionally the motif-variant (again the
-suffix of the src/motif/server/Config.* file to use as the Config file
-for the target's CMUCL/Motif server code).  If the lisp-variant is
-given but the motif-variant is not, the motif-variant is determined
-from the lisp-variant.
+    The lisp-variant (i.e. the suffix of the src/lisp/Config.* to use as
+    the target's Config file), and optionally the motif-variant (again the
+    suffix of the src/motif/server/Config.* file to use as the Config file
+    for the target's CMUCL/Motif server code).  If the lisp-variant is
+    given but the motif-variant is not, the motif-variant is determined
+    from the lisp-variant.
 
-The script will generate the target directory tree, link the relevant
-Config files, and generate place-holder files for various files, in
-order to ensure proper operation of the other build-scripts.  It also
-creates a sample setenv.lisp file in the target directory, which is
-used by the build and load processes to set up the correct list of
-*features* for your target lisp core.
+    The script will generate the target directory tree, link the relevant
+    Config files, and generate place-holder files for various files, in
+    order to ensure proper operation of the other build-scripts.  It also
+    creates a sample setenv.lisp file in the target directory, which is
+    used by the build and load processes to set up the correct list of
+    *features* for your target lisp core.
 
-IMPORTANT: You will normally NOT have to modify the sample setenv.lisp
-file, if you are building from a binary that has the desired features.
-In fact, the sample has all code commented out, If you want to add or
-remove features, you need to include code that puts at least a minimal
-set of features onto the list (use PUSHNEW and/or REMOVE).  You can
-use the current set of *features* of your lisp as a first guide.  The
-sample setenv.lisp includes a set of features that should work for the
-intended configuration.  Note also that some adding or removing some
-features may require a cross-compile instead of a normal compile.
+    IMPORTANT: You will normally NOT have to modify the sample setenv.lisp
+    file, if you are building from a binary that has the desired features.
+    In fact, the sample has all code commented out, If you want to add or
+    remove features, you need to include code that puts at least a minimal
+    set of features onto the list (use PUSHNEW and/or REMOVE).  You can
+    use the current set of *features* of your lisp as a first guide.  The
+    sample setenv.lisp includes a set of features that should work for the
+    intended configuration.  Note also that some adding or removing some
+    features may require a cross-compile instead of a normal compile.
 
 * bin/clean-target.sh [-l] target-directory [more dirs]
 
-Cleans the given target directory, so that all created files will be
-removed.  This is useful to force recompilation.  If the -l flag is
-given, then the C runtime is also removed, including all the lisp
-executable, any lisp cores, all object files, lisp.nm, internals.h,
-and the config file.
+    Cleans the given target directory, so that all created files will be
+    removed.  This is useful to force recompilation.  If the -l flag is
+    given, then the C runtime is also removed, including all the lisp
+    executable, any lisp cores, all object files, lisp.nm, internals.h,
+    and the config file.
 
 * bin/build-world.sh target-directory [build-binary] [build-flags...]
 
-Starts a complete world build for the given target, using the lisp
-binary/core specified as a build host.  The recompilation step will
-only recompile changed files, or files for which the fasl files are
-missing.  It will also not recompile the C runtime code (the lisp
-binary).  If a (re)compilation of that code is needed, the genesis
-step of the world build will inform you of that fact.  In that case,
-you'll have to use the rebuild-lisp.sh script, and then restart the
-world build process with build-world.sh
+    Starts a complete world build for the given target, using the lisp
+    binary/core specified as a build host.  The recompilation step will
+    only recompile changed files, or files for which the fasl files are
+    missing.  It will also not recompile the C runtime code (the lisp
+    binary).  If a (re)compilation of that code is needed, the genesis
+    step of the world build will inform you of that fact.  In that case,
+    you'll have to use the rebuild-lisp.sh script, and then restart the
+    world build process with build-world.sh
 
 * bin/rebuild-lisp.sh target-directory
 
-This script will force a complete recompilation of the C runtime code
-of CMU CL (aka the lisp executable).  Doing this will necessitate
-building a new kernel.core file, using build-world.sh.
+    This script will force a complete recompilation of the C runtime code
+    of CMU CL (aka the lisp executable).  Doing this will necessitate
+    building a new kernel.core file, using build-world.sh.
 
 * bin/load-world.sh target-directory version
 
-This will finish the CMU CL rebuilding process, by loading the
-remaining compiled files generated in the world build process into the
-kernel.core file, that also resulted from that process, creating the
-final lisp.core file.
+    This will finish the CMU CL rebuilding process, by loading the
+    remaining compiled files generated in the world build process into the
+    kernel.core file, that also resulted from that process, creating the
+    final lisp.core file.
 
-You have to pass the version string as a second argument.  The dumped
-core will anounce itself using that string.  Please don't use a string
-consisting of an official release name only, (e.g. "18d"), since those
-are reserved for official release builds.  Including the build-date in
-ISO8601 format is often a good idea, e.g. "18d+ 2002-05-06" for a
-binary that is based on sources current on the 6th May, 2002, which is
-post the 18d release.
+    You have to pass the version string as a second argument.  The dumped
+    core will anounce itself using that string.  Please don't use a string
+    consisting of an official release name only, (e.g. "18d"), since those
+    are reserved for official release builds.  Including the build-date in
+    ISO8601 format is often a good idea, e.g. "18d+ 2002-05-06" for a
+    binary that is based on sources current on the 6th May, 2002, which is
+    post the 18d release.
 
 * bin/build-utils.sh target-directory
 
-This script will build auxiliary libraries packaged with CMU CL,
-including CLX, CMUCL/Motif, the Motif debugger, inspector, and control
-panel, and the Hemlock editor.  It will use the lisp executable and
-core of the given target.
+    This script will build auxiliary libraries packaged with CMU CL,
+    including CLX, CMUCL/Motif, the Motif debugger, inspector, and control
+    panel, and the Hemlock editor.  It will use the lisp executable and
+    core of the given target.
 
-Note: To build with Motif (clm), you need to have the Motif libraries
-available and headers available to build motifd, the clm Motif server.
-OpenMotif is known to work.
+    Note: To build with Motif (clm), you need to have the Motif libraries
+    available and headers available to build motifd, the clm Motif server.
+    OpenMotif is known to work.
 
-You may need to adjust the include paths and library paths in
-src/motif/server/Config.* to match where Motif is installed if the
-paths therein are incorrect.
+    You may need to adjust the include paths and library paths in
+    src/motif/server/Config.* to match where Motif is installed if the
+    paths therein are incorrect.
 
-Unless you intend to use clm and motifd, you can safely ignore the
-build failure.  Everything else will have been compiled correctly; you
-just can't use clm.
+    Unless you intend to use clm and motifd, you can safely ignore the
+    build failure.  Everything else will have been compiled correctly; you
+    just can't use clm.
 
 * bin/make-dist.sh [-bg] [-G group] [-O owner] target-directory version arch os
 
-This script creates both main and extra distribution tarballs from the
-given target directory, using the make-main-dist.sh and
-make-extra-dist.sh scripts.  The result will be two tar files.  One
-contains the main distribution including the runtime and lisp.core
-with PCL (CLOS); the second contains the extra libraries such as
-Gray-streams, simple-streams, CLX, CLM, and Hemlock.
+    This script creates both main and extra distribution tarballs from the
+    given target directory, using the make-main-dist.sh and
+    make-extra-dist.sh scripts.  The result will be two tar files.  One
+    contains the main distribution including the runtime and lisp.core
+    with PCL (CLOS); the second contains the extra libraries such as
+    Gray-streams, simple-streams, CLX, CLM, and Hemlock.
 
-Some options that are available:
+    Some options that are available:
 
-  -b           Use bzip2 compression
-  -g           Use gzip compression
-  -G group     Group to use
-  -O owner     Owner to use
+      -b           Use bzip2 compression
+      -g           Use gzip compression
+      -G group     Group to use
+      -O owner     Owner to use
 
-If you specify both -b and -g, you will get two sets of tarfiles.  The
--G and -O options will attempt to set the owner and group of the files
-when building the tarfiles.  This way, when you extract the tarfiles,
-the owner and group will be set as specified.  You may need to be root
-to do this because many Unix systems don't normally let you change the
-owner and group of a file.
+    If you specify both -b and -g, you will get two sets of tarfiles.  The
+    -G and -O options will attempt to set the owner and group of the files
+    when building the tarfiles.  This way, when you extract the tarfiles,
+    the owner and group will be set as specified.  You may need to be root
+    to do this because many Unix systems don't normally let you change the
+    owner and group of a file.
 
-The remaining arguments used to create the name of the tarfiles.  The
-names will have the form:
+    The remaining arguments used to create the name of the tarfiles.  The
+    names will have the form:
 
+```
    cmucl-<version>-<arch>-<os>.tar.bz2
    cmucl-<version>-<arch>-<os>.extras.tar.bz2
+```
 
-Of course, the "bz2" will be "gz" if you specified gzip compression
-instead of bzip.
+    Of course, the "bz2" will be "gz" if you specified gzip compression
+    instead of bzip.
 
 * /bin/make-main-dist.sh target-directory version arch os
 
-This is script is not normally invoked by the user; make-dist will do
-it appropriately.
+    This is script is not normally invoked by the user; make-dist will do
+    it appropriately.
 
-This script creates a main distribution tarball (both in gzipped and
-bzipped variants) from the given target directory.  This will include
-all the stuff that is normally included in official release tarballs
-such as lisp.core and the PCL libraries, including Gray streams and
-simple streams.
+    This script creates a main distribution tarball (both in gzipped and
+    bzipped variants) from the given target directory.  This will include
+    all the stuff that is normally included in official release tarballs
+    such as lisp.core and the PCL libraries, including Gray streams and
+    simple streams.
 
-This is intended to be run from make-dist.sh.
+    This is intended to be run from make-dist.sh.
 
 * bin/make-extra-dist.sh target-directory version arch os
 
-This is script is not normally invoked by the user; make-dist will do
-it appropriately.
+    This is script is not normally invoked by the user; make-dist will do
+    it appropriately.
 
-This script creates an extra distribution tarball (both in gzipped and
-bzipped variants) from the given target directory.  This will include
-all the stuff that is normally included in official extra release
-tarballs, i.e. the auxiliary libraries such as CLX, CLM, and Hemlock.
+    This script creates an extra distribution tarball (both in gzipped and
+    bzipped variants) from the given target directory.  This will include
+    all the stuff that is normally included in official extra release
+    tarballs, i.e. the auxiliary libraries such as CLX, CLM, and Hemlock.
 
-This is intended to be run from make-dist.sh.
+    This is intended to be run from make-dist.sh.
 
 
 * cross-build-world.sh target-directory cross-directory cross-script 
                        [build-binary] [build-flags...]
 
-This is a script that can be used instead of build-world.sh for
-cross-compiling CMUCL.  In addition to the arguments of build-world.sh
-it takes two further required arguments:  The name of a directory that
-will contain the cross-compiler backend (the directory is created if
-it doesn't exist, and must not be the same as the target-directory),
-and the name of a Lisp cross-compilation script, which is responsible
-for setting up, compiling, and loading the cross-compiler backend.
-The latter argument is needed because each host/target combination of
-platform's needs slightly different code to produce a working
-cross-compiler.
+    This is a script that can be used instead of build-world.sh for
+    cross-compiling CMUCL.  In addition to the arguments of build-world.sh
+    it takes two further required arguments:  The name of a directory that
+    will contain the cross-compiler backend (the directory is created if
+    it doesn't exist, and must not be the same as the target-directory),
+    and the name of a Lisp cross-compilation script, which is responsible
+    for setting up, compiling, and loading the cross-compiler backend.
+    The latter argument is needed because each host/target combination of
+    platform's needs slightly different code to produce a working
+    cross-compiler.
 
-We include a number of working examples of cross-compiler scripts in
-the cross-scripts directory.  You'll have to edit the features section
-of the given scripts, to specify the features that should be removed
-from the current set of features in the host lisp, and those that
-should be added, so that the backend features are correct for the
-intended target.
+    We include a number of working examples of cross-compiler scripts in
+    the cross-scripts directory.  You'll have to edit the features section
+    of the given scripts, to specify the features that should be removed
+    from the current set of features in the host lisp, and those that
+    should be added, so that the backend features are correct for the
+    intended target.
 
-You can look at Eric Marsden's collection of build scripts for the
-basis of more cross-compiler scripts.
+    You can look at Eric Marsden's collection of build scripts for the
+    basis of more cross-compiler scripts.
 
 Step-by-Step Example of recompiling CMUCL for OpenBSD
 -----------------------------------------------------
 
 Set up everything as described in the setup section above. Then
 execute:
-
+```
 # Create a new target directory structure/config for OpenBSD:
 bin/create-target.sh openbsd OpenBSD_gencgc OpenBSD
 
@@ -488,10 +496,12 @@ bin/load-world.sh openbsd "18d+ 2002-05-06"
 # core will announce.  Please always put the build-date and some
 # other information in there, to make it possible to differentiate
 # those builds from official builds, which only contain the release.
+```
 
 Now you should have a new lisp.core, which you can start with
-
+```
 ./openbsd/lisp/lisp -core ./openbsd/lisp/lisp.core -noinit -nositeinit
+```
 
 Compiling sources that contain disruptive changes
 -------------------------------------------------
@@ -504,7 +514,7 @@ binaries built from earlier sources can compile the sources containing
 that change.  There are two forms of boostrapping that can be
 required:
 
-a) Bootfiles
+1. Bootfiles
 
    The maintainers try to make bootfiles available, that allow going
    from an old release to the next release.  These are located in the
@@ -525,7 +535,7 @@ a) Bootfiles
    Alternatively, the bootstrap file can just "load" the individual
    bootfiles as needed.
 
-b) Cross-compiling
+1. Cross-compiling
 
    Under some circumstances, bootstrap code will not be sufficient,
    and a cross-compilation is needed.  In that case you will have to
@@ -694,4 +704,4 @@ In particular steps 3, 4, and 5 can be combined into one by using the
 -c, -r, and -l options for cross-build-world.sh.  The -c option cleans
 out the targe and cross directories; -r does step 4; and -l does step
 5.
-===============
+

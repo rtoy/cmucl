@@ -522,8 +522,18 @@
   ;; Make sure all the args are okay.
   (unless (every #'simple-string-p args)
     (error (intl:gettext "All args to program must be simple strings -- ~S.") args))
+
+  ;; Make sure program is a string that we can use with spawn.
+  (setf program
+	(if (pathnamep program)
+	    (lisp::with-pathname (p program)
+	      (or (unix::unix-namestring p)
+		  (namestring p)))
+	    (namestring program)))
+  (check-type program string)
+
   ;; Prepend the program to the argument list.
-  (push (namestring program) args)
+  (push program args)
   ;; Clear random specials used by GET-DESCRIPTOR-FOR to communicate cleanup
   ;; info.  Also, establish proc at this level so we can return it.
   (let (*close-on-error* *close-in-parent* *handlers-installed* proc)
@@ -566,9 +576,10 @@
 					     (cdr entry)))
 					env))
 			(let ((child-pid
-			       (without-gcing
-				(spawn program argv envp pty-name
-				       stdin stdout stderr))))
+				(without-gcing
+				    (spawn program
+					   argv envp pty-name
+					   stdin stdout stderr))))
 			  (when (< child-pid 0)
 			    (error (intl:gettext "Could not fork child process: ~A")
 				   (unix:get-unix-error-msg)))

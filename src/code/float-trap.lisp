@@ -445,9 +445,7 @@
 	 `(progn
 	    (defmacro ,macro-name (traps &body body)
 	      ,docstring
-	      (let ((traps (dpb (float-trap-mask traps) float-traps-byte 0))
-		    (exceptions (dpb (float-trap-mask traps) float-sticky-bits 0))
-		    (trap-mask (dpb (lognot (float-trap-mask traps))
+	      (let ((trap-mask (dpb (lognot (float-trap-mask traps))
 				    float-traps-byte #xffffffff))
 		    (exception-mask (dpb (lognot (vm::float-trap-mask traps))
 					 float-sticky-bits #xffffffff))

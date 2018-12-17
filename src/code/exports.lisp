@@ -1566,6 +1566,10 @@
 	     "*TRUST-DYNAMIC-EXTENT-DECLARATIONS*"
 
 	     "INVALID-FASL")
+  ;; gencgc features
+  #+gencgc
+  (:export "GET-GC-ASSERTIONS"
+	   "SET-GC-ASSERTIONS")
 
   ;; run-program
   (:export "RUN-PROGRAM" "PROCESS-ALIVE-P" "PROCESS-CLOSE"
@@ -2530,7 +2534,8 @@
            "SET-SYMBOL-VALUE-CONDITIONAL"
            "ATOMIC-POP-SYMBOL-VALUE"
            "ATOMIC-PUSHA"
-           "ATOMIC-PUSHD")
+           "ATOMIC-PUSHD"
+	   "%UNARY-FROUND")
   #+x87
   (:export "%COS-QUICK" "%SIN-QUICK" "%TAN-QUICK")
   ;;#+double-double
