@@ -6,11 +6,11 @@ for Common Lisp programs and libraries.
 You can find the latest version of this manual at
 https://common-lisp.net/project/asdf/asdf.html.
 
-ASDF Copyright (C) 2001-2016 Daniel Barlow and contributors.
+ASDF Copyright (C) 2001-2019 Daniel Barlow and contributors.
 
-This manual Copyright (C) 2001-2016 Daniel Barlow and contributors.
+This manual Copyright (C) 2001-2019 Daniel Barlow and contributors.
 
-This manual revised (C) 2009-2016 Robert P. Goldman and Francois-Rene Rideau.
+This manual revised (C) 2009-2019 Robert P. Goldman and Francois-Rene Rideau.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -31,8 +31,9 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  -->
-<!-- Created by GNU Texinfo 6.1, http://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 6.5, http://www.gnu.org/software/texinfo/ -->
 <head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>ASDF Manual</title>
 
 <meta name="description" content="ASDF Manual">
@@ -40,7 +41,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <meta name="resource-type" content="document">
 <meta name="distribution" content="global">
 <meta name="Generator" content="makeinfo">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <link href="#Top" rel="start" title="Top">
 <link href="#Concept-Index" rel="index" title="Concept Index">
 <link href="#SEC_Contents" rel="contents" title="Table of Contents">
@@ -118,21 +118,24 @@ ul.no-bullet {list-style: none}
     <li><a name="toc-A-more-involved-example-1" href="#A-more-involved-example">6.2 A more involved example</a></li>
     <li><a name="toc-The-defsystem-grammar-1" href="#The-defsystem-grammar">6.3 The defsystem grammar</a>
     <ul class="no-bullet">
-      <li><a name="toc-Component-names" href="#Component-names">6.3.1 Component names</a></li>
-      <li><a name="toc-Component-types" href="#Component-types">6.3.2 Component types</a></li>
-      <li><a name="toc-System-class-names" href="#System-class-names">6.3.3 System class names</a></li>
-      <li><a name="toc-Defsystem-depends-on" href="#Defsystem-depends-on">6.3.4 Defsystem depends on</a></li>
-      <li><a name="toc-Build_002doperation" href="#Build_002doperation">6.3.5 Build-operation</a></li>
-      <li><a name="toc-Weakly-depends-on" href="#Weakly-depends-on">6.3.6 Weakly depends on</a></li>
-      <li><a name="toc-Pathname-specifiers" href="#Pathname-specifiers">6.3.7 Pathname specifiers</a></li>
-      <li><a name="toc-Version-specifiers" href="#Version-specifiers">6.3.8 Version specifiers</a></li>
-      <li><a name="toc-Require" href="#Require">6.3.9 Require</a></li>
-      <li><a name="toc-Feature-dependencies" href="#Feature-dependencies">6.3.10 Feature dependencies</a></li>
-      <li><a name="toc-Using-logical-pathnames" href="#Using-logical-pathnames">6.3.11 Using logical pathnames</a></li>
-      <li><a name="toc-Serial-dependencies" href="#Serial-dependencies">6.3.12 Serial dependencies</a></li>
-      <li><a name="toc-Source-location-_0028_003apathname_0029" href="#Source-location-_0028_003apathname_0029">6.3.13 Source location (<code>:pathname</code>)</a></li>
-      <li><a name="toc-if_002dfeature-option" href="#if_002dfeature-option">6.3.14 if-feature option</a></li>
-      <li><a name="toc-feature-requirement" href="#feature-requirement">6.3.15 feature requirement</a></li>
+      <li><a name="toc-System-designators" href="#System-designators">6.3.1 System designators</a></li>
+      <li><a name="toc-Simple-component-names-_0028simple_002dcomponent_002dname_0029" href="#Simple-component-names-_0028simple_002dcomponent_002dname_0029">6.3.2 Simple component names (<code>simple-component-name</code>)</a></li>
+      <li><a name="toc-Complex-component-names" href="#Complex-component-names">6.3.3 Complex component names</a></li>
+      <li><a name="toc-Component-types-1" href="#Component-types-1">6.3.4 Component types</a></li>
+      <li><a name="toc-System-class-names-1" href="#System-class-names-1">6.3.5 System class names</a></li>
+      <li><a name="toc-Defsystem-depends-on" href="#Defsystem-depends-on">6.3.6 Defsystem depends on</a></li>
+      <li><a name="toc-Build_002doperation-1" href="#Build_002doperation-1">6.3.7 Build-operation</a></li>
+      <li><a name="toc-Weakly-depends-on" href="#Weakly-depends-on">6.3.8 Weakly depends on</a></li>
+      <li><a name="toc-Pathname-specifiers-1" href="#Pathname-specifiers-1">6.3.9 Pathname specifiers</a></li>
+      <li><a name="toc-Version-specifiers-1" href="#Version-specifiers-1">6.3.10 Version specifiers</a></li>
+      <li><a name="toc-Require" href="#Require">6.3.11 Require</a></li>
+      <li><a name="toc-Feature-dependencies-1" href="#Feature-dependencies-1">6.3.12 Feature dependencies</a></li>
+      <li><a name="toc-Using-logical-pathnames-1" href="#Using-logical-pathnames-1">6.3.13 Using logical pathnames</a></li>
+      <li><a name="toc-Serial-dependencies" href="#Serial-dependencies">6.3.14 Serial dependencies</a></li>
+      <li><a name="toc-Source-location-_0028_003apathname_0029" href="#Source-location-_0028_003apathname_0029">6.3.15 Source location (<code>:pathname</code>)</a></li>
+      <li><a name="toc-if_002dfeature-option-1" href="#if_002dfeature-option-1">6.3.16 if-feature option</a></li>
+      <li><a name="toc-Entry-point-1" href="#Entry-point-1">6.3.17 Entry point</a></li>
+      <li><a name="toc-feature-requirement-1" href="#feature-requirement-1">6.3.18 feature requirement</a></li>
     </ul></li>
     <li><a name="toc-Other-code-in-_002easd-files-1" href="#Other-code-in-_002easd-files">6.4 Other code in .asd files</a></li>
     <li><a name="toc-The-package_002dinferred_002dsystem-extension-1" href="#The-package_002dinferred_002dsystem-extension">6.5 The package-inferred-system extension</a></li>
@@ -266,8 +269,9 @@ ul.no-bullet {list-style: none}
   <li><a name="toc-Ongoing-Work-1" href="#Ongoing-Work">Ongoing Work</a></li>
   <li><a name="toc-Bibliography-1" href="#Bibliography">Bibliography</a></li>
   <li><a name="toc-Concept-Index-1" href="#Concept-Index">Concept Index</a></li>
-  <li><a name="toc-Function-and-Class-Index-1" href="#Function-and-Class-Index">Function and Class Index</a></li>
+  <li><a name="toc-Function-and-Macro-Index-1" href="#Function-and-Macro-Index">Function and Macro Index</a></li>
   <li><a name="toc-Variable-Index-1" href="#Variable-Index">Variable Index</a></li>
+  <li><a name="toc-Class-and-Type-Index-1" href="#Class-and-Type-Index">Class and Type Index</a></li>
 </ul>
 </div>
 
@@ -277,7 +281,7 @@ ul.no-bullet {list-style: none}
 <a name="Top"></a>
 <a name="ASDF_003a-Another-System-Definition-Facility"></a>
 <h1 class="top">ASDF: Another System Definition Facility</h1>
-<p>Manual for Version 3.3.2
+<p>Manual for Version 3.3.3
 </p>
 
 <p>This manual describes ASDF, a system definition facility
@@ -286,11 +290,11 @@ for Common Lisp programs and libraries.
 <p>You can find the latest version of this manual at
 <a href="https://common-lisp.net/project/asdf/asdf.html">https://common-lisp.net/project/asdf/asdf.html</a>.
 </p>
-<p>ASDF Copyright &copy; 2001-2016 Daniel Barlow and contributors.
+<p>ASDF Copyright &copy; 2001-2019 Daniel Barlow and contributors.
 </p>
-<p>This manual Copyright &copy; 2001-2016 Daniel Barlow and contributors.
+<p>This manual Copyright &copy; 2001-2019 Daniel Barlow and contributors.
 </p>
-<p>This manual revised &copy; 2009-2016 Robert P. Goldman and Francois-Rene Rideau.
+<p>This manual revised &copy; 2009-2019 Robert P. Goldman and Francois-Rene Rideau.
 </p>
 <p>Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -328,7 +332,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <a name="index-_003aasdf2"></a>
 <a name="index-_003aasdf3"></a>
 
-<p>ASDF is Another System Definition Facility:
+<p>ASDF, or Another System Definition Facility, is a <em>build system</em>:
 a tool for specifying how systems of Common Lisp software
 are made up of components (sub-systems and files),
 and how to operate on these components in the right order
@@ -355,8 +359,8 @@ it plays a role like <code>make</code> or <code>ant</code>, not like a package m
 In particular, ASDF should not to be confused with Quicklisp or ASDF-Install,
 that attempt to find and download ASDF systems for you.
 Despite what the name might suggest,
-ASDF-Install was never a part of ASDF, it was a separate piece of software.
-ASDF-Install is also unmaintained and obsolete.
+ASDF-Install was never a part of ASDF; it was always a separate piece of software.
+ASDF-Install has also been unmaintained and obsolete for a very long time.
 We recommend you use Quicklisp
 (<a href="http://www.quicklisp.org/">http://www.quicklisp.org/</a>) instead,
 a Common Lisp package manager which works well and is being actively maintained.
@@ -862,15 +866,17 @@ ASDF hooks into the <code>cl:require</code> facility and you can just use:
 <pre class="example">(require :<var>foo</var>)
 </pre></div>
 
-<p>Note that the canonical name of a system is a string, conventionally lowercase.
-A system name can also be specified as a symbol (including a keyword),
-in which case its <code>symbol-name</code> is taken and lowercased.
+<p>Note that the canonical name of a system is a string, in <em>lowercase</em>.
+System names can also be specified as symbols (including keyword
+symbols).
+If a symbol is given as argument, its package is ignored,
+its <code>symbol-name</code> is taken, and converted to lowercase.
 The name must be a suitable value for the <code>:name</code> initarg
 to <code>make-pathname</code> in whatever filesystem the system is to be found.
 </p>
-<p>The lower-casing-symbols behaviour is unconventional,
+<p>Using lowercase as canonical is unconventional,
 but was selected after some consideration.
-The type of systems we want to support
+The type of file systems we  support
 either have lowercase as customary case (Unix, Mac, Windows)
 or silently convert lowercase to uppercase (lpns).
 </p>
@@ -912,19 +918,14 @@ compiling, loading and testing.
 </p>
 
 
-<a name="index-_002aload_002dsystem_002doperation_002a"></a>
 <a name="index-already_002dloaded_002dsystems"></a>
 
 <dl>
 <dt><a name="index-load_002dsystem"></a>Function: <strong>load-system</strong> <em>system &amp;rest keys &amp;key force force-not verbose version &amp;allow-other-keys</em></dt>
-<dd><p>Apply <code>operate</code> with the operation from
-<code>*load-system-operation*</code>
-the <var>system</var>, and any provided keyword arguments.
-<code>*load-system-operation*</code> by default is <code>load-op</code>;
-it would be <code>load-bundle-op</code> by default on ECL,
-if only an implementation bug were fixed.
-Calling <code>load-system</code> is the regular, recommended way
-to load a system into the current image.
+<dd><p>Apply <code>operate</code> with the operation <code>load-op</code>, the
+<var>system</var>, and any provided keyword arguments.  Calling
+<code>load-system</code> is the regular, recommended way to load a system
+into the current image.
 </p></dd></dl>
 
 <dl>
@@ -954,7 +955,7 @@ The default behaviour is to load the system as if by <code>load-system</code>;
 but system authors can override this default in their system definition
 they may specify an alternate operation as the intended use of their system,
 with a <code>:build-operation</code> option in the <code>defsystem</code> form
-(see <a href="#The-defsystem-grammar">build-operation</a>),
+(see <a href="#Build_002doperation">Build-operation</a>),
 and an intended output pathname for that operation with
 <code>:build-pathname</code>.
 This function is experimental and largely untested.  Use at your own risk.
@@ -1078,7 +1079,7 @@ especially if you intend your software to be eventually included in Quicklisp.
 
 </li><li> Make sure you know how the <code>:version</code> numbers will be parsed!
 Only period-separated non-negative integers are accepted at present.
-See below Version specifiers in <a href="#The-defsystem-grammar">The defsystem grammar</a>.
+See <a href="#Version-specifiers">Version specifiers</a>.
 
 </li><li> This file contains a single form, the <code>defsystem</code> declaration.
 No <code>in-package</code> form, no <code>asdf:</code> package prefix, no nothing.
@@ -1152,7 +1153,7 @@ in the same directory, or in a different subdirectory;
 see the discussion of the <code>:pathname</code> option in <a href="#The-defsystem-grammar">The defsystem grammar</a>).
 
 </li><li> The <code>:serial t</code> says that each sub-component of <code>mod</code> depends on the previous components,
-so that <samp>cooker.lisp</samp> depends-on <samp>utils.lisp</samp>, which depends-on <samp>reader.lisp</samp>.
+so that <samp>cooker.lisp</samp> depends-on <samp>reader.lisp</samp>, which depends-on <samp>utils.lisp</samp>.
 Also <samp>data.raw</samp> depends on all of them, but that doesn&rsquo;t matter since it&rsquo;s a static file;
 on the other hand, if it appeared first, then all the Lisp files would be recompiled
 when the data is modified, which is probably not what is desired in this case.
@@ -1270,11 +1271,19 @@ Presumably, the 4th form looks like <code>(defparameter *foo-version* &quot;5.6.
 
 
 <div class="example">
-<pre class="example">system-definition := ( defsystem system-designator <var>system-option</var>* )
+<pre class="example">system-definition := ( defsystem system-designator <var>system-option</var>*)
+
+system-designator := simple-component-name | complex-component-name
+
+simple-component-name := lower-case string  | symbol
+           NOTE: Underscores are not permitted.  See below.
+
+complex-component-name := string | symbol
+            See below.
 
 system-option := :defsystem-depends-on system-list
                  | :weakly-depends-on <var>system-list</var>
-                 | :class class-name (see discussion below)
+                 | :class class-name # see <a href="#System-class-names">System class names</a>
                  | :build-operation <var>operation-name</var>
                  | system-option
                  | module-option
@@ -1287,6 +1296,7 @@ system-option := :homepage string
                  | :long-name string
                  | :source-control source-control
                  | :version version-specifier
+                 | :entry-point object # see <a href="#Entry-point">Entry point</a>
 
 source-control := (keyword string)
 
@@ -1314,13 +1324,13 @@ component-def  := ( component-type simple-component-name <var>option</var>* )
 component-type := :module | :file | :static-file | other-component-type
 
 other-component-type := symbol-by-name
-                        (see <a href="#The-defsystem-grammar">Component types</a>)
+                        # see <a href="#Component-types">Component types</a>
 
 # This is used in :depends-on, as opposed to ``dependency,''
 # which is used in :in-order-to
 dependency-def := simple-component-name
                | ( :feature <var>feature-expression</var> dependency-def )
-                 # (see <a href="#The-defsystem-grammar">Feature dependencies</a>)
+                 # see <a href="#Feature-dependencies">Feature dependencies</a>
                | ( :version simple-component-name version-specifier )
                | ( :require module-name )
 
@@ -1335,6 +1345,10 @@ simple-component-name := string
                       |  symbol
 
 pathname-specifier := pathname | string | symbol
+                   NOTE: pathnames should be all lower case, and have no
+                   underscores, although hyphens are permitted.
+
+
 
 version-specifier := string
                      | (:read-file-form &lt;pathname-specifier&gt; &lt;form-specifier&gt;?)
@@ -1343,7 +1357,8 @@ line-specifier := :at integer # base zero
 form-specifier := :at [ integer | ( integer+ )]
 
 method-form := (operation-name qual lambda-list &amp;rest body)
-qual := method qualifier?
+qual := method-qualifier?
+method-qualifier = :before | :after | :around
 
 feature-expression := keyword
                       | (:and <var>feature-expression</var>*)
@@ -1351,16 +1366,57 @@ feature-expression := keyword
                       | (:not <var>feature-expression</var>)
 </pre></div>
 
+<a name="System-designators"></a>
+<h4 class="subsection">6.3.1 System designators</h4>
 
-<a name="Component-names"></a>
-<h4 class="subsection">6.3.1 Component names</h4>
-
-<p>Component names (<code>simple-component-name</code>)
-may be either strings or symbols.
+<p>System designators are either simple component names, or
+complex (&ldquo;slashy&rdquo;) component names.
 </p>
-<a name="Component-types"></a>
-<h4 class="subsection">6.3.2 Component types</h4>
+<a name="Simple-component-names-_0028simple_002dcomponent_002dname_0029"></a>
+<h4 class="subsection">6.3.2 Simple component names (<code>simple-component-name</code>)</h4>
 
+<p>Simple component names may be written as either strings or symbols.
+</p>
+<p>When using strings, use lower case exclusively.
+</p>
+<p>Symbols will be interpreted as convenient shorthand for the string
+that is their <code>symbol-name</code>, converted to lower case.  Put
+differently, a symbol may be a simple component name <em>designator</em>,
+but the simple component name itself is the string.
+</p>
+<p><strong>Never</strong>  use underscores in  component names, whether written as
+strings or symbols.
+</p>
+<p><strong>Never</strong> use slashes (&ldquo;/&rdquo;) in simple component names.  A slash
+indicates a <em>complex</em> component name; see below.  Using a slash
+improperly will cause ASDF to issue a warning.
+</p>
+<p>Violating these constraints by mixing case, or including underscores in
+component names, may lead to systems or components being impossible to
+find, because component names are interpreted as file names.  These
+problems will <em>definitely</em> occur for users who have configured ASDF
+using logical pathnames.
+</p>
+<a name="Complex-component-names"></a>
+<h4 class="subsection">6.3.3 Complex component names</h4>
+
+<p>A complex component name is a master name followed by a slash, followed
+by a subsidiary name.  This allows programmers to put multiple system
+definitions in a single <code>.asd</code> file, while still allowing ASDF to
+find these systems.
+</p>
+<p>The master name of a complex system <strong>must</strong> be the same as the
+name of the <code>.asd</code> file.
+</p>
+<p>The file <code>foo.asd</code> will contain the definition of the system
+<code>&quot;foo&quot;</code>.  However, it may <em>also</em> contain definitions of
+subsidiary systems, such as <code>&quot;foo/test&quot;</code>, <code>&quot;foo/docs&quot;</code>, and so
+forth.  ASDF will &ldquo;know&rdquo; that if you ask it to load system
+<code>&quot;foo/test&quot;</code> it should look for that system&rsquo;s definition in <code>foo.asd</code>.
+</p>
+<a name="Component-types-1"></a>
+<h4 class="subsection">6.3.4 Component types</h4>
+<a name="Component-types"></a>
 <p>Component type names, even if expressed as keywords, will be looked up
 by name in the current package and in the asdf package, if not found in
 the current package.  So a component type <code>my-component-type</code>, in
@@ -1370,9 +1426,9 @@ the current package <code>my-system-asd</code> can be specified as
 <p><code>system</code> and its subclasses are <em>not</em>
 allowed as component types for such children components.
 </p>
+<a name="System-class-names-1"></a>
+<h4 class="subsection">6.3.5 System class names</h4>
 <a name="System-class-names"></a>
-<h4 class="subsection">6.3.3 System class names</h4>
-
 <p>A system class name will be looked up
 in the same way as a Component type (see above),
 except that only <code>system</code> and its subclasses are allowed.
@@ -1393,7 +1449,7 @@ extension loaded by <code>:defsystem-depends-on</code>, causing a name
 conflict in the current package.
 </p>
 <a name="Defsystem-depends-on"></a>
-<h4 class="subsection">6.3.4 Defsystem depends on</h4>
+<h4 class="subsection">6.3.6 Defsystem depends on</h4>
 <a name="index-_003adefsystem_002ddepends_002don"></a>
 
 <p>The <code>:defsystem-depends-on</code> option to <code>defsystem</code> allows the
@@ -1402,10 +1458,10 @@ must be loaded <em>before</em> the system definition is processed.
 Typically this is used to load an ASDF extension that is used in the
 system definition.
 </p>
-<a name="Build_002doperation"></a>
-<h4 class="subsection">6.3.5 Build-operation</h4>
+<a name="Build_002doperation-1"></a>
+<h4 class="subsection">6.3.7 Build-operation</h4>
 <a name="index-_003abuild_002doperation"></a>
-
+<a name="Build_002doperation"></a>
 <p>The <code>:build-operation</code> option to <code>defsystem</code> allows the
 programmer to specify an operation that will be applied, in place of
 <code>load-op</code> when <code>make</code> (see <a href="#Convenience-Functions">make</a>)
@@ -1416,7 +1472,7 @@ value should be the name of an operation.  E.g., <code>:build-operation doc-op</
 experimental and largely untested.  Use at your own risk.
 </p>
 <a name="Weakly-depends-on"></a>
-<h4 class="subsection">6.3.6 Weakly depends on</h4>
+<h4 class="subsection">6.3.8 Weakly depends on</h4>
 <a name="index-_003aweakly_002ddepends_002don"></a>
 
 <p>We do <em>NOT</em> recommend you use this feature.
@@ -1445,10 +1501,10 @@ this anomalous behaviour may be removed without warning.
 </p>
 
 
-<a name="Pathname-specifiers"></a>
-<h4 class="subsection">6.3.7 Pathname specifiers</h4>
+<a name="Pathname-specifiers-1"></a>
+<h4 class="subsection">6.3.9 Pathname specifiers</h4>
 <a name="index-pathname-specifiers"></a>
-
+<a name="Pathname-specifiers"></a>
 <p>A pathname specifier (<code>pathname-specifier</code>)
 may be a pathname, a string or a symbol.
 When no pathname specifier is given for a component,
@@ -1488,12 +1544,16 @@ which when merged, goes back one level in the directory hierarchy.
 and downcased in the process.
 The downcasing of symbols is unconventional,
 but was selected after some consideration.
-Observations suggest that the type of systems we want to support
-either have lowercase as customary case (Unix, Mac, windows)
+The file systems we  support
+either have lowercase as customary case (Unix, Mac, Windows)
 or silently convert lowercase to uppercase (lpns),
 so this makes more sense than attempting to use <code>:case :common</code>
 as argument to <code>make-pathname</code>,
 which is reported not to work on some implementations.
+</p>
+<p>Please avoid using underscores in system names, or component (module or
+file) names,  since underscores are not
+compatible with logical pathnames (see <a href="#Using-logical-pathnames">Using logical pathnames</a>).
 </p>
 <p>Pathname objects may be given to override the path for a component.
 Such objects are typically specified using reader macros such as <code>#p</code>
@@ -1503,7 +1563,7 @@ a shorthand for <code>#.(parse-namestring ...)</code>
 and that the behaviour of <code>parse-namestring</code> is completely non-portable,
 unless you are using Common Lisp <code>logical-pathname</code>s,
 which themselves involve other non-portable behaviour
-(see <a href="#The-defsystem-grammar">Using logical pathnames</a>, below).
+(see <a href="#Using-logical-pathnames">Using logical pathnames</a>).
 Pathnames made with <code>#.(make-pathname ...)</code>
 can usually be done more easily with the string syntax above.
 The only case that you really need a pathname object is to override
@@ -1525,11 +1585,11 @@ fulfills whatever constraints are required from that component type
 on the other hand, you can circumvent the file type that would otherwise
 be forced upon you if you were specifying a string.
 </p>
-<a name="Version-specifiers"></a>
-<h4 class="subsection">6.3.8 Version specifiers</h4>
+<a name="Version-specifiers-1"></a>
+<h4 class="subsection">6.3.10 Version specifiers</h4>
 <a name="index-version-specifiers"></a>
 <a name="index-_003aversion-1"></a>
-
+<a name="Version-specifiers"></a>
 <p>Version specifiers are strings to be parsed as period-separated lists of integers.
 I.e., in the example, <code>&quot;0.2.1&quot;</code> is to be interpreted,
 roughly speaking, as <code>(0 2 1)</code>.
@@ -1543,9 +1603,8 @@ had the version strings been interpreted as decimal fractions.
 the <code>:version</code> argument can be an expression that is resolved to
 such a string using the following trivial domain-specific language:
 in addition to being a literal string, it can be an expression of the form
-<code>(:read-file-form &lt;pathname-or-string&gt; [:at &lt;access-at-specifier]&gt;)</code>,
-or <code>(:read-file-line &lt;pathname-or-string&gt; [:at
-&lt;access-at-specifier]?&gt;)</code>.
+<code>(:read-file-form &lt;pathname-or-string&gt; [:at &lt;access-at-specifier&gt;])</code>,
+or <code>(:read-file-line &lt;pathname-or-string&gt; [:at &lt;access-at-specifier&gt;])</code>.
 As the name suggests, the former will be resolved by reading a form in the specified pathname
 (read as a subpathname of the current system if relative or a
 unix-namestring), and the latter by reading a line.
@@ -1566,20 +1625,20 @@ where significant API incompatibilities are signaled by an increased major numbe
 <p>See <a href="#Common-attributes-of-components">Common attributes of components</a>.
 </p>
 <a name="Require"></a>
-<h4 class="subsection">6.3.9 Require</h4>
+<h4 class="subsection">6.3.11 Require</h4>
 <a name="index-_003arequire-dependencies"></a>
 
 <p>Use the implementation&rsquo;s own <code>require</code> to load the <var>module-name</var>.
 </p>
-<p>It is good taste to use <code>:if-feature <em>:implementation-name</em></code>
-rather than <code>#+<em>implementation-name</em></code>
+<p>It is good taste to use <code>(:feature <em>:implementation-name</em> (:require <var>module-name</var>))</code>
+rather than <code>#+<em>implementation-name</em> (:require <var>module-name</var>)</code>
 to only depend on the specified module on the specific implementation that provides it.
-See <a href="#if_002dfeature_002doption">if-feature-option</a>.
+See <a href="#Feature-dependencies">Feature dependencies</a>.
 </p>
-<a name="Feature-dependencies"></a>
-<h4 class="subsection">6.3.10 Feature dependencies</h4>
+<a name="Feature-dependencies-1"></a>
+<h4 class="subsection">6.3.12 Feature dependencies</h4>
 <a name="index-_003afeature-dependencies"></a>
-
+<a name="Feature-dependencies"></a>
 <p>A feature dependency is of the form
 <code>(:feature <var>feature-expression</var> <var>dependency</var>)</code>
 If the <var>feature-expression</var> is satisfied by the running lisp at the
@@ -1594,13 +1653,13 @@ definition to be loaded.  E.g., one cannot use <code>(:feature :sbcl)</code>
 to require that a system only be used on SBCL.
 </p>
 <p>Feature dependencies are not to be confused with the obsolete
-feature requirement (see <a href="#The-defsystem-grammar">feature requirement</a>), or
+feature requirement (see <a href="#feature-requirement">feature requirement</a>), or
 with <code>if-feature</code>.
 </p>
-<a name="Using-logical-pathnames"></a>
-<h4 class="subsection">6.3.11 Using logical pathnames</h4>
+<a name="Using-logical-pathnames-1"></a>
+<h4 class="subsection">6.3.13 Using logical pathnames</h4>
 <a name="index-logical-pathnames"></a>
-
+<a name="Using-logical-pathnames"></a>
 <p>We do not generally recommend the use of logical pathnames,
 especially not so to newcomers to Common Lisp.
 However, we do support the use of logical pathnames by old timers,
@@ -1654,7 +1713,7 @@ underscores, dots or CamelCase in pathnames.
 </p>
 
 <a name="Serial-dependencies"></a>
-<h4 class="subsection">6.3.12 Serial dependencies</h4>
+<h4 class="subsection">6.3.14 Serial dependencies</h4>
 <a name="index-serial-dependencies"></a>
 
 <p>If the <code>:serial t</code> option is specified for a module,
@@ -1677,7 +1736,7 @@ This is done as if by <code>:depends-on</code>.
 
 
 <a name="Source-location-_0028_003apathname_0029"></a>
-<h4 class="subsection">6.3.13 Source location (<code>:pathname</code>)</h4>
+<h4 class="subsection">6.3.15 Source location (<code>:pathname</code>)</h4>
 
 <p>The <code>:pathname</code> option is optional in all cases for systems
 defined via <code>defsystem</code>, and generally is unnecessary.  In the
@@ -1722,10 +1781,10 @@ and <code>*load-truename*</code> is currently unbound
 from within an editor without clobbering its source location)
 </li></ul>
 
-<a name="if_002dfeature-option"></a>
-<h4 class="subsection">6.3.14 if-feature option</h4>
+<a name="if_002dfeature-option-1"></a>
+<h4 class="subsection">6.3.16 if-feature option</h4>
 <a name="index-_003aif_002dfeature-component-option"></a>
-<a name="if_002dfeature_002doption"></a>
+<a name="if_002dfeature-option"></a>
 <p>This option allows you to specify a feature expression to be evaluated
 as if by <code>#+</code> to conditionally include a component in your build.
 If the expression is false, the component is dropped
@@ -1748,10 +1807,17 @@ been performed.
 <p>This option was added in ASDF 3.  For more information,
 See <a href="#required_002dfeatures">Required features</a>.
 </p>
-<a name="feature-requirement"></a>
-<h4 class="subsection">6.3.15 feature requirement</h4>
-<p>This requirement was removed in ASDF 3.1.  Please do not use it.  In
-most cases, <code>:if-feature</code> (see <a href="#if_002dfeature_002doption">if-feature-option</a>) will provide
+<a name="Entry-point-1"></a>
+<h4 class="subsection">6.3.17 Entry point</h4>
+<a name="index-_003aentry_002dpoint"></a>
+<a name="Entry-point"></a><p>The <code>:entry-point</code> option allows a developer to specify the entry point of an executable program created by <code>program-op</code>.
+</p>
+<p>When <code>program-op</code> is invoked, the form passed to this option is converted to a function by <code>uiop:ensure-function</code> and bound to <code>uiop:*image-entry-point*</code>. Typically one will specify a string, e.g. <code>&quot;foo:main&quot;</code>, so that the executable starts with the <code>foo:main</code> function. Note that using the symbol <code>foo:main</code> instead might not work because the <code>foo</code> package doesn&rsquo;t necessarily exist when ASDF reads the <code>defsystem</code> form. For more information on <code>program-op</code>, see <a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a>.
+</p>
+<a name="feature-requirement-1"></a>
+<h4 class="subsection">6.3.18 feature requirement</h4>
+<a name="feature-requirement"></a><p>This requirement was removed in ASDF 3.1.  Please do not use it.  In
+most cases, <code>:if-feature</code> (see <a href="#if_002dfeature-option">if-feature option</a>) will provide
 an adequate substitute.
 </p>
 <p>The <code>feature</code> requirement used to ensure that a chain of component
@@ -1794,14 +1860,19 @@ of output from ASDF operations.
 <a name="The-package_002dinferred_002dsystem-extension"></a>
 <a name="The-package_002dinferred_002dsystem-extension-1"></a>
 <h3 class="section">6.5 The package-inferred-system extension</h3>
+<a name="index-Package-inferred-systems"></a>
+<a name="index-Packages_002c-inferring-dependencies-from"></a>
+<a name="index-package_002dinferred_002dsystem"></a>
+<a name="index-One-package-per-file-systems"></a>
 
 <p>Starting with release 3.1.2,
 ASDF supports a one-package-per-file style of programming,
-whereby each file is its own system,
+in which each file is its own system,
 and dependencies are deduced from the <code>defpackage</code> form
-(or its variant <code>uiop:define-package</code>).
+or its variant, <code>uiop:define-package</code>.
 </p>
-<p>In this style, packages refer to a system with the same name (downcased);
+<p>In this style of system definition, package names map to systems with
+the same name (in lower case letters),
 and if a system is defined with <code>:class package-inferred-system</code>,
 then system names that start with that name
 (using the slash <code>/</code> separator)
@@ -1810,23 +1881,26 @@ For instance, if system <code>my-lib</code> is defined in
 <samp>/foo/bar/my-lib/my-lib.asd</samp>, then system <code>my-lib/src/utility</code>
 will be found in file <samp>/foo/bar/my-lib/src/utility.lisp</samp>.
 </p>
-<p>This style was made popular by <code>faslpath</code> and <code>quick-build</code> before,
-and at the cost of a stricter package discipline,
-seems to make for more maintainable code.
-It is used by ASDF itself (starting with ASDF 3), by <code>lisp-interface-library</code>,
+<p>One package per file style was made popular by <code>faslpath</code> and <code>quick-build</code>,
+and at the cost of stricter package discipline,
+may yield more maintainable code.
+This style is used in ASDF itself (starting with ASDF 3), by <code>lisp-interface-library</code>,
 and a few other libraries.
 </p>
 <p>To use this style, choose a toplevel system name, e.g. <code>my-lib</code>,
-and create a file <samp>my-lib.asd</samp>
-with the <code>:class :package-inferred-system</code> option in its <code>defsystem</code>.
+and create a file <samp>my-lib.asd</samp>.
+Define <code>my-lib</code>
+using the <code>:class :package-inferred-system</code> option in its <code>defsystem</code>.
 For instance:
 </p><div class="example">
-<pre class="example">#-asdf3.1 (error &quot;my-lib requires ASDF 3.1&quot;)
+<pre class="example">;; This example is based on lil.asd of LISP-INTERFACE-LIBRARY.
+
+#-asdf3.1 (error &quot;MY-LIB requires ASDF 3.1 or later.&quot;)
 (defsystem &quot;my-lib&quot;
   :class :package-inferred-system
   :depends-on (&quot;my-lib/interface/all&quot;
-               &quot;my-lib/src/all&quot;
-               &quot;my-lib/extras/all&quot;)
+                        &quot;my-lib/src/all&quot;
+                        &quot;my-lib/extras/all&quot;)
   :in-order-to ((test-op (load-op &quot;my-lib/test/all&quot;)))
   :perform (test-op (o c) (symbol-call :my-lib/test/all :test-suite)))
 
@@ -1838,43 +1912,83 @@ For instance:
 
 (register-system-packages
  &quot;closer-mop&quot;
- '(:c2mop :closer-common-lisp :c2cl :closer-common-lisp-user :c2cl-user))
+ '(:c2mop
+   :closer-common-lisp
+   :c2cl
+   :closer-common-lisp-user
+   :c2cl-user))
 </pre></div>
 
-<p>In the code above, the first line checks that we are using ASDF 3.1,
-which provides <code>package-inferred-system</code>.
+<p>In the code above, the first form checks that we are using ASDF 3.1 or
+later, which provides <code>package-inferred-system</code>.  This is probably
+no longer necessary, since none of the major lisp implementations
+provides an older version of ASDF.
 </p>
-<p>The function <code>register-system-packages</code> has to be called to register
-packages used or provided by your system and its components
-where the name of the system that provides the package
-is not the downcase of the package name.
+<a name="index-register_002dsystem_002dpackages"></a>
+<p>The function <code>register-system-packages</code> must be called to register
+packages used or provided by your system
+when the name of the system/file that provides the package
+is not the same as the package name (converted to lower case).
 </p>
-<p>Then, file <samp>interface/order.lisp</samp> under the <code>lil</code> hierarchy,
-that defines abstract interfaces for order comparisons,
-starts with the following form,
-dependencies being trivially computed from the <code>:use</code> and <code>:mix</code> clauses:
+<p>Each file under the <code>my-lib</code> hierarchy will start with a
+package definition.
+<a name="index-define_002dpackage"></a>
+<a name="index-uiop_003adefine_002dpackage"></a>
+The form <code>uiop:define-package</code> is supported as well as
+<code>defpackage</code>.
+ASDF will compute dependencies from the
+<code>:use</code>, <code>:mix</code>, and other importation clauses of this package definition. Take the file
+<samp>interface/order.lisp</samp> as an example:
 </p>
 <div class="example">
-<pre class="example">(uiop:define-package :lil/interface/order
+<pre class="example">(uiop:define-package :my-lib/interface/order
   (:use :closer-common-lisp
-   :lil/interface/definition
-   :lil/interface/base
-   :lil/interface/eq :lil/interface/group)
+   :my-lib/interface/definition
+   :my-lib/interface/base)
   (:mix :fare-utils :uiop :alexandria)
   (:export ...))
 </pre></div>
 
-<p>ASDF can tell that this file depends on system <code>closer-mop</code> (registered above),
-<code>lil/interface/definition</code>, <code>lil/interface/base</code>,
-<code>lil/interface/eq</code>, and <code>lil/interface/group</code>
-(package and system names match, and they will be looked up hierarchically).
+<p>ASDF can tell that this file/system depends on system <code>closer-mop</code> (registered above),
+<code>my-lib/interface/definition</code>, and <code>my-lib/interface/base</code>.
+</p>
+<p>How can ASDF find the file <samp>interface/order.lisp</samp> from the
+toplevel system <code>my-lib</code>, however? In the example above,
+<samp>interface/all.lisp</samp> (and other <samp>all.lisp</samp>) reexport
+all the symbols exported from the packages at the same or lower levels
+of the hierarchy. This can be easily done with
+<code>uiop:define-package</code>, which has many options that prove useful in this
+context.  For example:
+</p>
+<div class="example">
+<pre class="example">(uiop:define-package :my-lib/interface/all
+  (:nicknames :my-lib-interface)
+  (:use :closer-common-lisp)
+  (:mix :fare-utils :uiop :alexandria)
+  (:use-reexport
+   :my-lib/interface/definition
+   :my-lib/interface/base
+   :my-lib/interface/order
+   :my-lib/interface/monad/continuation))
+</pre></div>
+
+<p>Thus the top level system need only depend on the <code>my-lib/.../all</code> systems
+because ASDF detects
+<samp>interface/order.lisp</samp> and all other dependencies from <code>all</code>
+systems&rsquo; <code>:use-reexport</code> clauses, which effectively
+allow for &ldquo;inheritance&rdquo; of symbols being exported.
 </p>
 <p>ASDF also detects dependencies from <code>:import-from</code> clauses.
-You may thus import a well-defined set of symbols from an existing package
-as loaded from suitably named system;
-or if you prefer to use any such symbol fully qualified by a package prefix,
+You may thus import a well-defined set of symbols from an existing
+package, and ASDF will know to load the system that provides that
+package.  In the following example, ASDF will infer that the current
+system depends on <code>foo/baz</code> from the first <code>:import-from</code>.
+If you prefer to use any such symbol fully qualified by a package prefix,
 you may declare a dependency on such a package and its corresponding system
-via an <code>:import-from</code> clause with an empty list of symbols, as in:
+via an <code>:import-from</code> clause with an empty list of symbols.  For
+example, if we preferred to use the name &lsquo;foo/quux:bletch&lsquo;, the second,
+empty, <code>:import-from</code> form would cause ASDF to load
+<code>foo/quux</code>.
 </p>
 <div class="example">
 <pre class="example">(defpackage :foo/bar
@@ -1884,13 +1998,8 @@ via an <code>:import-from</code> clause with an empty list of symbols, as in:
   (:export ...))
 </pre></div>
 
-<p>The form <code>uiop:define-package</code> is supported as well as <code>defpackage</code>,
-and has many options that prove useful in this context,
-such as <code>:use-reexport</code> and <code>:mix-reexport</code>
-that allow for &ldquo;inheritance&rdquo; of symbols being exported.
-</p>
 <p>Note that starting with ASDF 3.1.5.6 only, ASDF will look for source files under
-the <code>component-pathname</code> as specified via the <code>:pathname</code> option,
+the <code>component-pathname</code> (specified via the <code>:pathname</code> option),
 whereas earlier versions ignore this option and use the <code>system-source-directory</code>
 where the <samp>.asd</samp> file resides.
 </p>
@@ -1972,8 +2081,8 @@ discuss these in turn below.
 
 <p>Operations are invoked on systems via <code>operate</code>.
 <a name="operate"></a></p><dl>
-<dt><a name="index-operate-1"></a>Generic function: <strong><code>operate</code></strong> <em><var>operation</var> <var>component</var> &amp;rest <var>initargs</var> &amp;key <code>force</code> <code>force-not</code> <code>verbose</code> &amp;allow-other-keys</em></dt>
-<dt><a name="index-oos-1"></a>Generic function: <strong><code>oos</code></strong> <em><var>operation</var> <var>component</var> &amp;rest <var>initargs</var> &amp;key &amp;allow-other-keys</em></dt>
+<dt><a name="index-operate-1"></a>Generic function: <strong>operate</strong> <em><var>operation</var> <var>component</var> &amp;rest <var>initargs</var> &amp;key <code>force</code> <code>force-not</code> <code>verbose</code> &amp;allow-other-keys</em></dt>
+<dt><a name="index-oos-1"></a>Generic function: <strong>oos</strong> <em><var>operation</var> <var>component</var> &amp;rest <var>initargs</var> &amp;key &amp;allow-other-keys</em></dt>
 <dd><p><code>operate</code> invokes <var>operation</var> on <var>system</var>.
 <code>oos</code> is a synonym for <code>operate</code> (it stands for operate-on-system).
 </p>
@@ -2026,7 +2135,7 @@ See <a href="#Miscellaneous-Functions">Miscellaneous Functions</a>.
 </dd></dl>
 
 <dl>
-<dt><a name="index-make_002doperation"></a>Function: <strong><code>make-operation</code></strong> <em><var>operation-class</var> &amp;rest <var>initargs</var></em></dt>
+<dt><a name="index-make_002doperation"></a>Function: <strong>make-operation</strong> <em><var>operation-class</var> &amp;rest <var>initargs</var></em></dt>
 <dd><a name="make_002doperation"></a>
 <p>The <var>initargs</var> are passed to <code>make-instance</code> call
 when creating the operation object.
@@ -2054,7 +2163,7 @@ They are invoked via the <code>operate</code> generic function.
 </pre></div>
 
 <dl>
-<dt><a name="index-compile_002dop"></a>Operation: <strong><code>compile-op</code></strong></dt>
+<dt><a name="index-compile_002dop"></a>Operation: <strong>compile-op</strong></dt>
 <dd>
 <p>This operation compiles the specified component.
 A <code>cl-source-file</code> will be <code>compile-file</code>&rsquo;d.
@@ -2072,7 +2181,7 @@ Use <code>load-op</code> to load a system.
 </p></dd></dl>
 
 <dl>
-<dt><a name="index-load_002dop"></a>Operation: <strong><code>load-op</code></strong></dt>
+<dt><a name="index-load_002dop"></a>Operation: <strong>load-op</strong></dt>
 <dd>
 <p>This operation loads the compiled code for a specified component.
 A <code>cl-source-file</code> will have its compiled fasl <code>load</code>ed,
@@ -2086,7 +2195,7 @@ as well as of its parent&rsquo;s dependencies.
 </p></dd></dl>
 
 <dl>
-<dt><a name="index-prepare_002dop"></a>Operation: <strong><code>prepare-op</code></strong></dt>
+<dt><a name="index-prepare_002dop"></a>Operation: <strong>prepare-op</strong></dt>
 <dd>
 <p>This operation ensures that the dependencies of a component
 and its recursive parents are loaded (as per <code>load-op</code>),
@@ -2095,7 +2204,8 @@ may be performed on a given component.
 </p></dd></dl>
 
 <dl>
-<dt><a name="index-load_002dsource_002dop_002c"></a>Operation: <strong><code>load-source-op</code>,</strong> <em><code>prepare-source-op</code></em></dt>
+<dt><a name="index-load_002dsource_002dop"></a>Operation: <strong>load-source-op</strong></dt>
+<dt><a name="index-prepare_002dsource_002dop"></a>Operation: <strong>prepare-source-op</strong></dt>
 <dd>
 <p><code>load-source-op</code> will load the source for the files in a module
 rather than the compiled fasl output.
@@ -2105,7 +2215,7 @@ that ensures the dependencies are themselves loaded via <code>load-source-op</co
 </dd></dl>
 
 <a name="test_002dop"></a><dl>
-<dt><a name="index-test_002dop"></a>Operation: <strong><code>test-op</code></strong></dt>
+<dt><a name="index-test_002dop"></a>Operation: <strong>test-op</strong></dt>
 <dd>
 <p>This operation will perform some tests on the module.
 The default method will do nothing.
@@ -2158,7 +2268,18 @@ on a library.  For example, one might have
 
 
 <dl>
-<dt><a name="index-compile_002dbundle_002dop_002c"></a>Operation: <strong><code>compile-bundle-op</code>,</strong> <em><code>monolithic-compile-bundle-op</code>, <code>load-bundle-op</code>, <code>monolithic-load-bundle-op</code>, <code>deliver-asd-op</code>, <code>monolithic-deliver-asd-op</code>, <code>lib-op</code>, <code>monolithic-lib-op</code>, <code>dll-op</code>, <code>monolithic-dll-op</code>, <code>image-op</code>, <code>program-op</code></em></dt>
+<dt><a name="index-compile_002dbundle_002dop"></a>Operation: <strong>compile-bundle-op</strong></dt>
+<dt><a name="index-monolithic_002dcompile_002dbundle_002dop"></a>Operation: <strong>monolithic-compile-bundle-op</strong></dt>
+<dt><a name="index-load_002dbundle_002dop"></a>Operation: <strong>load-bundle-op</strong></dt>
+<dt><a name="index-monolithic_002dload_002dbundle_002dop"></a>Operation: <strong>monolithic-load-bundle-op</strong></dt>
+<dt><a name="index-deliver_002dasd_002dop"></a>Operation: <strong>deliver-asd-op</strong></dt>
+<dt><a name="index-monolithic_002ddeliver_002dasd_002dop"></a>Operation: <strong>monolithic-deliver-asd-op</strong></dt>
+<dt><a name="index-lib_002dop"></a>Operation: <strong>lib-op</strong></dt>
+<dt><a name="index-monolithic_002dlib_002dop"></a>Operation: <strong>monolithic-lib-op</strong></dt>
+<dt><a name="index-dll_002dop"></a>Operation: <strong>dll-op</strong></dt>
+<dt><a name="index-monolithic_002ddll_002dop"></a>Operation: <strong>monolithic-dll-op</strong></dt>
+<dt><a name="index-image_002dop"></a>Operation: <strong>image-op</strong></dt>
+<dt><a name="index-program_002dop"></a>Operation: <strong>program-op</strong></dt>
 <dd>
 <p>These are &ldquo;bundle&rdquo; operations, that can create a single-file &ldquo;bundle&rdquo;
 for all the contents of each system in an application,
@@ -2166,12 +2287,12 @@ or for the entire application.
 </p>
 <p><code>compile-bundle-op</code> will create a single fasl file for each of the systems needed,
 grouping all its many fasls in one,
-so you can deliver each system as a single fasl
+so you can deliver each system as a single fasl.
 <code>monolithic-compile-bundle-op</code> will create a single fasl file for the target system
 and all its dependencies,
 so you can deliver your entire application as a single fasl.
 <code>load-bundle-op</code> will load the output of <code>compile-bundle-op</code>.
-Note that if it the output is not up-to-date,
+Note that if the output is not up-to-date,
 <code>compile-bundle-op</code> may load the intermediate fasls as a side-effect.
 Bundling fasls together matters a lot on ECL,
 where the dynamic linking involved in loading tens of individual fasls
@@ -2227,7 +2348,7 @@ for building a linkable <samp>.a</samp> file (Windows: <samp>.lib</samp>)
 from all linkable object dependencies (FFI files, and on ECL, Lisp files too),
 and its monolithic equivalent <code>monolithic-lib-op</code>.
 And there is also <code>dll-op</code>
-(respectively its monolithic equivalent <code>monolithic-lib-op</code>)
+(respectively its monolithic equivalent <code>monolithic-dll-op</code>)
 for building a linkable <samp>.so</samp> file
 (Windows: <samp>.dll</samp>, MacOS X: <samp>.dynlib</samp>)
 to create a single dynamic library
@@ -2250,7 +2371,14 @@ Maybe you have suggestions on how to better configure it?
 </p></dd></dl>
 
 <dl>
-<dt><a name="index-concatenate_002dsource_002dop_002c"></a>Operation: <strong><code>concatenate-source-op</code>,</strong> <em><code>monolithic-concatenate-source-op</code>, <code>load-concatenated-source-op</code>, <code>compile-concatenated-source-op</code>, <code>load-compiled-concatenated-source-op</code>, <code>monolithic-load-concatenated-source-op</code>, <code>monolithic-compile-concatenated-source-op</code>, <code>monolithic-load-compiled-concatenated-source-op</code></em></dt>
+<dt><a name="index-concatenate_002dsource_002dop"></a>Operation: <strong>concatenate-source-op</strong></dt>
+<dt><a name="index-monolithic_002dconcatenate_002dsource_002dop"></a>Operation: <strong>monolithic-concatenate-source-op</strong></dt>
+<dt><a name="index-load_002dconcatenated_002dsource_002dop"></a>Operation: <strong>load-concatenated-source-op</strong></dt>
+<dt><a name="index-compile_002dconcatenated_002dsource_002dop"></a>Operation: <strong>compile-concatenated-source-op</strong></dt>
+<dt><a name="index-load_002dcompiled_002dconcatenated_002dsource_002dop"></a>Operation: <strong>load-compiled-concatenated-source-op</strong></dt>
+<dt><a name="index-monolithic_002dload_002dconcatenated_002dsource_002dop"></a>Operation: <strong>monolithic-load-concatenated-source-op</strong></dt>
+<dt><a name="index-monolithic_002dcompile_002dconcatenated_002dsource_002dop"></a>Operation: <strong>monolithic-compile-concatenated-source-op</strong></dt>
+<dt><a name="index-monolithic_002dload_002dcompiled_002dconcatenated_002dsource_002dop"></a>Operation: <strong>monolithic-load-compiled-concatenated-source-op</strong></dt>
 <dd>
 <p>These operations, as their respective names indicate,
 will concatenate all the <code>cl-source-file</code> source files in a system
@@ -2619,7 +2747,7 @@ performed by the exported function <code>coerce-name</code>.
 <p>Unless overridden by a <code>:pathname</code> attribute,
 the name will be interpreted as a pathname specifier according
 to a Unix-style syntax.
-See <a href="#The-defsystem-grammar">Pathname specifiers</a>.
+See <a href="#Pathname-specifiers">Pathname specifiers</a>.
 </p>
 <a name="Version-identifier"></a>
 <h4 class="subsubsection">7.2.1.2 Version identifier</h4>
@@ -2628,8 +2756,7 @@ See <a href="#The-defsystem-grammar">Pathname specifiers</a>.
 
 <p>This optional attribute specifies a version for the current component.
 The version should typically be a string of integers separated by dots,
-for example &lsquo;<samp>1.0.11</samp>&rsquo;.
-For more information on version specifiers, see <a href="#The-defsystem-grammar">The defsystem grammar</a>.
+for example &lsquo;<samp>1.0.11</samp>&rsquo;. See <a href="#Version-specifiers">Version specifiers</a>.
 </p>
 <p>A version may then be queried by the generic function <code>version-satisfies</code>,
 to see if <code>:version</code> dependencies are satisfied,
@@ -2675,7 +2802,7 @@ when the implementation is SBCL, CMUCL or Scieneer CL on an x86 machine.
 You cannot write it as <code>:if-feature (and x86 (or sbcl cmu scl))</code>
 since the symbols would not be read as keywords.
 </p>
-<p>See <a href="#if_002dfeature_002doption">if-feature-option</a>.
+<p>See <a href="#if_002dfeature-option">if-feature option</a>.
 </p>
 <a name="Dependencies-1"></a>
 <h4 class="subsubsection">7.2.1.4 Dependencies</h4>
@@ -2764,7 +2891,7 @@ in the defsystem grammar.
 <p>This attribute is optional and if absent (which is the usual case),
 the component name will be used.
 </p>
-<p>See <a href="#The-defsystem-grammar">Pathname specifiers</a>,
+<p>See <a href="#Pathname-specifiers">Pathname specifiers</a>,
 for an explanation of how this attribute is interpreted.
 </p>
 <p>Note that the <code>defsystem</code> macro (used to create a &ldquo;top-level&rdquo; system)
@@ -2857,7 +2984,7 @@ are inferred to be of this type.
 
 </li><li> <code>:if-component-dep-fails</code>
 This attribute was removed in ASDF 3. Do not use it.
-Use <code>:if-feature</code> instead (see <a href="#required_002dfeatures">required-features</a>, and see <a href="#if_002dfeature_002doption">if-feature-option</a>).
+Use <code>:if-feature</code> instead (see <a href="#required_002dfeatures">required-features</a>, and see <a href="#if_002dfeature-option">if-feature option</a>).
 
 </li><li> <code>:serial</code> When this attribute is set,
 each subcomponent of this component is assumed to depend on all subcomponents
@@ -2984,7 +3111,7 @@ Therefore <code>&quot;1.9.1&quot;</code>, <code>&quot;1.9.2&quot;</code> and <co
 but <code>&quot;1.8.4&quot;</code> or <code>&quot;1.9&quot;</code> do not.
 For more information about how <code>version-satisfies</code> parses and interprets
 version strings and specifications,
-see <a href="#The-defsystem-grammar">The defsystem grammar</a> (version specifiers) and
+see <a href="#Version-specifiers">Version specifiers</a> and
 <a href="#Common-attributes-of-components">Common attributes of components</a>.
 </p>
 <p>Note that in versions of ASDF prior to 3.0.1,
@@ -3411,20 +3538,21 @@ if it begins with a paren <code>(</code>,
 otherwise it will be interpreted much like <code>TEXINPUTS</code>,
 as a list of paths, where
 </p>
-<p>* paths are separated
-   by a <code>:</code> (colon) on Unix platforms (including cygwin),
-   by a <code>;</code> (semicolon) on other platforms (mainly, Windows).
-</p>
-<p>* each entry is a directory to add to the search path.
-</p>
-<p>* if the entry ends with a double slash <code>//</code>
-    then it instead indicates a tree in the subdirectories
-    of which to recurse.
-</p>
-<p>* if the entry is the empty string (which may only appear once),
-    then it indicates that the inherited configuration should be
-    spliced there.
-</p>
+<ul>
+<li> paths are separated by a <code>:</code> (colon) on Unix platforms
+   (including cygwin), by a <code>;</code> (semicolon) on other platforms
+   (mainly, Windows).
+
+</li><li> each entry is a directory to add to the search path.
+
+</li><li> if the entry ends with a double slash <code>//</code> then it instead
+   indicates a tree in the subdirectories of which to recurse.
+
+</li><li> if the entry is the empty string (which may only appear once),
+   then it indicates that the inherited configuration should be spliced
+   there.
+</li></ul>
+
 <hr>
 <a name="Search-Algorithm"></a>
 <a name="Search-Algorithm-1"></a>
@@ -4205,18 +4333,18 @@ But so are good design ideas and elegant implementation tricks.
 <a name="Error-handling"></a>
 <a name="Error-handling-1"></a>
 <h2 class="chapter">10 Error handling</h2>
-<a name="index-SYSTEM_002dDEFINITION_002dERROR"></a>
-<a name="index-OPERATION_002dERROR"></a>
+<a name="index-system_002ddefinition_002derror"></a>
+<a name="index-operation_002derror"></a>
 
 <a name="ASDF-errors"></a>
 <h3 class="section">10.1 ASDF errors</h3>
 
 <p>If ASDF detects an incorrect system definition, it will signal a generalised instance of
-<code>SYSTEM-DEFINITION-ERROR</code>.
+<code>system-definition-error</code>.
 </p>
 <p>Operations may go wrong (for example when source files contain errors).
 These are signalled using generalised instances of
-<code>OPERATION-ERROR</code>.
+<code>operation-error</code>.
 </p>
 <a name="Compilation-error-and-warning-handling"></a>
 <h3 class="section">10.2 Compilation error and warning handling</h3>
@@ -4468,7 +4596,7 @@ The <code>system-relative-pathname</code> function meets this need.
 and a keyword argument <var>type</var>:
 <var>system</var> is name of a system, whereas <var>name</var> and optionally <var>type</var>
 specify a relative pathname, interpreted like a component pathname specifier
-by <code>coerce-pathname</code>. See <a href="#The-defsystem-grammar">Pathname specifiers</a>.
+by <code>coerce-pathname</code>. See <a href="#Pathname-specifiers">Pathname specifiers</a>.
 </p>
 <p>It returns a pathname built from the location of the system&rsquo;s
 source directory and the relative pathname. For example:
@@ -5011,7 +5139,7 @@ where you must now use an explicit pathname object:
 must now be written with the <code>#p</code> syntax:
 <code>(defsystem ... :pathname #p&quot;LOGICAL-HOST:PATH;TO;SYSTEM;&quot; ...)</code>
 </p>
-<p>See <a href="#The-defsystem-grammar">Pathname specifiers</a>.
+<p>See <a href="#Pathname-specifiers">Pathname specifiers</a>.
 </p>
 
 <hr>
@@ -5398,12 +5526,12 @@ so ASDF 3 doesn&rsquo;t try (anymore) and loses any configuration from ASDF 2.
 <a name="index-monolithic_002dfasl_002dop-_0028obsolete_0029"></a>
 <a name="index-monolithic_002dload_002dfasl_002dop-_0028obsolete_0029"></a>
 <a name="index-monolithic_002dbinary_002dop-_0028obsolete_0029"></a>
-<a name="index-compile_002dbundle_002dop"></a>
-<a name="index-load_002dbundle_002dop"></a>
-<a name="index-deliver_002dasd_002dop"></a>
-<a name="index-monolithic_002dcompile_002dbundle_002dop"></a>
-<a name="index-monolithic_002dload_002dbundle_002dop"></a>
-<a name="index-monolithic_002ddeliver_002dasd_002dop"></a>
+<a name="index-compile_002dbundle_002dop-1"></a>
+<a name="index-load_002dbundle_002dop-1"></a>
+<a name="index-deliver_002dasd_002dop-1"></a>
+<a name="index-monolithic_002dcompile_002dbundle_002dop-1"></a>
+<a name="index-monolithic_002dload_002dbundle_002dop-1"></a>
+<a name="index-monolithic_002ddeliver_002dasd_002dop-1"></a>
 
 <p><code>asdf-ecl</code> and its short-lived successor <code>asdf-bundle</code> are no more,
 having been replaced by code now built into ASDF 3.
@@ -5989,7 +6117,30 @@ see the <samp>TODO</samp> file in the source repository.
 <h2 class="unnumbered">Bibliography</h2>
 
 <ul>
-<li> Francois-Rene Rideau:
+<li> Andrey Mokhov, Neil Mitchell and Simon Peyton Jones:
+&ldquo;Build Systems à la Carte&rdquo;, 2018.
+  <a href="https://www.microsoft.com/en-us/research/uploads/prod/2018/03/build-systems-final.pdf">https://www.microsoft.com/en-us/research/uploads/prod/2018/03/build-systems-final.pdf</a>
+  This article provides axes along which to describe build systems in general;
+  ASDF, in addition to being in-image (an axis not considered by these authors),
+  has the following characteristics:
+  ASDF&rsquo;s persistent build information is file modification times
+  (the way ASDF is written, it should be easy enough to write an extension that modifies it
+  to use a &ldquo;cloud cache&rdquo; à la Bazel,
+  but that would involve using some database, network and cryptographic libraries,
+  which cannot reasonably be included in the base ASDF,
+  that must remain a minimal bootstrappable system with no external dependencies).
+  The object model of ASDF was initially designed for &ldquo;static&rdquo; dependencies
+  with a &ldquo;topological&rdquo; scheduler, but its <code>defsystem-depends-on</code> mechanism
+  (and more generally, the ability to call ASDF from within an <code>.asd</code> file)
+  allows for multiple <em>phases</em> of execution resulting
+  in &ldquo;dynamic&rdquo; dependencies with a &ldquo;suspending&rdquo; scheduler.
+  The rebuilder essentially uses a &ldquo;dirty bit&rdquo;, except that the in-image model
+  and the multiple phase support mean that&rsquo;s actually more than a bit:
+  instead three bits, the timestamp and a phase depth level.
+  The build is guaranteed &ldquo;minimal&rdquo; in number of steps computed.
+  It is local; it assumes but does not enforce determinism;
+  it does not assume early cutoff of the build when rebuild dependencies didn&rsquo;t change.
+</li><li> Francois-Rene Rideau:
   &ldquo;ASDF 3, or Why Lisp is Now an Acceptable Scripting Language&rdquo;, 2014.
   This article describes the innovations in ASDF 3 and 3.1,
   as well as historical information on previous versions.
@@ -6004,15 +6155,16 @@ see the <samp>TODO</samp> file in the source repository.
   modulo a different setup for toplevel hierarchies.
 </li><li> Zach Beane:
   &ldquo;Quicklisp&rdquo;, 2011.
-  The Quicklisp blog and Xach&rsquo;s livejournal contain information on Quicklisp.
+  The Quicklisp blog and Xach&rsquo;s personal blogs contain information on Quicklisp.
   <a href="http://blog.quicklisp.org/">http://blog.quicklisp.org/</a>
-  <a href="http://xach.livejournal.com/">http://xach.livejournal.com/</a>
+  <a href="http://lispblog.xach.com/">http://lispblog.xach.com/</a> (new)
+  <a href="http://xach.livejournal.com/">http://xach.livejournal.com/</a> (old)
 </li><li> Francois-Rene Rideau and Robert Goldman:
   &ldquo;Evolving ASDF: More Cooperation, Less Coordination&rdquo;, 2010.
   This article describes the main issues solved by ASDF 2,
   and exposes its design principles.
-  <a href="https://common-lisp.net/project/asdf/doc/ilc2010draft.pdf">https://common-lisp.net/project/asdf/doc/ilc2010draft.pdf</a>
-  <a href="https://gitlab.common-lisp.org/asdf/ilc2010">https://gitlab.common-lisp.org/asdf/ilc2010</a>
+  <a href="https://common-lisp.net/project/asdf/ilc2010draft.pdf">https://common-lisp.net/project/asdf/ilc2010draft.pdf</a>
+  <a href="http://rpgoldman.goldman-tribe.org/papers/ilc2010-asdf.pdf">http://rpgoldman.goldman-tribe.org/papers/ilc2010-asdf.pdf</a>
 </li><li> Francois-Rene Rideau and Spencer Brody:
   &ldquo;XCVB: an eXtensible Component Verifier and Builder for Common Lisp&rdquo;, 2009.
   This article describes XCVB, a proposed competitor for ASDF;
@@ -6042,7 +6194,7 @@ see the <samp>TODO</samp> file in the source repository.
   are available in the CLOCC repository as <code>defsystem-3.x</code>.
 </li><li> Richard Elliot Robbins:
   &ldquo;BUILD: A Tool for Maintaining Consistency in Modular Systems&rdquo;, MIT AI TR 874, 1985.
-  <a href="ftp://publications.ai.mit.edu/ai-publications/pdf/AITR-874.pdf">ftp://publications.ai.mit.edu/ai-publications/pdf/AITR-874.pdf</a>
+  <a href="http://www.dtic.mil/dtic/tr/fulltext/u2/a162744.pdf">http://www.dtic.mil/dtic/tr/fulltext/u2/a162744.pdf</a>
 </li><li> Kent M. Pitman (kmp): &ldquo;The Description of Large Systems&rdquo;, MIT AI Memo 801, 1984.
   Available in updated-for-CL form on the web at
   <a href="http://nhplace.com/kent/Papers/Large-Systems.html">http://nhplace.com/kent/Papers/Large-Systems.html</a>
@@ -6112,6 +6264,7 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-_003adefault_002dregistry-source-config-directive">:default-registry source config directive</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuration-DSL">Configuration DSL</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003adefsystem_002ddepends_002don">:defsystem-depends-on</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003adirectory-source-config-directive">:directory source config directive</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuration-DSL">Configuration DSL</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-_003aentry_002dpoint">:entry-point</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003aexclude-source-config-directive">:exclude source config directive</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuration-DSL">Configuration DSL</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003afeature-dependencies">:feature dependencies</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_003aif_002dfeature-component-option">:if-feature component option</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
@@ -6169,9 +6322,12 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-mailing-list">mailing list</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Mailing-list">Mailing list</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
 <tr><th><a name="Concept-Index_cp_letter-O">O</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-One-package-per-file-systems">One package per file systems</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-package_002dinferred_002dsystem-extension">The package-inferred-system extension</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-operation">operation</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Operations">Operations</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
 <tr><th><a name="Concept-Index_cp_letter-P">P</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-Package-inferred-systems">Package inferred systems</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-package_002dinferred_002dsystem-extension">The package-inferred-system extension</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-Packages_002c-inferring-dependencies-from">Packages, inferring dependencies from</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-package_002dinferred_002dsystem-extension">The package-inferred-system extension</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-pathname-specifiers">pathname specifiers</a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-Primary-system-name">Primary system name</a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
@@ -6233,53 +6389,50 @@ see the <samp>TODO</samp> file in the source repository.
 </td></tr></table>
 
 <hr>
-<a name="Function-and-Class-Index"></a>
-<a name="Function-and-Class-Index-1"></a>
-<h2 class="unnumbered">Function and Class Index</h2>
+<a name="Function-and-Macro-Index"></a>
+<a name="Function-and-Macro-Index-1"></a>
+<h2 class="unnumbered">Function and Macro Index</h2>
 
-<table><tr><th valign="top">Jump to: &nbsp; </th><td><a class="summary-letter" href="#Function-and-Class-Index_fn_letter-A"><b>A</b></a>
+<table><tr><th valign="top">Jump to: &nbsp; </th><td><a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-A"><b>A</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-B"><b>B</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-C"><b>C</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-C"><b>C</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-D"><b>D</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-D"><b>D</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-E"><b>E</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-E"><b>E</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-F"><b>F</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-F"><b>F</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-I"><b>I</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-I"><b>I</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-L"><b>L</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-L"><b>L</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-M"><b>M</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-M"><b>M</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-O"><b>O</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-O"><b>O</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-P"><b>P</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-P"><b>P</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-R"><b>R</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-R"><b>R</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-S"><b>S</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-S"><b>S</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-T"><b>T</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-T"><b>T</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-U"><b>U</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-V"><b>V</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-V"><b>V</b></a>
  &nbsp; 
 </td></tr></table>
 <table class="index-fn" border="0">
 <tr><td></td><th align="left">Index Entry</th><td>&nbsp;</td><th align="left"> Section</th></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-A">A</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-A">A</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-already_002dloaded_002dsystems"><code>already-loaded-systems</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-apply_002doutput_002dtranslations"><code>apply-output-translations</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Output-location-API">Output location API</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-asdf_002dversion"><code>asdf-version</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#How-do-I-detect-the-ASDF-version_003f">How do I detect the ASDF version?</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-B">B</a></th><td></td><td></td></tr>
-<tr><td></td><td valign="top"><a href="#index-binary_002dop-_0028obsolete_0029"><code>binary-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
-<tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-C">C</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-C">C</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-clear_002dconfiguration"><code>clear-configuration</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Resetting-the-ASDF-configuration">Resetting the ASDF configuration</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-clear_002doutput_002dtranslations"><code>clear-output-translations</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuring-where-ASDF-stores-object-files">Configuring where ASDF stores object files</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-clear_002doutput_002dtranslations-1"><code>clear-output-translations</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Output-location-API">Output location API</a></td></tr>
@@ -6288,95 +6441,74 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-coerce_002dname"><code>coerce-name</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Creating-new-operations">Creating new operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-coerce_002dname-1"><code>coerce-name</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-coerce_002dname-2"><code>coerce-name</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Common-attributes-of-components">Common attributes of components</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-compile_002dbundle_002dop"><code>compile-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-compile_002dbundle_002dop_002c"><code><code>compile-bundle-op</code>,</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-compile_002dfile_002a"><code>compile-file*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Controlling-file-compilation">Controlling file compilation</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-compile_002dop"><code><code>compile-op</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-compile_002dsystem"><code>compile-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-component-1"><code>component</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-object-model-of-ASDF">The object model of ASDF</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-component_002ddepends_002don"><code>component-depends-on</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Creating-new-operations">Creating new operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-component_002dpathname"><code>component-pathname</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Common-attributes-of-components">Common attributes of components</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-concatenate_002dsource_002dop_002c"><code><code>concatenate-source-op</code>,</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-D">D</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-D">D</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-define_002dpackage"><code>define-package</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-package_002dinferred_002dsystem-extension">The package-inferred-system extension</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-defsystem"><code>defsystem</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-form">The defsystem form</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-defsystem-1"><code>defsystem</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#A-more-involved-example">A more involved example</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-defsystem-2"><code>defsystem</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-grammar">The defsystem grammar</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-deliver_002dasd_002dop"><code>deliver-asd-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-disable_002doutput_002dtranslations"><code>disable-output-translations</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Output-location-API">Output location API</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-E">E</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-E">E</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-enable_002dasdf_002dbinary_002dlocations_002dcompatibility"><code>enable-asdf-binary-locations-compatibility</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Output-Backward-Compatibility">Output Backward Compatibility</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-ensure_002doutput_002dtranslations"><code>ensure-output-translations</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Output-location-API">Output location API</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-ensure_002dsource_002dregistry"><code>ensure-source-registry</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuration-API">Configuration API</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-F">F</a></th><td></td><td></td></tr>
-<tr><td></td><td valign="top"><a href="#index-fasl_002dop-_0028obsolete_0029"><code>fasl-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-F">F</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-file_002dtype"><code>file-type</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pitfalls-of-the-transition-to-ASDF-2">Pitfalls of the transition to ASDF 2</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-find_002dcomponent"><code>find-component</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Creating-new-operations">Creating new operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-find_002dcomponent-1"><code>find-component</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-find_002dsystem"><code>find-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-I">I</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-I">I</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-initialize_002doutput_002dtranslations"><code>initialize-output-translations</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Output-location-API">Output location API</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-initialize_002dsource_002dregistry"><code>initialize-source-registry</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Configuration-API">Configuration API</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-input_002dfiles"><code>input-files</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Creating-new-operations">Creating new operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-input_002dfiles-1"><code>input-files</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Creating-new-operations">Creating new operations</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-L">L</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-L">L</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-load_002dasd"><code>load-asd</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-defsystem-form">The defsystem form</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-load_002dbundle_002dop"><code>load-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-load_002dfasl_002dop-_0028obsolete_0029"><code>load-fasl-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-load_002dop"><code><code>load-op</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-load_002dsource_002dop_002c"><code><code>load-source-op</code>,</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-load_002dsystem"><code>load-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-locate_002dsystem"><code>locate-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-M">M</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-M">M</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-make"><code>make</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-make_002doperation"><code><code>make-operation</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Operations">Operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-make_002doperation"><code>make-operation</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Operations">Operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-merge_002dpathnames_002a"><code>merge-pathnames*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Some-Utility-Functions">Some Utility Functions</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-module"><code>module</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pre_002ddefined-subclasses-of-component">Pre-defined subclasses of component</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-monolithic_002dbinary_002dop-_0028obsolete_0029"><code>monolithic-binary-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-monolithic_002dcompile_002dbundle_002dop"><code>monolithic-compile-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-monolithic_002ddeliver_002dasd_002dop"><code>monolithic-deliver-asd-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-monolithic_002dfasl_002dop-_0028obsolete_0029"><code>monolithic-fasl-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-monolithic_002dload_002dbundle_002dop"><code>monolithic-load-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-monolithic_002dload_002dfasl_002dop-_0028obsolete_0029"><code>monolithic-load-fasl-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-O">O</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-O">O</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-oos"><code>oos</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-oos-1"><code><code>oos</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Operations">Operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-oos-1"><code>oos</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Operations">Operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-operate"><code>operate</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-operate-1"><code><code>operate</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Operations">Operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-operation-1"><code>operation</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-object-model-of-ASDF">The object model of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-operate-1"><code>operate</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Operations">Operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-operation_002ddone_002dp"><code>operation-done-p</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Creating-new-operations">Creating new operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-OPERATION_002dERROR"><code>OPERATION-ERROR</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Error-handling">Error handling</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-output_002dfiles"><code>output-files</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Creating-new-operations">Creating new operations</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-P">P</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-P">P</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-package_002dinferred_002dsystem"><code>package-inferred-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-package_002dinferred_002dsystem-extension">The package-inferred-system extension</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-parse_002dunix_002dnamestring"><code>parse-unix-namestring</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Some-Utility-Functions">Some Utility Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-perform"><code>perform</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Creating-new-operations">Creating new operations</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-prepare_002dop"><code><code>prepare-op</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-primary_002dsystem_002dname"><code>primary-system-name</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-primary_002dsystem_002dname-1"><code>primary-system-name</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-R">R</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-R">R</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-register_002dimmutable_002dsystem"><code>register-immutable-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Operations">Operations</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-register_002dimmutable_002dsystem-1"><code>register-immutable-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-Functions">Miscellaneous Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-register_002dpreloaded_002dsystem"><code>register-preloaded-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-Functions">Miscellaneous Functions</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-register_002dsystem_002dpackages"><code>register-system-packages</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-package_002dinferred_002dsystem-extension">The package-inferred-system extension</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-require_002dsystem"><code>require-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-run_002dprogram"><code>run-program</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Some-Utility-Functions">Some Utility Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-run_002dshell_002dcommand"><code>run-shell-command</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-Functions">Miscellaneous Functions</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-S">S</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-S">S</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-slurp_002dinput_002dstream"><code>slurp-input-stream</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Some-Utility-Functions">Some Utility Functions</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-source_002dfile"><code>source-file</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pre_002ddefined-subclasses-of-component">Pre-defined subclasses of component</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-source_002dfile_002dtype"><code>source-file-type</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pitfalls-of-the-transition-to-ASDF-2">Pitfalls of the transition to ASDF 2</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-subpathname"><code>subpathname</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Some-Utility-Functions">Some Utility Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-subpathname_002a"><code>subpathname*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Some-Utility-Functions">Some Utility Functions</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-system-1"><code>system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pre_002ddefined-subclasses-of-component">Pre-defined subclasses of component</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-SYSTEM_002dDEFINITION_002dERROR"><code>SYSTEM-DEFINITION-ERROR</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Error-handling">Error handling</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-system_002ddefsystem_002ddepends_002don"><code>system-defsystem-depends-on</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Information-about-system-dependencies">Information about system dependencies</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-system_002ddepends_002don"><code>system-depends-on</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Information-about-system-dependencies">Information about system dependencies</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-system_002drelative_002dpathname"><code>system-relative-pathname</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-Functions">Miscellaneous Functions</a></td></tr>
@@ -6384,45 +6516,47 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-system_002dsource_002ddirectory"><code>system-source-directory</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Miscellaneous-Functions">Miscellaneous Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-system_002dweakly_002ddepends_002don"><code>system-weakly-depends-on</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Information-about-system-dependencies">Information about system dependencies</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-T">T</a></th><td></td><td></td></tr>
-<tr><td></td><td valign="top"><a href="#index-test_002dop"><code><code>test-op</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-T">T</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-test_002dsystem"><code>test-system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-traverse"><code>traverse</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Operations">Operations</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
-<tr><th><a name="Function-and-Class-Index_fn_letter-V">V</a></th><td></td><td></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-U">U</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-uiop_003adefine_002dpackage"><code>uiop:define-package</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-package_002dinferred_002dsystem-extension">The package-inferred-system extension</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Function-and-Macro-Index_fn_letter-V">V</a></th><td></td><td></td></tr>
 <tr><td></td><td valign="top"><a href="#index-version_002dsatisfies"><code>version-satisfies</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Common-attributes-of-components">Common attributes of components</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-version_002dsatisfies-1"><code>version-satisfies</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Functions">Functions</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
 </table>
-<table><tr><th valign="top">Jump to: &nbsp; </th><td><a class="summary-letter" href="#Function-and-Class-Index_fn_letter-A"><b>A</b></a>
+<table><tr><th valign="top">Jump to: &nbsp; </th><td><a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-A"><b>A</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-B"><b>B</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-C"><b>C</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-C"><b>C</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-D"><b>D</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-D"><b>D</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-E"><b>E</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-E"><b>E</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-F"><b>F</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-F"><b>F</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-I"><b>I</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-I"><b>I</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-L"><b>L</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-L"><b>L</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-M"><b>M</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-M"><b>M</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-O"><b>O</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-O"><b>O</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-P"><b>P</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-P"><b>P</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-R"><b>R</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-R"><b>R</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-S"><b>S</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-S"><b>S</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-T"><b>T</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-T"><b>T</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-U"><b>U</b></a>
  &nbsp; 
-<a class="summary-letter" href="#Function-and-Class-Index_fn_letter-V"><b>V</b></a>
+<a class="summary-letter" href="#Function-and-Macro-Index_fn_letter-V"><b>V</b></a>
  &nbsp; 
 </td></tr></table>
 
@@ -6448,7 +6582,6 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-_002afeatures_002a-1"><code>*features*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Introduction">Introduction</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002aimage_002ddump_002dhook_002a"><code>*image-dump-hook*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Resetting-the-ASDF-configuration">Resetting the ASDF configuration</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002aLOAD_002dPATHNAME_002a"><code>*LOAD-PATHNAME*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#LOAD_002dPATHNAME-has-a-weird-value">LOAD-PATHNAME has a weird value</a></td></tr>
-<tr><td></td><td valign="top"><a href="#index-_002aload_002dsystem_002doperation_002a"><code>*load-system-operation*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Convenience-Functions">Convenience Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002aLOAD_002dTRUENAME_002a"><code>*LOAD-TRUENAME*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#LOAD_002dPATHNAME-has-a-weird-value">LOAD-PATHNAME has a weird value</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002anil_002dpathname_002a"><code>*nil-pathname*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Some-Utility-Functions">Some Utility Functions</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-_002aoldest_002dforward_002dcompatible_002dasdf_002dversion_002a"><code>*oldest-forward-compatible-asdf-version*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pitfalls-of-the-upgrade-to-ASDF-3">Pitfalls of the upgrade to ASDF 3</a></td></tr>
@@ -6457,7 +6590,7 @@ see the <samp>TODO</samp> file in the source repository.
 <tr><td></td><td valign="top"><a href="#index-_002asystem_002ddefinition_002dsearch_002dfunctions_002a"><code>*system-definition-search-functions*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Components">Components</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
 <tr><th><a name="Variable-Index_vr_letter-A">A</a></th><td></td><td></td></tr>
-<tr><td></td><td valign="top"><a href="#index-asdf_003a_003a_002auser_002dcache_002a"><code><code>asdf::*user-cache*</code></code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Output-Configuration-DSL">Output Configuration DSL</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-asdf_003a_003a_002auser_002dcache_002a"><code>asdf::*user-cache*</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Output-Configuration-DSL">Output Configuration DSL</a></td></tr>
 <tr><td></td><td valign="top"><a href="#index-ASDF_005fOUTPUT_005fTRANSLATIONS"><code>ASDF_OUTPUT_TRANSLATIONS</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Controlling-where-ASDF-saves-compiled-files">Controlling where ASDF saves compiled files</a></td></tr>
 <tr><td colspan="4"> <hr></td></tr>
 </table>
@@ -6465,6 +6598,129 @@ see the <samp>TODO</samp> file in the source repository.
  &nbsp; 
 <br>
 <a class="summary-letter" href="#Variable-Index_vr_letter-A"><b>A</b></a>
+ &nbsp; 
+</td></tr></table>
+
+<hr>
+<a name="Class-and-Type-Index"></a>
+<a name="Class-and-Type-Index-1"></a>
+<h2 class="unnumbered">Class and Type Index</h2>
+
+<table><tr><th valign="top">Jump to: &nbsp; </th><td><a class="summary-letter" href="#Class-and-Type-Index_tp_letter-B"><b>B</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-C"><b>C</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-D"><b>D</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-F"><b>F</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-I"><b>I</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-L"><b>L</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-M"><b>M</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-O"><b>O</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-P"><b>P</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-S"><b>S</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-T"><b>T</b></a>
+ &nbsp; 
+</td></tr></table>
+<table class="index-tp" border="0">
+<tr><td></td><th align="left">Index Entry</th><td>&nbsp;</td><th align="left"> Section</th></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Class-and-Type-Index_tp_letter-B">B</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-binary_002dop-_0028obsolete_0029"><code>binary-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Class-and-Type-Index_tp_letter-C">C</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-compile_002dbundle_002dop"><code>compile-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-compile_002dbundle_002dop-1"><code>compile-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-compile_002dconcatenated_002dsource_002dop"><code>compile-concatenated-source-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-compile_002dop"><code>compile-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-component-1"><code>component</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-object-model-of-ASDF">The object model of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-concatenate_002dsource_002dop"><code>concatenate-source-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Class-and-Type-Index_tp_letter-D">D</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-deliver_002dasd_002dop"><code>deliver-asd-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-deliver_002dasd_002dop-1"><code>deliver-asd-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-dll_002dop"><code>dll-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Class-and-Type-Index_tp_letter-F">F</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-fasl_002dop-_0028obsolete_0029"><code>fasl-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Class-and-Type-Index_tp_letter-I">I</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-image_002dop"><code>image-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Class-and-Type-Index_tp_letter-L">L</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-lib_002dop"><code>lib-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-load_002dbundle_002dop"><code>load-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-load_002dbundle_002dop-1"><code>load-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-load_002dcompiled_002dconcatenated_002dsource_002dop"><code>load-compiled-concatenated-source-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-load_002dconcatenated_002dsource_002dop"><code>load-concatenated-source-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-load_002dfasl_002dop-_0028obsolete_0029"><code>load-fasl-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-load_002dop"><code>load-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-load_002dsource_002dop"><code>load-source-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Class-and-Type-Index_tp_letter-M">M</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-module"><code>module</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pre_002ddefined-subclasses-of-component">Pre-defined subclasses of component</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dbinary_002dop-_0028obsolete_0029"><code>monolithic-binary-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dcompile_002dbundle_002dop"><code>monolithic-compile-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dcompile_002dbundle_002dop-1"><code>monolithic-compile-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dcompile_002dconcatenated_002dsource_002dop"><code>monolithic-compile-concatenated-source-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dconcatenate_002dsource_002dop"><code>monolithic-concatenate-source-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002ddeliver_002dasd_002dop"><code>monolithic-deliver-asd-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002ddeliver_002dasd_002dop-1"><code>monolithic-deliver-asd-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002ddll_002dop"><code>monolithic-dll-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dfasl_002dop-_0028obsolete_0029"><code>monolithic-fasl-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dlib_002dop"><code>monolithic-lib-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dload_002dbundle_002dop"><code>monolithic-load-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dload_002dbundle_002dop-1"><code>monolithic-load-bundle-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dload_002dcompiled_002dconcatenated_002dsource_002dop"><code>monolithic-load-compiled-concatenated-source-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dload_002dconcatenated_002dsource_002dop"><code>monolithic-load-concatenated-source-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-monolithic_002dload_002dfasl_002dop-_0028obsolete_0029"><code>monolithic-load-fasl-op (obsolete)</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#What-happened-to-the-bundle-operations">What happened to the bundle operations</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Class-and-Type-Index_tp_letter-O">O</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-operation-1"><code>operation</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#The-object-model-of-ASDF">The object model of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-operation_002derror"><code>operation-error</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Error-handling">Error handling</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Class-and-Type-Index_tp_letter-P">P</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-prepare_002dop"><code>prepare-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-prepare_002dsource_002dop"><code>prepare-source-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-program_002dop"><code>program-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Class-and-Type-Index_tp_letter-S">S</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-source_002dfile"><code>source-file</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pre_002ddefined-subclasses-of-component">Pre-defined subclasses of component</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-system-1"><code>system</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Pre_002ddefined-subclasses-of-component">Pre-defined subclasses of component</a></td></tr>
+<tr><td></td><td valign="top"><a href="#index-system_002ddefinition_002derror"><code>system-definition-error</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Error-handling">Error handling</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+<tr><th><a name="Class-and-Type-Index_tp_letter-T">T</a></th><td></td><td></td></tr>
+<tr><td></td><td valign="top"><a href="#index-test_002dop"><code>test-op</code></a>:</td><td>&nbsp;</td><td valign="top"><a href="#Predefined-operations-of-ASDF">Predefined operations of ASDF</a></td></tr>
+<tr><td colspan="4"> <hr></td></tr>
+</table>
+<table><tr><th valign="top">Jump to: &nbsp; </th><td><a class="summary-letter" href="#Class-and-Type-Index_tp_letter-B"><b>B</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-C"><b>C</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-D"><b>D</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-F"><b>F</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-I"><b>I</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-L"><b>L</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-M"><b>M</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-O"><b>O</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-P"><b>P</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-S"><b>S</b></a>
+ &nbsp; 
+<a class="summary-letter" href="#Class-and-Type-Index_tp_letter-T"><b>T</b></a>
  &nbsp; 
 </td></tr></table>
 
