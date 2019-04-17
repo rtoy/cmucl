@@ -44,7 +44,10 @@ endif
 
 CPPFLAGS := $(CPP_DEFINE_OPTIONS) $(CPP_INCLUDE_OPTIONS) 
 CFLAGS += -Wstrict-prototypes -Wall -g -fno-omit-frame-pointer
-CFLAGS += -O2
+
+# gcc 8.1.1 and 8.3.1 (and probably anything after 8.1.1?) won't
+# produce a working lisp with -O2.  Just use -O1.
+CFLAGS += -O1
 ASFLAGS = -g 
 
 ASSEM_SRC = x86-assem.S
