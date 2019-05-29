@@ -17,10 +17,8 @@ public domain.
 
 ## New in this release:
   * Known issues:
-    * Building with gcc8 or later doesn't work with the default -O option. Use -O1 instead.  This shouldn't really impact overall speed much.
-    * Added simple support to compile with clang instead, which works. (Use x86_linux_clang).
   * Feature enhancements
-    * Update to ASDF 3.3.3
+    * Update to ASDF 3.3.2
   * Changes
     * x86 and sparc have replaced the MT19937 RNG with xoroshiro128+ RNG.
       * The required state for this generator is just 4 32-bit words instead of the 600+ for MT19937.
@@ -44,7 +42,6 @@ public domain.
     * ~~#62~~ Segfault when compiling `ARRAY-DISPLACEMENT` on a string constant
     * ~~#69~~ GC assertions compiled in and allow user to enable them.
     * ~~#71~~ More info for `MACHINE-TYPE` and `MACHINE-VERSION` for x86
-    * #73 Update clx from upstream clx
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
