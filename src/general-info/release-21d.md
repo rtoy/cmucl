@@ -44,7 +44,7 @@ public domain.
     * ~~#62~~ Segfault when compiling `ARRAY-DISPLACEMENT` on a string constant
     * ~~#69~~ GC assertions compiled in and allow user to enable them.
     * ~~#71~~ More info for `MACHINE-TYPE` and `MACHINE-VERSION` for x86
-    * ~~#73~~ Update clx from upstream clx
+    * #73 Update clx from upstream clx
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
