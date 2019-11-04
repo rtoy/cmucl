@@ -25,7 +25,6 @@ osx-runner:
   tags:
     - osx
   before_script:
-    - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
     - curl -s -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
