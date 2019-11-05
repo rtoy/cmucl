@@ -34,5 +34,6 @@ osx-runner:
     - bin/build.sh $bootstrap -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist darwin-4
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+    - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
     - grep 'No unexpected \(successes\|failures\)' test.out 
