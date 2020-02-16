@@ -1,4 +1,5 @@
-This is asdf.info, produced by makeinfo version 6.5 from asdf.texinfo.
+This is asdf.info, produced by makeinfo version 6.6dev from
+asdf.texinfo.
 
 This manual describes ASDF, a system definition facility for Common Lisp
 programs and libraries.
@@ -43,7 +44,7 @@ File: asdf.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 ASDF: Another System Definition Facility
 ****************************************
 
-Manual for Version 3.3.3
+Manual for Version 3.3.4
 
    This manual describes ASDF, a system definition facility for Common
 Lisp programs and libraries.
@@ -235,6 +236,7 @@ Issues with configuring ASDF
 
 * How can I customize where fasl files are stored?::
 * How can I wholly disable the compiler output cache?::
+* How can I debug problems finding ASDF systems::
 
 Issues with using and extending ASDF to define systems
 
@@ -892,6 +894,10 @@ loading and testing.
      itself never builds anything unless it’s an explicitly requested
      system or the dependencies thereof).
 
+ -- Function: already-loaded-systems
+     Returns a list of names of the systems that have been successfully
+     loaded so far.
+
    ---------- Footnotes ----------
 
    (1) For the curious, the option is ‘:force-not
@@ -1168,99 +1174,101 @@ File: asdf.info,  Node: The defsystem grammar,  Next: Other code in .asd files, 
 6.3 The defsystem grammar
 =========================
 
-     system-definition := ( defsystem system-designator SYSTEM-OPTION*)
+     system-definition := ( defsystem *note system-designator: (system-designator)rule-system-designator. *note system-option: (system-option)rule-system-option.* )
 
-     system-designator := simple-component-name | complex-component-name
+     system-designator := *note simple-component-name: (simple-component-name)rule-simple-component-name.
+                        | *note complex-component-name: (complex-component-name)rule-complex-component-name.
 
-     simple-component-name := lower-case string  | symbol
-                NOTE: Underscores are not permitted.  See below.
+     # NOTE: Underscores are not permitted.
+     # *note Simple component names: Simple component names.
+     simple-component-name := LOWER-CASE STRING | SYMBOL
 
-     complex-component-name := string | symbol
-                 See below.
+     # *note Complex component names: Complex component names.
+     complex-component-name := STRING | SYMBOL
 
-     system-option := :defsystem-depends-on system-list
-                      | :weakly-depends-on SYSTEM-LIST
-                      | :class class-name # *note System class names::
-                      | :build-operation OPERATION-NAME
-                      | system-option
-                      | module-option
-                      | option
+     system-option := :defsystem-depends-on *note system-list: (system-list)rule-system-list.
+                    | :weakly-depends-on *note system-list: (system-list)rule-system-list.
+                    | :class CLASS-NAME # *note System class names::
+                    | :build-pathname *note pathname-specifier: (pathname-specifier)rule-pathname-specifier.
+                    | :build-operation *note operation-name: (operation-name)rule-operation-name.
+                    | *note system-option/asdf3: (system-option/asdf3)rule-system-option/asdf3.
+                    | *note module-option: (module-option)rule-module-option.
+                    | *note option: (option)rule-option.
 
-     # These are only available since ASDF 3 (actually its alpha release 2.27)
-     system-option := :homepage string
-                      | :bug-tracker string
-                      | :mailto string
-                      | :long-name string
-                      | :source-control source-control
-                      | :version version-specifier
-                      | :entry-point object # *note Entry point::
+     # These are only available since ASDF 3 (actually its alpha release
+     # 2.27)
+     system-option/asdf3 := :homepage STRING
+                          | :bug-tracker STRING
+                          | :mailto STRING
+                          | :long-name STRING
+                          | :source-control *note source-control: (source-control)rule-source-control.
+                          | :version *note version-specifier: (version-specifier)rule-version-specifier.
+                          | :entry-point OBJECT # *note Entry point::
 
-     source-control := (keyword string)
+     source-control := ( KEYWORD STRING )
 
-     module-option := :components component-list
-                      | :serial [ t | nil ]
+     module-option := :components *note component-list: (component-list)rule-component-list.
+                    | :serial [ t | nil ]
 
-     option :=
-             | :pathname pathname-specifier
-             | :default-component-class class-name
-             | :perform method-form
-             | :explain method-form
-             | :output-files method-form
-             | :operation-done-p method-form
-             | :if-feature feature-expression
-             | :depends-on ( DEPENDENCY-DEF* )
-             | :in-order-to ( DEPENDENCY+ )
+     option := :description STRING
+             | :long-description STRING
+             | :author *note person-or-persons: (person-or-persons)rule-person-or-persons.
+             | :maintainer *note person-or-persons: (person-or-persons)rule-person-or-persons.
+             | :pathname *note pathname-specifier: (pathname-specifier)rule-pathname-specifier.
+             | :default-component-class CLASS-NAME
+             | :perform *note method-form: (method-form)rule-method-form.
+             | :explain *note method-form: (method-form)rule-method-form.
+             | :output-files *note method-form: (method-form)rule-method-form.
+             | :operation-done-p *note method-form: (method-form)rule-method-form.
+             | :if-feature *note feature-expression: (feature-expression)rule-feature-expression.
+             | :depends-on ( *note dependency-def: (dependency-def)rule-dependency-def.* )
+             | :in-order-to ( *note dependency: (dependency)rule-dependency.+ )
 
+     person-or-persons := STRING | ( STRING+ )
 
-     system-list := ( SIMPLE-COMPONENT-NAME* )
+     system-list := ( *note simple-component-name: (simple-component-name)rule-simple-component-name.* )
 
-     component-list := ( COMPONENT-DEF* )
+     component-list := ( *note component-def: (component-def)rule-component-def.* )
 
-     component-def  := ( component-type simple-component-name OPTION* )
+     component-def := ( *note component-type: (component-type)rule-component-type. *note simple-component-name: (simple-component-name)rule-simple-component-name. *note option: (option)rule-option.* )
 
-     component-type := :module | :file | :static-file | other-component-type
+     component-type := :module | :file | :static-file | *note other-component-type: (other-component-type)rule-other-component-type.
 
-     other-component-type := symbol-by-name
-                             # *note Component types::
+     other-component-type := symbol-by-name # *note Component types::
 
-     # This is used in :depends-on, as opposed to ``dependency,''
-     # which is used in :in-order-to
-     dependency-def := simple-component-name
-                    | ( :feature FEATURE-EXPRESSION dependency-def )
-                      # *note Feature dependencies::
-                    | ( :version simple-component-name version-specifier )
-                    | ( :require module-name )
+     # This is used in :depends-on, as opposed to "dependency", which is used
+     # in :in-order-to
+     dependency-def := *note simple-component-name: (simple-component-name)rule-simple-component-name.
+                     | ( :feature *note feature-expression: (feature-expression)rule-feature-expression. *note dependency-def: (dependency-def)rule-dependency-def. ) # *note Feature dependencies::
+                     | ( :version *note simple-component-name: (simple-component-name)rule-simple-component-name. *note version-specifier: (version-specifier)rule-version-specifier. )
+                     | ( :require MODULE-NAME )
 
-     # ``dependency'' is used in :in-order-to, as opposed to
-     # ``dependency-def''
-     dependency := (dependent-op REQUIREMENT+)
-     requirement := (required-op REQUIRED-COMPONENT+)
-     dependent-op := operation-name
-     required-op := operation-name
+     # "dependency" is used in :in-order-to, as opposed to "dependency-def"
+     dependency := ( *note dependent-op: (dependent-op)rule-dependent-op. *note requirement: (requirement)rule-requirement.+ )
+     requirement := ( *note required-op: (required-op)rule-required-op. REQUIRED-COMPONENT+ )
+     dependent-op := *note operation-name: (operation-name)rule-operation-name.
+     required-op := *note operation-name: (operation-name)rule-operation-name.
 
-     simple-component-name := string
-                           |  symbol
+     # NOTE: pathnames should be all lower case, and have no underscores,
+     # although hyphens are permitted.
+     pathname-specifier := PATHNAME | STRING | SYMBOL
 
-     pathname-specifier := pathname | string | symbol
-                        NOTE: pathnames should be all lower case, and have no
-                        underscores, although hyphens are permitted.
+     version-specifier := STRING
+                        | ( :read-file-form *note pathname-specifier: (pathname-specifier)rule-pathname-specifier. *note form-specifier: (form-specifier)rule-form-specifier.? )
+                        | ( :read-file-line *note pathname-specifier: (pathname-specifier)rule-pathname-specifier. *note line-specifier: (line-specifier)rule-line-specifier.? )
+     line-specifier := :at INTEGER # base zero
+     form-specifier := :at [ INTEGER | ( INTEGER+ ) ]
 
+     method-form := ( *note operation-name: (operation-name)rule-operation-name. *note qual: (qual)rule-qual. LAMBDA-LIST &rest BODY )
+     qual := *note method-qualifier: (method-qualifier)rule-method-qualifier.?
+     method-qualifier := :before | :after | :around
 
+     feature-expression := KEYWORD
+                         | ( :and *note feature-expression: (feature-expression)rule-feature-expression.* )
+                         | ( :or *note feature-expression: (feature-expression)rule-feature-expression.* )
+                         | ( :not *note feature-expression: (feature-expression)rule-feature-expression. )
 
-     version-specifier := string
-                          | (:read-file-form <pathname-specifier> <form-specifier>?)
-                          | (:read-file-line <pathname-specifier> <line-specifier>?)
-     line-specifier := :at integer # base zero
-     form-specifier := :at [ integer | ( integer+ )]
-
-     method-form := (operation-name qual lambda-list &rest body)
-     qual := method-qualifier?
-     method-qualifier = :before | :after | :around
-
-     feature-expression := keyword
-                           | (:and FEATURE-EXPRESSION*)
-                           | (:or FEATURE-EXPRESSION*)
-                           | (:not FEATURE-EXPRESSION)
+     operation-name := SYMBOL
 
 6.3.1 System designators
 ------------------------
@@ -4547,7 +4555,10 @@ File: asdf.info,  Node: Where do I report a bug?,  Next: Mailing list,  Prev: FA
 13.1 “Where do I report a bug?”
 ===============================
 
-ASDF bugs are tracked on launchpad: <https://launchpad.net/asdf>.
+ASDF bugs are tracked on common-lisp.net’s gitlab::
+<https://gitlab.common-lisp.net/asdf/asdf/issues>.  Previously, we had
+done bug-tracking on ‘launchpad.net’, but we are now consolidating
+project management on ‘common-lisp.net’.
 
    If you’re unsure about whether something is a bug, or for general
 discussion, use the asdf-devel mailing list (*note Mailing list::).
@@ -5201,6 +5212,7 @@ File: asdf.info,  Node: Issues with configuring ASDF,  Next: Issues with using a
 
 * How can I customize where fasl files are stored?::
 * How can I wholly disable the compiler output cache?::
+* How can I debug problems finding ASDF systems::
 
 
 File: asdf.info,  Node: How can I customize where fasl files are stored?,  Next: How can I wholly disable the compiler output cache?,  Prev: Issues with configuring ASDF,  Up: Issues with configuring ASDF
@@ -5225,7 +5237,7 @@ source directory of some system, and use
 been translated by the facility.
 
 
-File: asdf.info,  Node: How can I wholly disable the compiler output cache?,  Prev: How can I customize where fasl files are stored?,  Up: Issues with configuring ASDF
+File: asdf.info,  Node: How can I wholly disable the compiler output cache?,  Next: How can I debug problems finding ASDF systems,  Prev: How can I customize where fasl files are stored?,  Up: Issues with configuring ASDF
 
 13.5.2 “How can I wholly disable the compiler output cache?”
 ------------------------------------------------------------
@@ -5255,6 +5267,41 @@ process, use (after loading ASDF but before using it):
    Note that this does _NOT_ belong in a ‘.asd’ file.  Please do not
 tamper with ASDF configuration from a ‘.asd’ file, and only do this from
 your personal configuration or build scripts.
+
+
+File: asdf.info,  Node: How can I debug problems finding ASDF systems,  Prev: How can I wholly disable the compiler output cache?,  Up: Issues with configuring ASDF
+
+13.5.3 How can I debug problems finding ASDF systems?
+-----------------------------------------------------
+
+Sometimes ASDF will be unable to find and load your systems, although
+you believe that it should be able to.  There are a number of things you
+can do to debug such issues.
+
+   If you are using ‘asdf:*central-registry*’ (*note Configuring ASDF to
+find your systems --- old style::), you can simply look at the pathnames
+and namestrings in this variable, and use conventional tools such as
+‘cl:probe-file’ and ‘cl:directory’ to poke around and see why your
+systems are not being found.
+
+   If you are using one of the newer methods for configuring ASDF’s
+system finding (*note Controlling where ASDF searches for systems::),
+you can try:
+
+     (alexandria:hash-table-alist asdf/source-registry::*source-registry*)
+
+   (alphabetizing the results here may be helpful).  Or for a
+higher-level view:
+
+     (asdf/source-registry:flatten-source-registry)
+
+   Finally, if you use the source registry cache (*note Caching
+Results::), you can:
+     find ~/common-lisp -name .cl-source-registry.cache
+   at the shell.
+
+   It is still, unfortunately, an open question how to monitor ASDF’s
+interpretation of its source configuration as it happens.
 
 
 File: asdf.info,  Node: Issues with using and extending ASDF to define systems,  Next: ASDF development FAQs,  Prev: Issues with configuring ASDF,  Up: FAQ
@@ -5604,37 +5651,47 @@ Bibliography
 ************
 
    • Andrey Mokhov, Neil Mitchell and Simon Peyton Jones: “Build Systems
-     à la Carte”, 2018.
+     à la Carte”, International Conference on Functional Programming,
+     2018.
      <https://www.microsoft.com/en-us/research/uploads/prod/2018/03/build-systems-final.pdf>
-     This article provides axes along which to describe build systems in
-     general; ASDF, in addition to being in-image (an axis not
-     considered by these authors), has the following characteristics:
-     ASDF’s persistent build information is file modification times (the
-     way ASDF is written, it should be easy enough to write an extension
-     that modifies it to use a “cloud cache” à la Bazel, but that would
-     involve using some database, network and cryptographic libraries,
-     which cannot reasonably be included in the base ASDF, that must
-     remain a minimal bootstrappable system with no external
-     dependencies).  The object model of ASDF was initially designed for
-     “static” dependencies with a “topological” scheduler, but its
-     ‘defsystem-depends-on’ mechanism (and more generally, the ability
-     to call ASDF from within an ‘.asd’ file) allows for multiple
-     _phases_ of execution resulting in “dynamic” dependencies with a
-     “suspending” scheduler.  The rebuilder essentially uses a “dirty
-     bit”, except that the in-image model and the multiple phase support
-     mean that’s actually more than a bit: instead three bits, the
-     timestamp and a phase depth level.  The build is guaranteed
-     “minimal” in number of steps computed.  It is local; it assumes but
-     does not enforce determinism; it does not assume early cutoff of
-     the build when rebuild dependencies didn’t change.
+     This influential article provides axes along which to describe
+     build systems in general; ASDF, in addition to being in-image (an
+     axis not considered by these authors), has the following
+     characteristics: ASDF’s persistent build information is file
+     modification times (the way ASDF is written, it should be easy
+     enough to write an extension that modifies it to use a “cloud
+     cache” à la Bazel, but that would involve using some database,
+     network and cryptographic libraries, which cannot reasonably be
+     included in the base ASDF, that must remain a minimal
+     bootstrappable system with no external dependencies).  The object
+     model of ASDF was initially designed for “static” dependencies with
+     a “topological” scheduler, but its ‘defsystem-depends-on’ mechanism
+     (and more generally, the ability to call ASDF from within an ‘.asd’
+     file) allows for multiple _phases_ of execution resulting in
+     “dynamic” dependencies with a “suspending” scheduler.  The
+     rebuilder essentially uses a “dirty bit”, except that the in-image
+     model and the multiple phase support mean that’s actually more than
+     a bit: instead it’s three bits plus the timestamp plus a phase
+     depth level.  The build is guaranteed “minimal” in number of steps
+     computed.  It is local.  It assumes but does not enforce
+     determinism.  It does not assume early cutoff of the build when
+     rebuild dependencies didn’t change.
+   • Robert Goldman, Elias Pipping, and François-René Rideau:
+     “Delivering Common Lisp Applications with ASDF 3.3”, European Lisp
+     Symposium, 2017.  <https://github.com/fare/asdf2017> This short
+     article gives an overview of the changes in ASDF 3.2 and 3.3,
+     including improved application delivery, asynchronous subprocess
+     management, correct support for multi-phase builds, and enhanced
+     source location configuration.
    • Francois-Rene Rideau: “ASDF 3, or Why Lisp is Now an Acceptable
-     Scripting Language”, 2014.  This article describes the innovations
-     in ASDF 3 and 3.1, as well as historical information on previous
-     versions.  <https://github.com/fare/asdf3-2013>
+     Scripting Language”, European Lisp Symposium, 2014.
+     <https://github.com/fare/asdf3-2013> This article describes the
+     innovations in ASDF 3 and 3.1, as well as historical information on
+     previous versions.
    • Alastair Bridgewater: “Quick-build” (private communication), 2012.
      ‘quick-build’ is a simple and robust one file, one package build
      system, similar to ‘faslpath’, in 182 lines of code (117 of which
-     are not blank, not comments, not docstrings).  Unhappily, it
+     are neither blank nor comments nor docstrings).  Unhappily, it
      remains unpublished and its IP status is unclear as of April 2014.
      ‘asdf/package-system’ is mostly compatible with it, modulo a
      different setup for toplevel hierarchies.
@@ -5643,22 +5700,23 @@ Bibliography
      <http://blog.quicklisp.org/> <http://lispblog.xach.com/> (new)
      <http://xach.livejournal.com/> (old)
    • Francois-Rene Rideau and Robert Goldman: “Evolving ASDF: More
-     Cooperation, Less Coordination”, 2010.  This article describes the
-     main issues solved by ASDF 2, and exposes its design principles.
+     Cooperation, Less Coordination”, International Lisp Conference,
+     2010.  This article describes the main issues solved by ASDF 2, and
+     exposes its design principles.
      <https://common-lisp.net/project/asdf/ilc2010draft.pdf>
      <http://rpgoldman.goldman-tribe.org/papers/ilc2010-asdf.pdf>
    • Francois-Rene Rideau and Spencer Brody: “XCVB: an eXtensible
-     Component Verifier and Builder for Common Lisp”, 2009.  This
-     article describes XCVB, a proposed competitor for ASDF; many of its
-     ideas have been incorporated into ASDF 2 and 3, though many other
-     ideas still haven’t.  <https://common-lisp.net/project/xcvb/>
+     Component Verifier and Builder for Common Lisp”, International Lisp
+     Conference, 2009.  This article describes XCVB, a proposed
+     competitor for ASDF; many of its ideas have been incorporated into
+     ASDF 2 and 3, though many other ideas still haven’t.
+     <https://common-lisp.net/project/xcvb/>
    • Peter von Etter: “faslpath”, 2009.  ‘faslpath’ is similar to the
      latter ‘quick-build’ and our yet latter ‘asdf/package-system’
      extension, except that it uses dot ‘.’ rather than slash ‘/’ as a
      separator.  <https://code.google.com/p/faslpath/>
    • Drew McDermott: “A Framework for Maintaining the Coherence of a
-     Running Lisp,” International Lisp Conference, 2005, available in
-     pre-print form at
+     Running Lisp,” International Lisp Conference, 2005.
      <http://www.cs.yale.edu/homes/dvm/papers/lisp05.pdf>
    • Dan Barlow: “ASDF Manual”, 2004.  Older versions of this document
      from the days of ASDF 1; they include ideas laid down by Dan
@@ -5700,36 +5758,36 @@ Concept Index
 * :asdf2:                                Introduction.        (line   6)
 * :asdf3:                                Introduction.        (line   6)
 * :build-operation:                      The defsystem grammar.
-                                                              (line 190)
+                                                              (line 192)
 * :compile-check:                        Controlling file compilation.
                                                               (line   6)
 * :default-registry source config directive: Configuration DSL.
                                                               (line   6)
 * :defsystem-depends-on:                 The defsystem grammar.
-                                                              (line 182)
+                                                              (line 184)
 * :directory source config directive:    Configuration DSL.   (line   6)
 * :entry-point:                          The defsystem grammar.
-                                                              (line 479)
+                                                              (line 481)
 * :exclude source config directive:      Configuration DSL.   (line   6)
 * :feature dependencies:                 The defsystem grammar.
-                                                              (line 337)
+                                                              (line 339)
 * :if-feature component option:          The defsystem grammar.
-                                                              (line 456)
+                                                              (line 458)
 * :ignore-invalid-entries source config directive: Configuration DSL.
                                                               (line   6)
 * :include source config directive:      Configuration DSL.   (line   6)
 * :inherit-configuration source config directive: Configuration DSL.
                                                               (line   6)
 * :require dependencies:                 The defsystem grammar.
-                                                              (line 327)
+                                                              (line 329)
 * :tree source config directive:         Configuration DSL.   (line   6)
 * :version:                              The defsystem form.  (line  68)
 * :version <1>:                          The defsystem grammar.
-                                                              (line 293)
+                                                              (line 295)
 * :version <2>:                          Common attributes of components.
                                                               (line  23)
 * :weakly-depends-on:                    The defsystem grammar.
-                                                              (line 202)
+                                                              (line 204)
 * also-exclude source config directive:  Configuration DSL.   (line   6)
 * around-compile keyword:                Controlling file compilation.
                                                               (line   6)
@@ -5759,6 +5817,8 @@ Concept Index
                                                               (line   6)
 * directory source config directive:     Configuration DSL.   (line   6)
 * exclude source config directive:       Configuration DSL.   (line   6)
+* gitlab:                                Where do I report a bug?.
+                                                              (line   6)
 * ignore-invalid-entries source config directive: Configuration DSL.
                                                               (line   6)
 * immutable systems:                     Operations.          (line  67)
@@ -5770,7 +5830,7 @@ Concept Index
 * launchpad:                             Where do I report a bug?.
                                                               (line   6)
 * logical pathnames:                     The defsystem grammar.
-                                                              (line 355)
+                                                              (line 357)
 * mailing list:                          Mailing list.        (line   6)
 * One package per file systems:          The package-inferred-system extension.
                                                               (line   6)
@@ -5780,21 +5840,21 @@ Concept Index
 * Packages, inferring dependencies from: The package-inferred-system extension.
                                                               (line   6)
 * pathname specifiers:                   The defsystem grammar.
-                                                              (line 224)
+                                                              (line 226)
 * Primary system name:                   Components.          (line  70)
 * Quicklisp:                             After upgrading ASDF.
                                                               (line   6)
 * readtables:                            How do I work with readtables?.
                                                               (line   6)
 * serial dependencies:                   The defsystem grammar.
-                                                              (line 401)
+                                                              (line 403)
 * system:                                Components.          (line   6)
 * system designator:                     Components.          (line   6)
 * System names:                          Components.          (line  70)
 * Testing for ASDF:                      Introduction.        (line   6)
 * tree source config directive:          Configuration DSL.   (line   6)
 * version specifiers:                    The defsystem grammar.
-                                                              (line 293)
+                                                              (line 295)
 
 
 File: asdf.info,  Node: Function and Macro Index,  Next: Variable Index,  Prev: Concept Index,  Up: Top
@@ -5806,7 +5866,7 @@ Function and Macro Index
 * Menu:
 
 * already-loaded-systems:                Convenience Functions.
-                                                              (line  29)
+                                                              (line  92)
 * apply-output-translations:             Output location API. (line  36)
 * asdf-version:                          How do I detect the ASDF version?.
                                                               (line   6)
@@ -5849,6 +5909,8 @@ Function and Macro Index
                                                               (line  70)
 * find-component <1>:                    Components.          (line 132)
 * find-system:                           Components.          (line  21)
+* flatten-source-registry:               How can I debug problems finding ASDF systems.
+                                                              (line  25)
 * initialize-output-translations:        Output location API. (line   8)
 * initialize-source-registry:            Configuration API.   (line  10)
 * input-files:                           Creating new operations.
@@ -5935,6 +5997,8 @@ Variable Index
 
 * *central-registry*:                    After upgrading ASDF.
                                                               (line   6)
+* *central-registry* <1>:                How can I debug problems finding ASDF systems.
+                                                              (line  10)
 * *compile-file-failure-behaviour*:      Error handling.      (line  19)
 * *compile-file-warnings-behaviour*:     Error handling.      (line  19)
 * *default-source-registry-exclusions*:  Search Algorithm.    (line   6)
@@ -5949,6 +6013,8 @@ Variable Index
                                                               (line  44)
 * *oldest-forward-compatible-asdf-version*: Pitfalls of the upgrade to ASDF 3.
                                                               (line  86)
+* *source-registry*:                     How can I debug problems finding ASDF systems.
+                                                              (line  20)
 * *source-registry-parameter*:           *source-registry-parameter* variable.
                                                               (line   6)
 * *standard-output*:                     How can I capture ASDF's output?.
@@ -6060,153 +6126,185 @@ Class and Type Index
 
 
 Tag Table:
-Node: Top1689
-Node: Introduction7825
-Node: Quick start summary10254
-Node: Loading ASDF12017
-Node: Loading a pre-installed ASDF12319
-Ref: Loading a pre-installed ASDF-Footnote-114154
-Node: Checking whether ASDF is loaded14354
-Node: Upgrading ASDF15268
-Node: Replacing your implementation's ASDF16266
-Node: Loading ASDF from source17718
-Node: Configuring ASDF18841
-Node: Configuring ASDF to find your systems19614
-Ref: Configuring ASDF to find your systems-Footnote-123015
-Ref: Configuring ASDF to find your systems-Footnote-223266
-Ref: Configuring ASDF to find your systems-Footnote-323568
-Node: Configuring ASDF to find your systems --- old style24041
-Ref: Configuring ASDF to find your systems --- old style-Footnote-127717
-Ref: Configuring ASDF to find your systems --- old style-Footnote-227955
-Ref: Configuring ASDF to find your systems --- old style-Footnote-328758
-Node: Configuring where ASDF stores object files28914
-Node: Resetting the ASDF configuration30323
-Node: Using ASDF31416
-Node: Loading a system31627
-Node: Convenience Functions32702
-Ref: Convenience Functions-Footnote-138049
-Node: Moving on38131
-Node: Defining systems with defsystem38504
-Node: The defsystem form38932
-Node: A more involved example42467
-Ref: A more involved example-Footnote-149720
-Node: The defsystem grammar50428
-Ref: Component types56203
-Ref: System class names56685
-Ref: Build-operation57894
-Ref: Pathname specifiers59480
-Ref: Version specifiers63516
-Ref: Feature dependencies65765
-Ref: Using logical pathnames66636
-Ref: if-feature option71277
-Ref: Entry point72414
-Ref: feature requirement73144
-Node: Other code in .asd files73562
-Node: The package-inferred-system extension74734
-Node: The object model of ASDF80499
-Ref: The object model of ASDF-Footnote-182886
-Ref: The object model of ASDF-Footnote-283250
-Node: Operations83585
-Ref: operate84712
-Ref: make-operation87510
-Node: Predefined operations of ASDF87955
-Ref: test-op90187
-Node: Creating new operations98428
-Node: Components103833
-Ref: System names107455
-Ref: Components-Footnote-1112273
-Ref: Components-Footnote-2112585
-Node: Common attributes of components112915
-Ref: required-features114437
-Node: Pre-defined subclasses of component120377
-Node: Creating new component types122877
-Node: Dependencies124185
-Node: Functions126114
-Node: Controlling where ASDF searches for systems127971
-Node: Configurations128593
-Node: Truenames and other dangers132160
-Node: XDG base directory133468
-Node: Backward Compatibility134914
-Node: Configuration DSL135645
-Node: Configuration Directories141208
-Node: The here directive143075
-Node: Shell-friendly syntax for configuration145002
-Node: Search Algorithm146077
-Node: Caching Results147971
-Node: Configuration API151279
-Node: Introspection153362
-Node: *source-registry-parameter* variable153626
-Node: Information about system dependencies154205
-Node: Status155125
-Node: Rejected ideas155588
-Node: TODO158041
-Node: Credits for the source-registry158228
-Node: Controlling where ASDF saves compiled files158764
-Ref: Controlling where ASDF saves compiled files-Footnote-1160194
-Node: Output Configurations160246
-Ref: Output Configurations-Footnote-1163135
-Node: Output Backward Compatibility163205
-Node: Output Configuration DSL166013
-Node: Output Configuration Directories171584
-Node: Output Shell-friendly syntax for configuration173173
-Node: Semantics of Output Translations174736
-Node: Output Caching Results176305
-Node: Output location API176785
-Node: Credits for output translations179253
-Node: Error handling179782
-Node: Miscellaneous additional functionality180643
-Node: Controlling file compilation181115
-Node: Controlling source file character encoding184453
-Node: Miscellaneous Functions191504
-Ref: system-relative-pathname191801
-Ref: Miscellaneous Functions-Footnote-1198363
-Node: Some Utility Functions198478
-Node: Getting the latest version209646
-Node: FAQ210609
-Node: Where do I report a bug?211004
-Node: Mailing list211375
-Node: What has changed between ASDF 1 ASDF 2 and ASDF 3?211714
-Node: What are ASDF 1 2 3?213909
-Node: How do I detect the ASDF version?214954
-Node: ASDF can portably name files in subdirectories217313
-Node: Output translations218872
-Node: Source Registry Configuration219915
-Node: Usual operations are made easier to the user221552
-Node: Many bugs have been fixed222162
-Node: ASDF itself is versioned224014
-Node: ASDF can be upgraded224897
-Node: Decoupled release cycle226051
-Node: Pitfalls of the transition to ASDF 2226982
-Node: Pitfalls of the upgrade to ASDF 3231372
-Ref: reinitializeASDFAfterUpgrade235124
-Ref: Pitfalls of the upgrade to ASDF 3-Footnote-1236000
-Node: What happened to the bundle operations236174
-Node: Issues with installing the proper version of ASDF237423
-Node: My Common Lisp implementation comes with an outdated version of ASDF. What to do?237986
-Node: I'm a Common Lisp implementation vendor. When and how should I upgrade ASDF?238925
-Node: After upgrading ASDF242951
-Node: Issues with configuring ASDF244612
-Node: How can I customize where fasl files are stored?244987
-Node: How can I wholly disable the compiler output cache?246109
-Node: Issues with using and extending ASDF to define systems247516
-Node: How can I cater for unit-testing in my system?248313
-Node: How can I cater for documentation generation in my system?249217
-Node: How can I maintain non-Lisp (e.g. C) source files?249746
-Ref: report-bugs250192
-Node: I want to put my module's files at the top level. How do I do this?250192
-Node: How do I create a system definition where all the source files have a .cl extension?253398
-Node: How do I mark a source file to be loaded only and not compiled?255403
-Node: How do I work with readtables?256405
-Node: How can I capture ASDF's output?260230
-Node: LOAD-PATHNAME has a weird value260711
-Node: ASDF development FAQs262225
-Node: How do I run the tests interactively in a REPL?262464
-Node: Ongoing Work264033
-Node: Bibliography264316
-Node: Concept Index269741
-Node: Function and Macro Index277332
-Node: Variable Index285976
-Node: Class and Type Index287975
+Node: Top1692
+Node: Introduction7878
+Node: Quick start summary10307
+Node: Loading ASDF12070
+Node: Loading a pre-installed ASDF12372
+Ref: Loading a pre-installed ASDF-Footnote-114207
+Node: Checking whether ASDF is loaded14407
+Node: Upgrading ASDF15321
+Node: Replacing your implementation's ASDF16319
+Node: Loading ASDF from source17771
+Node: Configuring ASDF18894
+Node: Configuring ASDF to find your systems19667
+Ref: Configuring ASDF to find your systems-Footnote-123068
+Ref: Configuring ASDF to find your systems-Footnote-223319
+Ref: Configuring ASDF to find your systems-Footnote-323621
+Node: Configuring ASDF to find your systems --- old style24094
+Ref: Configuring ASDF to find your systems --- old style-Footnote-127770
+Ref: Configuring ASDF to find your systems --- old style-Footnote-228008
+Ref: Configuring ASDF to find your systems --- old style-Footnote-328811
+Node: Configuring where ASDF stores object files28967
+Node: Resetting the ASDF configuration30376
+Node: Using ASDF31469
+Node: Loading a system31680
+Node: Convenience Functions32755
+Ref: Convenience Functions-Footnote-138232
+Node: Moving on38314
+Node: Defining systems with defsystem38687
+Node: The defsystem form39115
+Node: A more involved example42650
+Ref: A more involved example-Footnote-149903
+Node: The defsystem grammar50611
+Ref: rule-system-definition50816
+Ref: rule-system-designator50982
+Ref: rule-simple-component-name51303
+Ref: rule-complex-component-name51424
+Ref: rule-system-option51472
+Ref: rule-system-option/asdf352251
+Ref: rule-source-control52712
+Ref: rule-module-option52755
+Ref: rule-option52891
+Ref: rule-person-or-persons53879
+Ref: rule-system-list53927
+Ref: rule-component-list54033
+Ref: rule-component-def54118
+Ref: rule-component-type54320
+Ref: rule-other-component-type54454
+Ref: rule-dependency-def54626
+Ref: rule-dependency55235
+Ref: rule-requirement55362
+Ref: rule-dependent-op55456
+Ref: rule-required-op55536
+Ref: rule-pathname-specifier55729
+Ref: rule-version-specifier55784
+Ref: rule-line-specifier56171
+Ref: rule-form-specifier56218
+Ref: rule-method-form56273
+Ref: rule-qual56408
+Ref: rule-method-qualifier56487
+Ref: rule-feature-expression56540
+Ref: rule-operation-name56898
+Ref: Simple component names57193
+Ref: Complex component names58204
+Ref: Component types58920
+Ref: System class names59402
+Ref: Build-operation60611
+Ref: Pathname specifiers62197
+Ref: Version specifiers66233
+Ref: Feature dependencies68482
+Ref: Using logical pathnames69353
+Ref: if-feature option73994
+Ref: Entry point75131
+Ref: feature requirement75861
+Node: Other code in .asd files76279
+Node: The package-inferred-system extension77451
+Node: The object model of ASDF83216
+Ref: The object model of ASDF-Footnote-185603
+Ref: The object model of ASDF-Footnote-285967
+Node: Operations86302
+Ref: operate87429
+Ref: make-operation90227
+Node: Predefined operations of ASDF90672
+Ref: test-op92904
+Node: Creating new operations101145
+Node: Components106550
+Ref: System names110172
+Ref: Components-Footnote-1114990
+Ref: Components-Footnote-2115302
+Node: Common attributes of components115632
+Ref: required-features117154
+Node: Pre-defined subclasses of component123094
+Node: Creating new component types125594
+Node: Dependencies126902
+Node: Functions128831
+Node: Controlling where ASDF searches for systems130688
+Node: Configurations131310
+Node: Truenames and other dangers134877
+Node: XDG base directory136185
+Node: Backward Compatibility137631
+Node: Configuration DSL138362
+Node: Configuration Directories143925
+Node: The here directive145792
+Node: Shell-friendly syntax for configuration147719
+Node: Search Algorithm148794
+Node: Caching Results150688
+Node: Configuration API153996
+Node: Introspection156079
+Node: *source-registry-parameter* variable156343
+Node: Information about system dependencies156922
+Node: Status157842
+Node: Rejected ideas158305
+Node: TODO160758
+Node: Credits for the source-registry160945
+Node: Controlling where ASDF saves compiled files161481
+Ref: Controlling where ASDF saves compiled files-Footnote-1162911
+Node: Output Configurations162963
+Ref: Output Configurations-Footnote-1165852
+Node: Output Backward Compatibility165922
+Node: Output Configuration DSL168730
+Node: Output Configuration Directories174301
+Node: Output Shell-friendly syntax for configuration175890
+Node: Semantics of Output Translations177453
+Node: Output Caching Results179022
+Node: Output location API179502
+Node: Credits for output translations181970
+Node: Error handling182499
+Node: Miscellaneous additional functionality183360
+Node: Controlling file compilation183832
+Node: Controlling source file character encoding187170
+Node: Miscellaneous Functions194221
+Ref: system-relative-pathname194518
+Ref: Miscellaneous Functions-Footnote-1201080
+Node: Some Utility Functions201195
+Node: Getting the latest version212363
+Node: FAQ213326
+Node: Where do I report a bug?213721
+Node: Mailing list214267
+Node: What has changed between ASDF 1 ASDF 2 and ASDF 3?214606
+Node: What are ASDF 1 2 3?216801
+Node: How do I detect the ASDF version?217846
+Node: ASDF can portably name files in subdirectories220205
+Node: Output translations221764
+Node: Source Registry Configuration222807
+Node: Usual operations are made easier to the user224444
+Node: Many bugs have been fixed225054
+Node: ASDF itself is versioned226906
+Node: ASDF can be upgraded227789
+Node: Decoupled release cycle228943
+Node: Pitfalls of the transition to ASDF 2229874
+Node: Pitfalls of the upgrade to ASDF 3234264
+Ref: reinitializeASDFAfterUpgrade238016
+Ref: Pitfalls of the upgrade to ASDF 3-Footnote-1238892
+Node: What happened to the bundle operations239066
+Node: Issues with installing the proper version of ASDF240315
+Node: My Common Lisp implementation comes with an outdated version of ASDF. What to do?240878
+Node: I'm a Common Lisp implementation vendor. When and how should I upgrade ASDF?241817
+Node: After upgrading ASDF245843
+Node: Issues with configuring ASDF247504
+Node: How can I customize where fasl files are stored?247929
+Node: How can I wholly disable the compiler output cache?249051
+Node: How can I debug problems finding ASDF systems250512
+Node: Issues with using and extending ASDF to define systems251941
+Node: How can I cater for unit-testing in my system?252738
+Node: How can I cater for documentation generation in my system?253642
+Node: How can I maintain non-Lisp (e.g. C) source files?254171
+Ref: report-bugs254617
+Node: I want to put my module's files at the top level. How do I do this?254617
+Node: How do I create a system definition where all the source files have a .cl extension?257823
+Node: How do I mark a source file to be loaded only and not compiled?259828
+Node: How do I work with readtables?260830
+Node: How can I capture ASDF's output?264655
+Node: LOAD-PATHNAME has a weird value265136
+Node: ASDF development FAQs266650
+Node: How do I run the tests interactively in a REPL?266889
+Node: Ongoing Work268458
+Node: Bibliography268741
+Node: Concept Index274773
+Node: Function and Macro Index282504
+Node: Variable Index291309
+Node: Class and Type Index293630
 
 End Tag Table
 
