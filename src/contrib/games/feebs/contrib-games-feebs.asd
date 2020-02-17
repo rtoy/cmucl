@@ -7,4 +7,4 @@
   :description "Planet of the Feebs. A somewhat educational simulation game."
   :components
   ((:file "feebs")
-   (:file "brains")))
+   (:file "brains" :depends-on ("feebs"))))
