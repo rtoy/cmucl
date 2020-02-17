@@ -23,6 +23,9 @@
 ;;; Dependencies: Depends only on standard Common Lisp facilities.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defpackage "HIST"
+  (:use "COMMON-LISP")
+
 (in-package "HIST")
 (export '(hist hist-record))
 
