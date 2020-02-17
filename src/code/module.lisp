@@ -158,3 +158,5 @@
 (defmodule "asdf"
     "modules:asdf/asdf")
 
+(defmodule :unix
+  "modules:load-unix")
