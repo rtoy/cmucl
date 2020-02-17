@@ -2,7 +2,7 @@
 
 (in-package :asdf)
 
-(defsystem :cmu-packed-sse2
+(defsystem :contrib-packed-sse2
   :name "cmu-packed-sse2"
   :maintainer "Cmucl project"
   :licence "Public Domain"
