@@ -2,7 +2,7 @@
 
 (in-package :asdf)
 
-(defsystem :cmu-unix
+(defsystem :unix
   :name "cmu-unix"
   :maintainer "Cmucl project"
   :licence "Public Domain"
