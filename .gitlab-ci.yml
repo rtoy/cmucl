@@ -1,7 +1,7 @@
 variables:
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2018/10"
-  version: "2018-10-x86"
-  bootstrap: "-B boot-21d.lisp"
+  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2019/06"
+  version: "2019-06-x86"
+  bootstrap: ""
 
 linux-runner:
   tags:
