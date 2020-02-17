@@ -2,7 +2,7 @@
 
 (in-package :asdf)
 
-(defsystem :feebs
+(defsystem :contrib-games-feebs
   :name "feebs"
   :description "Planet of the Feebs. A somewhat educational simulation game."
   :components
