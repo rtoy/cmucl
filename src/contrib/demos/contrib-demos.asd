@@ -7,7 +7,7 @@
 
 (require :clx)
 
-(defsystem :demos
+(defsystem :contrib-demos
   :name "demos"
   :maintainer "CMU Common Lisp Group"
   :licence "Public Domain"

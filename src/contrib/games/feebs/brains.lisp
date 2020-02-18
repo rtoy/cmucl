@@ -9,8 +9,10 @@
 ;;; feebs.
 ;;;
 
-(in-package "SAMPLE-BRAINS" :use '("LISP" "FEEBS"))
+(defpackage "SAMPLE-BRAINS"
+  (:use "LISP" "FEEBS"))
 
+(in-package "SAMPLE-BRAINS")
 
 ;;; Experimental brain.  Like the built-in conservative brain, but without the
 ;;; range limitation.

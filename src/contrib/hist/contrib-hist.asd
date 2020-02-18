@@ -2,7 +2,7 @@
 
 (in-package :asdf)
 
-(defsystem :hist
+(defsystem :contrib-hist
   :name "hist"
   :maintainer "Scott E. Fahlman"
   :licence "Public Domain"

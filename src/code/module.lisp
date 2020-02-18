@@ -163,19 +163,5 @@
 (defmodule "asdf"
     "modules:asdf/asdf")
 
-;; Lisp-unit
-(defmodule :lisp-unit
-    "modules:load-lisp-unit")
-
-(defmodule "lisp-unit"
-    "modules:load-lisp-unit")
-
-;; Allow user to specify "cmu-contribs" or :cmu-contribs.
-(defmodule "cmu-contribs"
-    "modules:contrib")
-
-(defmodule :cmu-contribs
-    "modules:contrib")
-
 (defmodule :unix
   "modules:load-unix")
