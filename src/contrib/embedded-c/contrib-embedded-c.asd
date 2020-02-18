@@ -2,7 +2,7 @@
 
 (in-package :asdf)
 
-(defsystem :embedded-c
+(defsystem :contrib-embedded-c
   :name "embedded-c"
   :author "Helmut Eller"
   :license "Public Domain"

@@ -20,7 +20,8 @@
 ;;;; modules.  This must be loaded first so commonlisp systems that
 ;;;; expand macros early have them available.
 
-(unless (find-package "OPS") (make-package "OPS"))
+(defpackage "OPS"
+  (:use "COMMON-LISP"))
 
 (in-package "OPS")
 

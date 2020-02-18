@@ -2,7 +2,7 @@
 
 (in-package :asdf)
 
-(defsystem :ops
+(defsystem :contrib-ops
   :name "ops"
   :licence "Public Domain"
   :description "MIT Regression Tester"
