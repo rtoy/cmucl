@@ -22,12 +22,13 @@ public domain.
     * Building with gcc8 or later doesn't work with the default -O option. Use -O1 instead.  This shouldn't really impact overall speed much.
     * Added simple support to compile with clang instead, which works. (Use x86_linux_clang).
   * Feature enhancements
-    * Update to ASDF 3.3.4
   * Changes
+    * Update to ASDF 3.3.4
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
     * ~~#73~~ Update clx from upstream clx
+    * ~~#79~~ Autoload ASDF when calling `REQUIRE` the first time.  User's no longer have to explicitly load ASDF anymore.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
