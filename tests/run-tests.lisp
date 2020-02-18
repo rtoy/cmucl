@@ -39,6 +39,7 @@
 
 (in-package :cmucl-test-runner)
 
+(require :asdf)
 (require :lisp-unit)
 
 ;; Be rather verbose in printing the tests

@@ -2,7 +2,7 @@
 
 (in-package :asdf)
 
-(defsystem :psgraph
+(defsystem :contrib-psgraph
   :name "PSGrapher"
   :author "Joseph Bates et al."
   :licence "Public Domain"
