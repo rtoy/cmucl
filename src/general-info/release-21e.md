@@ -29,6 +29,7 @@ public domain.
   * Gitlab tickets:
     * ~~#73~~ Update clx from upstream clx
     * ~~#79~~ Autoload ASDF when calling `REQUIRE` the first time.  User's no longer have to explicitly load ASDF anymore.
+    * ~~#80~~ Use ASDF to load contribs.  cmu-contribs still exists but does nothing.  The contrib names are the same, except it's best to use a keyword instead of a string.  So, `:contrib-demos` instead of `"contrib-demos"`.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
