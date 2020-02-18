@@ -102,6 +102,11 @@
   \"contrib-games-feebs\", \"contrib-hist\", \"contrib-psgraph\",
   \"contrib-ops\", \"contrib-embedded-c\", \"contrib-sprof\", and
   \"contrib-packed-sse2\". "
+  ;; First, load asdf if it's not already loaded.  This is needed to
+  ;; load easily the contribs that use asdf.  There are no contribs
+  ;; that use defsystem, so we won't autoload defsystem.
+  (unless (featurep :asdf)
+    (load "modules:asdf/asdf"))
   (let ((saved-modules (copy-list *modules*))
         (module-name (module-name-string module-name)))
     (unless (member module-name *modules* :test #'string=)
