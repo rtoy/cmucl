@@ -11,8 +11,10 @@
 ;; Note the use of CMUCL's SERVE-EVENT facility to handle several
 ;; concurrent connections without using any multithreading.
 
+(defpackage :cmu-tcp-forwarder
+  (:use "COMMON-LISP" "UNIX"))
 
-(use-package :unix)
+(in-package :cmu-tcp-forwarder)
 
 (defparameter +target-host+ "poulenc")
 (defparameter +target-port+ 8002)
