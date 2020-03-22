@@ -27,9 +27,13 @@ public domain.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
+    * ~~#68~~ gcc8.1.1 can't build lisp.  Change optimization from `-O2` to `-O1`
+    * ~~#72~~ CMU user manual now part of cmucl-site
     * ~~#73~~ Update clx from upstream clx
+    * ~~#77~~ Added tests for sqrt for exceptional values
     * ~~#79~~ Autoload ASDF when calling `REQUIRE` the first time.  User's no longer have to explicitly load ASDF anymore.
     * ~~#80~~ Use ASDF to load contribs.  cmu-contribs still exists but does nothing.  The contrib names are the same, except it's best to use a keyword instead of a string.  So, `:contrib-demos` instead of `"contrib-demos"`.
+    * ~~#81~~ Added contribs from Eric Marsden
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
