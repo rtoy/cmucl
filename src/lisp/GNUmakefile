@@ -47,7 +47,7 @@ lisp.nm: lisp lisp.a
 	mv ,lisp.nm lisp.nm
 
 version.o : version.c version
-	echo '1 + ' `cat version` | bc > ,version
+	expr 1 + `cat version` > ,version
 	mv ,version version
 	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
 
