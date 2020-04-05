@@ -48,7 +48,7 @@
 	  simple-array-complex-double-float-type
 	  simple-array-complex-long-float-type))
 
-#+#.(c::target-featurep :double-double)
+#+double-double
 (export '(double-double-float double-double-float-type
 	  complex-double-double-float-type
 	  simple-array-double-double-float-type
@@ -166,7 +166,7 @@
   funcallable-instance-header
   byte-code-function
   byte-code-closure
-  #-double-double dylan-function-header
+  ;;#-double-double dylan-function-header
   closure-function-header
   #-gengc return-pc-header
   #+gengc forwarding-pointer
@@ -549,7 +549,7 @@
   (real :c-type "long double" :length #+x86 3 #+sparc 4)
   (imag :c-type "long double" :length #+x86 3 #+sparc 4))
 
-#+#.(c:target-featurep :double-double)
+#+double-double
 (define-primitive-object (double-double-float
 			  :lowtag other-pointer-type
 			  :header double-double-float-type)
@@ -557,7 +557,7 @@
   (hi :c-type "double" :length 2)
   (lo :c-type "double" :length 2))
 
-#+#.(c:target-featurep :double-double)
+#+double-double
 (define-primitive-object (complex-double-double-float
 			  :lowtag other-pointer-type
 			  :header complex-double-double-float-type)
