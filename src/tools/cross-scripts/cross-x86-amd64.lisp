@@ -119,7 +119,7 @@
      :cmu
      :cmu21
      :cmu21d
-     ;;:double-double
+     :double-double
      :sse2
      :relocatable-stacks
      :unicode
@@ -131,7 +131,8 @@
      :long-float :new-random :small
      :alien-callback
      :modular-arith
-     :double-double))
+     ;;:double-double
+     ))
 
 (print c::*target-backend*)
 (print (c::backend-features c::*target-backend*))
@@ -200,7 +201,74 @@
 	OLD-X86:PENDING-INTERRUPT-TRAP
 	OLD-X86:HALT-TRAP
 	OLD-X86:FUNCTION-END-BREAKPOINT-TRAP
+
+	OLD-X86:UNBOUND-MARKER-TYPE
 	))
+
+(in-package :vm)
+(defun fixup-code-object (code offset fixup kind)
+  (declare (type index offset))
+  (flet ((add-fixup (code offset)
+	   ;; Although this could check for and ignore fixups for code
+	   ;; objects in the read-only and static spaces, this should
+	   ;; only be the case when *enable-dynamic-space-code* is
+	   ;; True.
+	   (when lisp::*enable-dynamic-space-code*
+	     (incf *num-fixups*)
+	     (let ((fixups (code-header-ref code code-constants-offset)))
+	       (cond ((typep fixups '(simple-array (unsigned-byte 32) (*)))
+		      (let ((new-fixups
+			     (adjust-array fixups (1+ (length fixups))
+					   :element-type '(unsigned-byte 32))))
+			(setf (aref new-fixups (length fixups)) offset)
+			(setf (code-header-ref code code-constants-offset)
+			      new-fixups)))
+		     (t
+		      (unless (or (eq (get-type fixups) vm:unbound-marker-type)
+				  (zerop fixups))
+			(format t "** Init. code FU = ~s~%" fixups))
+		      (setf (code-header-ref code code-constants-offset)
+			    (make-array 1 :element-type '(unsigned-byte 32)
+					:initial-element offset))))))))
+    (system:without-gcing
+     (let* ((sap (truly-the system-area-pointer
+			    (kernel:code-instructions code)))
+	    (obj-start-addr (logand (kernel:get-lisp-obj-address code)
+				    #xfffffff8))
+	    #+nil (const-start-addr (+ obj-start-addr (* 5 4)))
+	    (code-start-addr (sys:sap-int (kernel:code-instructions code)))
+	    (ncode-words (kernel:code-header-ref code 1))
+	    (code-end-addr (+ code-start-addr (* ncode-words 8))))
+       (unless (member kind '(:absolute :relative))
+	 (error (intl:gettext "Unknown code-object-fixup kind ~s.") kind))
+       (ecase kind
+	 (:absolute
+	  ;; Word at sap + offset contains a value to be replaced by
+	  ;; adding that value to fixup.
+	  (setf (sap-ref-32 sap offset) (+ fixup (sap-ref-32 sap offset)))
+	  ;; Record absolute fixups that point within the code object.
+	  (when (> code-end-addr (sap-ref-32 sap offset) obj-start-addr)
+	    (add-fixup code offset)))
+	 (:relative
+	  ;; Fixup is the actual address wanted.
+	  ;;
+	  ;; Record relative fixups that point outside the code
+	  ;; object.
+	  (when (or (< fixup obj-start-addr) (> fixup code-end-addr))
+	    (add-fixup code offset))
+	  ;; Replace word with value to add to that loc to get there.
+	  (let* ((loc-sap (+ (sap-int sap) offset))
+		 (rel-val (- fixup loc-sap 4)))
+	    (declare (type (unsigned-byte 32) loc-sap)
+		     (type (signed-byte 32) rel-val))
+	    (setf (signed-sap-ref-32 sap offset) rel-val))))))
+    nil))
+(export 'fixup-code-object)
+
+(defun sanctify-for-execution (component)
+  (declare (ignore component))
+  nil)
+(export 'sanctify-for-execution)
 
 (in-package :cl-user)
 
