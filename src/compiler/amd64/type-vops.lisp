@@ -32,7 +32,7 @@
 
 
 (defparameter function-header-types
-  (list funcallable-instance-header-type dylan-function-header-type
+  (list funcallable-instance-header-type
 	byte-code-function-type byte-code-closure-type
 	function-header-type closure-function-header-type
 	closure-header-type))
