@@ -108,21 +108,99 @@
 (c::new-backend "AMD64"
    ;; Features to add here
    '(:amd64
-     :stack-checking :gencgc
-     :conservative-float-type
-     :hash-new :random-mt19937
-     :linux :glibc2 :glibc2.1
-     :cmu :cmu18 :cmu18d
+     :stack-checking
+     :gencgc
+     :hash-new
+     :random-xoroshiro
+     :linux
+     :glibc2
+     :glibc2.1
+     :cmucl
+     :cmu
+     :cmu21
+     :cmu21d
+     ;;:double-double
+     :sse2
+     :relocatable-stacks
+     :unicode
      )
    ;; Features to remove from current *features* here
    '(:x86 :i486 :pentium :x86-bootstrap :alpha :osf1 :mips
      :propagate-fun-type :propagate-float-type :constrain-float-type
      :openbsd :freebsd :glibc2 :linux :mp :heap-overflow-check
-     :long-float :new-random :small))
+     :long-float :new-random :small
+     :alien-callback
+     :modular-arith
+     :double-double))
+
+(print c::*target-backend*)
+(print (c::backend-features c::*target-backend*))
 
 ;;; Compile the new backend.
 (pushnew :bootstrap *features*)
 (pushnew :building-cross-compiler *features*)
+
+;;; Info environment hacks.
+;;;
+;;; Some of the code that is compiled and loaded by comcom references
+;;; exported symbols from AMD64.  So frob the symbols here and export
+;;; them.
+(macrolet ((frob (&rest syms)
+	     `(progn ,@(mapcar #'(lambda (sym)
+				   `(defconstant ,(intern (symbol-name sym)
+							  "AMD64")
+				      (symbol-value
+				       (find-symbol ,(symbol-name sym)
+						    :OLD-X86))))
+			       syms)
+		     (export ',(mapcar #'(lambda (sym)
+					   (intern (symbol-name sym) "AMD64"))
+				       syms)
+			     "AMD64"))))
+  (frob OLD-X86:BYTE-BITS
+	OLD-X86:WORD-BITS
+	OLD-X86:WORD-BYTES
+	OLD-X86:CHAR-BITS
+	OLD-X86:CHAR-BYTES
+	OLD-X86:WORD-SHIFT
+	#+long-float OLD-X86:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
+	OLD-X86:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
+	OLD-X86:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE
+	#+long-float OLD-X86:SIMPLE-ARRAY-COMPLEX-LONG-FLOAT-TYPE 
+	OLD-X86:SIMPLE-ARRAY-COMPLEX-DOUBLE-FLOAT-TYPE 
+	OLD-X86:SIMPLE-ARRAY-COMPLEX-SINGLE-FLOAT-TYPE
+	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-2-TYPE 
+	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-4-TYPE
+	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-8-TYPE 
+	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-16-TYPE 
+	OLD-X86:SIMPLE-ARRAY-UNSIGNED-BYTE-32-TYPE 
+	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-8-TYPE 
+	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-16-TYPE
+	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-30-TYPE 
+	OLD-X86:SIMPLE-ARRAY-SIGNED-BYTE-32-TYPE
+	OLD-X86:SIMPLE-BIT-VECTOR-TYPE
+	OLD-X86:SIMPLE-STRING-TYPE OLD-X86:SIMPLE-VECTOR-TYPE 
+	OLD-X86:SIMPLE-ARRAY-TYPE OLD-X86:VECTOR-DATA-OFFSET
+	OLD-X86:DOUBLE-FLOAT-EXPONENT-BYTE
+	OLD-X86:DOUBLE-FLOAT-NORMAL-EXPONENT-MAX 
+	OLD-X86:DOUBLE-FLOAT-NORMAL-EXPONENT-MIN
+	OLD-X86:DOUBLE-FLOAT-SIGNIFICAND-BYTE
+	OLD-X86:SINGLE-FLOAT-EXPONENT-BYTE
+	OLD-X86:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
+	OLD-X86:SINGLE-FLOAT-NORMAL-EXPONENT-MIN
+	OLD-X86:SINGLE-FLOAT-SIGNIFICAND-BYTE
+	OLD-X86:DOUBLE-FLOAT-DIGITS
+	OLD-X86:SINGLE-FLOAT-DIGITS
+	OLD-X86:DOUBLE-FLOAT-BIAS
+	OLD-X86:SINGLE-FLOAT-BIAS
+
+	OLD-X86:ERROR-TRAP
+	OLD-X86:CERROR-TRAP
+	OLD-X86:BREAKPOINT-TRAP
+	OLD-X86:PENDING-INTERRUPT-TRAP
+	OLD-X86:HALT-TRAP
+	OLD-X86:FUNCTION-END-BREAKPOINT-TRAP
+	))
 
 (in-package :cl-user)
 
@@ -201,14 +279,22 @@
 (setf *features* (remove :building-cross-compiler *features*))
 
 ;;; Info environment hacks.
+#+nil
 (macrolet ((frob (&rest syms)
 	     `(progn ,@(mapcar #'(lambda (sym)
 				   `(defconstant ,sym
-				      (symbol-value
-				       (find-symbol ,(symbol-name sym)
-						    :vm))))
-			       syms))))
+					(symbol-value
+					 (find-symbol ,(symbol-name sym)
+						      :vm))))
+			       syms)
+		     (export ,(mapcar #'(lambda (sym)
+					  (intern (symbol-name sym) "AMD64"))
+				      syms)
+			     "AMD64"))))
   (frob OLD-X86:BYTE-BITS
+	OLD-X86:WORD-BITS
+	OLD-X86:CHAR-BITS
+	OLD-X86:CHAR-BYTES
 	#+long-float OLD-X86:SIMPLE-ARRAY-LONG-FLOAT-TYPE 
 	OLD-X86:SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE 
 	OLD-X86:SIMPLE-ARRAY-SINGLE-FLOAT-TYPE
@@ -227,6 +313,12 @@
 	OLD-X86:SIMPLE-BIT-VECTOR-TYPE
 	OLD-X86:SIMPLE-STRING-TYPE OLD-X86:SIMPLE-VECTOR-TYPE 
 	OLD-X86:SIMPLE-ARRAY-TYPE OLD-X86:VECTOR-DATA-OFFSET
+	OLD-X86:DOUBLE-FLOAT-EXPONENT-BYTE
+	OLD-X86:DOUBLE-FLOAT-NORMAL-EXPONENT-MAX 
+	OLD-X86:DOUBLE-FLOAT-SIGNIFICAND-BYTE
+	OLD-X86:SINGLE-FLOAT-EXPONENT-BYTE
+	OLD-X86:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
+	OLD-X86:SINGLE-FLOAT-SIGNIFICAND-BYTE
 	))
 
 (let ((function (symbol-function 'kernel:error-number-or-lose)))

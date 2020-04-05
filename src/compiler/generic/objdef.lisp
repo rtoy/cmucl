@@ -48,7 +48,7 @@
 	  simple-array-complex-double-float-type
 	  simple-array-complex-long-float-type))
 
-#+double-double
+#+#.(c::target-featurep :double-double)
 (export '(double-double-float double-double-float-type
 	  complex-double-double-float-type
 	  simple-array-double-double-float-type
@@ -123,12 +123,14 @@
   single-float
   double-float
   #+long-float long-float
-  #+double-double double-double-float
+  #+#.(c:target-featurep :double-double)
+  double-double-float
   complex
   complex-single-float
   complex-double-float
   #+long-float complex-long-float
-  #+double-double complex-double-double-float
+  #+#.(c:target-featurep :double-double)
+  complex-double-double-float
   
   simple-array
   simple-string
@@ -146,11 +148,13 @@
   simple-array-single-float
   simple-array-double-float
   #+long-float simple-array-long-float
-  #+double-double simple-array-double-double-float
+  #+#.(c:target-featurep :double-double)
+  simple-array-double-double-float
   simple-array-complex-single-float
   simple-array-complex-double-float
   #+long-float simple-array-complex-long-float
-  #+double-double simple-array-complex-double-double-float
+  #+#.(c:target-featurep :double-double)
+  simple-array-complex-double-double-float
   complex-string
   complex-bit-vector
   complex-vector
@@ -545,7 +549,7 @@
   (real :c-type "long double" :length #+x86 3 #+sparc 4)
   (imag :c-type "long double" :length #+x86 3 #+sparc 4))
 
-#+double-double
+#+#.(c:target-featurep :double-double)
 (define-primitive-object (double-double-float
 			  :lowtag other-pointer-type
 			  :header double-double-float-type)
@@ -553,7 +557,7 @@
   (hi :c-type "double" :length 2)
   (lo :c-type "double" :length 2))
 
-#+double-double
+#+#.(c:target-featurep :double-double)
 (define-primitive-object (complex-double-double-float
 			  :lowtag other-pointer-type
 			  :header complex-double-double-float-type)

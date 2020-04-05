@@ -55,7 +55,10 @@
 
 ;;;; Machine Architecture parameters:
 
-(export '(word-bits byte-bits word-shift word-bytes float-sign-shift
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(export '(word-bits byte-bits char-bits word-shift word-bytes char-bytes
+	  fixnum-tag-bits fixnum-tag-mask positive-fixnum-bits
+	  float-sign-shift
 
 	  single-float-bias single-float-exponent-byte
 	  single-float-significand-byte single-float-normal-exponent-min
@@ -76,6 +79,9 @@
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
 
+#+double-double
+(export '(double-double-float-digits))
+) ; eval-when
 	  
 
 (eval-when (compile load eval)
@@ -86,11 +92,36 @@
 (defconstant byte-bits 8
   "Number of bits per byte where a byte is the smallest addressable object.")
 
+(defconstant char-bits #-unicode 8 #+unicode 16
+  "Number of bits needed to represent a character")
+
+(defconstant char-bytes (truncate char-bits byte-bits)
+  "Number of bytes needed to represent a character")
+
 (defconstant word-shift (1- (integer-length (/ word-bits byte-bits)))
   "Number of bits to shift between word addresses and byte addresses.")
 
 (defconstant word-bytes (/ word-bits byte-bits)
   "Number of bytes in a word.")
+
+(defconstant lowtag-bits 3
+  "Number of bits at the low end of a pointer used for type information.")
+
+(defconstant lowtag-mask (1- (ash 1 lowtag-bits))
+  "Mask to extract the low tag bits from a pointer.")
+  
+(defconstant lowtag-limit (ash 1 lowtag-bits)
+  "Exclusive upper bound on the value of the low tag bits from a
+  pointer.")
+
+(defconstant fixnum-tag-bits (1- lowtag-bits)
+  "Number of tag bits used for a fixnum")
+
+(defconstant fixnum-tag-mask (1- (ash 1 fixnum-tag-bits))
+  "Mask to get the fixnum tag")
+
+(defconstant positive-fixnum-bits (- word-bits fixnum-tag-bits 1)
+  "Maximum number of bits in a positive fixnum")
 ) ; eval-when
 
 (eval-when (compile load eval)
@@ -147,34 +178,47 @@
 (defconstant float-round-to-positive 2)
 (defconstant float-round-to-zero     3)
 
-(defconstant float-precision-24-bit  0)
-(defconstant float-precision-53-bit  2)
-(defconstant float-precision-64-bit  3)
+;; NOTE: These actually match the SSE2 MXCSR register definitions.  We
+;; need to do it this way because the interface assumes the modes are
+;; in the same order as the MXCSR register.
+(defconstant float-rounding-mode     (byte 2 13))
+(defconstant float-sticky-bits       (byte 6  0))
+(defconstant float-traps-byte        (byte 6  7))
+(defconstant float-exceptions-byte   (byte 6  0))
 
-(defconstant float-rounding-mode   (byte 2 10))
-(defconstant float-sticky-bits     (byte 6 16))
-(defconstant float-traps-byte      (byte 6  0))
-(defconstant float-exceptions-byte (byte 6 16))
-(defconstant float-precision-control (byte 2 8))
-(defconstant float-fast-bit 0) ; No fast mode on x86
+(progn
+;; SSE2 has a flush-to-zero flag, which we use as the fast bit.  Some
+;; versions of sse2 also have a denormals-are-zeros flag.  We don't
+;; currently use denormals-are-zeroes for anything.
+(defconstant float-fast-bit (ash 1 15))
+)
 ); eval-when
 
 
 ;;;; Description of the target address space.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(target-read-only-space-start
 	  target-static-space-start
 	  target-dynamic-space-start
 	  target-foreign-linkage-space-start
 	  target-foreign-linkage-entry-size))
+)
 
 ;;; Where to put the different spaces.
 ;;; 
 (defconstant target-read-only-space-start #x10000000)
-(defconstant target-static-space-start    #x28000000)
-(defconstant target-dynamic-space-start   #x48000000)
-(defconstant target-foreign-linkage-space-start #xB0000000)
-(defconstant target-foreign-linkage-entry-size 16) ;In bytes.  Duh.
+(defconstant target-static-space-start
+  #+FreeBSD #x28F00000
+  #-FreeBSD #x28000000)
+(defconstant target-dynamic-space-start
+  #+linux #x60000000
+  #+solaris #x40000000
+  #-(or linux solaris) #x48000000)
+(defconstant target-foreign-linkage-space-start
+  (c:backend-foreign-linkage-space-start *target-backend*))
+(defconstant target-foreign-linkage-entry-size
+  (c:backend-foreign-linkage-entry-size *target-backend*)) ;In bytes.  Duh.
 
 ;;; Given that NIL is the first thing allocated in static space, we
 ;;; know its value at compile time:
@@ -184,15 +228,16 @@
 
 ;;;; Other random constants.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
 	  breakpoint-trap function-end-breakpoint-trap
+	  single-step-breakpoint-trap
 	  dynamic-space-overflow-error-trap
 	  dynamic-space-overflow-warning-trap
-	  single-step-breakpoint-trap
           object-not-list-trap object-not-instance-trap
 	  trace-table-normal trace-table-call-site
 	  trace-table-function-prologue trace-table-function-epilogue))
-
+)
 (defenum (:suffix -trap :start 8)
   halt
   pending-interrupt
@@ -218,7 +263,9 @@
 
 ;;;; Static symbols.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (export '(static-symbols static-functions))
+)
 
 ;;; These symbols are loaded into static space directly after NIL so
 ;;; that the system can compute their address by adding a constant
@@ -301,12 +348,29 @@
       ;; common slot unbound check.
       pcl::..slot-unbound..
 
+      ;; Used by CGC.
+      *x86-cgc-active-p*
+      ;; Foreign linkage stuff
+      lisp::*linkage-table-data*
+      system::*global-table*
+
+      *current-region-free-pointer*
+      *current-region-end-addr*
+
       ;; These are filled in the C run-time.
       lisp::*cmucl-lib*
       lisp::*cmucl-core-path*
-      
+
+      ;; Weak hash table support
+      :key
+      :value
+      :key-and-value
+      :key-or-value
+
+      lisp::*unidata-path*
       ;; Spare symbols.  Rename these when you need to add some static
       ;; symbols and don't want to do a cross-compile.
+      spare-9
       spare-8
       spare-7
       spare-6
@@ -316,16 +380,7 @@
       spare-2
       spare-1
       
-      ;; Used by CGC.
-      *x86-cgc-active-p*
-      ;; Foreign linkage stuff
-      lisp::*linkage-table-data*
-      system::*global-table*
-      *current-region-free-pointer*
-      *current-region-end-addr*
       *static-blue-bag*		; Must be last or change C code
-
-      
       ))
 
 (defparameter static-functions

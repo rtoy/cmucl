@@ -136,7 +136,7 @@
 
 ;;; added by jrd
 (eval-when (compile load eval)
-  (defvar *float-register-names* (make-array 8 :initial-element nil)))
+  (defvar *float-register-names* (make-array 16 :initial-element nil)))
 (defreg fr0 0 :float)
 (defreg fr1 1 :float)
 (defreg fr2 2 :float)
@@ -145,7 +145,18 @@
 (defreg fr5 5 :float)
 (defreg fr6 6 :float)
 (defreg fr7 7 :float)
-(defregset float-regs fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7)
+(defreg xmm0 8 :float)
+(defreg xmm1 9 :float)
+(defreg xmm2 10 :float)
+(defreg xmm3 11 :float)
+(defreg xmm4 12 :float)
+(defreg xmm5 13 :float)
+(defreg xmm6 14 :float)
+(defreg xmm7 15 :float)
+
+(defregset float-regs
+  fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7
+  xmm0 xmm1 xmm2 xmm3 xmm4 xmm5 xmm6 xmm7)
 
 
 ;;;; SB definitions.
@@ -164,7 +175,7 @@
 ;;; sense to use the 387's idea of a stack.  8 separate registers is easier
 ;;; to deal with.
 ;;; (define-storage-base float-registers :finite :size 1)
-(define-storage-base float-registers :finite :size 8)
+(define-storage-base float-registers :finite :size 16)
 
 (define-storage-base stack :unbounded :size 8)
 (define-storage-base constant :non-packed)
@@ -215,12 +226,16 @@
   (sap-stack stack)			; System area pointers.
   (single-stack stack)			; single-floats
   (double-stack stack :element-size 2)	; double-floats.
+  ;;#+#.(c:target-featurep :double-double)
+  (double-double-stack stack :element-size 4)	; double-double-float
   #+long-float
   (long-stack stack :element-size 3)	; long-floats.
   (complex-single-stack stack :element-size 2)	; complex-single-floats
   (complex-double-stack stack :element-size 4)	; complex-double-floats
   #+long-float
   (complex-long-stack stack :element-size 6)	; complex-long-floats
+  ;;#+#.(c:target-featurep :double-double)
+  (complex-double-double-stack stack :element-size 8)	; complex-double-double-floats
 
   ;; **** Magic SCs.
 
@@ -298,14 +313,14 @@
 
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
-	      :locations (0 1 2 3 4 5 6 7)
+	      :locations (8 9 10 11 12 13 14 15)
 	      :constant-scs (fp-constant)
 	      :save-p t
 	      :alternate-scs (single-stack))
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
-	      :locations (0 1 2 3 4 5 6 7)
+	      :locations (8 9 10 11 12 13 14 15)
 	      :constant-scs (fp-constant)
 	      :save-p t
 	      :alternate-scs (double-stack))
@@ -317,6 +332,18 @@
 	    :constant-scs (fp-constant)
 	    :save-p t
 	    :alternate-scs (long-stack))
+
+  ;;#+#.(c:target-featurep :double-double)
+  (double-double-reg float-registers
+		     ;; For SSE2, we currently don't store two
+		     ;; double-floats (1 double-double-float) in each
+		     ;; register.  Hence, use every other xmm register
+		     ;; here.
+		     :locations (8 10 12 14)
+		     :element-size 2
+		     :constant-scs ()
+		     :save-p t
+		     :alternate-scs (double-double-stack))
 
   (complex-single-reg float-registers
 		      :locations (0 2 4 6)
@@ -339,6 +366,18 @@
 		    :constant-scs ()
 		    :save-p t
 		    :alternate-scs (complex-long-stack))
+
+  ;;#+#.(c::target-featurep :double-double)
+  (complex-double-double-reg float-registers
+		      ;; For SSE2, we don't pack the
+		      ;; complex-double-double value into registers
+		      ;; but use four separate registers to hold the
+		      ;; value.
+		      :locations (8 12)
+		      :element-size 4
+		      :constant-scs ()
+		      :save-p t
+		      :alternate-scs (complex-double-double-stack))
 
   ;; A catch or unwind block.
   (catch-block stack :element-size vm:catch-block-size)

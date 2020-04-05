@@ -121,6 +121,7 @@
 (comf "target:compiler/typetran" :byte-compile *byte-compile*)
 (comf "target:compiler/generic/vm-typetran" :byte-compile *byte-compile*)
 (comf "target:compiler/float-tran" :byte-compile *byte-compile*)
+#+#.(c:target-featurep :double-double)
 (comf "target:compiler/float-tran-dd" :byte-compile *byte-compile*)
 (comf "target:compiler/saptran" :byte-compile *byte-compile*)
 (comf "target:compiler/srctran") ;; try
