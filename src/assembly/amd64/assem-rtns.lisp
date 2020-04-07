@@ -64,7 +64,8 @@
   (inst lea rdi (make-ea :qword :base rbx :disp (- word-bytes)))
   (inst rep)
   (inst movs :qword)
-
+  (inst cld)
+  
   ;; Restore the count.
   (inst mov rcx rdx)
 
@@ -159,6 +160,7 @@
   (inst sub rsi word-bytes)
   (inst rep)
   (inst movs :qword)
+  (inst cld)
 
   ;; Load the register arguments carefully.
   (loadw rdx rbp-tn -1)
@@ -274,3 +276,23 @@
 
   (inst jmp (make-ea :byte :base block
 		     :disp (* unwind-block-entry-pc-slot word-bytes))))
+
+#+assembler
+(define-assembly-routine (closure-tramp
+			  (:return-style :none))
+                         ()
+  (loadw rax-tn rax-tn fdefn-function-slot other-pointer-type)
+  (inst jmp (make-ea :qword :base rax-tn
+		     :disp (- (* closure-function-slot word-bytes)
+			      function-pointer-type))))
+
+#+assembler
+(define-assembly-routine (undefined-tramp
+			  (:return-style :none))
+                         ()
+  (let ((error (generate-error-code nil undefined-symbol-error
+				    (make-random-tn :kind :normal
+						    :sc (sc-or-lose 'descriptor-reg c::*backend*)
+						    :offset 0))))
+    (inst jmp error)
+    (inst ret)))
