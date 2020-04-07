@@ -268,8 +268,7 @@
 
   ;; Non-Descriptor characters
   (base-char-reg registers
-		 :locations #.byte-regs
-		 :reserve-locations (#.ah-offset #.al-offset)
+		 :locations #.dword-regs
 		 :constant-scs (immediate)
 		 :save-p t
 		 :alternate-scs (base-char-stack))
@@ -385,12 +384,13 @@
 
 (eval-when (compile load eval)
 
-(defconstant byte-sc-names '(base-char-reg byte-reg base-char-stack))
+(defconstant byte-sc-names '(byte-reg))
 (defconstant word-sc-names '(word-reg))
 (defconstant dword-sc-names '(dword-reg))
 (defconstant qword-sc-names
   '(any-reg descriptor-reg sap-reg signed-reg unsigned-reg control-stack
-    signed-stack unsigned-stack sap-stack single-stack constant))
+    signed-stack unsigned-stack sap-stack single-stack constant
+    base-char-reg base-char-stack))
 
 ;;;
 ;;; added by jrd.  I guess the right thing to do is to treat floats
