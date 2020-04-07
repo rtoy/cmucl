@@ -123,13 +123,13 @@
   single-float
   double-float
   #+long-float long-float
-  #+#.(c:target-featurep :double-double)
+  #+double-double
   double-double-float
   complex
   complex-single-float
   complex-double-float
   #+long-float complex-long-float
-  #+#.(c:target-featurep :double-double)
+  #+double-double
   complex-double-double-float
   
   simple-array
@@ -148,12 +148,12 @@
   simple-array-single-float
   simple-array-double-float
   #+long-float simple-array-long-float
-  #+#.(c:target-featurep :double-double)
+  #+double-double
   simple-array-double-double-float
   simple-array-complex-single-float
   simple-array-complex-double-float
   #+long-float simple-array-complex-long-float
-  #+#.(c:target-featurep :double-double)
+  #+double-double
   simple-array-complex-double-double-float
   complex-string
   complex-bit-vector
