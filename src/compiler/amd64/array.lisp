@@ -1234,20 +1234,13 @@
   (:args (object :scs (descriptor-reg))
 	 (index :scs (unsigned-reg)))
   (:arg-types simple-string positive-fixnum)
-  (:temporary (:sc unsigned-reg ; byte-reg
-		   :offset rax-offset ; al-offset
-		   :target value
-		   :from (:eval 0) :to (:result 0))
-	      rax)
-  (:ignore rax)
   (:results (value :scs (base-char-reg)))
   (:result-types base-char)
   (:generator 5
-    (inst mov al-tn
-	  (make-ea :byte :base object :index index :scale 1
+    (inst movzx value
+	  (make-ea :word :base object :index index :scale 2
 		   :disp (- (* vector-data-offset word-bytes)
-			    other-pointer-type)))
-    (move value al-tn)))
+			    other-pointer-type)))))
 
 (define-vop (data-vector-ref-c/simple-string)
   (:translate data-vector-ref)
@@ -1255,18 +1248,13 @@
   (:args (object :scs (descriptor-reg)))
   (:info index)
   (:arg-types simple-string (:constant (signed-byte 30)))
-  (:temporary (:sc unsigned-reg :offset rax-offset :target value
-		   :from (:eval 0) :to (:result 0))
-	      rax)
-  (:ignore rax)
   (:results (value :scs (base-char-reg)))
   (:result-types base-char)
   (:generator 4
-    (inst mov al-tn
-	  (make-ea :byte :base object
-		   :disp (- (+ (* vector-data-offset word-bytes) index)
-			    other-pointer-type)))
-    (move value al-tn)))
+    (inst movzx value
+	  (make-ea :word :base object
+		   :disp (- (+ (* vector-data-offset word-bytes) (* 2 index))
+			    other-pointer-type)))))
 
 
 (define-vop (data-vector-set/simple-string)
@@ -1276,14 +1264,18 @@
 	 (index :scs (unsigned-reg) :to (:eval 0))
 	 (value :scs (base-char-reg)))
   (:arg-types simple-string positive-fixnum base-char)
-  (:results (result :scs (base-char-reg)))
+   (:temporary (:sc unsigned-reg :offset rax-offset :target result
+		   :from (:argument 2) :to (:result 0))
+	      rax)
+ (:results (result :scs (base-char-reg)))
   (:result-types base-char)
   (:generator 5 
-    (inst mov (make-ea :byte :base object :index index :scale 1
+    (move rax value)
+    (inst mov (make-ea :word :base object :index index :scale 2
 		       :disp (- (* vector-data-offset word-bytes)
 				other-pointer-type))
-	  value)
-    (move result value)))
+	  ax-tn)
+    (move result rax)))
 
 
 (define-vop (data-vector-set/simple-string-c)
@@ -1293,14 +1285,19 @@
 	 (value :scs (base-char-reg)))
   (:info index)
   (:arg-types simple-string (:constant (signed-byte 30)) base-char)
+  (:temporary (:sc unsigned-reg :offset rax-offset :target result
+		   :from (:argument 1) :to (:result 0))
+	      rax)
   (:results (result :scs (base-char-reg)))
   (:result-types base-char)
   (:generator 4
-   (inst mov (make-ea :byte :base object
-		      :disp (- (+ (* vector-data-offset word-bytes) index)
-			       other-pointer-type))
-	 value)
-   (move result value)))
+    (move rax value)
+    (inst mov (make-ea :word :base object
+		       :disp (- (+ (* vector-data-offset word-bytes)
+				   (* 2 index))
+				other-pointer-type))
+	  ax-tn)
+    (move result rax)))
 
 
 ;;; signed-byte-8
