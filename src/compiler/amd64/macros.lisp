@@ -130,10 +130,10 @@
 	      (n-offset offset))
     (ecase (backend-byte-order *target-backend*)
       (:little-endian
-       `(inst mov ,n-target
+       `(inst movzx ,n-target
 	      (make-ea :byte :base ,n-source :disp ,n-offset)))
       (:big-endian
-       `(inst mov ,n-target
+       `(inst movzx ,n-target
 	      (make-ea :byte :base ,n-source :disp (+ ,n-offset 3)))))))
 
 (defmacro load-foreign-data-symbol (reg name )
