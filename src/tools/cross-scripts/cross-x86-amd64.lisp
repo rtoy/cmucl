@@ -206,6 +206,7 @@
 	))
 
 (in-package :vm)
+(defvar *num-fixups* 0)
 (defun fixup-code-object (code offset fixup kind)
   (declare (type index offset))
   (flet ((add-fixup (code offset)
