@@ -30,41 +30,31 @@
 ;;; Move a tagged char to an untagged representation.
 ;;;
 (define-vop (move-to-base-char)
-  (:args (x :scs (any-reg control-stack) :target al))
-  (:temporary (:sc byte-reg :offset al-offset
-		   :from (:argument 0) :to (:eval 0)) al)
-  (:ignore al)
-  (:temporary (:sc byte-reg :offset ah-offset :target y
-		   :from (:argument 0) :to (:result 0)) ah)
-  (:results (y :scs (base-char-reg base-char-stack)))
-  (:note "character untagging")
+  (:args (x :scs (any-reg control-stack) :target y))
+  (:results (y :scs (base-char-reg)))
+  (:note _N"character untagging")
   (:generator 1
-    (move rax-tn x)
-    (move y ah)))
+    (move y x)
+    (inst shr y type-bits)))
 ;;;
 (define-move-vop move-to-base-char :move
-  (any-reg control-stack) (base-char-reg base-char-stack))
+  (any-reg control-stack) (base-char-reg))
 
 
 ;;; Move an untagged char to a tagged representation.
 ;;;
 (define-vop (move-from-base-char)
-  (:args (x :scs (base-char-reg base-char-stack) :target ah))
-  (:temporary (:sc byte-reg :offset al-offset :target y
-		   :from (:argument 0) :to (:result 0)) al)
-  (:temporary (:sc byte-reg :offset ah-offset
-		   :from (:argument 0) :to (:result 0)) ah)
-  (:results (y :scs (any-reg descriptor-reg control-stack)))
-  (:note "character tagging")
+  (:args (x :scs (base-char-reg base-char-stack) :target y))
+  (:results (y :scs (any-reg descriptor-reg)))
+  (:note _N"character tagging")
   (:generator 1
-    (move ah x)				; maybe move char byte
-    (inst mov al base-char-type)	; #x86 to type bits
-    (inst and rax-tn #xffff)		; remove any junk bits
-    (move y rax-tn)))
+    (move y x)
+    (inst shl y type-bits)
+    (inst or y base-char-type)))
 
 ;;;
 (define-move-vop move-from-base-char :move
-  (base-char-reg base-char-stack) (any-reg descriptor-reg control-stack))
+  (base-char-reg base-char-stack) (any-reg descriptor-reg))
 
 ;;; Move untagged base-char values.
 ;;;
@@ -74,7 +64,7 @@
 	    :load-if (not (location= x y))))
   (:results (y :scs (base-char-reg base-char-stack)
 	       :load-if (not (location= x y))))
-  (:note "character move")
+  (:note _N"character move")
   (:effects)
   (:affected)
   (:generator 0
@@ -92,15 +82,13 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y base-char-reg))))
   (:results (y))
-  (:note "character arg move")
+  (:note _N"character arg move")
   (:generator 0
     (sc-case y
       (base-char-reg
        (move y x))
       (base-char-stack
-       (inst mov
-	     (make-ea :byte :base fp :disp (- (* (1+ (tn-offset y)) word-bytes)))
-	     x)))))
+       (storew x fp (- (1+ (tn-offset y))))))))
 ;;;
 (define-move-vop move-base-char-argument :move-argument
   (any-reg base-char-reg) (base-char-reg))
@@ -119,29 +107,22 @@
 (define-vop (char-code)
   (:translate char-code)
   (:policy :fast-safe)
-  (:args (ch :scs (base-char-reg base-char-stack)))
+  (:args (ch :scs (base-char-reg base-char-stack) :target res))
   (:arg-types base-char)
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 1
-	      ;; ah to dh are not addressable when a rex prefix is used
-	      ;; The high 32 bits of doubleword operands are
-	      ;; zero-extended to 64-bits.
-    (inst movzx (64-bit-to-32-bit-tn res) ch)))
+    (move res ch)))
 
 (define-vop (code-char)
   (:translate code-char)
   (:policy :fast-safe)
-  (:args (code :scs (unsigned-reg unsigned-stack) :target rax))
+  (:args (code :scs (unsigned-reg control-stack) :target res))
   (:arg-types positive-fixnum)
-  (:temporary (:sc unsigned-reg :offset rax-offset :target res
-		   :from (:argument 0) :to (:result 0))
-	      rax)
   (:results (res :scs (base-char-reg)))
   (:result-types base-char)
   (:generator 1
-    (move rax code)
-    (move res al-tn)))
+    (move res code)))
 
 
 ;;; Comparison of base-chars.
@@ -155,7 +136,7 @@
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)
-  (:note "inline comparison")
+  (:note _N"inline comparison")
   (:variant-vars condition not-condition)
   (:generator 3
     (inst cmp x y)
@@ -179,7 +160,7 @@
   (:conditional)
   (:info target not-p y)
   (:policy :fast-safe)
-  (:note "inline comparison")
+  (:note _N"inline comparison")
   (:variant-vars condition not-condition)
   (:generator 2
     (inst cmp x (char-code y))
