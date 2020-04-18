@@ -922,6 +922,7 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:temporary (:sc unsigned-reg :from (:argument 0)) temp)
+  (:guard (not (backend-featurep :sse3)))
   (:generator 30
     (move result arg)
 

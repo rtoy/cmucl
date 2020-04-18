@@ -2302,6 +2302,7 @@
   (:policy :fast-safe)
   (:temporary (:scs (complex-double-reg)) t0 t1 t2)
   (:temporary (:scs (unsigned-reg)) tmp)
+  (:guard (not (backend-featurep :sse3)))
   (:generator 13
     ;; Basic algorithm from the paper "The Microarchitecture of the
     ;; Intel Pentium 4 Processor on 90nm Technololgy"

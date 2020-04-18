@@ -42,6 +42,12 @@
   (setf *features* (delete :x87 *features*))
   (sys:register-lisp-feature :sse2))
 
+#+ssse3
+(progn
+  (setf *features* (delete :x87 *features*))
+  (sys:register-lisp-feature :sse3)
+  (sys:register-lisp-feature :ssse3))
+
 #+(or darwin linux)
 (sys:register-lisp-runtime-feature :relocatable-stacks)
 
