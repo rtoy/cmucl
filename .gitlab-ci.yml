@@ -1,7 +1,7 @@
 variables:
   download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2020/04"
   version: "2020-04-x86"
-  bootstrap: ""
+  bootstrap: "-B boot-2020-04"
 
 linux-runner:
   tags:

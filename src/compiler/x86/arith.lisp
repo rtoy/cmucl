@@ -964,7 +964,7 @@
   (:arg-types unsigned-num)
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
-  (:guard (backend-featurep :sse3))
+  (:guard (backend-featurep :sse4))
   (:generator 2
     (inst popcnt result arg)))
 

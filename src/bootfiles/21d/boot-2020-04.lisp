@@ -3,3 +3,5 @@
 (pushnew :sse3 *features*)
 #+x86
 (pushnew :ssse3 *features*)
+#+x86
+(pushnew :sse4 *features*)

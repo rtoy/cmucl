@@ -3201,6 +3201,7 @@
   (define-regular-sse-inst paddq #x66 #xd4)
   )
 
+;; SSE4 instruction
 (define-instruction popcnt (segment dst src)
   (:printer ext-reg-reg/mem
 	    ((prefix #xf3) (op #xb8)))
