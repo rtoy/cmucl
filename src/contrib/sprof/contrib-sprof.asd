@@ -2,7 +2,7 @@
 
 (in-package :asdf)
 
-(defsystem :sprof
+(defsystem :contrib-sprof
   :name "demos"
   :author "Gerd Moellmann"
   :license "BSD-like"
