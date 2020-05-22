@@ -1452,16 +1452,17 @@ Z may be any number, but the result is always a complex."
   ;; NOTE: this differs from what the CLHS says for the continuity.
   ;; Instead of the text in the CLHS, we choose to use the definition
   ;; to derive the correct values.
-  (if (realp z)
+  (if (and nil (realp z))
       (complex-atanh (complex (float z) (- (* 0 (float z)))))
       (let* ( ;; Constants
 	     (theta (/ (sqrt most-positive-double-float) 4.0d0))
-	     (rho (/ 4.0d0 (sqrt most-positive-double-float)))
+	     (rho (/ theta))
 	     (half-pi (/ pi 2.0d0))
 	     (rp (float (realpart z) 1.0d0))
 	     (beta (float-sign rp 1.0d0))
-	     (x (* beta rp))
-	     (y (* beta (- (float (imagpart z) 1.0d0))))
+	     (z* (conjugate z))
+	     (x (* beta (realpart z*)))
+	     (y (* beta (imagpart z*)))
 	     (eta 0.0d0)
 	     (nu 0.0d0))
 	;; Shouldn't need this declare.
@@ -1503,7 +1504,8 @@ Z may be any number, but the result is always a complex."
 			       (atan (* 2.0d0 y)
 				     (- (* (- 1.0d0 x)
 					   (+ 1.0d0 x))
-					(square t1))))))))
+					(square t1)))))
+		   (format t "eta = ~A nu ~A~%" eta nu))))
 	  (coerce-to-complex-type (* beta eta)
 				  (- (* beta nu))
 				  z)))))
@@ -1581,17 +1583,26 @@ Z may be any number, but the result is always a complex."
 ;;
 ;; The functions below are intended to handle the cases where a real
 ;; is mixed with a complex and we don't want CL complex contagion to
-;; occur..
+;; occur.. But if the arg is real, do real arithmetic so we don't
+;; accidentally introduce a spurious signed zero.
 
 (declaim (inline 1+z 1-z z-1 z+1))
 (defun 1+z (z)
-  (complex (+ 1 (realpart z)) (imagpart z)))
+  (if (realp z)
+      (+ 1 z)
+      (complex (+ 1 (realpart z)) (imagpart z))))
 (defun 1-z (z)
-  (complex (- 1 (realpart z)) (- (imagpart z))))
+  (if (realp z)
+      (- 1 z)
+      (complex (- 1 (realpart z)) (- (imagpart z)))))
 (defun z-1 (z)
-  (complex (- (realpart z) 1) (imagpart z)))
+  (if (realp z)
+      (- z 1)
+      (complex (- (realpart z) 1) (imagpart z))))
 (defun z+1 (z)
-  (complex (+ (realpart z) 1) (imagpart z)))
+  (if (realp z)
+      (+ z 1)
+      (complex (+ (realpart z) 1) (imagpart z))))
 
 (defun complex-acos (z)
   "Compute acos z = pi/2 - asin z
@@ -1601,7 +1612,7 @@ Z may be any number, but the result is always a complex."
   #+double-double
   (when (typep z '(or double-double-float (complex double-double-float)))
     (return-from complex-acos (dd-complex-acos z)))
-  (if (and (realp z) (> z 1))
+  (if (and nil (realp z) (> z 1))
       ;; acos is continuous in quadrant IV in this case.
       (complex-acos (complex z -0f0))
       (let ((sqrt-1+z (complex-sqrt (1+z z)))
@@ -1669,7 +1680,7 @@ Z may be any number, but the result is always a complex."
   #+double-double
   (when (typep z '(or double-double-float (complex double-double-float)))
     (return-from complex-asin (dd-complex-asin z)))
-  (if (and (realp z) (> z 1))
+  (if (and nil (realp z) (> z 1))
       ;; asin is continuous in quadrant IV in this case.
       (complex-asin (complex z -0f0))
       (let ((sqrt-1-z (complex-sqrt (1-z z)))
