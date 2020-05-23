@@ -1334,6 +1334,27 @@ and Y are coerced to single-float."
 	      (t
 	       (values rho 0)))))))
 
+;; sqrt(z) = z^(1/2)
+;;         = exp(1/2*log(z))
+;;
+;; Some special values, with x > 0
+;;   sqrt(x + i*0) = exp(1/2*log(x+i*0))
+;;                 = exp(1/2*(log(x)+i*0))
+;;                 = exp(1/2*log(x)+i*0)
+;;                 = exp(1/2*log(x))*exp(i*0)
+;;                 = sqrt(x)*(cos 0 + i*sin(0))
+;;                 = sqrt(x) + i*0
+;;   sqrt(x - i*0) = exp(1/2*log(x-i*0))
+;;                 = exp(1/2*(log(x) - i*0))
+;;                 = exp(1/2*log(x) - i*0)
+;;                 = exp(1/2*log(x))*exp(-i*0)
+;;                 = sqrt(x)*(cos(-0) + i*sin(-0))
+;;                 = sqrt(x) - i*0
+;;  Kahan also gives the following for b > 0
+;;    sqrt(-b+/-i*0) = +0 +/- i*sqrt(b)
+;;    sqrt(x +/- i*inf) = +inf +/- i*inf for all finite x.
+;;    sqrt(inf +/- i*b) = +inf +/- i*0
+;;    sqrt(-inf +/- i*b) = +0 +/- i*inf
 (defun complex-sqrt (z)
   "Principle square root of Z
 
@@ -1604,6 +1625,51 @@ Z may be any number, but the result is always a complex."
       (+ z 1)
       (complex (+ (realpart z) 1) (imagpart z))))
 
+;; acos(z) = 2*log(sqrt((1+z)/2) + i*sqrt((1-z)/2))/i
+;;         = pi/2 - asin(z)
+;;
+;; In particular for z = x > 1:
+;;   acos(x) = 2/i*log(sqrt((x+1)/2) + i*sqrt((1-x)/2))
+;;           = 2/i*log(sqrt((x+1)/2) + i*i*sqrt((x-1)/2))
+;;           = 2/i*log(sqrt((x+1)/2) - sqrt((x-1)/2))
+;;           = -2*i*log(sqrt((x+1)/2) - sqrt((x-1)/2))
+;;           = -i*log(x-sqrt(x-1)*sqrt(x+1))
+;; Thus, acos(2) = -i*log(2-sqrt(3) = -i*1.31695...
+;;
+;; Similarly for z = -x, x > 1:
+;;   acos(-x) = 2/i*log(sqrt((1-x)/2) + i*sart((1+x)/2))
+;;            = 2/i*log(i*sqrt((x-1)/2) + i*sqrt((1+x)/2))
+;;            = 2/i*log(i*(sqrt((x+1)/2)+sqrt((x-1)/2)))
+;;            = 2/i*(log(sqrt((x+1)/2)+sqrt((x-1)/2)) + i*pi/2)
+;;            = -i*2*log(sqrt((x+1)/2)+sqrt((x-1)/2)) - pi
+;;            = -pi - i*log(x+sqrt(x+1)*(sqrt(x-1)))
+;;
+;; Thus acos(-2) = -pi - i*log(2+sqrt(3)) = -pi -i*1.31695...
+;;
+;; Now see what aacos(x-i0) for x > 1 is:
+;;  acos(x-i*0) = 2/i*log(sqrt((x+1)/2-i*0) + i*sqrt((1-x)/2+i*0))
+;;              = 2/i*log(sqrt((x+1)/2) -i*0+ i*(0+i*sqrt((x-1)/2)))
+;;              = 2/i*log(sqrt((x+1)/2) - sqrt((x-1)/2) - i*0)
+;;              = 2/i*[log(sqrt((x+1)/2) - sqrt((x-1)/2)) - i*0]
+;;              = -i*[2*log(sqrt((x+1)/2) - sqrt((x-1)/2)) - i*0]
+;;              = -i*log(x-sqrt(x-1)*sqrt(x+1)) + 0
+;;
+;; Thus acos(2 - i*0) is the same as acos(2).  That is, acos is
+;; continuous with quadrant IV for x > 1.
+;;
+;; For acos(-x+i0), x > 1:
+;;  acos(-x+i0) = 2/i*log(sqrt((1-x+i0)/2) + i*sqrt((1+x-i0)/2))
+;;              = 2/i*log(sqrt((1-x)/2+i0) + i*sqrt((1+x)/2-i0))
+;;              = 2/i*log((i*sqrt((x-1)/2) + 0) + i*(sqrt((1+x)/2)-i0))
+;;              = 2/i*log(i*sqrt((x-1)/2) + i*sqrt((1+x)/2) + 0)
+;;              = 2/i*log(i*(sqrt((x-1)/2 + sqrt(1+x)/2)) + 0)
+;;              = 2/i*(log(sqrt(x+sqrt(x-1)*sqrt(x+1))) + i*pi/2)
+;;              = -i*log(x+sqrt(x-1)*sqrt(x+1)) + pi
+;;              = pi - i*log(x+sqrt(x-1)*sqrt(x+1))
+;;
+;; Thus acos(-2+i0) = pi - i*log(sqrt(3)+2) = pi -i*1.31695, and this
+;; equal acos(-2).  This means acos is continuous with quadrant II.
+;;
 (defun complex-acos (z)
   "Compute acos z = pi/2 - asin z
 
