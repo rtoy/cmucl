@@ -1726,6 +1726,46 @@ Z may be any number, but the result is always a complex."
 		   (asinh (imagpart (* (conjugate sqrt-1+z)
 				       sqrt-1-z))))))))
 
+;; acosh(z) = 2*log(sqrt((x+1)/2) + sqrt((x-1)/2))
+;;
+;; For z = x, 0 <= x < 1
+;;  acosh(z) = 2*log(sqrt((x+1)/2) + sqrt((x-1)/2))
+;;           = 2*log(sqrt((x+1)/2) + i*sqrt((1-x)/2))
+;;           = 2*(log(1) + i*arg(sqrt((x+1)/2) + i*sqrt((1-x)/2)))
+;;           = 2*i*atan(sqrt((1-x)/2), sqrt((x+1)/2))
+;;           = 2*i*atan(sqrt((1-x)/(1+x)))
+;;
+;; For z = -x, x > 1
+;;  acosh(z) = 2*log(sqrt((1-x)/2) + sqrt((-x-1)/2))
+;;           = 2*log((i*sqrt((x-1)/2) + 0 + i*sqrt((1+x)/2)) + 0)
+;;           = 2*log(i*(sqrt((x-1)/2) + sqrt((1+x)/2)) + 0)
+;;           = 2*(log(sqrt((x-1)/2) + sqrt((1+x)/2)) + i*arg(sqrt((x-1)/2) + sqrt((1+x)/2)) + 0)
+;;           = 2*(log(sqrt((x-1)/2) + sqrt((1+x)/2)) + i*pi/2)
+;;           = 2*log(x+sqrt(x+1)*sqrt(x-1)) + i*pi
+;;
+;; For z = x + i0, 0 <= x < 1
+;;  acosh(z) = 2*log(sqrt((1+x)/2+i0) + sqrt((x-1)/2+i0))
+;;           = 2*log(sqrt((1+x)/2)+i0 + i*sqrt((1-x)/2) + 0)
+;;           = 2*log(sqrt((1+x)/2) + i*sqrt((1-x)/2))
+;;           = 2*(log(1) + i*arg(sqrt((1+x)/2) + i*sqrt((1-x)/2))
+;;           = 0 + 2*i*atan(sqrt((1-x)/2)/sqrt((1+x)/2)) + 
+;;           = 0 + 2*i*atan(sqrt((1-x)/(1+x))
+;;
+;; This is the same value we got for acosh(x), 0 <= x < 1.  Hence,
+;; acosh is continuous with quadrant I on the branch cut for 0 <= x <
+;; 1.
+;;
+;; Finally, for z = -x + i0, x > 1
+;;  acosh(z) = 2*log(sqrt((1-x)/2+i0) + sqrt((-x-1)/2+i0))
+;;           = 2*log(i*sqrt((x-1)/2) + 0 + i*sqrt((1+x)/2 + i0))
+;;           = 2*log(i*(sqrt((x-1)/2) + sqrt((1+x)/2)) + 0)
+;;           = 2*(log(sqrt((x-1)/2) + sqrt((1+x)/2)) + i*arg(0, (sqrt((x-1)/2) + sqrt((1+x)/2)))
+;;           = 2*(log(sqrt((x-1)/2) + sqrt((1+x)/2)) + i*pi/2)
+;;           = 2*log(sqrt((x-1)/2) + sqrt((1+x)/2)) + i*pi
+;;
+;; We see that this is the same expression for acosh(z), z < -1.
+;; Hence, acosh(z) is continuous with quadrant II on the branch cut x
+;; < -1.
 (defun complex-acosh (z)
   "Compute acosh z = 2 * log(sqrt((z+1)/2) + sqrt((z-1)/2))
 
