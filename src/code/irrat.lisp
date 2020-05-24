@@ -1449,7 +1449,44 @@ Z may be any number, but the result is always a complex."
 ;; +infinity, but the following code returns approx 176 + i*pi/4. The
 ;; reason for the imaginary part is caused by the fact that arg i*y is
 ;; never 0 since we have positive and negative zeroes.
-
+;;
+;; The branch cut for atanh is on the real axis for x < -1 and x > 1.
+;; Let's derive the values on the branch cut.
+;;
+;; atanh(z) = 1/2*(log(1+z)-log(1-z))
+;;
+;; For z = x, x > 1:
+;;   atanh(x) = 1/2*(log(1+x) - log(1-x))
+;;            = 1/2*(log(1+x) - [log(x-1) + i*arg(1-x))
+;;            = 1/2*(log(1+x) - (log(x-1) + i*pi))
+;;            = 1/2*(log(1+x) - log(x-1) _ i*pi)
+;;            = 1/2*log((1+x)/(x-1)) - i*pi/2
+;;
+;; For z = -x, x > 1
+;;   atanh(x) = 1/2*(log(1-x) - log(1+x))
+;;            = 1/2*((log(x-1) + i*arg(1-x)) - log(1+x))
+;;            = 1/2*((log(x-1) + i*pi) - log(1+x))
+;;            = 1/2*(log((x-1)/(x+1)) + i*pi)
+;;            = 1/2*log((x-1)/(x+1)) + i*pi/2
+;;
+;; For z = x - i0, x > 1
+;;  atanh(z) = 1/2*(log(1+x - i0) - log(1-x+i0))
+;;           = 1/2*(log(1+x) + i*arg(1+x,-0) - (log(x-1) + i*arg(1-x, +0)))
+;;           = 1/2*(log(1+x) - i*0 - (log(x-1) + i*pi))
+;;           = 1/2*(log(1+x) - log(x-1) - i*pi)
+;;           = 1/2*log((1+x)/(x-1)) - i*pi/2
+;;
+;; This is the same answer we get for atanh(x), x > 1.  Hence, atanh
+;; is continuous with quadrant IV along the branch cut x > 1.
+;;
+;; Similary, for z = -x + i0, x > 1:
+;;  atanh(z) = 1/2*(log(1-x + i0) - log(1+x-i0))
+;;           = 1/2*((log(x-1) + i*arg(1-x, +0)) - (log(1+x)+i*arg(1+x, -0)))
+;;           = 1/2*(log(x-1) + i*pi - (log(1+x) - i0))
+;;           = 1/2*(log(x-1) - log(1+x) + i*pi)
+;;           = 1/2*log((x-1)/(x+1)) + i*pi/2
+;; This is same answer as atanh(x), x < -1.  Thus, atanh is continuous
+;; with quadrant II on the branch cut for x < -1
 (defun complex-atanh (z)
   "Compute atanh z = (log(1+z) - log(1-z))/2"
   (declare (number z))
