@@ -1510,7 +1510,7 @@ Z may be any number, but the result is always a complex."
   ;; NOTE: this differs from what the CLHS says for the continuity.
   ;; Instead of the text in the CLHS, we choose to use the definition
   ;; to derive the correct values.
-  (if (and nil (realp z))
+  (if (realp z)
       (complex-atanh (complex (float z) (- (* 0 (float z)))))
       (let* ( ;; Constants
 	     (theta (/ (sqrt most-positive-double-float) 4.0d0))
@@ -1518,9 +1518,10 @@ Z may be any number, but the result is always a complex."
 	     (half-pi (/ pi 2.0d0))
 	     (rp (float (realpart z) 1.0d0))
 	     (beta (float-sign rp 1.0d0))
-	     (z* (conjugate z))
-	     (x (* beta (realpart z*)))
-	     (y (* beta (imagpart z*)))
+	     ;; x+iy = beta*conjugate(z), but being careful to produce
+	     ;; a signed-zero if z is  rational.
+	     (x (* beta (realpart z)))
+	     (y (* beta (- (float (imagpart z) 1d0))))
 	     (eta 0.0d0)
 	     (nu 0.0d0))
 	;; Shouldn't need this declare.
@@ -1562,8 +1563,7 @@ Z may be any number, but the result is always a complex."
 			       (atan (* 2.0d0 y)
 				     (- (* (- 1.0d0 x)
 					   (+ 1.0d0 x))
-					(square t1)))))
-		   (format t "eta = ~A nu ~A~%" eta nu))))
+					(square t1))))))))
 	  (coerce-to-complex-type (* beta eta)
 				  (- (* beta nu))
 				  z)))))
@@ -1715,16 +1715,13 @@ Z may be any number, but the result is always a complex."
   #+double-double
   (when (typep z '(or double-double-float (complex double-double-float)))
     (return-from complex-acos (dd-complex-acos z)))
-  (if (and nil (realp z) (> z 1))
-      ;; acos is continuous in quadrant IV in this case.
-      (complex-acos (complex z -0f0))
-      (let ((sqrt-1+z (complex-sqrt (1+z z)))
-	    (sqrt-1-z (complex-sqrt (1-z z))))
-	(with-float-traps-masked (:divide-by-zero)
-	  (complex (* 2 (atan (/ (realpart sqrt-1-z)
-				 (realpart sqrt-1+z))))
-		   (asinh (imagpart (* (conjugate sqrt-1+z)
-				       sqrt-1-z))))))))
+  (let ((sqrt-1+z (complex-sqrt (1+z z)))
+	(sqrt-1-z (complex-sqrt (1-z z))))
+    (with-float-traps-masked (:divide-by-zero)
+      (complex (* 2 (atan (/ (realpart sqrt-1-z)
+			     (realpart sqrt-1+z))))
+	       (asinh (imagpart (* (conjugate sqrt-1+z)
+				   sqrt-1-z)))))))
 
 ;; acosh(z) = 2*log(sqrt((x+1)/2) + sqrt((x-1)/2))
 ;;
@@ -1823,16 +1820,13 @@ Z may be any number, but the result is always a complex."
   #+double-double
   (when (typep z '(or double-double-float (complex double-double-float)))
     (return-from complex-asin (dd-complex-asin z)))
-  (if (and nil (realp z) (> z 1))
-      ;; asin is continuous in quadrant IV in this case.
-      (complex-asin (complex z -0f0))
-      (let ((sqrt-1-z (complex-sqrt (1-z z)))
-	    (sqrt-1+z (complex-sqrt (1+z z))))
-	(with-float-traps-masked (:divide-by-zero)
-	  (complex (atan (/ (realpart z)
-			    (realpart (* sqrt-1-z sqrt-1+z))))
-		   (asinh (imagpart (* (conjugate sqrt-1-z)
-				       sqrt-1+z))))))))
+  (let ((sqrt-1-z (complex-sqrt (1-z z)))
+	(sqrt-1+z (complex-sqrt (1+z z))))
+    (with-float-traps-masked (:divide-by-zero)
+      (complex (atan (/ (realpart z)
+			(realpart (* sqrt-1-z sqrt-1+z))))
+	       (asinh (imagpart (* (conjugate sqrt-1-z)
+				   sqrt-1+z)))))))
 
 (defun complex-asinh (z)
   "Compute asinh z = log(z + sqrt(1 + z*z))
