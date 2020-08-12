@@ -165,6 +165,10 @@
 (defconstant long-float-digits
   (+ (byte-size long-float-significand-byte) 32 1))
 
+#+double-double
+(defconstant double-double-float-digits
+  (* 2 double-float-digits))
+
 ;;; pfw -- from i486 microprocessor programmers reference manual
 (defconstant float-invalid-trap-bit        (ash 1 0))
 (defconstant float-denormal-trap-bit       (ash 1 1))
