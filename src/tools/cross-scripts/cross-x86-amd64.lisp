@@ -273,6 +273,7 @@
 
 (in-package :cl-user)
 
+(print "***Comcom")
 (load "target:tools/comcom")
 
 ;;; Load the new backend.
@@ -284,7 +285,7 @@
       '("target:assembly/" "target:assembly/amd64/"))
 
 ;; Load the backend of the compiler.
-
+(print "***Load backend")
 (in-package "C")
 
 (load "vm:vm-fndb")
@@ -299,6 +300,7 @@
 (load "target:compiler/srctran")
 (load "vm:vm-typetran")
 (load "target:compiler/float-tran")
+(load "target:compiler/float-tran-dd")
 (load "target:compiler/saptran")
 
 (load "vm:macros")
@@ -309,9 +311,10 @@
 (load "vm:primtype")
 (load "vm:move")
 (load "vm:sap")
+(load "vm:sse2-sap")
 (load "vm:system")
 (load "vm:char")
-(load "vm:float")
+(load "vm:float-sse2")
 
 (load "vm:memory")
 (load "vm:static-fn")
@@ -319,12 +322,13 @@
 (load "vm:cell")
 (load "vm:subprim")
 (load "vm:debug")
-(load "vm:c-call")
+(load "vm:sse2-c-call")
 (load "vm:print")
 (load "vm:alloc")
 (load "vm:call")
 (load "vm:nlx")
 (load "vm:values")
+(load "vm:sse2-array")
 (load "vm:array")
 (load "vm:pred")
 (load "vm:type-vops")

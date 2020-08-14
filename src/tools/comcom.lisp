@@ -180,7 +180,7 @@
 	  (vmdir "target:compiler/float"))
       :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/sap") :byte-compile *byte-compile*)
-(when (c:target-featurep :x86)
+(when (c:target-featurep :sse2)
   (comf (vmdir "target:compiler/sse2-sap")
 	:byte-compile *byte-compile*))
 (comf (vmdir "target:compiler/system") :byte-compile *byte-compile*)
@@ -192,7 +192,7 @@
 
 (comf (vmdir "target:compiler/debug") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/c-call") :byte-compile *byte-compile*)
-(when (c:target-featurep :x86)
+(when (c:target-featurep :sse2)
   (comf (vmdir "target:compiler/sse2-c-call")
 	:byte-compile *byte-compile*))
 (when (c:target-featurep :alien-callback)
@@ -206,7 +206,7 @@
 
 ;; Must come before array.lisp because array.lisp wants to use some
 ;; vops as templates.
-(when (c:target-featurep :x86)
+(when (c:target-featurep :sse2)
   (comf (vmdir "target:compiler/sse2-array")
 	:byte-compile *byte-compile*))
 
