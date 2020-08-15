@@ -82,10 +82,16 @@
 
 (defun reg-tn-encoding (tn)
   (declare (type tn tn))
-  (assert (eq (sb-name (sc-sb (tn-sc tn))) 'registers))
-  (let ((offset (tn-offset tn)))
-    (logior (ash (logand offset 1) 2)
-	    (ash offset -1))))
+  ;; ea only has space for three bits of register number: regs r8
+  ;; and up are selected by a REX prefix byte which caller is responsible
+  ;; for having emitted where necessary already
+  (ecase (sb-name (sc-sb (tn-sc tn)))
+    (registers
+     (let ((offset (mod (tn-offset tn) 16)))
+       (logior (ash (logand offset 1) 2)
+               (ash offset -1))))
+    (float-registers
+     (mod (tn-offset tn) 8))))
 
 (defstruct (ea
 	    (:constructor make-ea (size &key base index scale disp))
