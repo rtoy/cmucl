@@ -427,7 +427,9 @@
 (def-random-reg-tns byte-reg al ah bl bh cl ch dl dh)
 
 ;; added by jrd
-(def-random-reg-tns single-reg fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7)
+(def-random-reg-tns single-reg
+    fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7
+    xmm0 xmm1 xmm2 xmm3 xmm4 xmm5 xmm6 xmm7)
 
 ;; Added by pw.
 
@@ -526,7 +528,11 @@
 		  (< -1 offset (length name-vec))
 		  (svref name-vec offset))
 	     (format nil "<Unknown Reg: off=~D, sc=~A>" offset sc-name))))
-      (float-registers (format nil "FR~D" offset))
+      (float-registers
+       (format nil (if (< offset 8)
+		       "FR~D"
+		       "XMM~D")
+	       (mod offset 8)))
       (stack (format nil "S~D" offset))
       (constant (format nil "Const~D" offset))
       (immediate-constant "Immed")
