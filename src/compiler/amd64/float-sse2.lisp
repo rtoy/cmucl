@@ -30,7 +30,7 @@
 
 (macrolet ((ea-for-xf-desc (tn slot)
 	     `(make-ea
-	       :dword :base ,tn
+	       :qword :base ,tn
 	       :disp (- (* ,slot vm:word-bytes) vm:other-pointer-type))))
   (defun ea-for-sf-desc (tn)
     (ea-for-xf-desc tn vm:single-float-value-slot))
@@ -70,7 +70,7 @@
 
 (macrolet ((ea-for-xf-stack (tn kind)
 	     `(make-ea
-	       :dword :base rbp-tn
+	       :qword :base rbp-tn
 	       :disp (- (* (+ (tn-offset ,tn)
 			      (ecase ,kind (:single 1) (:double 2) (:long 3)))
 			 vm:word-bytes)))))
@@ -605,12 +605,12 @@
 		      (,stack-sc
 		       (if (= (tn-offset fp) esp-offset)
 			   (let* ((offset (* (tn-offset y) word-bytes))
-				  (ea (make-ea :dword :base fp :disp offset)))
+				  (ea (make-ea :qword :base fp :disp offset)))
 			     ,@(ecase format
 				      (:single '((inst movss ea x)))
 				      (:double '((inst movsd ea x)))))
 			   (let ((ea (make-ea
-				      :dword :base fp
+				      :qword :base fp
 				      :disp (- (* (+ (tn-offset y)
 						     ,(case format
 							    (:single 1)
