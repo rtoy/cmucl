@@ -150,7 +150,7 @@
   (etypecase thing
     (tn
      (ecase (sb-name (sc-sb (tn-sc thing)))
-       (registers
+       ((registers float-registers)
 	(emit-mod-reg-r/m-byte segment #b11 reg (reg-lower-3-bits thing)))
        (stack
 	;; Convert stack tns into an index off of RBP.
