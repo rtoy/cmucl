@@ -188,9 +188,15 @@
 	 (let ((ss (1- (integer-length scale)))
 	       (index (if (null index)
 			  #b100
+			  ;; FIXME: We're going to assume this is ok
+			  ;; for now because we emitted an appropriate
+			  ;; REX prefix already to allow using R12
+			  ;; here.
+			  #+nil
 			  (if (= (reg-tn-encoding index) #b100)
 			      (error "Can't index off of RSP")
-			      (reg-lower-3-bits index))))
+			      (reg-lower-3-bits index))
+			  (reg-lower-3-bits index)))
 	       (base (if (null base)
 			 #b101
 			 (reg-lower-3-bits base))))
