@@ -226,6 +226,7 @@
 				 :foreign-data))
    (inst mov res (make-ea :qword :base res))))
 
+#||
 (define-vop (call-out)
   (:args (function :scs (sap-reg))
 	 (args :more t))
@@ -296,6 +297,7 @@
       (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst add rsp-tn delta)))))
 
+||#
 (define-vop (alloc-alien-stack-space)
   (:info amount)
   (:results (result :scs (sap-reg any-reg)))
@@ -323,6 +325,7 @@
 			     (- other-pointer-type)))
 	(inst add (make-ea :qword :base temp-tn)
 	      delta)))))
+#||
 
 ;;; Support for callbacks to Lisp.
 (export '(make-callback-trampoline callback-accessor-form))
@@ -372,5 +375,4 @@ pointer to the arguments."
     (let* ((length (finalize-segment segment)))
       (prog1 (alien::segment-to-trampoline segment length)
 	(release-segment segment)))))
-
-
+||#
