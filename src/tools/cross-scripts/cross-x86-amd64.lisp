@@ -300,7 +300,7 @@
 (load "target:compiler/srctran")
 (load "vm:vm-typetran")
 (load "target:compiler/float-tran")
-(load "target:compiler/float-tran-dd")
+;;(load "target:compiler/float-tran-dd")
 (load "target:compiler/saptran")
 
 (load "vm:macros")
@@ -322,12 +322,16 @@
 (load "vm:cell")
 (load "vm:subprim")
 (load "vm:debug")
+(load "vm:c-call")
 (load "vm:sse2-c-call")
+
 (load "vm:print")
 (load "vm:alloc")
 (load "vm:call")
 (load "vm:nlx")
 (load "vm:values")
+;; These need to be loaded before array because array wants to use
+;; some vops as templates.
 (load "vm:sse2-array")
 (load "vm:array")
 (load "vm:pred")
@@ -343,8 +347,10 @@
 
 (check-move-function-consistency)
 
-(load "target:compiler/codegen")
-(load "target:compiler/array-tran.lisp")
+;; Aret these necessary?
+;;(load "target:compiler/codegen")
+;;(load "target:compiler/array-tran.lisp")
+
 (load "vm:new-genesis")
 
 ;;; OK, the cross compiler backend is loaded.
