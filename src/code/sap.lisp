@@ -80,19 +80,19 @@
 
 (defun int-sap (int)
   "Converts an integer into a System Area Pointer."
-  (declare (type (unsigned-byte #-alpha #.vm:word-bits #+alpha 64) int))
+  (declare (type (unsigned-byte #-(or alpha amd64) #.vm:word-bits #+(or alpha amd64) 64) int))
   (int-sap int))
 
 (defun sap-ref-8 (sap offset)
   "Returns the 8-bit byte at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
-	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
+	   (type (signed-byte #-(or alpha amd64) #.vm:word-bits #+(or alpha amd64) 64) offset))
   (sap-ref-8 sap offset))
 
 (defun sap-ref-16 (sap offset)
   "Returns the 16-bit word at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
-	   (type (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63) offset))
+	   (type (signed-byte #-(or alpha amd64) #.(1- vm:word-bits) #+(or alpha amd64) 63) offset))
   (sap-ref-16 sap offset))
 
 (defun sap-ref-32 (sap offset)
@@ -110,7 +110,7 @@
 (defun sap-ref-sap (sap offset)
   "Returns the 32-bit system-area-pointer at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
-	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
+	   (type (signed-byte #-(or alpha amd64) #.vm:word-bits #+(or alpha amd64) 64) offset))
   (sap-ref-sap sap offset))
 
 (defun sap-ref-single (sap offset)
@@ -135,13 +135,13 @@
 (defun signed-sap-ref-8 (sap offset)
   "Returns the signed 8-bit byte at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
-	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
+	   (type (signed-byte #-(or alpha amd64) #.vm:word-bits #+(or alpha amd64) 64) offset))
   (signed-sap-ref-8 sap offset))
 
 (defun signed-sap-ref-16 (sap offset)
   "Returns the signed 16-bit word at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
-	   (type (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63) offset))
+	   (type (signed-byte #-(or alpha amd64) #.(1- vm:word-bits) #+(or alpha amd64) 63) offset))
   (signed-sap-ref-16 sap offset))
 
 (defun signed-sap-ref-32 (sap offset)
@@ -158,13 +158,13 @@
 
 (defun %set-sap-ref-8 (sap offset new-value)
   (declare (type system-area-pointer sap)
-	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset)
+	   (type (signed-byte #-(or alpha amd64) #.vm:word-bits #+(or alpha amd64) 64) offset)
 	   (type (unsigned-byte 8) new-value))
   (setf (sap-ref-8 sap offset) new-value))
 
 (defun %set-sap-ref-16 (sap offset new-value)
   (declare (type system-area-pointer sap)
-	   (type (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63) offset)
+	   (type (signed-byte #-(or alpha amd64) #.(1- vm:word-bits) #+(or alpha amd64) 63) offset)
 	   (type (unsigned-byte 16) new-value))
   (setf (sap-ref-16 sap offset) new-value))
 
@@ -182,13 +182,13 @@
 
 (defun %set-signed-sap-ref-8 (sap offset new-value)
   (declare (type system-area-pointer sap)
-	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset)
+	   (type (signed-byte #-(or alpha amd64) #.vm:word-bits #+(or alpha amd64) 64) offset)
 	   (type (signed-byte 8) new-value))
   (setf (signed-sap-ref-8 sap offset) new-value))
 
 (defun %set-signed-sap-ref-16 (sap offset new-value)
   (declare (type system-area-pointer sap)
-	   (type (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63) offset)
+	   (type (signed-byte #-(or alpha amd64) #.(1- vm:word-bits) #+(or alpha amd64) 63) offset)
 	   (type (signed-byte 16) new-value))
   (setf (signed-sap-ref-16 sap offset) new-value))
 
@@ -206,7 +206,7 @@
 
 (defun %set-sap-ref-sap (sap offset new-value)
   (declare (type system-area-pointer sap new-value)
-	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
+	   (type (signed-byte #-(or alpha amd64) #.vm:word-bits #+(or alpha amd64) 64) offset))
   (setf (sap-ref-sap sap offset) new-value))
 
 (defun %set-sap-ref-single (sap offset new-value)
