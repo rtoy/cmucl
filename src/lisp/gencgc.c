@@ -8416,10 +8416,13 @@ void do_pending_interrupt(void);
 char *
 alloc(int nbytes)
 {
-#if 0 && (defined(i386) || defined(__x86_64))
+#if (defined(i386) || defined(__x86_64))
     /*
      * Need to save and restore the FPU registers on x86, but only for
-     * sse2.  See Ticket #61.
+     * sse2.  See Trac ticket #61
+     * (https://trac.common-lisp.net/cmucl/ticket/61) and gitlab
+     * ticket #86
+     * (https://gitlab.common-lisp.net/cmucl/cmucl/-/issues/86).
      *
      * Not needed by sparc or ppc because we never call alloc from
      * Lisp directly to do allocation.
@@ -8457,20 +8460,6 @@ alloc(int nbytes)
 	    set_current_region_free((lispobj) new_free_pointer);
             break;
 	} else if (bytes_allocated <= auto_gc_trigger) {
-#if 1 && (defined(i386) || defined(__x86_64))
-    /*
-     * Need to save and restore the FPU registers on x86, but only for
-     * sse2.  See Ticket #61.
-     *
-     * Not needed by sparc or ppc because we never call alloc from
-     * Lisp directly to do allocation.
-     */
-    FPU_STATE(fpu_state);
-
-    if (fpu_mode == SSE2) {
-        save_fpu_state(fpu_state);
-    }
-#endif
 	    /* Call gc_alloc.  */
 	    boxed_region.free_pointer = (void *) get_current_region_free();
 	    boxed_region.end_addr =
@@ -8481,11 +8470,6 @@ alloc(int nbytes)
 	    set_current_region_free((lispobj) boxed_region.free_pointer);
 	    set_current_region_end((lispobj) boxed_region.end_addr);
 
-#if 1 && (defined(i386) || defined(__x86_64))
-    if (fpu_mode == SSE2) {
-        restore_fpu_state(fpu_state);
-    }
-#endif
             break;
 	} else {
 	    /* Run GC and try again.  */
@@ -8499,7 +8483,7 @@ alloc(int nbytes)
 	}
     }
 
-#if 0 && (defined(i386) || defined(__x86_64))
+#if (defined(i386) || defined(__x86_64))
     if (fpu_mode == SSE2) {
         restore_fpu_state(fpu_state);
     }
