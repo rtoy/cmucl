@@ -8412,9 +8412,24 @@ gencgc_pickup_dynamic(void)
 
 void do_pending_interrupt(void);
 
+//#pragma GCC optimize ("-O1")
 char *
 alloc(int nbytes)
 {
+#if 0 && (defined(i386) || defined(__x86_64))
+    /*
+     * Need to save and restore the FPU registers on x86, but only for
+     * sse2.  See Ticket #61.
+     *
+     * Not needed by sparc or ppc because we never call alloc from
+     * Lisp directly to do allocation.
+     */
+    FPU_STATE(fpu_state);
+
+    if (fpu_mode == SSE2) {
+        save_fpu_state(fpu_state);
+    }
+#endif
     void *new_obj;
 #if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
     /*
@@ -8442,19 +8457,19 @@ alloc(int nbytes)
 	    set_current_region_free((lispobj) new_free_pointer);
             break;
 	} else if (bytes_allocated <= auto_gc_trigger) {
-#if defined(i386) || defined(__x86_64)
-            /*
-             * Need to save and restore the FPU registers on x86, but only for
-             * sse2.  See Ticket #61.
-             *
-             * Not needed by sparc or ppc because we never call alloc from
-             * Lisp directly to do allocation.
-             */
-            FPU_STATE(fpu_state);
+#if 1 && (defined(i386) || defined(__x86_64))
+    /*
+     * Need to save and restore the FPU registers on x86, but only for
+     * sse2.  See Ticket #61.
+     *
+     * Not needed by sparc or ppc because we never call alloc from
+     * Lisp directly to do allocation.
+     */
+    FPU_STATE(fpu_state);
 
-            if (fpu_mode == SSE2) {
-                save_fpu_state(fpu_state);
-            }
+    if (fpu_mode == SSE2) {
+        save_fpu_state(fpu_state);
+    }
 #endif
 	    /* Call gc_alloc.  */
 	    boxed_region.free_pointer = (void *) get_current_region_free();
@@ -8466,10 +8481,10 @@ alloc(int nbytes)
 	    set_current_region_free((lispobj) boxed_region.free_pointer);
 	    set_current_region_end((lispobj) boxed_region.end_addr);
 
-#if defined(i386) || defined(__x86_64)
-            if (fpu_mode == SSE2) {
-                restore_fpu_state(fpu_state);
-            }
+#if 1 && (defined(i386) || defined(__x86_64))
+    if (fpu_mode == SSE2) {
+        restore_fpu_state(fpu_state);
+    }
 #endif
             break;
 	} else {
@@ -8484,8 +8499,14 @@ alloc(int nbytes)
 	}
     }
 
+#if 0 && (defined(i386) || defined(__x86_64))
+    if (fpu_mode == SSE2) {
+        restore_fpu_state(fpu_state);
+    }
+#endif
     return new_obj;
 }
+#pragma GCC optimize ("-O2")
 
 char *
 alloc_pseudo_atomic(int nbytes)
@@ -8545,6 +8566,7 @@ component_ptr_from_pc(lispobj * pc)
     return NULL;
 }
 
+#pragma GCC optimize ("-O1")
 /*
  * Get lower and upper(middle) 28 bits of total allocation
  */

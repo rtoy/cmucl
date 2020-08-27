@@ -21,12 +21,12 @@ extern boolean os_support_sse2(void);
  * 512+16 bytes of space and let the routine adjust the appropriate
  * alignment.
  */
-#define SSE_STATE_SIZE ((512+16)/4)
+#define SSE_STATE_SIZE 512
 
 /*
  * Just use the SSE size for both x87 and sse2 since the SSE size is
  * enough for either.
  */
-#define FPU_STATE(name)    int name[SSE_STATE_SIZE];
+#define FPU_STATE(name)    u_int8_t name[SSE_STATE_SIZE] __attribute__((aligned(16)))
 
 #endif
