@@ -8527,7 +8527,6 @@ component_ptr_from_pc(lispobj * pc)
     return NULL;
 }
 
-#pragma GCC optimize ("-O1")
 /*
  * Get lower and upper(middle) 28 bits of total allocation
  */
