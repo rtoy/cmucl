@@ -381,28 +381,6 @@ ENDFUNC(fastcopy16)
  * On exit:
  * %eax = address
  */
-#if 0
-FUNCDEF(alloc_overflow_sse2)
-	STACK_PROLOGUE(20)
-	movl	%ecx, 8(%esp)	# Save ecx and edx registers
-	movl	%edx, 4(%esp)
-	stmxcsr 12(%esp)	# Save MXCSR
-	/* Clear the exceptions that might have occurred */
-	movl	12(%esp), %edx
-	and	$-64, %edx	# Clear the exceptions
-	movl	%edx, 16(%esp)
-	ldmxcsr 16(%esp)	# Get new mxcsr value
-	movl	%eax, (%esp)	# Put size on stack for first arg to alloc()
-
-	call	GNAME(alloc)
-
-	movl	4(%esp), %edx	# Restore edx and ecx registers.  eax has the return value.
-	movl	8(%esp), %ecx
-	ldmxcsr	12(%esp)
-	STACK_EPILOGUE
-	ret
-ENDFUNC(alloc_overflow_sse2)	
-#else
 FUNCDEF(alloc_overflow_sse2)
 	# Need 8*16 bytes for the xmm registers, and space to save ecx
 	# and edx, space for mxcsr, a temp, and one arg to pass to alloc.
@@ -465,7 +443,6 @@ FUNCDEF(alloc_overflow_sse2)
 	STACK_EPILOGUE
 	ret
 ENDFUNC(alloc_overflow_sse2)	
-#endif		
 
 #ifdef LINKAGE_TABLE
 
