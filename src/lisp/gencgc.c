@@ -8412,28 +8412,11 @@ gencgc_pickup_dynamic(void)
 
 void do_pending_interrupt(void);
 
-//#pragma GCC optimize ("-O1")
 char *
 alloc(int nbytes)
 {
-#if (defined(i386) || defined(__x86_64))
-    /*
-     * Need to save and restore the FPU registers on x86, but only for
-     * sse2.  See Trac ticket #61
-     * (https://trac.common-lisp.net/cmucl/ticket/61) and gitlab
-     * ticket #86
-     * (https://gitlab.common-lisp.net/cmucl/cmucl/-/issues/86).
-     *
-     * Not needed by sparc or ppc because we never call alloc from
-     * Lisp directly to do allocation.
-     */
-    FPU_STATE(fpu_state);
-
-    if (fpu_mode == SSE2) {
-        save_fpu_state(fpu_state);
-    }
-#endif
     void *new_obj;
+
 #if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
     /*
      * *current-region-free-pointer* is the same as alloc-tn (=
@@ -8483,14 +8466,8 @@ alloc(int nbytes)
 	}
     }
 
-#if (defined(i386) || defined(__x86_64))
-    if (fpu_mode == SSE2) {
-        restore_fpu_state(fpu_state);
-    }
-#endif
     return new_obj;
 }
-#pragma GCC optimize ("-O2")
 
 char *
 alloc_pseudo_atomic(int nbytes)
