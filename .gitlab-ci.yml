@@ -4,6 +4,9 @@ variables:
   bootstrap: ""
 
 linux-runner:
+  artifacts:
+    paths:
+      - ansi-test/test.out
   tags:
     - linux
   before_script:
