@@ -6,6 +6,7 @@ include Config.x86_common
 # you have the SDK available.
 MIN_VER = -mmacosx-version-min=10.6
 
+CFLAGS += $(COPT)
 CPPFLAGS += -DDARWIN $(MIN_VER) -m32
 CFLAGS += -g3 -mtune=generic
 ASFLAGS += -g3 $(MIN_VER)

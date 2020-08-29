@@ -3,6 +3,7 @@ include Config.x86_common
 
 CC = clang
 CPPFLAGS += -m32 -D__NO_CTYPE -D_GNU_SOURCE
+CFLAGS += $(COPT)
 CFLAGS += -march=pentium4 -mfpmath=sse -mtune=generic
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
