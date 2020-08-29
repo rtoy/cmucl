@@ -25,6 +25,9 @@ linux-runner:
     - grep 'No unexpected \(successes\|failures\)' test.out 
 
 osx-runner:
+  artifacts:
+    paths:
+      - ansi-test/test.out
   tags:
     - osx
   before_script:
