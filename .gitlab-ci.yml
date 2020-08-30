@@ -4,9 +4,14 @@ variables:
   bootstrap: ""
 
 linux-runner:
+  artifacts:
+    paths:
+      - ansi-test/test.out
   tags:
     - linux
   before_script:
+    - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
+    - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
     - wget -nv $download_url/cmucl-$version-linux.tar.bz2
     - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
     - mkdir snapshot
@@ -15,11 +20,19 @@ linux-runner:
     - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist linux-4
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+    - cd ansi-test
+    - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
+    - grep 'No unexpected \(successes\|failures\)' test.out 
 
 osx-runner:
+  artifacts:
+    paths:
+      - ansi-test/test.out
   tags:
     - osx
   before_script:
+    - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
+    - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
     - curl -s -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
@@ -27,3 +40,6 @@ osx-runner:
     - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist darwin-4
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+    - cd ansi-test
+    - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
+    - grep 'No unexpected \(successes\|failures\)' test.out 
