@@ -7,6 +7,7 @@ linux-runner:
   artifacts:
     paths:
       - ansi-test/test.out
+      - benchmarks/cl-bench/results
   tags:
     - linux
   before_script:
@@ -22,7 +23,11 @@ linux-runner:
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
-    - grep 'No unexpected \(successes\|failures\)' test.out 
+    - grep 'No unexpected \(successes\|failures\)' test.out
+    - cd ../benchmarks/cl-bench
+    - CMUCL=../../snapshot/bin/lisp run-cmucl.sh
+    - CMUCL=../../dist/bin/lisp run-cmucl.sh
+    - ../../snapshot/bin/lisp -load report
 
 osx-runner:
   artifacts:
