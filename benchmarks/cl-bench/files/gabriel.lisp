@@ -1018,7 +1018,9 @@
 
 ;;; FPRINT -- Benchmark to print to a file.
 
-(defparameter +fread-temporary-pathname+ "/tmp/fprint.tst")
+(defparameter +fread-temporary-pathname+
+  "./tmp/fprint.tst"
+  "Temporary file used for benchmarking fread")
 
 (defvar *fprint-test-atoms*
   '(abcdef12 cdefgh23 efghij34 ghijkl45 ijklmn56 klmnop67

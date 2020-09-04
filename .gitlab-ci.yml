@@ -27,6 +27,7 @@ linux-runner:
     - cd ../benchmarks/cl-bench
     - echo $PWD
     - ls
+    - mkdir tmp
     - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
     - ../../snapshot/bin/lisp -load report
