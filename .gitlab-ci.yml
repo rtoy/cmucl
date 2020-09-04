@@ -34,6 +34,7 @@ osx-runner:
   artifacts:
     paths:
       - ansi-test/test.out
+      - benchmarks/cl-bench/results
   tags:
     - osx
   before_script:
