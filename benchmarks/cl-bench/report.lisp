@@ -30,7 +30,6 @@
 				     "CL-benchmark*.*"))
 	data implementations benchmarks)
     (dolist (f (directory benchmark-path))
-      (format t "*** f = ~A~%" f)
       (ignore-errors
         (with-open-file (f f :direction :input)
           (let ((*read-eval* nil))
