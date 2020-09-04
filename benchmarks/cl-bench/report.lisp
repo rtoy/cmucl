@@ -14,18 +14,28 @@
 
 (in-package :cl-user)
 
+(defvar *benchmark-file-directory*
+  (merge-pathnames (make-pathname :directory '(:relative "results"))
+		   (make-pathname :directory (pathname-directory *load-truename*)))
+  "Directory where the benchmark report file is stored")
+
 (defconstant +implementation+
   (concatenate 'string
                (lisp-implementation-type) " "
                (lisp-implementation-version)))
 
 (defun bench-analysis ()
-  (let (data implementations benchmarks)
-    (dolist (f (directory "/var/tmp/CL-benchmark*.*"))
+  (let ((benchmark-path (concatenate 'string
+				     (namestring *benchmark-file-directory*)
+				     "CL-benchmark*.*"))
+	data implementations benchmarks)
+    (dolist (f (directory benchmark-path))
+      (format t "*** f = ~A~%" f)
       (ignore-errors
         (with-open-file (f f :direction :input)
           (let ((*read-eval* nil))
             (push (read f) data)))))
+    (format t "*** data = ~A~%" data)
     (setq implementations (delete +implementation+ (mapcar #'car data) :test #'string=))
     (setq benchmarks (reverse (mapcar #'first (cdr (first data)))))
     (format t "~25a~10@a" "Benchmark" "Reference")

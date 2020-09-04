@@ -21,6 +21,10 @@
 
 (defvar *benchmarks* '())
 (defvar *benchmark-results* '())
+(defvar *benchmark-file-directory*
+  (merge-pathnames (make-pathname :directory '(:relative "results"))
+		   (make-pathname :directory (pathname-directory *load-truename*)))
+  "Directory where the benchmark report file is stored")
 
 (defvar +implementation+
   (concatenate 'string
@@ -117,11 +121,14 @@
 
 
 (defun benchmark-report-file ()
+  (ensure-directories-exist *benchmark-file-directory*)
   (multiple-value-bind (second minute hour date month year)
       (get-decoded-time)
     (declare (ignore second))
+    ;; Should we use pathnames directly instead of creating a string
+    ;; naming the file?
     (format nil "~aCL-benchmark-~d~2,'0d~2,'0dT~2,'0d~2,'0d"
-            #+win32 "" #-win32 "/var/tmp/"
+            *benchmark-file-directory*
             year month date hour minute)))
 
 ;; grr, CLISP doesn't implement ~<..~:>
