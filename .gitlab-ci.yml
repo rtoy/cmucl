@@ -49,6 +49,7 @@ linux:test:
   artifacts:
     paths:
       - ansi-test/test.out
+      - test.log
   needs:
     # Needs artifacts from install (ansi-test/) and build (dist/)
     - job: linux:install
@@ -115,6 +116,7 @@ osx:test:
   artifacts:
     paths:
       - ansi-test/test.out
+      - test.log
   needs:
     # Needs artifacts from install (ansi-test/) and build (dist/)
     - job: osx:install
