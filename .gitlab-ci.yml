@@ -18,11 +18,8 @@ linux:install:
     - linux
   artifacts:
     paths:
-      - ansi-test/
       - snapshot/
   script:
-    - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
-    - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
     - wget -nv $download_url/cmucl-$version-linux.tar.bz2
     - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
     - mkdir snapshot
@@ -51,10 +48,12 @@ linux:test:
       - ansi-test/test.out
       - test.log
   needs:
-    # Needs artifacts from install (ansi-test/) and build (dist/)
-    - job: linux:install
-      artifacts: true
+    # Needs artifacts from build (dist/)
     - job: linux:build
+      artifacts: true
+  before_script:
+    - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
+    - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
   script:
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
     - cd ansi-test
@@ -86,11 +85,8 @@ osx:install:
     - osx
   artifacts:
     paths:
-      - ansi-test/
       - snapshot/
   script:
-    - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
-    - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
     - curl -s -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
@@ -118,10 +114,12 @@ osx:test:
       - ansi-test/test.out
       - test.log
   needs:
-    # Needs artifacts from install (ansi-test/) and build (dist/)
-    - job: osx:install
-      artifacts: true
+    # Needs artifacts from build (dist/)
     - job: osx:build
+      artifacts: true
+  before_script:
+    - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
+    - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
   script:
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
     - cd ansi-test
