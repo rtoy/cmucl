@@ -49,6 +49,9 @@ linux:test:
   artifacts:
     paths:
       - ansi-test/test.out
+  needs:
+    - job: linux:build
+      artifacts: true
   script:
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
     - cd ansi-test
@@ -62,6 +65,9 @@ linux:benchmark:
   artifacts:
     paths:
       - benchmarks/cl-bench/results
+  needs:
+    - job: linux:build
+      artifacts: true
   script:
     - cd ../benchmarks/cl-bench
     - mkdir tmp
@@ -105,6 +111,9 @@ osx:test:
   artifacts:
     paths:
       - ansi-test/test.out
+  needs:
+    - job: osx:build
+      artifacts: true
   script:
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
     - cd ansi-test
@@ -118,6 +127,9 @@ osx:benchmark:
   artifacts:
     paths:
       - benchmarks/cl-bench/results
+  needs:
+    - job: osx:build
+      artifacts: true
   script:
     - cd ../benchmarks/cl-bench
     - mkdir tmp
