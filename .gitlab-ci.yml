@@ -32,13 +32,15 @@ linux:build:
   stage: build
   tags:
     - linux
+  artifacts:
+    paths:
+      - dist/
   needs:
     - job: linux:install
       artifacts: true
   script:
     - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist linux-4
-    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 linux:test:
   stage: test
@@ -48,6 +50,7 @@ linux:test:
     paths:
       - ansi-test/test.out
   script:
+    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
     - grep 'No unexpected \(successes\|failures\)' test.out
@@ -85,6 +88,9 @@ osx:build:
   stage: build
   tags:
     - osx
+  artifacts:
+    paths:
+      - dist/
   needs:
     - job: osx:install
       artifacts: true
