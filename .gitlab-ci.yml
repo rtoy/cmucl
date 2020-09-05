@@ -82,7 +82,7 @@ osx:install:
     - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
 
 osx:build:
-  stage: install
+  stage: build
   tags:
     - osx
   needs:
