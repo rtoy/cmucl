@@ -73,7 +73,7 @@ linux:benchmark:
       artifacts: true
     - job: linux:build
   script:
-    - cd ../benchmarks/cl-bench
+    - cd benchmarks/cl-bench
     - mkdir tmp
     - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
@@ -127,7 +127,7 @@ osx:test:
     - grep 'No unexpected \(successes\|failures\)' test.out 
 
 osx:benchmark:
-  stage: test
+  stage: benchmark
   tags:
     - osx
   artifacts:
@@ -139,7 +139,7 @@ osx:benchmark:
       artifacts: true
     - job:  osx:build
   script:
-    - cd ../benchmarks/cl-bench
+    - cd benchmarks/cl-bench
     - mkdir tmp
     - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
