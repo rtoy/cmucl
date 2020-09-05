@@ -3,53 +3,100 @@ variables:
   version: "2020-04-x86"
   bootstrap: ""
 
-linux-runner:
-  artifacts:
-    paths:
-      - ansi-test/test.out
-      - benchmarks/cl-bench/results
+stages:
+  - install
+  - build
+  - test
+  - benchmark
+
+
+linux:install:
+  stage: install
   tags:
     - linux
-  before_script:
+  script:
     - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
     - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
     - wget -nv $download_url/cmucl-$version-linux.tar.bz2
     - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
+
+linux:build:
+  stage: build
+  tags:
+    - linux
   script:
     - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist linux-4
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
+linux:test:
+  stage: test
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - ansi-test/test.out
+  script:
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
     - grep 'No unexpected \(successes\|failures\)' test.out
+
+linux:benchmark:
+  stage: benchmark
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - benchmarks/cl-bench/results
+  script:
     - cd ../benchmarks/cl-bench
     - mkdir tmp
     - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
     - ../../snapshot/bin/lisp -load report
 
-osx-runner:
-  artifacts:
-    paths:
-      - ansi-test/test.out
-      - benchmarks/cl-bench/results
+osx:install:
+  stage: install
   tags:
     - osx
-  before_script:
+  script:
     - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
     - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
     - curl -s -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
+
+osx:build:
+  stage: install
+  tags:
+    - osx
   script:
     - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist darwin-4
+
+osx:test:
+  stage: test
+  tags:
+    - osx
+  artifacts:
+    paths:
+      - ansi-test/test.out
+  script:
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
     - grep 'No unexpected \(successes\|failures\)' test.out 
+
+osx:benchmark:
+  stage: test
+  tags:
+    - osx
+  artifacts:
+    paths:
+      - benchmarks/cl-bench/results
+  script:
     - cd ../benchmarks/cl-bench
     - mkdir tmp
     - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
