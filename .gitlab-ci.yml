@@ -9,11 +9,17 @@ stages:
   - test
   - benchmark
 
+cache:
+
 
 linux:install:
   stage: install
   tags:
     - linux
+  artifacts:
+    paths:
+      - ansi-test/
+      - snapshot/
   script:
     - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
     - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
@@ -26,6 +32,9 @@ linux:build:
   stage: build
   tags:
     - linux
+  needs:
+    - job: linux:install
+      artifacts: true
   script:
     - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist linux-4
@@ -61,6 +70,10 @@ osx:install:
   stage: install
   tags:
     - osx
+  artifacts:
+    paths:
+      - ansi-test/
+      - snapshot/
   script:
     - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
     - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
@@ -72,6 +85,9 @@ osx:build:
   stage: install
   tags:
     - osx
+  needs:
+    - job: osx:install
+      artifacts: true
   script:
     - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist darwin-4
