@@ -1,9 +1,6 @@
 # -*- Mode: makefile -*-
 include Config.x86_common
 
-# gcc 8.1.1 and 8.3.1 (and probably anything after 8.1.1?) won't
-# produce a working lisp with -O2.  Just use -O1.
-COPT = -O2
 CFLAGS += $(COPT)
 CPPFLAGS += -m32 -D__NO_CTYPE -D_GNU_SOURCE
 CFLAGS += -rdynamic  -march=pentium4 -mfpmath=sse -mtune=generic
