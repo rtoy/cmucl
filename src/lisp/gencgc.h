@@ -36,6 +36,17 @@ int gc_write_barrier(void *);
 #define PAGE_NEEDS_ZEROING_MARKER	0xdead0000
 
 /*
+ * The generation that this page belongs to. This should be valid for
+ * all pages that may have objects allocated, even current allocation
+ * region pages - this allows the space of an object to be easily
+ * determined.
+ */
+
+#define PAGE_GENERATION_MASK		0x0000000f
+#define PAGE_GENERATION(page) \
+	(page_table[page].flags & PAGE_GENERATION_MASK)
+
+/*
  * Set when the page is write protected. If it is writen into it is
  * made writable and this flag is cleared. This should always reflect
  * the actual write_protect status of a page.
@@ -61,7 +72,7 @@ int gc_write_barrier(void *);
  * the bytes_used must be 0.
  */
 
-#define PAGE_ALLOCATED_MASK	0x00000040
+#define PAGE_ALLOCATED_MASK		0x00000040
 #define PAGE_ALLOCATED(page)	(page_table[page].flags & PAGE_ALLOCATED_MASK)
 
 /*
@@ -94,16 +105,12 @@ int gc_write_barrier(void *);
 #define PAGE_LARGE_OBJECT_VAL(page) \
 	(PAGE_LARGE_OBJECT(page) >> PAGE_LARGE_OBJECT_SHIFT)
 
-/*
- * The generation that this page belongs to. This should be valid for
- * all pages that may have objects allocated, even current allocation
- * region pages - this allows the space of an object to be easily
- * determined.
- */
-
-#define PAGE_GENERATION_MASK		0x0000000f
-#define PAGE_GENERATION(page) \
-	(page_table[page].flags & PAGE_GENERATION_MASK)
+#define PAGE_YOUNGEST_GEN_MASK		0x0000f000
+#define PAGE_YOUNGEST_GEN_SHIFT		12
+#define PAGE_YOUNGEST_GEN(page) \
+  (page_table[page].flags & PAGE_YOUNGEST_GEN_MASK)
+#define PAGE_YOUNGEST_GEN_VAL(page) \
+  (PAGE_YOUNGEST_GEN(page) >> PAGE_YOUNGEST_GEN_SHIFT)
 
 #define PAGE_FLAGS(page, mask) (page_table[page].flags & (mask))
 #define PAGE_FLAGS_UPDATE(page, mmask, mflags) \
@@ -111,7 +118,21 @@ int gc_write_barrier(void *);
 
 struct page {
     /*
-     * Page flags.
+     * Page flags.  See above for the contents, but basically it looks
+     * has fields like so:
+     *
+     * YOUNG(4) | LARGE(1) | NOMOVE(1) | UNBOXED(1) | ALLOC(1) | WPC(1) | WP(1) | GEN(4)
+     *
+     * The number in parens is the number of bits used for the field.  The fields are:
+     *
+     * YOUNG - YOUNGEST_GEN: the youngest generation found in the page
+     * LARGE - LARGE_OBJECT: page is part of a large object
+     * NOMOVE - DONT_MOVE: page should not be moved
+     * UNBOXED - UNBOXED: 1 if page is for unboxed objects
+     * ALLOC - ALLOCATED: 1 if page has been allocated
+     * WPC - WRITE_PROTECT_CLEARED: set when WP flag is cleared by sigbus handler
+     * WP - WRITE_PROTECT: set when page is write-protected
+     * GEN - GENERATION: the generation this page belongs to.
      */
 
     unsigned flags;
