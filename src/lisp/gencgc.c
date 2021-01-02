@@ -495,7 +495,6 @@ gc_write_barrier(void *addr)
     /* Un-protect the page */
     os_protect((os_vm_address_t) page_address(page_index), GC_PAGE_SIZE, OS_VM_PROT_ALL);
     page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-    page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
 
     return 1;
 }

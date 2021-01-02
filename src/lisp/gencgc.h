@@ -46,16 +46,6 @@ int gc_write_barrier(void *);
 	(page_table[page].flags & PAGE_WRITE_PROTECTED_MASK)
 
 /*
- * This flag is set when the above write protect flag is clear by the
- * sigbus handler. This is useful for re-scavenging pages that are
- * written during a GC.
- */
-
-#define PAGE_WRITE_PROTECT_CLEARED_MASK	0x00000020
-#define PAGE_WRITE_PROTECT_CLEARED(page) \
-	(page_table[page].flags & PAGE_WRITE_PROTECT_CLEARED_MASK)
-
-/*
  * Page allocated flag: 0 for a free page; 1 when allocated. If
  * the page is free then the following slots are invalid - well
  * the bytes_used must be 0.
