@@ -7866,6 +7866,7 @@ garbage_collect_generation(int generation, int raise)
     printf("Done scavenging the scavenger hooks.\n");
 #endif
 
+#if 0
     if (SymbolValue(SCAVENGE_READ_ONLY_SPACE) != NIL) {
 	read_only_space_size =
 	    (lispobj *) SymbolValue(READ_ONLY_SPACE_FREE_POINTER) -
@@ -7874,6 +7875,7 @@ garbage_collect_generation(int generation, int raise)
 		read_only_space_size * sizeof(lispobj));
 	scavenge(read_only_space, read_only_space_size);
     }
+#endif
 
     static_space_size = (lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER)
 	- static_space;
