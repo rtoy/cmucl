@@ -415,10 +415,18 @@
      (when (static-symbol-p value)
        (sc-number-or-lose 'immediate *backend*)))
     (single-float
-     (when (eql value 0f0)
+     (when (or (= value 0f0)
+	       (eql value 1f0)
+	       (eql value 1.5f0)
+	       (eql value 0.5f0)
+	       (eql value 2f0))
        (sc-number-or-lose 'fp-constant *backend*)))
     (double-float
-     (when (eql value 0d0)
+     (when (or (= value 0d0)
+	       (eql value 1d0)
+	       (eql value 1.5d0)
+	       (eql value 0.5d0)
+	       (eql value 2d0))
        (sc-number-or-lose 'fp-constant *backend*)))
     #+long-float
     (long-float

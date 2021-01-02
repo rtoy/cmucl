@@ -178,11 +178,81 @@
 (define-move-function (load-fp-constant 2) (vop x y)
   ((fp-constant) (single-reg double-reg))
   (let ((value (c::constant-value (c::tn-leaf x))))
-    (cond ((and (zerop value)
-		(= (float-sign value) 1))
+    (cond ((zerop value)
+	   (let ((sign (float-sign value)))
+	     (cond ((= sign 1)
+		    ;; +0.0
+		    (sc-case y
+		      (single-reg (inst xorps y y))
+		      (double-reg (inst xorpd y y))))
+		   ((= sign -1)
+		    ;; -0.0 Set y to all ones, and then left shift all
+		    ;; the bits until just one is in the MSB position
+		    (sc-case y
+		      (single-reg
+		       (inst pcmpeqw y y)
+		       (inst pslld y 31))
+		      (double-reg
+		       (inst pcmpeqw y y)
+		       (inst pslld y 63)))))))
+	  ;; Reference:
+	  ;; https://www.agner.org/optimize/optimizing_assembly.pdf,
+	  ;; Chapter 13.8, Table 13.10
+	  ;;
+	  ;; These all depend on the fact that the number we want
+	  ;; consists of some leading 0's, a bunch of 1's all followed
+	  ;; by a bunch of trailing 0's.
+	  ;;
+	  ;; Thus, start with all ones, left shift enough to get the
+	  ;; desired number of trailing zeros.  Then right shift to
+	  ;; get the right number of leading zeros.
+	  ((= value 1)
+	   ;; 1f0 = #b00111111100000000000000000000000
 	   (sc-case y
-	     (single-reg (inst xorps y y))
-	     (double-reg (inst xorpd y y))))
+	     (single-reg
+	      ;; y = #xffffffff
+	      (inst pcmpeqw y y)
+	      ;; y = #xfe000000
+	      (inst pslld y 25)
+	      ;; y = #x3f800000
+	      (inst psrld y 2))
+	     (double-reg
+	      (inst pcmpeqw y y)
+	      (inst psllq y 53)
+	      (inst psrlq y 2))))
+	  ((= value 0.5)
+	   ;; 0.5 = #b00111111000000000000000000000000
+	   (sc-case y
+	     (single-reg
+	      (inst pcmpeqw y y)
+	      (inst pslld y 26)
+	      (inst psrld y 2))
+	     (double-reg
+	      (inst pcmpeqw y y)
+	      (inst pslld y 55)
+	      (inst psrld y 2))))
+	  ((= value 1.5)
+	   ;; 1.5 = #b00111111110000000000000000000000
+	   (sc-case y
+	     (single-reg
+	      (inst pcmpeqw y y)
+	      (inst pslld y 24)
+	      (inst psrld y 2))
+	     (double-reg
+	      (inst pcmpeqw y y)
+	      (inst pslld y 53)
+	      (inst psrld y 2))))
+	  ((= value 2)
+	   ;; 2.0 = #b01000000000000000000000000000000
+	   (sc-case y
+	     (single-reg
+	      (inst pcmpeqw y y)
+	      (inst pslld y 31)
+	      (inst psrld y 1))
+	     (double-reg
+	      (inst pcmpeqw y y)
+	      (inst pslld y 63)
+	      (inst psrld y 1))))
 	  (t
 	   (warn (intl:gettext "Ignoring bogus i387 Constant ~a") value)))))
 
@@ -427,6 +497,7 @@
   (:generator 13
      (with-fixed-allocation (y vm:double-float-type vm:double-float-size node)
        (inst movsd (ea-for-df-desc y) x))))
+
 (define-move-vop move-from-double :move
   (double-reg) (descriptor-reg))
 
@@ -444,6 +515,7 @@
 (define-move-vop move-from-long :move
   (long-reg) (descriptor-reg))
 
+#+nil
 (define-vop (move-from-fp-constant)
   (:args (x :scs (fp-constant)))
   (:results (y :scs (descriptor-reg)))
@@ -455,6 +527,28 @@
        (0d0 (load-symbol-value y *fp-constant-0d0*))
        #+nil
        (1d0 (load-symbol-value y *fp-constant-1d0*)))))
+
+(define-vop (move-from-fp-constant)
+  (:args (x :scs (fp-constant)))
+  (:results (y :scs (descriptor-reg)))
+  (:node-var node)
+  (:temporary (:sc unsigned-reg) temp)
+  (:temporary (:sc double-reg) dtemp)
+  (:temporary (:sc single-reg) stemp)
+  (:generator 2
+    (let ((v (c::constant-value (c::tn-leaf x))))
+      (cond ((typep v 'single-float)
+	     (inst mov temp (kernel:single-float-bits v))
+	     (inst movd stemp temp)
+	     (with-fixed-allocation (y vm:single-float-type vm:single-float-size node)
+               (inst movss (ea-for-sf-desc y) stemp)))
+	    ((typep v 'double-float)
+	     (inst mov temp (kernel:double-float-high-bits v))
+	     (inst movd dtemp temp)
+	     (with-fixed-allocation (y vm:double-float-type vm:double-float-size node)
+               (inst movsd (ea-for-df-desc y) dtemp)))))))
+
+
 (define-move-vop move-from-fp-constant :move
   (fp-constant) (descriptor-reg))
 
