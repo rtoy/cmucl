@@ -537,6 +537,10 @@
   (:temporary (:sc single-reg) stemp)
   (:generator 2
     (let ((v (c::constant-value (c::tn-leaf x))))
+      ;; This code assumes that the fp-constant value matches what
+      ;; values supported by load-fp-constant does.  This actually
+      ;; handles any single or andy double float where the low 32 bits
+      ;; are zero.
       (cond ((typep v 'single-float)
 	     (inst mov temp (kernel:single-float-bits v))
 	     (inst movd stemp temp)
@@ -544,8 +548,8 @@
                (inst movss (ea-for-sf-desc y) stemp)))
 	    ((typep v 'double-float)
 	     (inst mov temp (kernel:double-float-high-bits v))
-	     (inst pslld temp 32)
 	     (inst movd dtemp temp)
+	     (inst psllq dtemp 32)
 	     (with-fixed-allocation (y vm:double-float-type vm:double-float-size node)
                (inst movsd (ea-for-df-desc y) dtemp)))))))
 
