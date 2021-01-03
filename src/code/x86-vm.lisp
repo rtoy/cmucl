@@ -443,9 +443,6 @@
 (defvar *fp-constant-lg2*)
 (defvar *fp-constant-ln2*)
 
-;;; Enable/Disable scavenging of the read-only space.
-(defvar *scavenge-read-only-space* nil)
-
 ;;; The current alien stack pointer; saved/restored for non-local
 ;;; exits.
 (defvar *alien-stack*)
