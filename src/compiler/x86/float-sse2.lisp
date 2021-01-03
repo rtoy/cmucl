@@ -544,6 +544,7 @@
                (inst movss (ea-for-sf-desc y) stemp)))
 	    ((typep v 'double-float)
 	     (inst mov temp (kernel:double-float-high-bits v))
+	     (inst pslld temp 32)
 	     (inst movd dtemp temp)
 	     (with-fixed-allocation (y vm:double-float-type vm:double-float-size node)
                (inst movsd (ea-for-df-desc y) dtemp)))))))
