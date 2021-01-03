@@ -363,9 +363,6 @@
       *fp-constant-lg2*
       *fp-constant-ln2*
 
-      ;; Used by gencgc.
-      *scavenge-read-only-space*
-
       ;; Multi-process support.
       *control-stacks*
 
