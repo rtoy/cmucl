@@ -341,6 +341,9 @@
     ;; address.
     #+gencgc
     *current-region-end-addr*
+
+    ;; TODO(issue #89).  This needs to be removed.  It's harmless to
+    ;; have this, but it should be removed.
     #+gencgc
     *scavenge-read-only-space*
 

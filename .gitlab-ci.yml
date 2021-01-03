@@ -36,7 +36,12 @@ linux:build:
     - job: linux:install
       artifacts: true
   script:
-    - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
+    # Do cross compile first
+    - bin/create-target.sh xtarget x86_linux_clang
+    - bin/create-target.sh xcross x86_linux_clang
+    - bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
+    # Regular build using the cross-compiled result
+    - bin/build.sh $bootstrap -R -C "" -o xtarget/lisp/lisp
     - bin/make-dist.sh -I dist linux-4
 
 linux:test:
@@ -102,7 +107,12 @@ osx:build:
     - job: osx:install
       artifacts: true
   script:
-    - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
+    # Do cross compile first
+    - bin/create-target.sh xtarget x86_darwin
+    - bin/create-target.sh xcross x86_darwin
+    - bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
+    # Regular build using the cross-compiled result
+    - bin/build.sh $bootstrap -R -C "" -o xtarget/lisp/lisp
     - bin/make-dist.sh -I dist darwin-4
 
 osx:test:
