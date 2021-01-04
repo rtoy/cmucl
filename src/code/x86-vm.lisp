@@ -430,18 +430,8 @@
 ;;; cases. Note these are initialise by genesis as they are needed
 ;;; early.
 ;;;
-(defvar *fp-constant-0s0*)
-(defvar *fp-constant-1s0*)
+(defvar *fp-constant-0f0*)
 (defvar *fp-constant-0d0*)
-(defvar *fp-constant-1d0*)
-;;; The long-float constants.
-(defvar *fp-constant-0l0*)
-(defvar *fp-constant-1l0*)
-(defvar *fp-constant-pi*)
-(defvar *fp-constant-l2t*)
-(defvar *fp-constant-l2e*)
-(defvar *fp-constant-lg2*)
-(defvar *fp-constant-ln2*)
 
 ;;; The current alien stack pointer; saved/restored for non-local
 ;;; exits.
