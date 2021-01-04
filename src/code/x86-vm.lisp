@@ -430,7 +430,7 @@
 ;;; cases. Note these are initialise by genesis as they are needed
 ;;; early.
 ;;;
-(defvar *fp-constant-0s0*)
+(defvar *fp-constant-0f0*)
 (defvar *fp-constant-0d0*)
 
 ;;; The current alien stack pointer; saved/restored for non-local

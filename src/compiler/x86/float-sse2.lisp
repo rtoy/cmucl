@@ -449,7 +449,7 @@
   (:results (y :scs (descriptor-reg)))
   (:generator 2
      (ecase (c::constant-value (c::tn-leaf x))
-       (0f0 (load-symbol-value y *fp-constant-0s0*))
+       (0f0 (load-symbol-value y *fp-constant-0f0*))
        #+nil
        (1f0 (load-symbol-value y *fp-constant-1s0*))
        (0d0 (load-symbol-value y *fp-constant-0d0*))

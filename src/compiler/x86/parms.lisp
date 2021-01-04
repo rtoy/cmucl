@@ -351,7 +351,7 @@
 
       ;; The FP constants
       *fp-constant-0d0*
-      *fp-constant-0s0*
+      *fp-constant-0f0*
 
       ;; Multi-process support.
       *control-stacks*
