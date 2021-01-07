@@ -57,7 +57,7 @@ linux:test:
     - job: linux:build
       artifacts: true
   before_script:
-    - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
+    - git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
     - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
   script:
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
@@ -128,7 +128,7 @@ osx:test:
     - job: osx:build
       artifacts: true
   before_script:
-    - git clone https://gitlab.common-lisp.net/ansi-test/ansi-test.git
+    - git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
     - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
   script:
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
