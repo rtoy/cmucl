@@ -797,7 +797,7 @@
   (op      :field (byte 7 1))
   (width   :field (byte 1 0)	:type 'width)
   (reg/mem :fields (list (byte 2 14) (byte 3 8))
-	   			:type 'reg/mem)
+	   			:type 'sized-reg/mem)
   (reg     :field (byte 3 11)	:type 'reg)
   ;; optional fields
   (imm))
@@ -835,7 +835,10 @@
 (disassem:define-instruction-format
     (accum-reg/mem 16
      :include 'reg/mem :default-printer '(:name :tab accum ", " reg/mem))
-  (reg/mem :type 'reg/mem)		; don't need a size
+  ;; This format uses the accumulator, so the size is known; therefore
+  ;; we don't really need to print out the memory size, but let's do
+  ;; it for consistency.
+  (reg/mem :type 'sized-reg/mem)
   (accum :type 'accum))
 
 ;;; Same as reg-reg/mem, but with a prefix of #b00001111
@@ -1132,7 +1135,8 @@
 	      (error "Bogus args to XCHG: ~S ~S" operand1 operand2)))))))
 
 (define-instruction lea (segment dst src)
-  (:printer reg-reg/mem ((op #b1000110) (width 1)))
+  ;; Don't need to print out the width for the LEA instruction
+  (:printer reg-reg/mem ((op #b1000110) (width 1) (reg/mem nil :type 'reg/mem)))
   (:emitter
    (assert (dword-reg-p dst))
    (emit-byte segment #b10001101)
