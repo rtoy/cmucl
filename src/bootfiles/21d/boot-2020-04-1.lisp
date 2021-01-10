@@ -10,3 +10,8 @@
 ;; x86: cross-x86-x86
 ;; sparc: cross-sparc-sparc
 
+;; This is also used to easily change the order of x86::conditions
+;; constant so that we prefer je instead of jeq.  Without a
+;; cross-compile we'd need to handle the refefintion of the
+;; defconstant in a different way.  See issue #95.
+

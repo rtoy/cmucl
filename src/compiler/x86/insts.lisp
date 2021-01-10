@@ -255,12 +255,15 @@
        (= (tn-offset thing) 0)))
 
 (eval-when (compile load eval)
+;; If a line has more than one value, then these are all synonyms, but
+;; the first one is the one that is preferred when printing the
+;; condition code out.
 (defconstant conditions
   '((:o . 0)
     (:no . 1)
     (:b . 2) (:nae . 2) (:c . 2)
     (:nb . 3) (:ae . 3) (:nc . 3)
-    (:eq . 4) (:e . 4) (:z . 4)
+    (:e . 4) (:eq . 4) (:z . 4)
     (:ne . 5) (:nz . 5)
     (:be . 6) (:na . 6)
     (:nbe . 7) (:a . 7)
@@ -843,7 +846,7 @@
   (op      :field (byte 7 9))
   (width   :field (byte 1 8)	:type 'width)
   (reg/mem :fields (list (byte 2 22) (byte 3 16))
-	   			:type 'reg/mem)
+	   			:type 'sized-reg/mem)
   (reg     :field (byte 3 19)	:type 'reg)
   ;; optional fields
   (imm))
@@ -865,7 +868,7 @@
   (prefix  :field (byte 8 0)  :value #b00001111)
   (op      :field (byte 8 8))
   (reg/mem :fields (list (byte 2 22) (byte 3 16))
-	                      :type 'reg/mem)
+	                      :type 'sized-reg/mem)
   (reg     :field (byte 3 19) :type 'reg)
   ;; optional fields
   (imm))
@@ -2112,6 +2115,7 @@
        (nt "Function end breakpoint trap"))
     )))
 
+;; This is really the int3 instruction.
 (define-instruction break (segment code)
   (:declare (type (unsigned-byte 8) code))
   (:printer byte-imm ((op #b11001100)) '(:name :tab code)
