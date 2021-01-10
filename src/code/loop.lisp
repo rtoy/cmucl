@@ -995,7 +995,10 @@ collected result will be returned as the value of the LOOP."
   (if crocks
       (let ((*ignores* ()))
 	(declare (special *ignores*))
-	`((destructuring-bind ,(subst-gensyms-for-nil (car crocks))
+	;; Destructuring in loop doesn't require that the values be
+	;; available.  The missing elements are filled with NIL.  So,
+	;; make everything &optional
+	`((destructuring-bind (&optional ,@(subst-gensyms-for-nil (car crocks)))
 	      ,(cadr crocks)
 	    (declare (ignore ,@*ignores*))
 	    ,@(loop-build-destructuring-bindings (cddr crocks) forms))))
