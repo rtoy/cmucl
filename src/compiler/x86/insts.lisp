@@ -2636,7 +2636,8 @@
 ;;; store single from st(0) and pop
 ;;;
 (define-instruction fstp (segment dest)
-  (:printer floating-point ((op '(#b001 #b011))))
+  (:printer floating-point ((op '(#b001 #b011)))
+	    '('fstp :tab 'dword " " 'ptr " " reg/mem))
   (:emitter 
    (cond ((fp-reg-tn-p dest)
 	  (emit-byte segment #b11011101)
@@ -2648,7 +2649,8 @@
 ;;; store double from st(0) and pop
 ;;;
 (define-instruction fstpd (segment dest)
-  (:printer floating-point ((op '(#b101 #b011))))
+  (:printer floating-point ((op '(#b101 #b011)))
+	    '('fstp :tab 'qword " " 'ptr " " reg/mem))
   (:printer floating-point-fp ((op '(#b101 #b011))))
   (:emitter 
    (cond ((fp-reg-tn-p dest)
