@@ -7722,7 +7722,7 @@ static void
 garbage_collect_generation(int generation, int raise)
 {
     unsigned long i;
-    unsigned long read_only_space_size, static_space_size;
+    unsigned long static_space_size;
 
 #if defined(i386) || defined(__x86_64)
     invalid_stack_start = (void *) control_stack;
@@ -7863,17 +7863,6 @@ garbage_collect_generation(int generation, int raise)
     scavenge(&scavenger_hooks, 1);
 #ifdef PRINTNOISE
     printf("Done scavenging the scavenger hooks.\n");
-#endif
-
-#if 0
-    if (SymbolValue(SCAVENGE_READ_ONLY_SPACE) != NIL) {
-	read_only_space_size =
-	    (lispobj *) SymbolValue(READ_ONLY_SPACE_FREE_POINTER) -
-	    read_only_space;
-	fprintf(stderr, "Scavenge read only space: %ld bytes\n",
-		read_only_space_size * sizeof(lispobj));
-	scavenge(read_only_space, read_only_space_size);
-    }
 #endif
 
     static_space_size = (lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER)
