@@ -132,8 +132,15 @@ write_elf_header(int fd)
     eh.e_ident[EI_VERSION]	= EV_CURRENT;
 #ifdef SOLARIS
     eh.e_ident[EI_OSABI]	= ELFOSABI_SOLARIS;
-#else
+#elif defined(__FREEBSD__)
     eh.e_ident[EI_OSABI]	= ELFOSABI_FREEBSD;
+#elif defined(__NetBSD__)
+    eh.e_ident[EI_OSABI]	= ELFOSABI_NETBSD;
+#elif defined(__linux__)
+    eh.e_ident[EI_OSABI]	= ELFOSABI_LINUX;
+#else
+    /* Default to NONE */
+    eh.e_ident[EI_OSABI]	= ELFOSABI_NONE;
 #endif
 
 #ifdef SOLARIS
