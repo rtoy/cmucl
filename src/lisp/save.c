@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "lisp.h"
 #include "os.h"
@@ -253,6 +254,11 @@ save_executable(char *filename, lispobj init_function)
     char *dir_name;
     char *dir_copy;
     int rc;
+
+    void init_asmtab(void);
+    void write_asm_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t end);
+
+    init_asmtab();
     
 #if defined WANT_CGC
     volatile lispobj *func_ptr = &init_function;
@@ -298,6 +304,11 @@ save_executable(char *filename, lispobj init_function)
                        (os_vm_address_t)SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
     write_space_object(dir_name, STATIC_SPACE_ID, (os_vm_address_t)static_space,
                        (os_vm_address_t)SymbolValue(STATIC_SPACE_FREE_POINTER));
+
+
+    write_asm_object(dir_name, STATIC_SPACE_ID, (os_vm_address_t)static_space,
+                       (os_vm_address_t)SymbolValue(STATIC_SPACE_FREE_POINTER));
+
 #ifdef GENCGC
     /* Flush the current_region updating the tables. */
 #ifdef DEBUG_BAD_HEAP
@@ -368,3 +379,320 @@ save_executable(char *filename, lispobj init_function)
     exit(rc);
 }
 #endif
+
+
+
+/*
+ * Table for each header type value.  The entry is a function to
+ * handle the type value when printing out the assembly code.
+ */
+static int (*asmtab[256])(lispobj* where, lispobj object, FILE* f);
+
+void
+asm_label(lispobj* ptr, lispobj object, FILE* f) 
+{
+    fprintf(f, "L%lx:\n", (unsigned long) ptr);
+}
+
+void
+asm_word(lispobj* ptr, lispobj object, FILE* f)
+{
+    unsigned long val = (unsigned long) object;
+    
+    fprintf(f, "\t.4byte\t0x%lx\t# %ld\n", val, val);
+}
+
+void
+asm_lispobj(lispobj* ptr, lispobj object, FILE* f)
+{
+    fprintf(f, "\t.4byte\t");
+    if ((object & 3) == 0) {
+        /* A fixnum */
+        fprintf(f, "0x%lx\t# fixnum %ld\n",
+                (long) object,
+                ((long) object) >> 2);
+    } else {
+        fprintf(f, "L%lx + %lu\n", PTR(object), LowtagOf(object));
+    }
+}
+
+void
+asm_align(FILE* f)
+{
+    /*
+     * Align the location counter to an 8-byte boundary that we need
+     * for lisp, since all objects must be multiples of 8 bytes.
+     *
+     * This should be called
+     */
+    fprintf(f, "\t.align\t8\n");
+}
+
+void
+asm_header_word(lispobj* ptr, lispobj object, FILE* f)
+{
+    unsigned long len = HeaderValue(object);
+    unsigned long type = TypeOf(object);
+    
+    fprintf(f, "\t.4byte\t0x%lx << 8 + %ld\n", len, type);
+}
+
+    
+/*
+ * Handles all objects that consists of only of lispobjs
+ */
+int
+asm_boxed(lispobj* ptr, lispobj object, FILE* f) 
+{
+    int len = 1 + HeaderValue(object);
+    int k;
+
+    asm_label(ptr, object, f);
+
+    asm_header_word(ptr, object, f);
+    
+    for (k = 1; k < len; ++k) {
+        asm_lispobj(ptr + k, ptr[k], f);
+    }
+
+    asm_align(f);
+    
+    return len;
+}
+
+int
+asm_immediate(lispobj* ptr, lispobj object, FILE* f)
+{
+    asm_label(ptr, object, f);
+    
+    fprintf(f, "\t.4byte\t0x%lx\t# immediate\n", object);
+
+    return 1;
+}
+
+int
+asm_list_pointer(lispobj* ptr, lispobj object, FILE* f)
+{
+    asm_label(ptr, object, f);
+
+    asm_lispobj(ptr, object, f);
+    asm_lispobj(ptr + 1, ptr[1], f);
+
+    return 2;
+}
+
+int
+asm_function_pointer(lispobj* ptr, lispobj object, FILE* f)
+{
+    int k;
+    int len = HeaderValue(object);
+    
+    asm_label(ptr, object, f);
+    for (k = 0; k < 6; ++k) {
+        asm_lispobj(ptr, *ptr, f);
+        ++ptr;
+    }
+    fprintf(f, "# function code\n");
+
+    unsigned char *c = (unsigned char*) ptr;
+    
+    for (k = 0; k < len - 5*4; ++k) {
+        fprintf(f, "\t.byte\t0x%x\n", *c++);
+    }
+
+    return len + 1;
+}
+
+
+int
+asm_other_pointer(lispobj* ptr, lispobj object, FILE* f)
+{
+    int len;
+    
+    asm_label(ptr, object, f);
+    asm_lispobj(ptr, object, f);
+    len = asmtab[TypeOf(ptr[1])](ptr + 1, ptr[1], f);
+    return len + 1;
+}
+
+int
+asm_fdefn(lispobj* ptr, lispobj object, FILE* f)
+{
+    asm_label(ptr, *ptr, f);
+    
+    asm_header_word(ptr, *ptr, f);
+    asm_lispobj(ptr + 1, ptr[1], f);
+    asm_lispobj(ptr + 2, ptr[2], f);
+
+    fprintf(f, "\t.4byte\tL%lx\t# raw_addr\n", (unsigned long) ptr[3]);
+
+    return 4;
+}
+
+
+#if 0
+int
+asm_bignum(lispobj* ptr, lispobj object, FILE* f)
+{
+    int len = HeaderValue(object);
+    
+    asm_label(ptr, object, f);
+    
+    asm_lispobj(ptr, object, f);
+    ++ptr;
+    
+    for (k = 0; k < len; ++k) {
+        fprintf(f, "\t.4byte\t%d\n", ptr[k]);
+    }
+
+    return len;
+}
+
+int
+asm_catch_block(lispobj* ptr, lispobj object, FILE* f)
+{
+    return asm_boxed(ptr, object, f);
+}
+
+int
+asm_catch_block(lispobj* ptr, lispobj object, FILE* f)
+{
+    return asm_boxed(ptr, object, f);
+}
+
+int
+asm_closure(lispobj* ptr, lispobj object, FILE* f)
+{
+    return asm_boxed(ptr, object, f);
+}
+
+int
+asm_code(lispobj* ptr, lispobj object, FILE* f)
+{
+    return asm_boxed(ptr, object, f);
+}
+
+int
+asm_complex(lispobj* ptr, lispobj object, FILE* f)
+{
+    return asm_boxed(ptr, object, f);
+}
+
+int
+asm_complex_double_double_float(lispobj* ptr, lispobj object, FILE* f)
+{
+    asm_label(ptr, object, f);
+    asm_lispobj(ptr, object, f);
+    asm_lispobj(ptr + 1, ptr[1], f);
+
+    double* d = (double*) (ptr + 2);
+    
+    for (k = 0; k < 4; ++k) {
+        fprintf(f, "\t.double\t%.15lg\n", d[k]);
+    }
+
+    return HeaderValue(object);
+}
+
+int
+asm_complex_double_float(lispobj* ptr, lispobj object, FILE* f)
+{
+    asm_label(ptr, object, f);
+    asm_lispobj(ptr, object, f);
+    asm_lispobj(ptr + 1, ptr[1], f);
+
+    double* d = ptr + 2;
+    fprintf(f, "\t.double\t%.15lg, %.15lg\n", d[0], d[1]);
+
+    return HeaderValue(object);
+}
+
+int
+asm_complex_double_float(lispobj* ptr, lispobj object, FILE* f)
+{
+    asm_label(ptr, object, f);
+    asm_lispobj(ptr, object, f);
+
+    double* d = ptr + 2;
+    fprintf(f, "\t.double\t%.15lg, %.15lg\n", d[0], d[1]);
+
+    return HeaderValue(object);
+}
+
+#endif
+
+void
+init_asmtab()
+{
+    int k = 0;
+
+    for (k = 0; k < 256; ++k) {
+        asmtab[k] = asm_boxed;
+    }
+
+    for (k = 0; k < 32; ++k) {
+        asmtab[type_EvenFixnum | (k << 3)] = asm_immediate;
+        asmtab[type_FunctionPointer | (k << 3)] = asm_function_pointer;
+	/* OtherImmediate0 */
+        asmtab[type_ListPointer | (k << 3)] = asm_list_pointer;
+        asmtab[type_OddFixnum | (k << 3)] = asm_immediate;
+#if 0
+        asmtab[type_InstancePointer | (k << 3)] = asm_instance_pointer;
+#endif        
+	/* OtherImmediate1 */
+        asmtab[type_OtherPointer | (k << 3)] = asm_other_pointer;
+    }
+    
+    asmtab[type_SymbolHeader] = asm_boxed;
+    asmtab[type_Fdefn] = asm_fdefn;
+}
+    
+void
+write_asm_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t end)
+{
+    char asm_file[PATH_MAX];
+    FILE* f;
+    
+    snprintf(asm_file, PATH_MAX, "%s/space-%d.s", dir, id);
+    f = fopen(asm_file, "w");
+
+    lispobj* ptr = (lispobj*) start;
+    lispobj* end_ptr = (lispobj*) end;
+    
+    /*
+     * If the id is the static space, we need special handling for
+     * beginning which has NIL in a funny way to make NIL a symbol and
+     * list.
+     */
+    if (id == STATIC_SPACE_ID) {
+        int k;
+        
+        /* Output the first word */
+        asm_header_word(ptr, *ptr, f);
+        /* Header word for NIL */
+        asm_header_word(ptr + 1, ptr[1], f);
+        /* Label for NIL */
+        asm_label(ptr + 2, ptr[2], f);
+        ptr += 2;
+
+        /* The 5 other words for the NIL symbol */
+        for (k = 0; k < 5; ++k) {
+            asm_lispobj(ptr, *ptr, f);
+            ++ptr;
+        }
+        /* Bump pointer one more time to get double-word alignment */
+        ++ptr;
+        asm_align(f);
+    }
+    
+    while (ptr < end_ptr) {
+        lispobj object = *ptr;
+        int object_length;
+        
+        object_length = asmtab[TypeOf(object)](ptr, object, f);
+        ptr += object_length;
+    }
+
+    fclose(f);
+}
+
