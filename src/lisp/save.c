@@ -438,6 +438,15 @@ asm_header_word(lispobj* ptr, lispobj object, FILE* f)
 }
 
     
+int
+asm_ni(lispobj* ptr, lispobj object, FILE* f)
+{
+    asm_label(ptr, object, f);
+    fprintf(f, "\t.4byte\t0x%lx\t# NOT IMPLEMENTED\n",
+            object);
+    return 1;
+}
+
 /*
  * Handles all objects that consists of only of lispobjs
  */
@@ -476,51 +485,35 @@ asm_list_pointer(lispobj* ptr, lispobj object, FILE* f)
     asm_label(ptr, object, f);
 
     asm_lispobj(ptr, object, f);
-    asm_lispobj(ptr + 1, ptr[1], f);
 
-    return 2;
+    return 1;
 }
 
 int
 asm_function_pointer(lispobj* ptr, lispobj object, FILE* f)
 {
-    int k;
-    int len = HeaderValue(object);
+    printf("function pointer 0x%lx\n", object);
     
     asm_label(ptr, object, f);
-    for (k = 0; k < 6; ++k) {
-        asm_lispobj(ptr, *ptr, f);
-        ++ptr;
-    }
-    fprintf(f, "# function code\n");
-
-    unsigned char *c = (unsigned char*) ptr;
-    
-    for (k = 0; k < len - 5*4; ++k) {
-        fprintf(f, "\t.byte\t0x%x\n", *c++);
-    }
-
-    return len + 1;
+    asm_lispobj(ptr, object, f);
+    return 1;
 }
 
 
 int
 asm_other_pointer(lispobj* ptr, lispobj object, FILE* f)
 {
-    int len;
-    
     asm_label(ptr, object, f);
     asm_lispobj(ptr, object, f);
-    len = asmtab[TypeOf(ptr[1])](ptr + 1, ptr[1], f);
-    return len + 1;
+    return 1;
 }
 
 int
 asm_fdefn(lispobj* ptr, lispobj object, FILE* f)
 {
-    asm_label(ptr, *ptr, f);
+    asm_label(ptr, object, f);
     
-    asm_header_word(ptr, *ptr, f);
+    asm_header_word(ptr, object, f);
     asm_lispobj(ptr + 1, ptr[1], f);
     asm_lispobj(ptr + 2, ptr[2], f);
 
@@ -529,6 +522,43 @@ asm_fdefn(lispobj* ptr, lispobj object, FILE* f)
     return 4;
 }
 
+int
+asm_instance_pointer(lispobj* ptr, lispobj object, FILE* f)
+{
+    asm_label(ptr, object, f);
+    asm_lispobj(ptr, object, f);
+    return 1;
+}
+
+int
+asm_simple_vector(lispobj* ptr, lispobj object, FILE* f)
+{
+    int k;
+    int len = ptr[1] >> 2;
+    lispobj* data = ptr + 2;
+    
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f);
+    asm_lispobj(ptr + 1, ptr[1], f);
+
+    for (k = 0; k < len; ++k) {
+        asm_lispobj(data + k,  data[k], f);
+    }
+    
+    return len + 2;
+}
+
+int
+asm_closure_header(lispobj* ptr, lispobj object, FILE* f)
+{
+    return asm_boxed(ptr, object, f);
+}
+
+int
+asm_complex_vector(lispobj* ptr, lispobj object, FILE* f)
+{
+    return asm_ni(ptr, object, f);
+}
 
 #if 0
 int
@@ -627,24 +657,26 @@ init_asmtab()
     int k = 0;
 
     for (k = 0; k < 256; ++k) {
-        asmtab[k] = asm_boxed;
+        asmtab[k] = asm_ni;
     }
 
     for (k = 0; k < 32; ++k) {
         asmtab[type_EvenFixnum | (k << 3)] = asm_immediate;
         asmtab[type_FunctionPointer | (k << 3)] = asm_function_pointer;
-	/* OtherImmediate0 */
+        asmtab[type_OtherImmediate0 | (k << 3)] = asm_ni;
         asmtab[type_ListPointer | (k << 3)] = asm_list_pointer;
         asmtab[type_OddFixnum | (k << 3)] = asm_immediate;
-#if 0
         asmtab[type_InstancePointer | (k << 3)] = asm_instance_pointer;
-#endif        
-	/* OtherImmediate1 */
+        asmtab[type_OtherImmediate1 | (k << 3) ] = asm_ni;
         asmtab[type_OtherPointer | (k << 3)] = asm_other_pointer;
     }
     
     asmtab[type_SymbolHeader] = asm_boxed;
     asmtab[type_Fdefn] = asm_fdefn;
+    asmtab[type_InstanceHeader] = asm_boxed;
+    asmtab[type_SimpleVector] = asm_simple_vector;
+    asmtab[type_FuncallableInstanceHeader] = asm_closure_header;
+    asmtab[type_ComplexVector] = asm_boxed;
 }
     
 void
