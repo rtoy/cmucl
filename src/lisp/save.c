@@ -680,6 +680,9 @@ init_asmtab()
     asmtab[type_SimpleVector] = asm_simple_vector;
     asmtab[type_FuncallableInstanceHeader] = asm_closure_header;
     asmtab[type_ComplexVector] = asm_boxed;
+    asmtab[type_BaseChar] = asm_immediate;
+    /* Just use asm_boxed or have a special version for a value cell? */
+    asmtab[type_ValueCellHeader] = asm_boxed;
 }
     
 void
