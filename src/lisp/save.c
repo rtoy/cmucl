@@ -26,6 +26,9 @@
 #include "gencgc.h"
 #endif
 
+/* Like (ceiling x y), but y is constrained to be a power of two */
+#define CEILING(x,y) (((x) + ((y) - 1)) & (~((y) - 1)))
+
 #ifdef FEATURE_EXECUTABLE
 #include "elf.h"
 #if !(defined(DARWIN) && defined(__ppc__))
@@ -454,6 +457,7 @@ int
 asm_boxed(lispobj* ptr, lispobj object, FILE* f) 
 {
     int len = 1 + HeaderValue(object);
+    len = CEILING(len, 2);
     int k;
 
     asm_label(ptr, object, f);
@@ -464,8 +468,6 @@ asm_boxed(lispobj* ptr, lispobj object, FILE* f)
         asm_lispobj(ptr + k, ptr[k], f);
     }
 
-    asm_align(f);
-    
     return len;
 }
 
@@ -535,6 +537,7 @@ asm_simple_vector(lispobj* ptr, lispobj object, FILE* f)
 {
     int k;
     int len = ptr[1] >> 2;
+    len = CEILING(len, 2);
     lispobj* data = ptr + 2;
     
     asm_label(ptr, object, f);
