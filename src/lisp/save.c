@@ -675,6 +675,8 @@ init_asmtab(void)
     }
     
     asmtab[type_Ratio] = asm_boxed;
+    asmtab[type_Complex] = asm_boxed;
+    asmtab[type_SimpleArray] = asm_boxed;
     asmtab[type_SymbolHeader] = asm_boxed;
     asmtab[type_Fdefn] = asm_fdefn;
     asmtab[type_InstanceHeader] = asm_boxed;
