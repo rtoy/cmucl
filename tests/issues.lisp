@@ -544,3 +544,15 @@
   ;; the correct value.
   (assert-false
    (funcall (compile nil '(lambda () (array-displacement "aaaaaaaa"))))))
+
+(define-test issue.101
+    (:tag :issues)
+  ;; Verifies that we don't get unexpected overflow.  The actual value
+  ;; is not really important.  The important part is no overflow is
+  ;; signaled.
+  ;;
+  ;; See https://gitlab.common-lisp.net/cmucl/cmucl/-/issues/101 for
+  ;; more details.
+  (assert-equalp
+   3.0380154777955097d205
+   (expt 1.7976931348623157d308 0.6666)))
