@@ -19,8 +19,6 @@ public domain.
 
 ## New in this release:
   * Known issues:
-    * Building with gcc8 or later doesn't work with the default -O option. Use -O1 instead.  This shouldn't really impact overall speed much.
-    * Added simple support to compile with clang instead, which works. (Use x86_linux_clang).
   * Feature enhancements
   * Changes
     * Update to ASDF 3.3.4
@@ -35,6 +33,12 @@ public domain.
     * ~~#80~~ Use ASDF to load contribs.  cmu-contribs still exists but does nothing.  The contrib names are the same, except it's best to use a keyword instead of a string.  So, `:contrib-demos` instead of `"contrib-demos"`.
     * ~~#81~~ Added contribs from Eric Marsden
     * ~~#82~~ Replace bc with expr in GNUMakefile
+    * ~~#86~~ Building with gcc 8 and later works when using -O2 optimization
+    * ~~#90~~ Some static symbols have been removed.  This probably makes the fasl files incompatible with older versions.
+    * ~~#91~~ Loop destructuring no longer incorrectly signals an error
+    * ~~#95~~ Disassembler syntax of x86 je and movzx is incorrect
+    * ~~#98~~ fstpd is not an Intel instruction; disassemble as `fstp dword ptr [addr]`
+    * ~~#100~~ ldb prints out unicode base-chars correctly instead of just the low 8 bits.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
