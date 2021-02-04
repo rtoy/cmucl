@@ -655,7 +655,7 @@ asm_complex_double_float(lispobj* ptr, lispobj object, FILE* f)
 #endif
 
 void
-init_asmtab()
+init_asmtab(void)
 {
     int k = 0;
 
@@ -674,6 +674,7 @@ init_asmtab()
         asmtab[type_OtherPointer | (k << 3)] = asm_other_pointer;
     }
     
+    asmtab[type_Ratio] = asm_boxed;
     asmtab[type_SymbolHeader] = asm_boxed;
     asmtab[type_Fdefn] = asm_fdefn;
     asmtab[type_InstanceHeader] = asm_boxed;
@@ -683,6 +684,7 @@ init_asmtab()
     asmtab[type_BaseChar] = asm_immediate;
     /* Just use asm_boxed or have a special version for a value cell? */
     asmtab[type_ValueCellHeader] = asm_boxed;
+    
 }
     
 void
