@@ -59,9 +59,6 @@ linux:test:
       artifacts: true
   script:
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
-    - cd ansi-test
-    - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
-    - grep 'No unexpected \(successes\|failures\)' test.out
 
 linux:ansi-test:
   stage: ansi-test
