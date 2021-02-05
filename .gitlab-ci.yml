@@ -7,6 +7,7 @@ stages:
   - install
   - build
   - test
+  - ansi-test
   - benchmark
 
 cache:
@@ -41,7 +42,7 @@ linux:build:
     #- bin/create-target.sh xcross x86_linux_clang
     #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
     # Regular build using the cross-compiled result or snapshot
-    - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
+    - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist linux-4
 
 linux:test:
@@ -56,15 +57,28 @@ linux:test:
     # Needs artifacts from build (dist/)
     - job: linux:build
       artifacts: true
+  script:
+    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
+linux:ansi-test:
+  stage: ansi-test
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - ansi-test/test.out
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: linux:build
+      artifacts: true
   before_script:
     - git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
     - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
   script:
-    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
     - grep 'No unexpected \(successes\|failures\)' test.out
-
+    
 linux:benchmark:
   stage: benchmark
   tags:
@@ -121,8 +135,21 @@ osx:test:
     - osx
   artifacts:
     paths:
-      - ansi-test/test.out
       - test.log
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: osx:build
+      artifacts: true
+  script:
+    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
+osx:ansi-test:
+  stage: ansi-test
+  tags:
+    - osx
+  artifacts:
+    paths:
+      - ansi-test/test.out
   needs:
     # Needs artifacts from build (dist/)
     - job: osx:build
@@ -131,11 +158,10 @@ osx:test:
     - git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
     - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
   script:
-    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
     - grep 'No unexpected \(successes\|failures\)' test.out 
-
+  
 osx:benchmark:
   stage: benchmark
   tags:
