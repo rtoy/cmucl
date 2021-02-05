@@ -1,6 +1,6 @@
 variables:
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2020/04"
-  version: "2020-04-x86"
+  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2021/01"
+  version: "2021-01-x86"
   bootstrap: ""
 
 stages:
@@ -37,10 +37,10 @@ linux:build:
       artifacts: true
   script:
     # Do cross compile first
-    - bin/create-target.sh xtarget x86_linux_clang
-    - bin/create-target.sh xcross x86_linux_clang
-    - bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
-    # Regular build using the cross-compiled result
+    #- bin/create-target.sh xtarget x86_linux_clang
+    #- bin/create-target.sh xcross x86_linux_clang
+    #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
+    # Regular build using the cross-compiled result or snapshot
     - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o xtarget/lisp/lisp
     - bin/make-dist.sh -I dist linux-4
 
@@ -108,11 +108,11 @@ osx:build:
       artifacts: true
   script:
     # Do cross compile first
-    - bin/create-target.sh xtarget x86_darwin
-    - bin/create-target.sh xcross x86_darwin
-    - bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
-    # Regular build using the cross-compiled result
-    - bin/build.sh $bootstrap -R -C "" -o xtarget/lisp/lisp
+    #- bin/create-target.sh xtarget x86_darwin
+    #- bin/create-target.sh xcross x86_darwin
+    #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
+    # Regular build using the cross-compiled result or snapshot
+    - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist darwin-4
 
 osx:test:
