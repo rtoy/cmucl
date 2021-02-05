@@ -4,7 +4,11 @@ include Config.x86_common
 CC = clang
 CPPFLAGS += -m32 -D__NO_CTYPE -D_GNU_SOURCE
 CFLAGS += $(COPT)
-CFLAGS += -march=pentium4 -mfpmath=sse -mtune=generic
+
+# Allow sse2 instructions (-msse2); and tune for pentium4
+# (-mtune=pentium4), the first chip to have sse2; and finally generate
+# code assuming instructions can trap (-ftrapping-math).
+CFLAGS += -msse2 -mtune=pentium4 -ftrapping-math
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC +=  linux-stubs.S
