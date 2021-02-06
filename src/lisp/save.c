@@ -633,8 +633,8 @@ asm_simple_string(lispobj* where, lispobj object, FILE* f)
      * Strings are just like arrays with 16-bit elements, and contain
      * one more element than the slot length indicates.
      */
+    nchars = CEILING(length + 1, 2);
     nwords = CEILING(NWORDS(length, 2) + 2, 2);
-    nchars = 2 * nwords;
 #endif
 
     asm_label(where, object, f);
@@ -642,9 +642,17 @@ asm_simple_string(lispobj* where, lispobj object, FILE* f)
     asm_lispobj(where + 1, where[1], f);
     
     s = (uint16_t*) vector->data;
+
     
     for (k = 0; k < nchars; ++k) {
-        fprintf(f, "\t.2byte\t0x%x\n", s[k]);
+        int c = s[k];
+        
+        fprintf(f, "\t.2byte\t0x%x\t# ", c);
+        if (c >= ' ' && c <= 127) {
+            fprintf(f, "%c\n", c);
+        } else {
+            fprintf(f, "#\\u+%04x\n", c);
+        }
     }
 
     return nwords;
