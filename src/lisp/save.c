@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <math.h>
 
 #include "lisp.h"
 #include "os.h"
@@ -665,7 +666,18 @@ asm_single_float(lispobj* ptr, lispobj object, FILE* f)
     
     asm_label(ptr, object, f);
     asm_header_word(ptr, object, f, "single float");
-    fprintf(f, "\t.float\t%.15g\n", obj->value);
+    if (isfinite(obj->value)) {
+        fprintf(f, "\t.float\t%.15g\n", obj->value);
+    } else {
+        union 
+        {
+            uint32_t a;
+            float f;
+        } val;
+
+        val.f = obj->value;
+        fprintf(f, "\t.4byte\t0x%x\n", val.a);
+    }
 
     return 2;
 }
@@ -678,9 +690,62 @@ asm_double_float(lispobj* ptr, lispobj object, FILE* f)
     asm_label(ptr, object, f);
     asm_header_word(ptr, object, f, "double float");
     asm_lispobj(&obj->filler, obj->filler, f);
-    fprintf(f, "\t.double\t%.15g\n", obj->value);
+    if (isfinite(obj->value)) {
+        fprintf(f, "\t.double\t%.15g\n", obj->value);
+    } else {
+        union 
+        {
+            uint32_t a[2];
+            double d;
+        } val;
+
+        val.d = obj->value;
+
+        fprintf(f, "\t.4byte\t0x%x\n", val.a[0]);
+        fprintf(f, "\t.4byte\t0x%x\n", val.a[1]);
+    }
 
     return 4;
+}
+
+int
+asm_double_double_float(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct double_double_float* obj = (struct double_double_float*) ptr;
+    
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "double double float");
+    asm_lispobj(&obj->filler, obj->filler, f);
+    
+    if (isfinite(obj->hi)) {
+        fprintf(f, "\t.double\t%.16g\n", obj->hi);
+    } else {
+        union 
+        {
+            uint32_t a[2];
+            double d;
+        } val;
+        val.d = obj->hi;
+                
+        fprintf(f, "\t.4byte\t0x%x\n", val.a[0]);
+        fprintf(f, "\t.4byte\t0x%x\n", val.a[1]);
+    }
+    
+    if (isfinite(obj->lo)) {
+        fprintf(f, "\t.double\t%.16g\n", obj->lo);
+    } else {
+        union 
+        {
+            uint32_t a[2];
+            double d;
+        } val;
+        val.d = obj->lo;
+                
+        fprintf(f, "\t.4byte\t0x%x\n", val.a[0]);
+        fprintf(f, "\t.4byte\t0x%x\n", val.a[1]);
+    }
+
+    return 1 + HeaderValue(object);
 }
 
 int
@@ -869,6 +934,7 @@ init_asmtab(void)
     asmtab[type_Ratio] = asm_boxed;
     asmtab[type_SingleFloat] = asm_single_float;
     asmtab[type_DoubleFloat] = asm_double_float;
+    asmtab[type_DoubleDoubleFloat] = asm_double_double_float;
     asmtab[type_Complex] = asm_boxed;
     asmtab[type_SimpleArray] = asm_boxed;
     asmtab[type_SimpleString] = asm_simple_string;
