@@ -309,8 +309,10 @@ save_executable(char *filename, lispobj init_function)
                        (os_vm_address_t)SymbolValue(STATIC_SPACE_FREE_POINTER));
 
 
+    write_asm_object(dir_name, READ_ONLY_SPACE_ID, (os_vm_address_t)read_only_space,
+                     (os_vm_address_t)SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
     write_asm_object(dir_name, STATIC_SPACE_ID, (os_vm_address_t)static_space,
-                       (os_vm_address_t)SymbolValue(STATIC_SPACE_FREE_POINTER));
+                     (os_vm_address_t)SymbolValue(STATIC_SPACE_FREE_POINTER));
 
 #ifdef GENCGC
     /* Flush the current_region updating the tables. */
@@ -677,16 +679,15 @@ init_asmtab(void)
     asmtab[type_Ratio] = asm_boxed;
     asmtab[type_Complex] = asm_boxed;
     asmtab[type_SimpleArray] = asm_boxed;
-    asmtab[type_SymbolHeader] = asm_boxed;
-    asmtab[type_Fdefn] = asm_fdefn;
-    asmtab[type_InstanceHeader] = asm_boxed;
     asmtab[type_SimpleVector] = asm_simple_vector;
-    asmtab[type_FuncallableInstanceHeader] = asm_closure_header;
     asmtab[type_ComplexVector] = asm_boxed;
-    asmtab[type_BaseChar] = asm_immediate;
+    asmtab[type_FuncallableInstanceHeader] = asm_closure_header;
     /* Just use asm_boxed or have a special version for a value cell? */
     asmtab[type_ValueCellHeader] = asm_boxed;
-    
+    asmtab[type_SymbolHeader] = asm_boxed;
+    asmtab[type_BaseChar] = asm_immediate;
+    asmtab[type_InstanceHeader] = asm_boxed;
+    asmtab[type_Fdefn] = asm_fdefn;
 }
     
 void
