@@ -751,6 +751,38 @@ asm_complex_single_float(lispobj* ptr, lispobj object, FILE* f)
     return CEILING(1 + HeaderValue(object), 2);
 }
 
+int
+asm_complex_double_float(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct complex_double_float* obj = (struct complex_double_float*) ptr;
+    
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "complex double-float");
+    asm_lispobj(&obj->filler, obj->filler, f);
+    
+    print_double(f, obj->real);
+    print_double(f, obj->imag);
+    
+    return CEILING(1 + HeaderValue(object), 2);
+}
+
+int
+asm_complex_double_double_float(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct complex_double_double_float* obj = (struct complex_double_double_float*) ptr;
+    
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "complex double-float");
+    asm_lispobj(&obj->filler, obj->filler, f);
+    
+    print_double(f, obj->real_hi);
+    print_double(f, obj->real_lo);
+    print_double(f, obj->imag_hi);
+    print_double(f, obj->imag_lo);
+    
+    return CEILING(1 + HeaderValue(object), 2);
+}
+
     
 int
 asm_vector_unsigned_byte_8(lispobj* ptr, lispobj object, FILE* f)
@@ -840,80 +872,6 @@ asm_sap(lispobj* ptr, lispobj object, FILE* f)
     return 2;
 }
     
-#if 0
-int
-asm_catch_block(lispobj* ptr, lispobj object, FILE* f)
-{
-    return asm_boxed(ptr, object, f);
-}
-
-int
-asm_catch_block(lispobj* ptr, lispobj object, FILE* f)
-{
-    return asm_boxed(ptr, object, f);
-}
-
-int
-asm_closure(lispobj* ptr, lispobj object, FILE* f)
-{
-    return asm_boxed(ptr, object, f);
-}
-
-int
-asm_code(lispobj* ptr, lispobj object, FILE* f)
-{
-    return asm_boxed(ptr, object, f);
-}
-
-int
-asm_complex(lispobj* ptr, lispobj object, FILE* f)
-{
-    return asm_boxed(ptr, object, f);
-}
-
-int
-asm_complex_double_double_float(lispobj* ptr, lispobj object, FILE* f)
-{
-    asm_label(ptr, object, f);
-    asm_lispobj(ptr, object, f);
-    asm_lispobj(ptr + 1, ptr[1], f);
-
-    double* d = (double*) (ptr + 2);
-    
-    for (k = 0; k < 4; ++k) {
-        fprintf(f, "\t.double\t%.15lg\n", d[k]);
-    }
-
-    return HeaderValue(object);
-}
-
-int
-asm_complex_double_float(lispobj* ptr, lispobj object, FILE* f)
-{
-    asm_label(ptr, object, f);
-    asm_lispobj(ptr, object, f);
-    asm_lispobj(ptr + 1, ptr[1], f);
-
-    double* d = ptr + 2;
-    fprintf(f, "\t.double\t%.15lg, %.15lg\n", d[0], d[1]);
-
-    return HeaderValue(object);
-}
-
-int
-asm_complex_double_float(lispobj* ptr, lispobj object, FILE* f)
-{
-    asm_label(ptr, object, f);
-    asm_lispobj(ptr, object, f);
-
-    double* d = ptr + 2;
-    fprintf(f, "\t.double\t%.15lg, %.15lg\n", d[0], d[1]);
-
-    return HeaderValue(object);
-}
-
-#endif
-
 void
 init_asmtab(void)
 {
@@ -941,6 +899,8 @@ init_asmtab(void)
     asmtab[type_DoubleDoubleFloat] = asm_double_double_float;
     asmtab[type_Complex] = asm_boxed;
     asmtab[type_ComplexSingleFloat] = asm_complex_single_float;
+    asmtab[type_ComplexDoubleFloat] = asm_complex_double_float;
+    asmtab[type_ComplexDoubleDoubleFloat] = asm_complex_double_double_float;
     asmtab[type_SimpleArray] = asm_boxed;
     asmtab[type_SimpleString] = asm_simple_string;
     asmtab[type_SimpleVector] = asm_simple_vector;
