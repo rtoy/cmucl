@@ -659,15 +659,11 @@ asm_simple_string(lispobj* where, lispobj object, FILE* f)
     return nwords;
 }
 
-int
-asm_single_float(lispobj* ptr, lispobj object, FILE* f)
+void
+print_float(FILE* f, float value)
 {
-    struct single_float* obj = (struct single_float*) ptr;
-    
-    asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "single float");
-    if (isfinite(obj->value)) {
-        fprintf(f, "\t.float\t%.15g\n", obj->value);
+    if (isfinite(value)) {
+        fprintf(f, "\t.float\t%.15g\n", value);
     } else {
         union 
         {
@@ -675,11 +671,41 @@ asm_single_float(lispobj* ptr, lispobj object, FILE* f)
             float f;
         } val;
 
-        val.f = obj->value;
+        val.f = value;
         fprintf(f, "\t.4byte\t0x%x\n", val.a);
     }
+}
+
+int
+asm_single_float(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct single_float* obj = (struct single_float*) ptr;
+    
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "single float");
+    print_float(f, obj->value);
+    
 
     return 2;
+}
+
+void
+print_double(FILE* f, double value)
+{
+    if (isfinite(value)) {
+        fprintf(f, "\t.double\t%.15g\n", value);
+    } else {
+        union 
+        {
+            uint32_t a[2];
+            double d;
+        } val;
+
+        val.d = value;
+
+        fprintf(f, "\t.4byte\t0x%x\n", val.a[0]);
+        fprintf(f, "\t.4byte\t0x%x\n", val.a[1]);
+    }
 }
 
 int
@@ -690,21 +716,8 @@ asm_double_float(lispobj* ptr, lispobj object, FILE* f)
     asm_label(ptr, object, f);
     asm_header_word(ptr, object, f, "double float");
     asm_lispobj(&obj->filler, obj->filler, f);
-    if (isfinite(obj->value)) {
-        fprintf(f, "\t.double\t%.15g\n", obj->value);
-    } else {
-        union 
-        {
-            uint32_t a[2];
-            double d;
-        } val;
-
-        val.d = obj->value;
-
-        fprintf(f, "\t.4byte\t0x%x\n", val.a[0]);
-        fprintf(f, "\t.4byte\t0x%x\n", val.a[1]);
-    }
-
+    print_double(f, obj->value);
+    
     return 4;
 }
 
@@ -717,37 +730,28 @@ asm_double_double_float(lispobj* ptr, lispobj object, FILE* f)
     asm_header_word(ptr, object, f, "double double float");
     asm_lispobj(&obj->filler, obj->filler, f);
     
-    if (isfinite(obj->hi)) {
-        fprintf(f, "\t.double\t%.16g\n", obj->hi);
-    } else {
-        union 
-        {
-            uint32_t a[2];
-            double d;
-        } val;
-        val.d = obj->hi;
-                
-        fprintf(f, "\t.4byte\t0x%x\n", val.a[0]);
-        fprintf(f, "\t.4byte\t0x%x\n", val.a[1]);
-    }
+    print_double(f, obj->hi);
+    print_double(f, obj->lo);
     
-    if (isfinite(obj->lo)) {
-        fprintf(f, "\t.double\t%.16g\n", obj->lo);
-    } else {
-        union 
-        {
-            uint32_t a[2];
-            double d;
-        } val;
-        val.d = obj->lo;
-                
-        fprintf(f, "\t.4byte\t0x%x\n", val.a[0]);
-        fprintf(f, "\t.4byte\t0x%x\n", val.a[1]);
-    }
-
     return 1 + HeaderValue(object);
 }
 
+int
+asm_complex_single_float(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct complex_single_float* obj = (struct complex_single_float*) ptr;
+    
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "complex single-float");
+    print_float(f, obj->real);
+    print_float(f, obj->imag);
+    /* Force double word boundary */
+    asm_lispobj(ptr + 3, ptr[3], f);
+    
+    return CEILING(1 + HeaderValue(object), 2);
+}
+
+    
 int
 asm_vector_unsigned_byte_8(lispobj* ptr, lispobj object, FILE* f)
 {
@@ -936,6 +940,7 @@ init_asmtab(void)
     asmtab[type_DoubleFloat] = asm_double_float;
     asmtab[type_DoubleDoubleFloat] = asm_double_double_float;
     asmtab[type_Complex] = asm_boxed;
+    asmtab[type_ComplexSingleFloat] = asm_complex_single_float;
     asmtab[type_SimpleArray] = asm_boxed;
     asmtab[type_SimpleString] = asm_simple_string;
     asmtab[type_SimpleVector] = asm_simple_vector;
