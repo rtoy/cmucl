@@ -734,24 +734,25 @@ asm_vector_unsigned_byte_32(lispobj* ptr, lispobj object, FILE* f)
     return nwords;
 }
 
-#if 0
 int
 asm_bignum(lispobj* ptr, lispobj object, FILE* f)
 {
-    int len = HeaderValue(object);
+    int len = 1 + HeaderValue(object);
+    int k;
+
+    len = CEILING(len, 2);
     
     asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "bignum");
     
-    asm_lispobj(ptr, object, f);
-    ++ptr;
-    
-    for (k = 0; k < len; ++k) {
-        fprintf(f, "\t.4byte\t%d\n", ptr[k]);
+    for (k = 1; k < len; ++k) {
+        fprintf(f, "\t.4byte\t%lx\t# %ld\n", ptr[k], ptr[k]);
     }
 
     return len;
 }
 
+#if 0
 int
 asm_catch_block(lispobj* ptr, lispobj object, FILE* f)
 {
@@ -845,6 +846,7 @@ init_asmtab(void)
         asmtab[type_OtherPointer | (k << 3)] = asm_other_pointer;
     }
     
+    asmtab[type_Bignum] = asm_bignum;
     asmtab[type_Ratio] = asm_boxed;
     asmtab[type_SingleFloat] = asm_single_float;
     asmtab[type_DoubleFloat] = asm_double_float;
