@@ -29,6 +29,8 @@
 /* Like (ceiling x y), but y is constrained to be a power of two */
 #define CEILING(x,y) (((x) + ((y) - 1)) & (~((y) - 1)))
 
+#define NWORDS(x,y) (CEILING((x),(y)) / (y))
+
 #ifdef FEATURE_EXECUTABLE
 #include "elf.h"
 #if !(defined(DARWIN) && defined(__ppc__))
@@ -597,10 +599,80 @@ asm_code_header(lispobj* ptr, lispobj object, FILE* f)
     fprintf(f, "# Code bytes?\n");
     
     for (; k < nwords; ++k) {
-        fprintf(f, "\t\.4byte\t0x%lx\n", ptr[k + 1]);
+        fprintf(f, "\t.4byte\t0x%lx\n", ptr[k + 1]);
     }
     
     return nwords;
+}
+
+int
+asm_simple_string(lispobj* where, lispobj object, FILE* f)
+{
+    struct vector* vector;
+    int length;
+    int nwords;
+    int k;
+    int nchars;
+    uint16_t* s;
+    
+    /*
+     * NOTE: Strings contain one more byte of data than the length
+     * slot indicates.
+     */
+
+    vector = (struct vector *) where;
+    length = fixnum_value(vector->length) + 1;
+#ifndef UNICODE
+#ifdef __x86_64
+    nwords = CEILING(NWORDS(length, 8) + 2, 2);
+#else
+    nwords = CEILING(NWORDS(length, 4) + 2, 2);
+#endif
+#else
+    /*
+     * Strings are just like arrays with 16-bit elements, and contain
+     * one more element than the slot length indicates.
+     */
+    nwords = CEILING(NWORDS(length, 2) + 2, 2);
+    nchars = 2 * nwords;
+#endif
+
+    asm_label(where, object, f);
+    asm_header_word(where, object, f, "simple string");
+    asm_lispobj(where + 1, where[1], f);
+    
+    s = (uint16_t*) vector->data;
+    
+    for (k = 0; k < nchars; ++k) {
+        fprintf(f, "\t.2byte\t0x%x\n", s[k]);
+    }
+
+    return nwords;
+}
+
+int
+asm_single_float(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct single_float* obj = (struct single_float*) ptr;
+    
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "single float");
+    fprintf(f, "\t.float\t%.15g\n", obj->value);
+
+    return 2;
+}
+
+int
+asm_double_float(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct double_float* obj = (struct double_float*) ptr;
+    
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "double float");
+    asm_lispobj(&obj->filler, obj->filler, f);
+    fprintf(f, "\t.double\t%.15g\n", obj->value);
+
+    return 4;
 }
 
 #if 0
@@ -715,9 +787,13 @@ init_asmtab(void)
     }
     
     asmtab[type_Ratio] = asm_boxed;
+    asmtab[type_SingleFloat] = asm_single_float;
+    asmtab[type_DoubleFloat] = asm_double_float;
     asmtab[type_Complex] = asm_boxed;
     asmtab[type_SimpleArray] = asm_boxed;
+    asmtab[type_SimpleString] = asm_simple_string;
     asmtab[type_SimpleVector] = asm_simple_vector;
+    asmtab[type_ComplexString] = asm_boxed;
     asmtab[type_ComplexVector] = asm_boxed;
     asmtab[type_CodeHeader] = asm_code_header;
     asmtab[type_FuncallableInstanceHeader] = asm_closure_header;
