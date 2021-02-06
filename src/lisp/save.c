@@ -694,6 +694,7 @@ asm_vector_bit(lispobj* ptr, lispobj object, FILE* f)
 void
 print_float(FILE* f, float value)
 {
+#if 0
     if (isfinite(value)) {
         fprintf(f, "\t.float\t%.15g\n", value);
     } else {
@@ -706,6 +707,17 @@ print_float(FILE* f, float value)
         val.f = value;
         fprintf(f, "\t.4byte\t0x%x\n", val.a);
     }
+#else
+    union 
+    {
+            uint32_t a;
+            float f;
+    } val;
+
+    val.f = value;
+    fprintf(f, "\t.4byte\t0x%x\t# %lg\n", val.a, value);
+#endif
+
 }
 
 int
@@ -716,7 +728,6 @@ asm_single_float(lispobj* ptr, lispobj object, FILE* f)
     asm_label(ptr, object, f);
     asm_header_word(ptr, object, f, "single float");
     print_float(f, obj->value);
-    
 
     return 2;
 }
@@ -724,8 +735,9 @@ asm_single_float(lispobj* ptr, lispobj object, FILE* f)
 void
 print_double(FILE* f, double value)
 {
+#if 0    
     if (isfinite(value)) {
-        fprintf(f, "\t.double\t%.15g\n", value);
+        fprintf(f, "\t.double\t%.16lg\n", value);
     } else {
         union 
         {
@@ -738,6 +750,18 @@ print_double(FILE* f, double value)
         fprintf(f, "\t.4byte\t0x%x\n", val.a[0]);
         fprintf(f, "\t.4byte\t0x%x\n", val.a[1]);
     }
+#else
+    union 
+    {
+        uint32_t a[2];
+        double d;
+    } val;
+
+    val.d = value;
+    fprintf(f, "\t.4byte\t0x%x\t# %.18lg\n", val.a[0], value);
+    fprintf(f, "\t.4byte\t0x%x\n", val.a[1]);
+    
+#endif
 }
 
 int
@@ -1111,6 +1135,9 @@ write_asm_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
 {
     char asm_file[PATH_MAX];
     FILE* f;
+    
+    printf("write_asm_object space %d start %p end %p\n",
+           id, start, end);
     
     snprintf(asm_file, PATH_MAX, "%s/space-%d.s", dir, id);
     f = fopen(asm_file, "w");
