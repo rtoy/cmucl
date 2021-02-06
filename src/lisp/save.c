@@ -746,12 +746,23 @@ asm_bignum(lispobj* ptr, lispobj object, FILE* f)
     asm_header_word(ptr, object, f, "bignum");
     
     for (k = 1; k < len; ++k) {
-        fprintf(f, "\t.4byte\t%lx\t# %ld\n", ptr[k], ptr[k]);
+        fprintf(f, "\t.4byte\t0x%lx\t# %lu\n", ptr[k], ptr[k]);
     }
 
     return len;
 }
 
+int
+asm_sap(lispobj* ptr, lispobj object, FILE* f)
+{
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "sap");
+    /* Just print out the raw value of the address */
+    fprintf(f, "\t.4byte\t0x%lx\n", ptr[1]);
+
+    return 2;
+}
+    
 #if 0
 int
 asm_catch_block(lispobj* ptr, lispobj object, FILE* f)
@@ -865,6 +876,7 @@ init_asmtab(void)
     asmtab[type_ValueCellHeader] = asm_boxed;
     asmtab[type_SymbolHeader] = asm_boxed;
     asmtab[type_BaseChar] = asm_immediate;
+    asmtab[type_Sap] = asm_sap;
     asmtab[type_InstanceHeader] = asm_boxed;
     asmtab[type_Fdefn] = asm_fdefn;
 }
