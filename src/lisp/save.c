@@ -434,12 +434,12 @@ asm_align(FILE* f)
 }
 
 void
-asm_header_word(lispobj* ptr, lispobj object, FILE* f)
+asm_header_word(lispobj* ptr, lispobj object, FILE* f, const char* note)
 {
     unsigned long len = HeaderValue(object);
     unsigned long type = TypeOf(object);
     
-    fprintf(f, "\t.4byte\t0x%lx << 8 + %ld\n", len, type);
+    fprintf(f, "\t.4byte\t0x%lx << 8 + %ld\t# %s\n", len, type, note);
 }
 
     
@@ -464,7 +464,7 @@ asm_boxed(lispobj* ptr, lispobj object, FILE* f)
 
     asm_label(ptr, object, f);
 
-    asm_header_word(ptr, object, f);
+    asm_header_word(ptr, object, f, "");
     
     for (k = 1; k < len; ++k) {
         asm_lispobj(ptr + k, ptr[k], f);
@@ -496,8 +496,10 @@ asm_list_pointer(lispobj* ptr, lispobj object, FILE* f)
 int
 asm_function_pointer(lispobj* ptr, lispobj object, FILE* f)
 {
+#if 0
     printf("function pointer 0x%lx\n", object);
-    
+#endif
+
     asm_label(ptr, object, f);
     asm_lispobj(ptr, object, f);
     return 1;
@@ -517,7 +519,7 @@ asm_fdefn(lispobj* ptr, lispobj object, FILE* f)
 {
     asm_label(ptr, object, f);
     
-    asm_header_word(ptr, object, f);
+    asm_header_word(ptr, object, f, "fdefn");
     asm_lispobj(ptr + 1, ptr[1], f);
     asm_lispobj(ptr + 2, ptr[2], f);
 
@@ -543,7 +545,7 @@ asm_simple_vector(lispobj* ptr, lispobj object, FILE* f)
     lispobj* data = ptr + 2;
     
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f);
+    asm_header_word(ptr, object, f, "simple vector");
     asm_lispobj(ptr + 1, ptr[1], f);
 
     for (k = 0; k < len; ++k) {
@@ -563,6 +565,42 @@ int
 asm_complex_vector(lispobj* ptr, lispobj object, FILE* f)
 {
     return asm_ni(ptr, object, f);
+}
+
+int
+asm_code_header(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct code *code;
+    int nheader_words;
+    int ncode_words;
+    int nwords;
+    int k;
+
+    code = (struct code *) ptr;
+    ncode_words = fixnum_value(code->code_size);
+    nheader_words = HeaderValue(object);
+    nwords = ncode_words + nheader_words;
+    nwords = CEILING(nwords, 2);
+
+#if 0
+    fprintf(stderr, "nwords = %d nheader_words %d\n",
+            nwords, nheader_words);
+#endif
+
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "code header");
+    
+    for (k = 0; k < nheader_words - 1; ++k) {
+        asm_lispobj(ptr + k + 1, ptr[k + 1], f);
+    }
+
+    fprintf(f, "# Code bytes?\n");
+    
+    for (; k < nwords; ++k) {
+        fprintf(f, "\t\.4byte\t0x%lx\n", ptr[k + 1]);
+    }
+    
+    return nwords;
 }
 
 #if 0
@@ -681,6 +719,7 @@ init_asmtab(void)
     asmtab[type_SimpleArray] = asm_boxed;
     asmtab[type_SimpleVector] = asm_simple_vector;
     asmtab[type_ComplexVector] = asm_boxed;
+    asmtab[type_CodeHeader] = asm_code_header;
     asmtab[type_FuncallableInstanceHeader] = asm_closure_header;
     /* Just use asm_boxed or have a special version for a value cell? */
     asmtab[type_ValueCellHeader] = asm_boxed;
@@ -711,9 +750,9 @@ write_asm_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
         int k;
         
         /* Output the first word */
-        asm_header_word(ptr, *ptr, f);
+        asm_header_word(ptr, *ptr, f, "");
         /* Header word for NIL */
-        asm_header_word(ptr + 1, ptr[1], f);
+        asm_header_word(ptr + 1, ptr[1], f, "NIL header");
         /* Label for NIL */
         asm_label(ptr + 2, ptr[2], f);
         ptr += 2;
