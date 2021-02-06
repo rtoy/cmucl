@@ -675,6 +675,35 @@ asm_double_float(lispobj* ptr, lispobj object, FILE* f)
     return 4;
 }
 
+int
+asm_vector_unsigned_byte_8(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct vector *vector;
+    int length, nwords;
+    unsigned long* data;
+    int k;
+    
+    vector = (struct vector *) ptr;
+    length = fixnum_value(vector->length);
+#ifdef __x86_64
+    nwords = CEILING(NWORDS(length, 8) + 2, 2);
+#else
+    nwords = CEILING(NWORDS(length, 4) + 2, 2);
+#endif
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "vector unsigned_byte 8");
+    asm_lispobj(ptr + 1, ptr[1], f);
+    
+    data = vector->data;
+
+    /* Minus 2 for the header and length words */
+    for (k = 0; k < nwords - 2; ++k) {
+        fprintf(f, "\t.4byte\t0x%lx\n", data[k]);
+    }
+    
+    return nwords;
+}
+
 #if 0
 int
 asm_bignum(lispobj* ptr, lispobj object, FILE* f)
@@ -793,6 +822,7 @@ init_asmtab(void)
     asmtab[type_SimpleArray] = asm_boxed;
     asmtab[type_SimpleString] = asm_simple_string;
     asmtab[type_SimpleVector] = asm_simple_vector;
+    asmtab[type_SimpleArrayUnsignedByte8] = asm_vector_unsigned_byte_8;
     asmtab[type_ComplexString] = asm_boxed;
     asmtab[type_ComplexVector] = asm_boxed;
     asmtab[type_CodeHeader] = asm_code_header;
