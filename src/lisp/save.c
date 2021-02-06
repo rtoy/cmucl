@@ -599,6 +599,10 @@ asm_code_header(lispobj* ptr, lispobj object, FILE* f)
 
     fprintf(f, "# Code bytes?\n");
     
+    /*
+     * TODO: Adopt trans_code or apply_code_fixups to process the code
+     * here so we can relocate everthing.
+     */
     for (; k < nwords; ++k) {
         fprintf(f, "\t.4byte\t0x%lx\n", ptr[k + 1]);
     }
