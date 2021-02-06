@@ -659,6 +659,38 @@ asm_simple_string(lispobj* where, lispobj object, FILE* f)
     return nwords;
 }
 
+int
+asm_vector_bit(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct vector *vector;
+    int length, nwords;
+    unsigned long* data;
+    int k;
+    
+
+    vector = (struct vector *) ptr;
+    length = fixnum_value(vector->length);
+#ifdef __x86_64
+    nwords = CEILING(NWORDS(length, 64) + 2, 2);
+#else
+    nwords = CEILING(NWORDS(length, 32) + 2, 2);
+#endif
+
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "simple bit-vector");
+    asm_lispobj(ptr + 1, ptr[1], f);
+
+    data = vector->data;
+
+    for (k = 0; k < nwords - 2; ++k) {
+        fprintf(f, "\t.4byte\t0x%lx\n", data[k]);
+    }
+    
+    return nwords;
+
+}
+
+
 void
 print_float(FILE* f, float value)
 {
@@ -844,6 +876,36 @@ asm_vector_unsigned_byte_32(lispobj* ptr, lispobj object, FILE* f)
 }
 
 int
+asm_vector_double_float(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct vector *vector;
+    int length, nwords;
+    const double* data;
+    int k;
+    
+    vector = (struct vector *) ptr;
+    length = fixnum_value(vector->length);
+#ifdef __x86_64
+    nwords = CEILING(length + 2, 2);
+#else
+    nwords = length * 2 + 2;	/* alignment guaranteed */
+#endif
+
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "vector double-float");
+    asm_lispobj(ptr + 1, ptr[1], f);
+    
+    data = (const double*) vector->data;
+
+
+    for (k = 0; k < length; ++k) {
+        print_double(f, data[k]);
+    }
+
+    return nwords;
+}
+
+int
 asm_bignum(lispobj* ptr, lispobj object, FILE* f)
 {
     int len = 1 + HeaderValue(object);
@@ -903,9 +965,11 @@ init_asmtab(void)
     asmtab[type_ComplexDoubleDoubleFloat] = asm_complex_double_double_float;
     asmtab[type_SimpleArray] = asm_boxed;
     asmtab[type_SimpleString] = asm_simple_string;
+    asmtab[type_SimpleBitVector] = asm_vector_bit;
     asmtab[type_SimpleVector] = asm_simple_vector;
     asmtab[type_SimpleArrayUnsignedByte8] = asm_vector_unsigned_byte_8;
     asmtab[type_SimpleArrayUnsignedByte32] = asm_vector_unsigned_byte_32;
+    asmtab[type_SimpleArrayDoubleFloat] = asm_vector_double_float;
     asmtab[type_ComplexString] = asm_boxed;
     asmtab[type_ComplexVector] = asm_boxed;
     asmtab[type_CodeHeader] = asm_code_header;
