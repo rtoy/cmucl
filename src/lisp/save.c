@@ -419,6 +419,10 @@ asm_lispobj(lispobj* ptr, lispobj object, FILE* f)
         fprintf(f, "0x%lx\t# fixnum %ld\n",
                 (long) object,
                 ((long) object) >> 2);
+    } else if ((object & 7) == 2 ||
+               (object & 7) == 6) {
+        /* Other immediates */
+        fprintf(f, "0x%08lx\n", object);
     } else {
         fprintf(f, "L%08lx + %lu\n", PTR(object), LowtagOf(object));
     }
@@ -571,12 +575,7 @@ asm_symbol_header(lispobj* ptr, lispobj object, FILE* f)
     
     asm_label(ptr, object, f);
     asm_header_word(ptr, object, f, "symbol header");
-    /* Handle the unbound marker carefully */
-    if (sym->value == type_UnboundMarker) {
-        asm_word(&sym->value, sym->value, f);
-    } else {
-        asm_lispobj(&sym->value, sym->value, f);
-    }
+    asm_lispobj(&sym->value, sym->value, f);
     asm_lispobj(&sym->hash, sym->hash, f);
     asm_lispobj(&sym->plist, sym->plist, f);
     asm_lispobj(&sym->name, sym->name, f);
