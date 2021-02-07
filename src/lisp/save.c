@@ -407,7 +407,7 @@ asm_word(lispobj* ptr, lispobj object, FILE* f)
 {
     unsigned long val = (unsigned long) object;
     
-    fprintf(f, "\t.4byte\t0x%lx\t# %ld\n", val, val);
+    fprintf(f, "\t.4byte\t0x%08lx\t# %ld\n", val, val);
 }
 
 void
@@ -420,7 +420,7 @@ asm_lispobj(lispobj* ptr, lispobj object, FILE* f)
                 (long) object,
                 ((long) object) >> 2);
     } else {
-        fprintf(f, "L%lx + %lu\n", PTR(object), LowtagOf(object));
+        fprintf(f, "L%08lx + %lu\n", PTR(object), LowtagOf(object));
     }
 }
 
@@ -565,6 +565,27 @@ asm_closure_header(lispobj* ptr, lispobj object, FILE* f)
 }
 
 int
+asm_symbol_header(lispobj* ptr, lispobj object, FILE* f)
+{
+    struct symbol* sym = (struct symbol*) ptr;
+    
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "symbol header");
+    /* Handle the unbound marker carefully */
+    if (sym->value == type_UnboundMarker) {
+        asm_word(&sym->value, sym->value, f);
+    } else {
+        asm_lispobj(&sym->value, sym->value, f);
+    }
+    asm_lispobj(&sym->hash, sym->hash, f);
+    asm_lispobj(&sym->plist, sym->plist, f);
+    asm_lispobj(&sym->name, sym->name, f);
+    asm_lispobj(&sym->package, sym->package, f);
+
+    return 1 + HeaderValue(object);
+}
+
+int
 asm_complex_vector(lispobj* ptr, lispobj object, FILE* f)
 {
     return asm_ni(ptr, object, f);
@@ -578,6 +599,8 @@ asm_code_header(lispobj* ptr, lispobj object, FILE* f)
     int ncode_words;
     int nwords;
     int k;
+    lispobj fheaderl;
+    struct function *fheaderp;
 
     code = (struct code *) ptr;
     ncode_words = fixnum_value(code->code_size);
@@ -597,16 +620,66 @@ asm_code_header(lispobj* ptr, lispobj object, FILE* f)
         asm_lispobj(ptr + k + 1, ptr[k + 1], f);
     }
 
-    fprintf(f, "# Code bytes?\n");
-    
-    /*
-     * TODO: Adopt trans_code or apply_code_fixups to process the code
-     * here so we can relocate everthing.
-     */
-    for (; k < nwords; ++k) {
-        fprintf(f, "\t.4byte\t0x%lx\n", ptr[k + 1]);
+    fheaderl = code->entry_points;
+    while (fheaderl != NIL) {
+        int code_words;
+        int fheader_len;
+        
+	fheaderp = (struct function *) PTR(fheaderl);
+        fheader_len = HeaderValue(fheaderp->header);
+#if 0
+        fprintf(f, "# fheaderp %p\n", (void*) fheaderp);
+        fprintf(f, "#   ->header 0x%lx\n", fheaderp->header);
+        fprintf(f, "#   ->self 0x%lx\n", fheaderp->self);
+        fprintf(f, "#   ->next 0x%lx\n", fheaderp->next);
+        fprintf(f, "#   ->name 0x%lx\n", fheaderp->name);
+        fprintf(f, "#   ->arglist 0x%lx\n", fheaderp->arglist);
+        fprintf(f, "#   ->type 0x%lx\n", fheaderp->type);
+        fprintf(f, "#   ->code %p\n", &fheaderp->code);
+#endif
+        asm_label((lispobj*)fheaderp, *((lispobj*)fheaderp), f);
+        asm_header_word(&fheaderp->header, fheaderp->header, f, "function header");
+        fprintf(f, "\t.4byte\tL%lx\n", fheaderp->self);
+        asm_lispobj(&fheaderp->next, fheaderp->next, f);
+        asm_lispobj(&fheaderp->name, fheaderp->name, f);
+        asm_lispobj(&fheaderp->arglist, fheaderp->arglist, f);
+        asm_lispobj(&fheaderp->type, fheaderp->type, f);
+        asm_label((lispobj*)fheaderp->code, 0, f);
+
+        /* We've sent out 6 of the total code words */
+        ncode_words -= fheader_len;
+        
+        /*
+         * TODO: Adopt trans_code or apply_code_fixups to process the code
+         * here so we can relocate everthing.
+         */
+        fprintf(f, "# Code bytes\n");
+
+        /* Dump out code between here and the next function header */
+        if (fheaderp->next != NIL) {
+            code_words = (fheaderp->next - fheaderl) / 4 - fheader_len;
+        } else {
+            code_words = ncode_words;
+        }
+        
+        fprintf(f, "# fheaderp->next %p code words %d ncode_words %d\n",
+                (void*)fheaderp->next, code_words, ncode_words);
+
+        {
+            uint32_t* code_data = (uint32_t*) fheaderp->code;
+            
+            for (k = 0; k < code_words; ++k) {
+                fprintf(f, "\t.4byte\t0x%08x\t# %p\n", code_data[k],
+                        fheaderp->code + 4*k);
+            }
+        }
+        
+        ncode_words -= code_words;
+        
+	fheaderl = fheaderp->next;
     }
-    
+
+    asm_align(f);
     return nwords;
 }
 
@@ -1127,7 +1200,7 @@ init_asmtab(void)
     asmtab[type_FuncallableInstanceHeader] = asm_closure_header;
     /* Just use asm_boxed or have a special version for a value cell? */
     asmtab[type_ValueCellHeader] = asm_boxed;
-    asmtab[type_SymbolHeader] = asm_boxed;
+    asmtab[type_SymbolHeader] = asm_symbol_header;
     asmtab[type_BaseChar] = asm_immediate;
     asmtab[type_Sap] = asm_sap;
     asmtab[type_InstanceHeader] = asm_boxed;
