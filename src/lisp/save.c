@@ -27,6 +27,16 @@
 #include "gencgc.h"
 #endif
 
+/*
+ * Aargh!  Why is SPARC so different here?  What is the advantage of
+ * making it different from all the other ports?
+ */
+#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
+#define RAW_ADDR_OFFSET 0
+#else
+#define RAW_ADDR_OFFSET (6 * sizeof(lispobj) - type_FunctionPointer)
+#endif
+
 /* Like (ceiling x y), but y is constrained to be a power of two */
 #define CEILING(x,y) (((x) + ((y) - 1)) & (~((y) - 1)))
 
@@ -371,9 +381,13 @@ save_executable(char *filename, lispobj init_function)
 #ifdef reg_ALLOC
     write_space_object(dir_name, DYNAMIC_SPACE_ID, (os_vm_address_t)current_dynamic_space,
                        (os_vm_address_t)current_dynamic_space_free_pointer);
+    write_asm_object(dir_name, DYNAMIC_SPACE_ID, (os_vm_address_t)current_dynamic_space,
+                     (os_vm_address_t)current_dynamic_space_free_pointer);
 #else
     write_space_object(dir_name, DYNAMIC_SPACE_ID, (os_vm_address_t)current_dynamic_space,
                        (os_vm_address_t)SymbolValue(ALLOCATION_POINTER));
+    write_asm_object(dir_name, DYNAMIC_SPACE_ID, (os_vm_address_t)current_dynamic_space,
+                     (os_vm_address_t)SymbolValue(ALLOCATION_POINTER));
 #endif
 
     printf("\tdone]\n");
@@ -530,6 +544,14 @@ asm_fdefn(lispobj* ptr, lispobj object, FILE* f)
     asm_lispobj(ptr + 1, ptr[1], f);
     asm_lispobj(ptr + 2, ptr[2], f);
 
+#if 0
+    struct fdefn* fdefn = (struct fdefn*) ptr;
+    
+    if (((char *) (fdefn->function + RAW_ADDR_OFFSET) != fdefn->raw_addr)) {
+        fprintf(f, "# Different!\n");
+    }
+#endif
+    
     fprintf(f, "\t.4byte\tL%lx\t# raw_addr\n", (unsigned long) ptr[3]);
 
     return 4;
@@ -678,6 +700,15 @@ asm_code_header(lispobj* ptr, lispobj object, FILE* f)
 	fheaderl = fheaderp->next;
     }
 
+    {
+        uint32_t* code_data = (uint32_t*) fheaderp->code;
+            
+        for (k = 0; k < ncode_words; ++k) {
+            fprintf(f, "\t.4byte\t0x%08x\t# %p\n", code_data[k],
+                    fheaderp->code + 4*k);
+        }
+    }
+        
     asm_align(f);
     return nwords;
 }
