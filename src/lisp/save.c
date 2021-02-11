@@ -409,6 +409,8 @@ save_executable(char *filename, lispobj init_function)
  * handle the type value when printing out the assembly code.
  */
 static int (*asmtab[256])(lispobj* where, lispobj object, FILE* f);
+static char* asmtab_types[256];
+
 
 void
 asm_label(lispobj* ptr, lispobj object, FILE* f) 
@@ -460,7 +462,7 @@ asm_header_word(lispobj* ptr, lispobj object, FILE* f, const char* note)
     unsigned long len = HeaderValue(object);
     unsigned long type = TypeOf(object);
     
-    fprintf(f, "\t.4byte\t0x%lx << 8 + %ld\t# %s\n", len, type, note);
+    fprintf(f, "\t.4byte\t0x%lx << 8 + %ld\t# %s\n", len, type, asmtab_types[type]);
 }
 
     
@@ -587,7 +589,23 @@ asm_simple_vector(lispobj* ptr, lispobj object, FILE* f)
 int
 asm_closure_header(lispobj* ptr, lispobj object, FILE* f)
 {
-    return asm_boxed(ptr, object, f);
+    struct closure *closure;
+    int k;
+    int nwords = CEILING(1 + HeaderValue(object), 2);
+
+    closure = (struct closure *) ptr;
+
+    asm_label(ptr, object, f);
+    asm_header_word(ptr, object, f, "closure header");
+    fprintf(f, "\t.4byte\tL%08lx\n", closure->function);
+
+    nwords -= 2;
+    
+    for (k = 0; k < nwords; ++k) {
+        asm_lispobj(closure->info + k, closure->info[k], f);
+
+    }
+    return nwords;
 }
 
 int
@@ -1188,6 +1206,61 @@ init_asmtab(void)
 {
     int k = 0;
 
+    /* Initialize type labels */
+    for (k = 0; k < 256; ++k) {
+        asmtab_types[k] = "";
+    }
+
+    asmtab_types[type_Bignum] = "Bignum";
+    asmtab_types[type_Ratio] = "Ratio";
+    asmtab_types[type_SingleFloat] = "SingleFloat";
+    asmtab_types[type_DoubleFloat] = "DoubleFloat";
+    asmtab_types[type_DoubleDoubleFloat] = "DoubleDoubleFloat";
+    asmtab_types[type_Complex] = "Complex";
+    asmtab_types[type_ComplexSingleFloat] = "ComplexSingleFloat";
+    asmtab_types[type_ComplexDoubleFloat] = "ComplexDoubleFloat";
+    asmtab_types[type_ComplexDoubleDoubleFloat] = "ComplexDoubleDoubleFloat";
+    asmtab_types[type_SimpleArray] = "SimpleArray";
+    asmtab_types[type_SimpleString] = "SimpleString";
+    asmtab_types[type_SimpleBitVector] = "SimpleBitVector";
+    asmtab_types[type_SimpleVector] = "SimpleVector";
+    asmtab_types[type_SimpleArrayUnsignedByte2] = "SimpleArrayUnsignedByte2";
+    asmtab_types[type_SimpleArrayUnsignedByte4] = "SimpleArrayUnsignedByte4";
+    asmtab_types[type_SimpleArrayUnsignedByte8] = "SimpleArrayUnsignedByte8";
+    asmtab_types[type_SimpleArrayUnsignedByte16] = "SimpleArrayUnsignedByte16";
+    asmtab_types[type_SimpleArrayUnsignedByte32] = "SimpleArrayUnsignedByte32";
+    asmtab_types[type_SimpleArraySignedByte8] = "SimpleArraySignedByte8";
+    asmtab_types[type_SimpleArraySignedByte16] = "SimpleArraySignedByte16";
+    asmtab_types[type_SimpleArraySignedByte30] = "SimpleArraySignedByte30";
+    asmtab_types[type_SimpleArraySignedByte32] = "SimpleArraySignedByte32";
+    asmtab_types[type_SimpleArraySingleFloat] = "SimpleArraySingleFloat";
+    asmtab_types[type_SimpleArrayDoubleFloat] = "SimpleArrayDoubleFloat";
+    asmtab_types[type_SimpleArrayDoubleDoubleFloat] = "SimpleArrayDoubleDoubleFloat";
+    asmtab_types[type_SimpleArrayComplexSingleFloat] = "SimpleArrayComplexSingleFloat";
+    asmtab_types[type_SimpleArrayComplexDoubleFloat] = "SimpleArrayComplexDoubleFloat";
+    asmtab_types[type_SimpleArrayComplexDoubleDoubleFloat] = "SimpleArrayComplexDoubleDoubleFloat";
+    asmtab_types[type_ComplexString] = "ComplexString";
+    asmtab_types[type_ComplexBitVector] = "ComplexBitVector";
+    asmtab_types[type_ComplexVector] = "ComplexVector";
+    asmtab_types[type_ComplexArray] = "ComplexArray";
+    asmtab_types[type_CodeHeader] = "CodeHeader";
+    asmtab_types[type_FunctionHeader] = "FunctionHeader";
+    asmtab_types[type_ClosureHeader] = "ClosureHeader";
+    asmtab_types[type_FuncallableInstanceHeader] = "FuncallableInstanceHeader";
+    asmtab_types[type_ByteCodeFunction] = "ByteCodeFunction";
+    asmtab_types[type_ByteCodeClosure] = "ByteCodeClosure";
+    asmtab_types[type_ClosureFunctionHeader] = "ClosureFunctionHeader";
+    asmtab_types[type_ReturnPcHeader] = "ReturnPcHeader";
+    asmtab_types[type_ValueCellHeader] = "ValueCellHeader";
+    asmtab_types[type_SymbolHeader] = "SymbolHeader";
+    asmtab_types[type_BaseChar] = "BaseChar";
+    asmtab_types[type_Sap] = "Sap";
+    asmtab_types[type_UnboundMarker] = "UnboundMarker";
+    asmtab_types[type_WeakPointer] = "WeakPointer";
+    asmtab_types[type_InstanceHeader] = "InstanceHeader";
+    asmtab_types[type_Fdefn] = "Fdefn";
+    asmtab_types[type_ScavengerHook] = "ScavengerHook";
+    
     for (k = 0; k < 256; ++k) {
         asmtab[k] = asm_ni;
     }
