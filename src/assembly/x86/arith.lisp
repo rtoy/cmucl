@@ -313,7 +313,7 @@
 ;;; the state vector with new random numbers. The state vector is
 ;;; passed in the EAX register.
 ;;;
-#+assembler ; we don't want a vop for this one.
+#+(and random-mt19937 assembler) ; we don't want a vop for this one.
 (define-assembly-routine
     (random-mt19937-update)
     ((:temp state unsigned-reg eax-offset)
