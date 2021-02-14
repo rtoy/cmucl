@@ -462,7 +462,12 @@ asm_header_word(lispobj* ptr, lispobj object, FILE* f, const char* note)
     unsigned long len = HeaderValue(object);
     unsigned long type = TypeOf(object);
     
-    fprintf(f, "\t.4byte\t0x%lx << 8 + %ld\t# %s\n", len, type, asmtab_types[type]);
+    fprintf(f, "\t.4byte\t0x%lx << 8 + %ld\t# %s", len, type, asmtab_types[type]);
+    if (note) {
+        fprintf(f, ": %s\n", note);
+    } else {
+        fprintf(f, "\n");
+    }
 }
 
     
@@ -487,7 +492,7 @@ asm_boxed(lispobj* ptr, lispobj object, FILE* f)
 
     asm_label(ptr, object, f);
 
-    asm_header_word(ptr, object, f, "");
+    asm_header_word(ptr, object, f, NULL);
     
     for (k = 1; k < len; ++k) {
         asm_lispobj(ptr + k, ptr[k], f);
@@ -542,7 +547,7 @@ asm_fdefn(lispobj* ptr, lispobj object, FILE* f)
 {
     asm_label(ptr, object, f);
     
-    asm_header_word(ptr, object, f, "fdefn");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(ptr + 1, ptr[1], f);
     asm_lispobj(ptr + 2, ptr[2], f);
 
@@ -576,7 +581,7 @@ asm_simple_vector(lispobj* ptr, lispobj object, FILE* f)
     lispobj* data = ptr + 2;
     
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "simple vector");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(ptr + 1, ptr[1], f);
 
     for (k = 0; k < len; ++k) {
@@ -596,7 +601,7 @@ asm_closure_header(lispobj* ptr, lispobj object, FILE* f)
     closure = (struct closure *) ptr;
 
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "closure header");
+    asm_header_word(ptr, object, f, NULL);
     fprintf(f, "\t.4byte\tL%08lx\n", closure->function);
 
     nwords -= 2;
@@ -614,7 +619,7 @@ asm_symbol_header(lispobj* ptr, lispobj object, FILE* f)
     struct symbol* sym = (struct symbol*) ptr;
     
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "symbol header");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(&sym->value, sym->value, f);
     asm_lispobj(&sym->hash, sym->hash, f);
     asm_lispobj(&sym->plist, sym->plist, f);
@@ -653,7 +658,7 @@ asm_code_header(lispobj* ptr, lispobj object, FILE* f)
 #endif
 
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "code header");
+    asm_header_word(ptr, object, f, NULL);
     
     for (k = 0; k < nheader_words - 1; ++k) {
         asm_lispobj(ptr + k + 1, ptr[k + 1], f);
@@ -677,7 +682,7 @@ asm_code_header(lispobj* ptr, lispobj object, FILE* f)
         fprintf(f, "#   ->code %p\n", &fheaderp->code);
 #endif
         asm_label((lispobj*)fheaderp, *((lispobj*)fheaderp), f);
-        asm_header_word(&fheaderp->header, fheaderp->header, f, "function header");
+        asm_header_word(&fheaderp->header, fheaderp->header, f, NULL);
         fprintf(f, "\t.4byte\tL%lx\n", fheaderp->self);
         asm_lispobj(&fheaderp->next, fheaderp->next, f);
         asm_lispobj(&fheaderp->name, fheaderp->name, f);
@@ -764,7 +769,7 @@ asm_simple_string(lispobj* where, lispobj object, FILE* f)
 #endif
 
     asm_label(where, object, f);
-    asm_header_word(where, object, f, "simple string");
+    asm_header_word(where, object, f, NULL);
     asm_lispobj(where + 1, where[1], f);
     
     s = (uint16_t*) vector->data;
@@ -802,7 +807,7 @@ asm_vector_bit(lispobj* ptr, lispobj object, FILE* f)
 #endif
 
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "simple bit-vector");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(ptr + 1, ptr[1], f);
 
     data = vector->data;
@@ -851,7 +856,7 @@ asm_single_float(lispobj* ptr, lispobj object, FILE* f)
     struct single_float* obj = (struct single_float*) ptr;
     
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "single float");
+    asm_header_word(ptr, object, f, NULL);
     print_float(f, obj->value);
 
     return 2;
@@ -895,7 +900,7 @@ asm_double_float(lispobj* ptr, lispobj object, FILE* f)
     struct double_float* obj = (struct double_float*) ptr;
     
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "double float");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(&obj->filler, obj->filler, f);
     print_double(f, obj->value);
     
@@ -908,7 +913,7 @@ asm_double_double_float(lispobj* ptr, lispobj object, FILE* f)
     struct double_double_float* obj = (struct double_double_float*) ptr;
     
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "double double float");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(&obj->filler, obj->filler, f);
     
     print_double(f, obj->hi);
@@ -923,7 +928,7 @@ asm_complex_single_float(lispobj* ptr, lispobj object, FILE* f)
     struct complex_single_float* obj = (struct complex_single_float*) ptr;
     
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "complex single-float");
+    asm_header_word(ptr, object, f, NULL);
     print_float(f, obj->real);
     print_float(f, obj->imag);
     /* Force double word boundary */
@@ -938,7 +943,7 @@ asm_complex_double_float(lispobj* ptr, lispobj object, FILE* f)
     struct complex_double_float* obj = (struct complex_double_float*) ptr;
     
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "complex double-float");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(&obj->filler, obj->filler, f);
     
     print_double(f, obj->real);
@@ -953,7 +958,7 @@ asm_complex_double_double_float(lispobj* ptr, lispobj object, FILE* f)
     struct complex_double_double_float* obj = (struct complex_double_double_float*) ptr;
     
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "complex double-float");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(&obj->filler, obj->filler, f);
     
     print_double(f, obj->real_hi);
@@ -981,7 +986,7 @@ asm_vector_unsigned_byte_2(lispobj* ptr, lispobj object, FILE* f)
     nwords = CEILING(NWORDS(length, 16) + 2, 2);
 #endif
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "vector unsigned_byte 2");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(ptr + 1, ptr[1], f);
     
     data = vector->data;
@@ -1012,7 +1017,7 @@ asm_vector_unsigned_byte_4(lispobj* ptr, lispobj object, FILE* f)
     nwords = CEILING(NWORDS(length, 8) + 2, 2);
 #endif
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "vector unsigned_byte 4");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(ptr + 1, ptr[1], f);
     
     data = vector->data;
@@ -1043,7 +1048,7 @@ asm_vector_unsigned_byte_8(lispobj* ptr, lispobj object, FILE* f)
     nwords = CEILING(NWORDS(length, 4) + 2, 2);
 #endif
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "vector unsigned_byte 8");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(ptr + 1, ptr[1], f);
     
     data = vector->data;
@@ -1072,7 +1077,7 @@ asm_vector_unsigned_byte_16(lispobj* ptr, lispobj object, FILE* f)
     nwords = CEILING(NWORDS(length, 2) + 2, 2);
 #endif
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "vector unsigned_byte 16");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(ptr + 1, ptr[1], f);
     
     data = (uint16_t*) vector->data;
@@ -1104,7 +1109,7 @@ asm_vector_unsigned_byte_32(lispobj* ptr, lispobj object, FILE* f)
 #endif
 
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "vector unsigned_byte 32");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(ptr + 1, ptr[1], f);
     
     data = vector->data;
@@ -1134,7 +1139,7 @@ asm_vector_double_float(lispobj* ptr, lispobj object, FILE* f)
 #endif
 
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "vector double-float");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(ptr + 1, ptr[1], f);
     
     data = (const double*) vector->data;
@@ -1160,7 +1165,7 @@ asm_vector_double_double_float(lispobj* ptr, lispobj object, FILE* f)
     nwords = CEILING(length * 4 + 2, 2);
 
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "vector double-float");
+    asm_header_word(ptr, object, f, NULL);
     asm_lispobj(ptr + 1, ptr[1], f);
     
     data = (const double*) vector->data;
@@ -1181,7 +1186,7 @@ asm_bignum(lispobj* ptr, lispobj object, FILE* f)
     len = CEILING(len, 2);
     
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "bignum");
+    asm_header_word(ptr, object, f, NULL);
     
     for (k = 1; k < len; ++k) {
         fprintf(f, "\t.4byte\t0x%lx\t# %lu\n", ptr[k], ptr[k]);
@@ -1194,7 +1199,7 @@ int
 asm_sap(lispobj* ptr, lispobj object, FILE* f)
 {
     asm_label(ptr, object, f);
-    asm_header_word(ptr, object, f, "sap");
+    asm_header_word(ptr, object, f, NULL);
     /* Just print out the raw value of the address */
     fprintf(f, "\t.4byte\t0x%lx\n", ptr[1]);
 
@@ -1370,7 +1375,7 @@ write_asm_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
         int k;
         
         /* Output the first word */
-        asm_header_word(ptr, *ptr, f, "");
+        asm_header_word(ptr, *ptr, f, NULL);
         /* Header word for NIL */
         asm_header_word(ptr + 1, ptr[1], f, "NIL header");
         /* Label for NIL */
