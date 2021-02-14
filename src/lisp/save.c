@@ -415,7 +415,8 @@ static char* asmtab_types[256];
 void
 asm_label(lispobj* ptr, lispobj object, FILE* f) 
 {
-    fprintf(f, "L%lx:\n", (unsigned long) ptr);
+    fprintf(f, "\t.global\tL%08lx\n", (unsigned long) ptr);
+    fprintf(f, "L%08lx:\n", (unsigned long) ptr);
 }
 
 void
@@ -1365,6 +1366,9 @@ write_asm_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
 
     lispobj* ptr = (lispobj*) start;
     lispobj* end_ptr = (lispobj*) end;
+
+    /* Set the section name */
+    fprintf(f, "\t.section\t\"space%d\", \"wx\"\n", id);
     
     /*
      * If the id is the static space, we need special handling for
