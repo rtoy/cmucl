@@ -2448,7 +2448,7 @@
   (and (>= (length string) (length head))
        (string= string head :end1 (length head))))
 
-(defun emit-c-header-aux ()
+(defun emit-c-header-aux (assembler-routines)
   (format t "/*~% * Machine generated header file.  Do not edit.~% */~2%")
   (format t "#ifndef _INTERNALS_H_~%#define _INTERNALS_H_~2%")
   ;; Write out various constants
@@ -2602,6 +2602,17 @@
 			   (remove-if #'(lambda (char)
 					  (member char '(#\% #\* #\.)))
 				      (symbol-name feature))))))
+
+  (format t "~2%#if defined(DEFINE_ASM)~%")
+  (format t "/* Assembly routines */~%")
+  (format t "unsigned long lisp_asm_routines[] = {~%")
+  (dolist (routine (sort (copy-list *cold-assembler-routines*)
+			 #'< :key #'cdr))
+    (format t "  0x~8,'0x, /* ~S */~%"
+	    (cdr routine) (car routine)))
+  (format t "  0x~8,'0x, /* End marker */~%" 0)
+  (format t "};~%")
+  (format t "#endif~%")
   ;;
   (format t "~%#endif~%"))
 
@@ -2622,14 +2633,14 @@
 		      (string/= line1 line2))
 	      (return t)))))))
 
-(defun emit-c-header (name)
+(defun emit-c-header (name assembler-routines)
   (let* ((new-name (concatenate 'string (namestring name) ".NEW"))
 	 (unix-newname (unix-namestring new-name nil)))
     (with-open-file
 	(*standard-output* new-name
 			   :direction :output
 			   :if-exists :supersede)
-      (emit-c-header-aux))
+      (emit-c-header-aux assembler-routines))
     (cond ((not (probe-file name))
 	   (unix:unix-chmod unix-newname #o444)
 	   (rename-file new-name name)
@@ -2755,13 +2766,15 @@
 				     :if-exists :supersede)
 		(write-map-file)))
 	    (when header-name
+	      (format t "cold-assembler ~S~%" *cold-assembler-routines*)
 	      (emit-c-header
 	       (merge-pathnames (if (eq header-name t)
 				    "internals.h"
 				    (merge-pathnames
 				     header-name
 				     (make-pathname :type "h")))
-				core-name))
+				core-name)
+	       *cold-assembler-routines*)
 	      (emit-makefile-header
 	       (merge-pathnames (if (eq header-name t)
 				    "internals.inc"
