@@ -13,6 +13,8 @@
 #include <limits.h>
 #include <math.h>
 
+/* Get the lisp assembly routines because we need them */
+#define DEFINE_ASM
 #include "lisp.h"
 #include "os.h"
 #include "internals.h"
@@ -1357,6 +1359,7 @@ write_asm_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
 {
     char asm_file[PATH_MAX];
     FILE* f;
+    int k;
     
     printf("write_asm_object space %d start %p end %p\n",
            id, start, end);
@@ -1370,13 +1373,21 @@ write_asm_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
     /* Set the section name */
     fprintf(f, "\t.section\t\"space%d\", \"wx\"\n", id);
     
+    /* Print the assembly routines */
+    k = 0;
+    while (lisp_asm_routines[k] != 0) {
+        fprintf(f, "\t.set\tL%08lx, 0x%08lx\n",
+                lisp_asm_routines[k],
+                lisp_asm_routines[k]);
+        ++k;
+    }
+
     /*
      * If the id is the static space, we need special handling for
      * beginning which has NIL in a funny way to make NIL a symbol and
      * list.
      */
     if (id == STATIC_SPACE_ID) {
-        int k;
         
         /* Output the first word */
         asm_header_word(ptr, *ptr, f, NULL);
