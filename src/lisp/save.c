@@ -1215,11 +1215,19 @@ init_asmtab(void)
     asmtab_types[type_Ratio] = "Ratio";
     asmtab_types[type_SingleFloat] = "SingleFloat";
     asmtab_types[type_DoubleFloat] = "DoubleFloat";
+#ifdef type_DoubleDoubleFloat
     asmtab_types[type_DoubleDoubleFloat] = "DoubleDoubleFloat";
+#endif
     asmtab_types[type_Complex] = "Complex";
+#ifdef type_ComplexSingleFloat
     asmtab_types[type_ComplexSingleFloat] = "ComplexSingleFloat";
+#endif
+#ifdef type_ComplexDoubleFloat
     asmtab_types[type_ComplexDoubleFloat] = "ComplexDoubleFloat";
+#endif
+#ifdef type_ComplexDoubleDoubleFloat
     asmtab_types[type_ComplexDoubleDoubleFloat] = "ComplexDoubleDoubleFloat";
+#endif
     asmtab_types[type_SimpleArray] = "SimpleArray";
     asmtab_types[type_SimpleString] = "SimpleString";
     asmtab_types[type_SimpleBitVector] = "SimpleBitVector";
@@ -1229,16 +1237,32 @@ init_asmtab(void)
     asmtab_types[type_SimpleArrayUnsignedByte8] = "SimpleArrayUnsignedByte8";
     asmtab_types[type_SimpleArrayUnsignedByte16] = "SimpleArrayUnsignedByte16";
     asmtab_types[type_SimpleArrayUnsignedByte32] = "SimpleArrayUnsignedByte32";
+#ifdef type_SimpleArraySignedByte8
     asmtab_types[type_SimpleArraySignedByte8] = "SimpleArraySignedByte8";
+#endif
+#ifdef type_SimpleArraySignedByte16
     asmtab_types[type_SimpleArraySignedByte16] = "SimpleArraySignedByte16";
+#endif
+#ifdef type_SimpleArraySignedByte30
     asmtab_types[type_SimpleArraySignedByte30] = "SimpleArraySignedByte30";
+#endif
+#ifdef type_SimpleArraySignedByte32
     asmtab_types[type_SimpleArraySignedByte32] = "SimpleArraySignedByte32";
+#endif
     asmtab_types[type_SimpleArraySingleFloat] = "SimpleArraySingleFloat";
     asmtab_types[type_SimpleArrayDoubleFloat] = "SimpleArrayDoubleFloat";
+#ifdef type_SimpleArrayDoubleDoubleFloat
     asmtab_types[type_SimpleArrayDoubleDoubleFloat] = "SimpleArrayDoubleDoubleFloat";
+#endif
+#ifdef type_SimpleArrayComplexSingleFloat
     asmtab_types[type_SimpleArrayComplexSingleFloat] = "SimpleArrayComplexSingleFloat";
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
     asmtab_types[type_SimpleArrayComplexDoubleFloat] = "SimpleArrayComplexDoubleFloat";
+#endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
     asmtab_types[type_SimpleArrayComplexDoubleDoubleFloat] = "SimpleArrayComplexDoubleDoubleFloat";
+#endif
     asmtab_types[type_ComplexString] = "ComplexString";
     asmtab_types[type_ComplexBitVector] = "ComplexBitVector";
     asmtab_types[type_ComplexVector] = "ComplexVector";
@@ -1280,11 +1304,19 @@ init_asmtab(void)
     asmtab[type_Ratio] = asm_boxed;
     asmtab[type_SingleFloat] = asm_single_float;
     asmtab[type_DoubleFloat] = asm_double_float;
+#ifdef type_DoubleDoubleFloat
     asmtab[type_DoubleDoubleFloat] = asm_double_double_float;
+#endif    
     asmtab[type_Complex] = asm_boxed;
+#ifdef type_ComplexSingleFloat
     asmtab[type_ComplexSingleFloat] = asm_complex_single_float;
+#endif
+#ifdef type_ComplexDoubleFloat
     asmtab[type_ComplexDoubleFloat] = asm_complex_double_float;
+#endif
+#ifdef type_ComplexDoubleDoubleFloat
     asmtab[type_ComplexDoubleDoubleFloat] = asm_complex_double_double_float;
+#endif
     asmtab[type_SimpleArray] = asm_boxed;
     asmtab[type_SimpleString] = asm_simple_string;
     asmtab[type_SimpleBitVector] = asm_vector_bit;
@@ -1295,12 +1327,16 @@ init_asmtab(void)
     asmtab[type_SimpleArrayUnsignedByte16] = asm_vector_unsigned_byte_16;
     asmtab[type_SimpleArrayUnsignedByte32] = asm_vector_unsigned_byte_32;
     asmtab[type_SimpleArrayDoubleFloat] = asm_vector_double_float;
+#ifdef type_SimpleArrayDoubleDoubleFloat
     asmtab[type_SimpleArrayDoubleDoubleFloat] = asm_vector_double_double_float;
+#endif
     asmtab[type_ComplexString] = asm_boxed;
     asmtab[type_ComplexVector] = asm_boxed;
     asmtab[type_CodeHeader] = asm_code_header;
+#if defined(i386) || defined(__x86_64)
     asmtab[type_ClosureHeader] = asm_closure_header;
     asmtab[type_FuncallableInstanceHeader] = asm_closure_header;
+#endif
     /* Just use asm_boxed or have a special version for a value cell? */
     asmtab[type_ValueCellHeader] = asm_boxed;
     asmtab[type_SymbolHeader] = asm_symbol_header;
