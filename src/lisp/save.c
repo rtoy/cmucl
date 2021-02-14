@@ -396,6 +396,8 @@ save_executable(char *filename, lispobj init_function)
     fflush(stdout);
     
     printf("Linking executable...\n");
+    printf("  init_function 0x%08lx\n", init_function);
+    
     fflush(stdout);
     rc = obj_run_linker(init_function, filename);
     printf("done.\n");
