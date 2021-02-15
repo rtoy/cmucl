@@ -1357,9 +1357,15 @@ pscav(lispobj * addr, int nwords, boolean constant)
 	      case type_SimpleString:
 		  vector = (struct vector *) addr;
 #ifdef __x86_64
+#ifndef UNICODE
 		  count =
 		      CEILING(NWORDS(fixnum_value(vector->length) + 1, 8) + 2,
 			      2);
+#else
+		  count =
+		      CEILING(NWORDS(fixnum_value(vector->length) + 1, 4) + 2,
+			      2);
+#endif                  
 #else
 		  count =
 #ifndef UNICODE

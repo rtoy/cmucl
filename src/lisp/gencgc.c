@@ -4215,7 +4215,11 @@ size_string(lispobj * where)
      * Strings are just like arrays with 16-bit elements, and contain
      * one more element than the slot length indicates.
      */
+#ifdef __x86_64
+    nwords = CEILING(NWORDS(length, 4) + 2, 2);
+#else    
     nwords = CEILING(NWORDS(length, 2) + 2, 2);
+#endif    
 #endif
     return nwords;
 }
