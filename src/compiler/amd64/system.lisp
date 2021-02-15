@@ -39,38 +39,39 @@
   (:translate get-type)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg)))
-  (:temporary (:sc unsigned-reg :offset rax-offset :to (:result 0)) rax)
-  (:results (result :scs (unsigned-reg)))
+  (:args (object :scs (descriptor-reg) :to (:eval 1)))
+  (:results (result :scs (unsigned-reg) :from (:eval 0)))
   (:result-types positive-fixnum)
   (:generator 6
-    (inst mov rax object)
-    (inst and al-tn lowtag-mask)
-    (inst cmp al-tn other-pointer-type)
+    ;; Pick off objects with headers.
+    (inst mov result object)
+    (inst and result lowtag-mask)
+    (inst cmp result other-pointer-type)
     (inst jmp :e other-ptr)
-    (inst cmp al-tn function-pointer-type)
+    (inst cmp result function-pointer-type)
     (inst jmp :e function-ptr)
 
-    ;; pick off structures and list pointers
-    (inst test al-tn 1)
-    (inst jmp :ne done)
+    ;; Pick off structure and list pointers.
+    (inst test result 1)
+    (inst jmp :nz done)
 
-    ;; pick off fixnums
-    (inst and al-tn 3)
-    (inst jmp :e done)
+    ;; Pick off fixnums.
+    (inst and result 3)
+    (inst jmp :z done)
 
-    ;; must be an other immediate
-    (inst mov rax object)
+    ;; Must be an other immediate.
+    (inst mov result object)
+    (inst and result type-mask)
     (inst jmp done)
-    
+
     FUNCTION-PTR
-    (load-type al-tn object (- vm:function-pointer-type))
+    (load-type result object (- vm:function-pointer-type))
     (inst jmp done)
-    
+
     OTHER-PTR
-    (load-type al-tn object (- vm:other-pointer-type))
-    
-    DONE
-    (inst movzx result al-tn)))
+    (load-type result object (- vm:other-pointer-type))
+
+    DONE))
 
 (define-vop (function-subtype)
   (:translate function-subtype)
