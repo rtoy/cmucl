@@ -351,20 +351,7 @@
 
       ;; The FP constants
       *fp-constant-0d0*
-      *fp-constant-1d0*
-      *fp-constant-0s0*
-      *fp-constant-1s0*
-      ;; Following are all long-floats.
-      *fp-constant-0l0*
-      *fp-constant-1l0*
-      *fp-constant-pi*
-      *fp-constant-l2t*
-      *fp-constant-l2e*
-      *fp-constant-lg2*
-      *fp-constant-ln2*
-
-      ;; Used by gencgc.
-      *scavenge-read-only-space*
+      *fp-constant-0f0*
 
       ;; Multi-process support.
       *control-stacks*

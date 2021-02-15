@@ -914,22 +914,8 @@
       (macrolet ((frob (name pkg value)
 		   `(cold-setq (cold-intern (intern ,name ,pkg)) ,value)))
 	(frob "*FP-CONSTANT-0D0*" "X86" (number-to-core 0d0))
-	(frob "*FP-CONSTANT-1D0*" "X86" (number-to-core 1d0))
-	(frob "*FP-CONSTANT-0S0*" "X86" (number-to-core 0s0))
-	(frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0))
-	#+long-float
-	(when (c:backend-featurep :long-float)
-	  (frob "*FP-CONSTANT-0L0*" "X86" (number-to-core 0l0))
-	  (frob "*FP-CONSTANT-1L0*" "X86" (number-to-core 1l0))
-	  (frob "*FP-CONSTANT-PI*" "X86" (number-to-core pi))
-	  (frob "*FP-CONSTANT-L2T*" "X86" (number-to-core (log 10l0 2l0)))
-	  (frob "*FP-CONSTANT-L2E*" "X86"
-		(number-to-core
-		 (log 2.718281828459045235360287471352662L0 2l0)))
-	  (frob "*FP-CONSTANT-LG2*" "X86" (number-to-core (log 2l0 10l0)))
-	  (frob "*FP-CONSTANT-LN2*" "X86"
-		(number-to-core
-		 (log 2l0 2.718281828459045235360287471352662L0))))
+	(frob "*FP-CONSTANT-0F0*" "X86" (number-to-core 0f0))
+
 	(when (c:backend-featurep :gencgc)
 	  (frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern nil)))))
 

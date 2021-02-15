@@ -495,7 +495,6 @@ gc_write_barrier(void *addr)
     /* Un-protect the page */
     os_protect((os_vm_address_t) page_address(page_index), GC_PAGE_SIZE, OS_VM_PROT_ALL);
     page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-    page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
 
     return 1;
 }
@@ -7723,7 +7722,7 @@ static void
 garbage_collect_generation(int generation, int raise)
 {
     unsigned long i;
-    unsigned long read_only_space_size, static_space_size;
+    unsigned long static_space_size;
 
 #if defined(i386) || defined(__x86_64)
     invalid_stack_start = (void *) control_stack;
@@ -7865,15 +7864,6 @@ garbage_collect_generation(int generation, int raise)
 #ifdef PRINTNOISE
     printf("Done scavenging the scavenger hooks.\n");
 #endif
-
-    if (SymbolValue(SCAVENGE_READ_ONLY_SPACE) != NIL) {
-	read_only_space_size =
-	    (lispobj *) SymbolValue(READ_ONLY_SPACE_FREE_POINTER) -
-	    read_only_space;
-	fprintf(stderr, "Scavenge read only space: %ld bytes\n",
-		read_only_space_size * sizeof(lispobj));
-	scavenge(read_only_space, read_only_space_size);
-    }
 
     static_space_size = (lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER)
 	- static_space;
@@ -8416,6 +8406,7 @@ char *
 alloc(int nbytes)
 {
     void *new_obj;
+
 #if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
     /*
      * *current-region-free-pointer* is the same as alloc-tn (=
@@ -8442,20 +8433,6 @@ alloc(int nbytes)
 	    set_current_region_free((lispobj) new_free_pointer);
             break;
 	} else if (bytes_allocated <= auto_gc_trigger) {
-#if defined(i386) || defined(__x86_64)
-            /*
-             * Need to save and restore the FPU registers on x86, but only for
-             * sse2.  See Ticket #61.
-             *
-             * Not needed by sparc or ppc because we never call alloc from
-             * Lisp directly to do allocation.
-             */
-            FPU_STATE(fpu_state);
-
-            if (fpu_mode == SSE2) {
-                save_fpu_state(fpu_state);
-            }
-#endif
 	    /* Call gc_alloc.  */
 	    boxed_region.free_pointer = (void *) get_current_region_free();
 	    boxed_region.end_addr =
@@ -8466,11 +8443,6 @@ alloc(int nbytes)
 	    set_current_region_free((lispobj) boxed_region.free_pointer);
 	    set_current_region_end((lispobj) boxed_region.end_addr);
 
-#if defined(i386) || defined(__x86_64)
-            if (fpu_mode == SSE2) {
-                restore_fpu_state(fpu_state);
-            }
-#endif
             break;
 	} else {
 	    /* Run GC and try again.  */

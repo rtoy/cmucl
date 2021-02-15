@@ -382,7 +382,39 @@ ENDFUNC(fastcopy16)
  * %eax = address
  */
 FUNCDEF(alloc_overflow_sse2)
-	STACK_PROLOGUE(20)
+	# Need 8*16 bytes for the xmm registers, and space to save ecx
+	# and edx, space for mxcsr, a temp, and one arg to pass to alloc.
+	# That's 8*16 + 5*4 = 148 bytes.  Might as well have a few
+	# more so the xmm0 area is 16-byte aligned. That makes it 160
+	# bytes.
+	#
+	# Stack looks like:
+	#
+	#      +160
+	#      +144 -> xmm7
+	#      +128 -> xmm6
+	#      +112 -> xmm5
+	#      +96  -> xmm4
+	#      +80  -> xmm3
+	#      +64  -> xmm2
+	#      +48  -> xmm1
+	#      +32  -> xmm0
+	#      +20  -> unused
+	#      +16  -> temp
+	#      +12  -> mxcsr
+	#      + 8  -> save ecx
+	#      + 4  -> save edx
+	#  esp + 0  -> arg for alloc
+	STACK_PROLOGUE(160)
+	movapd  %xmm0, (32 + 0*16)(%esp)
+	movapd  %xmm1, (32 + 1*16)(%esp)
+	movapd  %xmm2, (32 + 2*16)(%esp)
+	movapd  %xmm3, (32 + 3*16)(%esp)
+	movapd  %xmm4, (32 + 4*16)(%esp)
+	movapd  %xmm5, (32 + 5*16)(%esp)
+	movapd  %xmm6, (32 + 6*16)(%esp)
+	movapd  %xmm7, (32 + 7*16)(%esp)
+
 	movl	%ecx, 8(%esp)	# Save ecx and edx registers
 	movl	%edx, 4(%esp)
 	stmxcsr 12(%esp)	# Save MXCSR
@@ -398,10 +430,20 @@ FUNCDEF(alloc_overflow_sse2)
 	movl	4(%esp), %edx	# Restore edx and ecx registers.  eax has the return value.
 	movl	8(%esp), %ecx
 	ldmxcsr	12(%esp)
+
+	movapd  (32 + 0*16)(%esp), %xmm0
+	movapd  (32 + 1*16)(%esp), %xmm1
+	movapd  (32 + 2*16)(%esp), %xmm2
+	movapd  (32 + 3*16)(%esp), %xmm3
+	movapd  (32 + 4*16)(%esp), %xmm4
+	movapd  (32 + 5*16)(%esp), %xmm5
+	movapd  (32 + 6*16)(%esp), %xmm6
+	movapd  (32 + 7*16)(%esp), %xmm7
+
 	STACK_EPILOGUE
 	ret
 ENDFUNC(alloc_overflow_sse2)	
-		
+
 #ifdef LINKAGE_TABLE
 
 /* Call into C code to resolve a linkage entry.  The initial code in the 

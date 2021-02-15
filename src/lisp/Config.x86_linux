@@ -1,6 +1,7 @@
 # -*- Mode: makefile -*-
 include Config.x86_common
 
+CFLAGS += $(COPT)
 CPPFLAGS += -m32 -D__NO_CTYPE -D_GNU_SOURCE
 CFLAGS += -rdynamic  -march=pentium4 -mfpmath=sse -mtune=generic
 

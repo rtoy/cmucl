@@ -2,6 +2,7 @@
 include Config.sparc_common
 
 CC = cc -xlibmieee -g
+CFLAGS += $(COPT)
 CFLAGS += -Di386
 CPP = cc -E
 DEPEND_FLAGS = -xM1
