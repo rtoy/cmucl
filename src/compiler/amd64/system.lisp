@@ -77,12 +77,10 @@
   (:translate function-subtype)
   (:policy :fast-safe)
   (:args (function :scs (descriptor-reg)))
-  (:temporary (:sc byte-reg :from (:eval 0) :to (:eval 1)) temp)
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
-    (load-type temp function (- vm:function-pointer-type))
-    (inst movzx result temp)))
+    (load-type result function (- vm:function-pointer-type))))
 
 (define-vop (set-function-subtype)
   (:translate (setf function-subtype))
