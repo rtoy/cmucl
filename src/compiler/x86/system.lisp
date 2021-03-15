@@ -1,4 +1,4 @@
-4;;; -*- Mode: LISP; Syntax: Common-Lisp; Base: 10; Package: x86 -*-
+;;; -*- Mode: LISP; Syntax: Common-Lisp; Base: 10; Package: x86 -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
