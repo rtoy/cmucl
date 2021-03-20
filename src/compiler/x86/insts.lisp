@@ -2099,20 +2099,9 @@
                        (sc-offsets)
                        (lengths))))))))
 
-#+nil
-(defmacro break-cases (breaknum &body cases)
-  (let ((bn-temp (gensym)))
-    (collect ((clauses))
-      (dolist (case cases)
-        (clauses `((= ,bn-temp ,(car case)) ,@(cdr case))))
-      `(let ((,bn-temp ,breaknum))
-         (cond ,@(clauses))))))
-
 (defun break-control (chunk inst stream dstate)
-  #+nil(declare (ignore inst))
+  (declare (ignore inst))
   (flet ((nt (x) (if stream (disassem:note x dstate))))
-    (format t "break-control: inst = ~A code = ~A~%" inst (break-code chunk dstate))
-    (describe inst)
     (case (break-code chunk dstate)
       (#.vm:error-trap
        (nt "Error trap")
