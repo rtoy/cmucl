@@ -247,13 +247,13 @@
 	     (vector (make-array length :element-type '(unsigned-byte 8))))
 	(declare (type (unsigned-byte 8) length)
 		 (type (simple-array (unsigned-byte 8) (*)) vector))
+	#+nil
 	(format t "internal-error-args scp ~A: pc ~X len ~D~%" scp pc length)
 	;; Grab the bytes after length byte, which 
 	(copy-from-system-area pc (* vm:byte-bits 4)
 			       vector (* vm:word-bits
 					 vm:vector-data-offset)
 			       (* length vm:byte-bits))
-	(format t "  vector ~A~%" vector)
 	(let* ((index 0)
 	       (error-number (c::read-var-integer vector index)))
 	  (collect ((sc-offsets))
