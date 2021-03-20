@@ -295,7 +295,7 @@ GNAME(function_end_breakpoint_end):
 
 
 FUNCDEF(do_pending_interrupt)
-	INT3
+	ud2
 	.byte 	trap_PendingInterrupt
 	ret
 ENDFUNC(do_pending_interrupt)

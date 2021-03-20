@@ -2061,6 +2061,14 @@
  (op :field (byte 8 0))
  (code :field (byte 8 8)))
 
+
+(disassem:define-instruction-format (break 24 :default-printer '(:name :tab code))
+  (op :fields (list (byte 8 0) (byte 8 8)) :value '(#xb00001111 #b00001011))
+  (code :field (byte 8 8)))
+
+(define-emitter emit-break-inst 24
+  (byte 8 0) (byte 8 8) (byte 8 16))
+
 (defun snarf-error-junk (sap offset &optional length-only)
   (let* ((length (system:sap-ref-8 sap offset))
          (vector (make-array length :element-type '(unsigned-byte 8))))
@@ -2091,6 +2099,7 @@
                        (sc-offsets)
                        (lengths))))))))
 
+#+nil
 (defmacro break-cases (breaknum &body cases)
   (let ((bn-temp (gensym)))
     (collect ((clauses))
@@ -2100,9 +2109,11 @@
          (cond ,@(clauses))))))
 
 (defun break-control (chunk inst stream dstate)
-  (declare (ignore inst))
+  #+nil(declare (ignore inst))
   (flet ((nt (x) (if stream (disassem:note x dstate))))
-    (case (byte-imm-code chunk dstate)
+    (format t "break-control: inst = ~A code = ~A~%" inst (break-code chunk dstate))
+    (describe inst)
+    (case (break-code chunk dstate)
       (#.vm:error-trap
        (nt "Error trap")
        (disassem:handle-break-args #'snarf-error-junk stream dstate))
@@ -2122,11 +2133,17 @@
 ;; This is really the int3 instruction.
 (define-instruction break (segment code)
   (:declare (type (unsigned-byte 8) code))
-  (:printer byte-imm ((op #b11001100)) '(:name :tab code)
+  (:printer break ((op '(#b00001111 #b00001011)))
+	    '(:name :tab code)
 	    :control #'break-control)
   (:emitter
-   (emit-byte segment #b11001100)
-   (emit-byte segment code)))
+   (emit-break-inst segment #b00001111 #b00001011 code)))
+
+#+nil
+(define-instruction ud2 (segment)
+  (:emitter
+   (emit-byte segment #b00001111)
+   (emit-byte segment #b00001011)))
 
 (define-instruction int (segment number)
   (:declare (type (unsigned-byte 8) number))

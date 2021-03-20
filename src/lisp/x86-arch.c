@@ -21,7 +21,9 @@
 #include "interr.h"
 #include "breakpoint.h"
 
+#if 0
 #define BREAKPOINT_INST 0xcc	/* INT3 */
+#endif
 
 unsigned long fast_random_state = 1;
 
@@ -140,18 +142,28 @@ arch_skip_instruction(os_context_t * context)
 {
     int vlen, code;
 
-    DPRINTF(0, (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
+    DPRINTF(1, (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
 
     /* Get and skip the lisp error code. */
-    code = *(char *) SC_PC(context)++;
+    char* pc = (char *) SC_PC(context);
+    
+    pc += 2;        /* skip 0x0f and 0x0b */
+
+    code = *pc++;
+    SC_PC(context) = (unsigned long) pc;
+
     switch (code) {
       case trap_Error:
       case trap_Cerror:
 	  /* Lisp error arg vector length */
-	  vlen = *(char *) SC_PC(context)++;
+          vlen = *pc++;
+          SC_PC(context) = (unsigned long) pc;
+          
 	  /* Skip lisp error arg data bytes */
-	  while (vlen-- > 0)
-	      SC_PC(context)++;
+	  while (vlen-- > 0) {
+              pc++;
+              SC_PC(context) = (unsigned long) pc;
+          }
 	  break;
 
       case trap_Breakpoint:
@@ -168,7 +180,7 @@ arch_skip_instruction(os_context_t * context)
 	  break;
     }
 
-    DPRINTF(0, (stderr, "[arch_skip_inst resuming at %lx>]\n", SC_PC(context)));
+    DPRINTF(1, (stderr, "[arch_skip_inst resuming at %lx>]\n", SC_PC(context)));
 }
 
 unsigned char *
@@ -194,10 +206,19 @@ arch_set_pseudo_atomic_interrupted(os_context_t * context)
 unsigned long
 arch_install_breakpoint(void *pc)
 {
+    char* ptr = (char *) pc;
     unsigned long result = *(unsigned long *) pc;
 
+#if 0
     *(char *) pc = BREAKPOINT_INST;	/* x86 INT3       */
     *((char *) pc + 1) = trap_Breakpoint;	/* Lisp trap code */
+#else
+    *ptr++ = 0x0f;              /* UD2 */
+    *ptr++ = 0x0b;
+    *ptr++ = trap_Breakpoint;   /* Lisp trap code */
+    *ptr++ = 1;                 /* Vector length */
+    *ptr++ = 0;                 /* Junk data */
+#endif
 
     return result;
 }
@@ -275,14 +296,26 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 
 
 void
-sigtrap_handler(HANDLER_ARGS)
+sigill_handler(HANDLER_ARGS)
 {
     unsigned int trap;
     os_context_t* os_context = (os_context_t *) context;
+#if 1
 #if 0
     fprintf(stderr, "x86sigtrap: %8x %x\n",
             SC_PC(os_os_context), *(unsigned char *) (SC_PC(os_context) - 1));
-    fprintf(stderr, "sigtrap(%d %d %x)\n", signal, CODE(code), os_context);
+#else
+    fprintf(stderr,"x86sigill: fp=%lx sp=%lx pc=%lx { %x, %x, %x, %x, %x }\n",
+            SC_REG(context, reg_FP),
+            SC_REG(context, reg_SP),
+            SC_PC(context),
+            *(unsigned char*)(SC_PC(context) + 0), /* 0x0F */
+            *(unsigned char*)(SC_PC(context) + 1), /* 0x0B */
+            *(unsigned char*)(SC_PC(context) + 2),
+            *(unsigned char*)(SC_PC(context) + 3),
+            *(unsigned char*)(SC_PC(context) + 4));
+#endif    
+    fprintf(stderr, "sigtrap(%d %d %p)\n", signal, CODE(code), os_context);
 #endif
 
     if (single_stepping && (signal == SIGTRAP)) {
@@ -309,8 +342,14 @@ sigtrap_handler(HANDLER_ARGS)
 	else {
 	    char *ptr = (char *) single_stepping;
 
+#if 0
 	    ptr[0] = BREAKPOINT_INST;	/* x86 INT3 */
 	    ptr[1] = trap_Breakpoint;
+#else
+            ptr[0] = 0x0f;
+            ptr[1] = 0x0b;
+            ptr[2] = trap_Breakpoint;
+#endif            
 	}
 
 	single_stepping = NULL;
@@ -335,7 +374,14 @@ sigtrap_handler(HANDLER_ARGS)
      * arguments to follow.
      */
 
-    trap = *(unsigned char *) SC_PC(os_context);
+    fprintf(stderr, "pc %x\n",  *(unsigned short *)SC_PC(context));
+    if (*(unsigned short *) SC_PC(context) == 0x0b0f) {
+        trap = *(((char *)SC_PC(context)) + 2);
+    } else {
+        abort();
+    }
+
+    fprintf(stderr, "code = %x\n", trap);
 
     switch (trap) {
       case trap_PendingInterrupt:
@@ -408,8 +454,7 @@ sigtrap_handler(HANDLER_ARGS)
 void
 arch_install_interrupt_handlers(void)
 {
-    interrupt_install_low_level_handler(SIGILL, sigtrap_handler);
-    interrupt_install_low_level_handler(SIGTRAP, sigtrap_handler);
+    interrupt_install_low_level_handler(SIGILL, sigill_handler);
 }
 
 
