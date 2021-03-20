@@ -2064,7 +2064,7 @@
 
 (disassem:define-instruction-format (break 24 :default-printer '(:name :tab code))
   (op :fields (list (byte 8 0) (byte 8 8)) :value '(#xb00001111 #b00001011))
-  (code :field (byte 8 8)))
+  (code :field (byte 8 16)))
 
 (define-emitter emit-break-inst 24
   (byte 8 0) (byte 8 8) (byte 8 16))
