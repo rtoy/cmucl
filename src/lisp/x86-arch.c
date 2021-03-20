@@ -142,7 +142,7 @@ arch_skip_instruction(os_context_t * context)
 {
     int vlen, code;
 
-    DPRINTF(1, (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
+    DPRINTF(0, (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
 
     /* Get and skip the lisp error code. */
     char* pc = (char *) SC_PC(context);
@@ -180,7 +180,7 @@ arch_skip_instruction(os_context_t * context)
 	  break;
     }
 
-    DPRINTF(1, (stderr, "[arch_skip_inst resuming at %lx>]\n", SC_PC(context)));
+    DPRINTF(0, (stderr, "[arch_skip_inst resuming at %lx>]\n", SC_PC(context)));
 }
 
 unsigned char *
@@ -300,7 +300,7 @@ sigill_handler(HANDLER_ARGS)
 {
     unsigned int trap;
     os_context_t* os_context = (os_context_t *) context;
-#if 1
+#if 0
 #if 0
     fprintf(stderr, "x86sigtrap: %8x %x\n",
             SC_PC(os_os_context), *(unsigned char *) (SC_PC(os_context) - 1));
@@ -374,14 +374,18 @@ sigill_handler(HANDLER_ARGS)
      * arguments to follow.
      */
 
+#if 0
     fprintf(stderr, "pc %x\n",  *(unsigned short *)SC_PC(context));
+#endif    
     if (*(unsigned short *) SC_PC(context) == 0x0b0f) {
         trap = *(((char *)SC_PC(context)) + 2);
     } else {
         abort();
     }
 
+#if 0
     fprintf(stderr, "code = %x\n", trap);
+#endif
 
     switch (trap) {
       case trap_PendingInterrupt:
