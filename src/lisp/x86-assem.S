@@ -302,7 +302,7 @@ ENDFUNC(do_pending_interrupt)
 	
 #ifdef trap_DynamicSpaceOverflowError
 FUNCDEF(do_dynamic_space_overflow_error)
-	INT3
+	ud2
 	.byte 	trap_DynamicSpaceOverflowError
 	ret
 ENDFUNC(do_dynamic_space_overflow_error)
@@ -310,7 +310,7 @@ ENDFUNC(do_dynamic_space_overflow_error)
 	
 #ifdef trap_DynamicSpaceOverflowWarning
 FUNCDEF(do_dynamic_space_overflow_warning)
-	INT3
+	ud2
 	.byte 	trap_DynamicSpaceOverflowWarning
 	ret
 ENDFUNC(do_dynamic_space_overflow_warning)
@@ -493,7 +493,7 @@ FUNCDEF(undefined_foreign_symbol_trap)
         movl 8(%ebp),%eax
 
 	/* Now trap to Lisp */
-	INT3
+	ud2
 	.byte	trap_Error
         /* Number of argument bytes */
         .byte   2
