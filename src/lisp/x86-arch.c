@@ -209,6 +209,9 @@ arch_install_breakpoint(void *pc)
     char* ptr = (char *) pc;
     unsigned long result = *(unsigned long *) pc;
 
+    fprintf(stderr, "arch_install_breakpoint at %p, old code = 0x%lx\n",
+            pc, result);
+    
 #if 0
     *(char *) pc = BREAKPOINT_INST;	/* x86 INT3       */
     *((char *) pc + 1) = trap_Breakpoint;	/* Lisp trap code */
@@ -216,8 +219,6 @@ arch_install_breakpoint(void *pc)
     *ptr++ = 0x0f;              /* UD2 */
     *ptr++ = 0x0b;
     *ptr++ = trap_Breakpoint;   /* Lisp trap code */
-    *ptr++ = 1;                 /* Vector length */
-    *ptr++ = 0;                 /* Junk data */
 #endif
 
     return result;
@@ -300,7 +301,7 @@ sigill_handler(HANDLER_ARGS)
 {
     unsigned int trap;
     os_context_t* os_context = (os_context_t *) context;
-#if 0
+#if 1
 #if 0
     fprintf(stderr, "x86sigtrap: %8x %x\n",
             SC_PC(os_os_context), *(unsigned char *) (SC_PC(os_context) - 1));
@@ -374,7 +375,7 @@ sigill_handler(HANDLER_ARGS)
      * arguments to follow.
      */
 
-#if 0
+#if 1
     fprintf(stderr, "pc %x\n",  *(unsigned short *)SC_PC(context));
 #endif    
     if (*(unsigned short *) SC_PC(context) == 0x0b0f) {
@@ -383,7 +384,7 @@ sigill_handler(HANDLER_ARGS)
         abort();
     }
 
-#if 0
+#if 1
     fprintf(stderr, "code = %x\n", trap);
 #endif
 
@@ -415,19 +416,23 @@ sigill_handler(HANDLER_ARGS)
 	  break;
 
       case trap_Breakpoint:
-#if 0
+#if 1
 	  fprintf(stderr, "*C break\n");
 #endif
+#if 0
 	  SC_PC(os_context) -= 1;
+#endif          
 
 	  handle_breakpoint(signal, CODE(code), os_context);
-#if 0
+#if 1
 	  fprintf(stderr, "*C break return\n");
 #endif
 	  break;
 
       case trap_FunctionEndBreakpoint:
+#if 0
 	  SC_PC(os_context) -= 1;
+#endif          
 	  SC_PC(os_context) =
 	      (int) handle_function_end_breakpoint(signal, CODE(code), os_context);
 	  break;
