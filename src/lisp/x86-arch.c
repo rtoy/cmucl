@@ -142,7 +142,7 @@ arch_skip_instruction(os_context_t * context)
 {
     int vlen, code;
 
-    DPRINTF(0, (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
+    DPRINTF(1, (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
 
     /* Get and skip the lisp error code. */
     char* pc = (char *) SC_PC(context);
@@ -206,8 +206,8 @@ arch_set_pseudo_atomic_interrupted(os_context_t * context)
 unsigned long
 arch_install_breakpoint(void *pc)
 {
-    char* ptr = (char *) pc;
-    unsigned long result = *(unsigned long *) pc;
+    unsigned char* ptr = (unsigned char *) pc;
+    unsigned long result = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
 
     fprintf(stderr, "arch_install_breakpoint at %p, old code = 0x%lx\n",
             pc, result);
@@ -227,8 +227,13 @@ arch_install_breakpoint(void *pc)
 void
 arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
-    *((char *) pc) = orig_inst & 0xff;
-    *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
+    fprintf(stderr, "arch_remove_breakpoint: %p orig %lx\n",
+            pc, orig_inst);
+    unsigned char *ptr = (unsigned char *) pc;
+    ptr[0] = orig_inst & 0xff;
+    ptr[1] = (orig_inst >> 8) & 0xff;
+    ptr[2] = (orig_inst >> 16) & 0xff;
+    ptr[3] = (orig_inst >> 24) & 0xff;
 }
 
 
@@ -249,14 +254,23 @@ unsigned int single_step_save3;
 void
 arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 {
-    unsigned int *pc = (unsigned int *) SC_PC(context);
+    unsigned char *pc = (unsigned char *) SC_PC(context);
 
+    fprintf(stderr, "arch_do_displaced_inst: pc %p orig_inst %lx\n",
+            pc, orig_inst);
+    
     /*
      * Put the original instruction back.
      */
 
+#if 0
     *((char *) pc) = orig_inst & 0xff;
     *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
+#else
+    pc[0] = orig_inst & 0xff;
+    pc[1] = (orig_inst >> 8) & 0xff;
+    pc[2] = (orig_inst >> 16) & 0xff;
+#endif
 
 #ifdef SC_EFLAGS
     /* Enable single-stepping */
@@ -319,8 +333,8 @@ sigill_handler(HANDLER_ARGS)
     fprintf(stderr, "sigtrap(%d %d %p)\n", signal, CODE(code), os_context);
 #endif
 
-    if (single_stepping && (signal == SIGTRAP)) {
-#if 0
+    if (single_stepping && (signal == SIGILL)) {
+#if 1
 	fprintf(stderr, "* Single step trap %p\n", single_stepping);
 #endif
 
@@ -338,7 +352,9 @@ sigill_handler(HANDLER_ARGS)
 	/*
 	 * Re-install the breakpoint if possible.
 	 */
-	if ((int) SC_PC(os_context) == (int) single_stepping + 1)
+        fprintf(stderr, "* Reinstall breakpoint at single_stepping %p\n", single_stepping);
+        
+	if ((int) SC_PC(os_context) >= (int) single_stepping + 3)
 	    fprintf(stderr, "* Breakpoint not re-install\n");
 	else {
 	    char *ptr = (char *) single_stepping;
@@ -461,9 +477,69 @@ sigill_handler(HANDLER_ARGS)
 }
 
 void
+sigtrap_handler(HANDLER_ARGS) 
+{
+    os_context_t* os_context = (os_context_t *) context;
+
+#if 1
+    fprintf(stderr,"sigtrap: fp=%lx sp=%lx pc=%lx { %x, %x, %x, %x, %x }\n",
+            SC_REG(context, reg_FP),
+            SC_REG(context, reg_SP),
+            SC_PC(context),
+            *(unsigned char*)(SC_PC(context) + 0), /* 0x0F */
+            *(unsigned char*)(SC_PC(context) + 1), /* 0x0B */
+            *(unsigned char*)(SC_PC(context) + 2),
+            *(unsigned char*)(SC_PC(context) + 3),
+            *(unsigned char*)(SC_PC(context) + 4));
+#endif    
+    if (single_stepping && (signal == SIGTRAP)) {
+#if 1
+	fprintf(stderr, "* Single step trap %p\n", single_stepping);
+#endif
+
+#ifdef SC_EFLAGS
+	/* Disable single-stepping */
+	SC_EFLAGS(os_context) ^= 0x100;
+#else
+	/* Un-install single step helper instructions. */
+	*(single_stepping - 3) = single_step_save1;
+	*(single_stepping - 2) = single_step_save2;
+	*(single_stepping - 1) = single_step_save3;
+        DPRINTF(0, (stderr, "Uninstalling helper instructions\n"));
+#endif
+
+	/*
+	 * Re-install the breakpoint if possible.
+	 */
+        fprintf(stderr, "* Maybe reinstall breakpoint for pc %p with single_stepping %p\n",
+                (void*) SC_PC(os_context), single_stepping);
+        
+	if ((unsigned long) SC_PC(os_context) <= (unsigned long) single_stepping + 3)
+	    fprintf(stderr, "* Breakpoint not re-install\n");
+	else {
+	    char *ptr = (char *) single_stepping;
+
+#if 0
+	    ptr[0] = BREAKPOINT_INST;	/* x86 INT3 */
+	    ptr[1] = trap_Breakpoint;
+#else
+            ptr[0] = 0x0f;
+            ptr[1] = 0x0b;
+            ptr[2] = trap_Breakpoint;
+#endif            
+	}
+
+	single_stepping = NULL;
+	return;
+    }
+}
+
+
+void
 arch_install_interrupt_handlers(void)
 {
     interrupt_install_low_level_handler(SIGILL, sigill_handler);
+    interrupt_install_low_level_handler(SIGTRAP, sigtrap_handler);
 }
 
 
