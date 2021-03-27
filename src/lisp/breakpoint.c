@@ -192,7 +192,9 @@ compute_offset(os_context_t * scp, lispobj code, boolean function_end)
 static int
 compute_offset(os_context_t * scp, lispobj code, boolean function_end)
 {
-    fprintf(stderr, "compute_offset: code = 0x%lx\n", code);
+    extern unsigned int debug_handlers;
+    
+    DPRINTF(debug_handlers, (stderr, "compute_offset: code = 0x%lx\n", code));
     
     if (code == NIL)
 	return 0;
@@ -209,16 +211,18 @@ compute_offset(os_context_t * scp, lispobj code, boolean function_end)
 	code_start = (unsigned long) codeptr
 	    + HeaderValue(codeptr->header) * sizeof(lispobj);
 
-        fprintf(stderr, "compute_offset: pc = 0x%lx, code_start = 0x%lx\n",
-                pc, code_start);
+        DPRINTF(debug_handlers,
+                (stderr, "compute_offset: pc = 0x%lx, code_start = 0x%lx\n",
+                 pc, code_start));
         
 	if (pc < code_start)
 	    return 0;
 	else {
 	    int offset = pc - code_start;
 
-            fprintf(stderr, "compute_offset: offset %d, size = %ld\n",
-                    offset, codeptr->code_size);
+            DPRINTF(debug_handlers,
+                    (stderr, "compute_offset: offset %d, size = %ld\n",
+                     offset, codeptr->code_size));
             
 	    if (offset >= codeptr->code_size) {
                 return 0;
@@ -253,17 +257,18 @@ handle_breakpoint(int signal, int subcode, os_context_t * scp)
 void
 handle_breakpoint(int signal, int subcode, os_context_t * scp)
 {
+    extern unsigned int debug_handlers;
+
     lispobj code, scp_sap = alloc_sap(scp);
 
     fake_foreign_function_call(scp);
 
     code = find_code(scp);
 
-#if 1
-    fprintf(stderr, "handle_breakpoint\n");
-    fprintf(stderr, " offset = %d\n", compute_offset(scp, code, 0));
-#endif    
-
+    DPRINTF(debug_handlers,
+            (stderr, "handle breakpoint: offset %d\n",
+             compute_offset(scp, code, 0)));
+    
     /*
      * Don't disallow recursive breakpoint traps.  Otherwise, we can't
      * use debugger breakpoints anywhere in here.

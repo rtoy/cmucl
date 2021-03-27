@@ -25,6 +25,13 @@
 
 unsigned long fast_random_state = 1;
 
+/*
+ * Set to positive value to enabled debug prints related to the sigill
+ * and sigtrap handlers.  Also enables prints related to handling of
+ * breakpoints.
+ */
+unsigned int debug_handlers = 0;
+
 #if defined(SOLARIS)
 /*
  * Use the /dev/cpu/self/cpuid interface on Solaris.  We could use the
@@ -140,7 +147,8 @@ arch_skip_instruction(os_context_t * context)
 {
     int vlen, code;
 
-    DPRINTF(1, (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
+    DPRINTF(debug_handlers,
+            (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
 
     /* Get and skip the lisp error code. */
     char* pc = (char *) SC_PC(context);
@@ -178,7 +186,8 @@ arch_skip_instruction(os_context_t * context)
 	  break;
     }
 
-    DPRINTF(0, (stderr, "[arch_skip_inst resuming at %lx>]\n", SC_PC(context)));
+    DPRINTF(debug_handlers,
+            (stderr, "[arch_skip_inst resuming at %lx>]\n", SC_PC(context)));
 }
 
 unsigned char *
@@ -207,9 +216,9 @@ arch_install_breakpoint(void *pc)
     unsigned char* ptr = (unsigned char *) pc;
     unsigned long result = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
 
-    DPRINTF(1, (stderr, "arch_install_breakpoint at %p, old code = 0x%lx\n",
-                pc, result));
-    
+    DPRINTF(debug_handlers,
+            (stderr, "arch_install_breakpoint at %p, old code = 0x%lx\n",
+             pc, result));
 
     *(char *) pc = BREAKPOINT_INST;	/* x86 INT3       */
     return result;
@@ -218,8 +227,9 @@ arch_install_breakpoint(void *pc)
 void
 arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
-    DPRINTF(1, (stderr, "arch_remove_breakpoint: %p orig %lx\n",
-                pc, orig_inst));
+    DPRINTF(debug_handlers,
+            (stderr, "arch_remove_breakpoint: %p orig %lx\n",
+             pc, orig_inst));
     unsigned char *ptr = (unsigned char *) pc;
     ptr[0] = orig_inst & 0xff;
     ptr[1] = (orig_inst >> 8) & 0xff;
@@ -247,8 +257,9 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 {
     unsigned char *pc = (unsigned char *) SC_PC(context);
 
-    DPRINTF(1, (stderr, "arch_do_displaced_inst: pc %p orig_inst %lx\n",
-                 pc, orig_inst));
+    DPRINTF(debug_handlers,
+            (stderr, "arch_do_displaced_inst: pc %p orig_inst %lx\n",
+             pc, orig_inst));
     
     /*
      * Put the original instruction back.
@@ -299,17 +310,17 @@ sigill_handler(HANDLER_ARGS)
 {
     unsigned int trap;
     os_context_t* os_context = (os_context_t *) context;
-#if 1
-    fprintf(stderr,"sigill: fp=%lx sp=%lx pc=%lx { %x, %x, %x, %x, %x }\n",
-            SC_REG(context, reg_FP),
-            SC_REG(context, reg_SP),
-            SC_PC(context),
-            *((unsigned char*)SC_PC(context) + 0), /* 0x0F */
-            *((unsigned char*)SC_PC(context) + 1), /* 0x0B */
-            *((unsigned char*)SC_PC(context) + 2),
-            *((unsigned char*)SC_PC(context) + 3),
-            *((unsigned char*)SC_PC(context) + 4));
-#endif
+
+    DPRINTF(debug_handlers,
+            (stderr,"sigill: fp=%lx sp=%lx pc=%lx { %x, %x, %x, %x, %x }\n",
+             SC_REG(context, reg_FP),
+             SC_REG(context, reg_SP),
+             SC_PC(context),
+             *((unsigned char*)SC_PC(context) + 0), /* 0x0F */
+             *((unsigned char*)SC_PC(context) + 1), /* 0x0B */
+             *((unsigned char*)SC_PC(context) + 2),
+             *((unsigned char*)SC_PC(context) + 3),
+             *((unsigned char*)SC_PC(context) + 4)));
 
     if (single_stepping) {
         lose("sigill handler with single-stepping enabled?\n");
@@ -332,22 +343,20 @@ sigill_handler(HANDLER_ARGS)
      * arguments to follow.
      */
 
-#if 1
-    fprintf(stderr, "pc %x\n",  *(unsigned short *)SC_PC(context));
-#endif    
+    DPRINTF(debug_handlers,
+            (stderr, "pc %x\n",  *(unsigned short *)SC_PC(context)));
+
     if (*(unsigned short *) SC_PC(context) == 0x0b0f) {
         trap = *(((char *)SC_PC(context)) + 2);
     } else {
         abort();
     }
 
-#if 1
-    fprintf(stderr, "code = %x\n", trap);
-#endif
+    DPRINTF(debug_handlers, (stderr, "code = %x\n", trap));
 
     switch (trap) {
       case trap_PendingInterrupt:
-	  DPRINTF(1, (stderr, "<trap Pending Interrupt.>\n"));
+	  DPRINTF(debug_handlers, (stderr, "<trap Pending Interrupt.>\n"));
 	  arch_skip_instruction(os_context);
 	  interrupt_handle_pending(os_context);
 	  break;
@@ -368,7 +377,7 @@ sigill_handler(HANDLER_ARGS)
 
       case trap_Error:
       case trap_Cerror:
-	  DPRINTF(1, (stderr, "<trap Error %x>\n", CODE(code)));
+	  DPRINTF(debug_handlers, (stderr, "<trap Error %x>\n", CODE(code)));
 	  interrupt_internal_error(signal, code, os_context, CODE(code) == trap_Cerror);
 	  break;
 
@@ -396,7 +405,7 @@ sigill_handler(HANDLER_ARGS)
 	  break;
 #endif
       default:
-	  DPRINTF(1,
+	  DPRINTF(debug_handlers,
 		  (stderr, "[C--trap default %d %d %p]\n", signal, CODE(code),
 		   os_context));
 	  interrupt_handle_now(signal, code, os_context);
@@ -409,22 +418,19 @@ sigtrap_handler(HANDLER_ARGS)
 {
     os_context_t* os_context = (os_context_t *) context;
 
-#if 1
-    fprintf(stderr,"sigtrap: fp=%lx sp=%lx pc=%lx { %x, %x, %x, %x, %x }\n",
-            SC_REG(context, reg_FP),
-            SC_REG(context, reg_SP),
-            SC_PC(context),
-            *((unsigned char*)SC_PC(context) + 0), /* 0x0F */
-            *((unsigned char*)SC_PC(context) + 1), /* 0x0B */
-            *((unsigned char*)SC_PC(context) + 2),
-            *((unsigned char*)SC_PC(context) + 3),
-            *(unsigned char*)(SC_PC(context) + 4));
-#endif    
+    DPRINTF(debug_handlers,
+            (stderr,"sigtrap: fp=%lx sp=%lx pc=%lx { %x, %x, %x, %x, %x }\n",
+             SC_REG(context, reg_FP),
+             SC_REG(context, reg_SP),
+             SC_PC(context),
+             *((unsigned char*)SC_PC(context) + 0), /* 0x0F */
+             *((unsigned char*)SC_PC(context) + 1), /* 0x0B */
+             *((unsigned char*)SC_PC(context) + 2),
+             *((unsigned char*)SC_PC(context) + 3),
+             *(unsigned char*)(SC_PC(context) + 4)));
 
     if (single_stepping && (signal == SIGTRAP)) {
-#if 1
-	fprintf(stderr, "* Single step trap %p\n", single_stepping);
-#endif
+	DPRINTF(debug_handlers, (stderr, "* Single step trap %p\n", single_stepping));
 
 #ifdef SC_EFLAGS
 	/* Disable single-stepping */
@@ -440,8 +446,9 @@ sigtrap_handler(HANDLER_ARGS)
 	/*
 	 * Re-install the breakpoint if possible.
 	 */
-        fprintf(stderr, "* Maybe reinstall breakpoint for pc %p with single_stepping %p\n",
-                (void*) SC_PC(os_context), single_stepping);
+        DPRINTF(debug_handlers,
+                (stderr, "* Maybe reinstall breakpoint for pc %p with single_stepping %p\n",
+                 (void*) SC_PC(os_context), single_stepping));
         
 	if ((unsigned long) SC_PC(os_context) <= (unsigned long) single_stepping)
 	    fprintf(stderr, "* Breakpoint not re-install\n");
@@ -454,16 +461,14 @@ sigtrap_handler(HANDLER_ARGS)
 	single_stepping = NULL;
 	return;
     }
-#if 1
-    fprintf(stderr, "*C break\n");
-#endif
+
+    DPRINTF(debug_handlers, (stderr, "*C break\n"));
 
     SC_PC(os_context) -= 1;
 
     handle_breakpoint(signal, CODE(code), os_context);
-#if 1
-    fprintf(stderr, "*C break return\n");
-#endif
+
+    DPRINTF(debug_handlers, (stderr, "*C break return\n"));
 }
 
 
