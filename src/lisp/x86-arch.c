@@ -21,9 +21,7 @@
 #include "interr.h"
 #include "breakpoint.h"
 
-#if 0
 #define BREAKPOINT_INST 0xcc	/* INT3 */
-#endif
 
 unsigned long fast_random_state = 1;
 
@@ -212,9 +210,11 @@ arch_install_breakpoint(void *pc)
     fprintf(stderr, "arch_install_breakpoint at %p, old code = 0x%lx\n",
             pc, result);
     
-#if 0
+#if 1
     *(char *) pc = BREAKPOINT_INST;	/* x86 INT3       */
+#if 0
     *((char *) pc + 1) = trap_Breakpoint;	/* Lisp trap code */
+#endif
 #else
     *ptr++ = 0x0f;              /* UD2 */
     *ptr++ = 0x0b;
@@ -263,9 +263,11 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
      * Put the original instruction back.
      */
 
-#if 0
+#if 1
     *((char *) pc) = orig_inst & 0xff;
+#if 0
     *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
+#endif
 #else
     pc[0] = orig_inst & 0xff;
     pc[1] = (orig_inst >> 8) & 0xff;
@@ -333,7 +335,8 @@ sigill_handler(HANDLER_ARGS)
     fprintf(stderr, "sigtrap(%d %d %p)\n", signal, CODE(code), os_context);
 #endif
 
-    if (single_stepping && (signal == SIGILL)) {
+#if 0
+    if (single_stepping && (signal == SIGTRAP)) {
 #if 1
 	fprintf(stderr, "* Single step trap %p\n", single_stepping);
 #endif
@@ -352,9 +355,10 @@ sigill_handler(HANDLER_ARGS)
 	/*
 	 * Re-install the breakpoint if possible.
 	 */
-        fprintf(stderr, "* Reinstall breakpoint at single_stepping %p\n", single_stepping);
+        fprintf(stderr, "* Maybe reinstall breakpoint for pc %p with single_stepping %p\n",
+                (void*) SC_PC(os_context), single_stepping);
         
-	if ((int) SC_PC(os_context) >= (int) single_stepping + 3)
+	if ((int) SC_PC(os_context) < (int) single_stepping + 3)
 	    fprintf(stderr, "* Breakpoint not re-install\n");
 	else {
 	    char *ptr = (char *) single_stepping;
@@ -372,7 +376,8 @@ sigill_handler(HANDLER_ARGS)
 	single_stepping = NULL;
 	return;
     }
-
+#endif
+    
     /* This is just for info in case monitor wants to print an approx */
     current_control_stack_pointer = (unsigned long *) SC_SP(os_context);
 
@@ -406,7 +411,7 @@ sigill_handler(HANDLER_ARGS)
 
     switch (trap) {
       case trap_PendingInterrupt:
-	  DPRINTF(0, (stderr, "<trap Pending Interrupt.>\n"));
+	  DPRINTF(1, (stderr, "<trap Pending Interrupt.>\n"));
 	  arch_skip_instruction(os_context);
 	  interrupt_handle_pending(os_context);
 	  break;
@@ -427,7 +432,7 @@ sigill_handler(HANDLER_ARGS)
 
       case trap_Error:
       case trap_Cerror:
-	  DPRINTF(0, (stderr, "<trap Error %x>\n", CODE(code)));
+	  DPRINTF(1, (stderr, "<trap Error %x>\n", CODE(code)));
 	  interrupt_internal_error(signal, code, os_context, CODE(code) == trap_Cerror);
 	  break;
 
@@ -468,7 +473,7 @@ sigill_handler(HANDLER_ARGS)
 	  break;
 #endif
       default:
-	  DPRINTF(0,
+	  DPRINTF(1,
 		  (stderr, "[C--trap default %d %d %p]\n", signal, CODE(code),
 		   os_context));
 	  interrupt_handle_now(signal, code, os_context);
@@ -514,7 +519,7 @@ sigtrap_handler(HANDLER_ARGS)
         fprintf(stderr, "* Maybe reinstall breakpoint for pc %p with single_stepping %p\n",
                 (void*) SC_PC(os_context), single_stepping);
         
-	if ((unsigned long) SC_PC(os_context) <= (unsigned long) single_stepping + 3)
+	if ((unsigned long) SC_PC(os_context) <= (unsigned long) single_stepping)
 	    fprintf(stderr, "* Breakpoint not re-install\n");
 	else {
 	    char *ptr = (char *) single_stepping;
@@ -532,6 +537,17 @@ sigtrap_handler(HANDLER_ARGS)
 	single_stepping = NULL;
 	return;
     }
+#if 1
+	  fprintf(stderr, "*C break\n");
+#endif
+#if 1
+	  SC_PC(os_context) -= 1;
+#endif          
+
+	  handle_breakpoint(signal, CODE(code), os_context);
+#if 1
+	  fprintf(stderr, "*C break return\n");
+#endif
 }
 
 

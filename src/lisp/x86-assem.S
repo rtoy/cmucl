@@ -286,7 +286,7 @@ multiple_value_return:
 	
 	.globl GNAME(function_end_breakpoint_trap)
 GNAME(function_end_breakpoint_trap):
-	INT3
+	UD2
 	.byte 	trap_FunctionEndBreakpoint
 	hlt			# Should never return here.
 

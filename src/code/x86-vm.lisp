@@ -247,7 +247,7 @@
 	     (vector (make-array length :element-type '(unsigned-byte 8))))
 	(declare (type (unsigned-byte 8) length)
 		 (type (simple-array (unsigned-byte 8) (*)) vector))
-	#+nil
+	#+t
 	(format t "internal-error-args scp ~A: pc ~X len ~D~%" scp pc length)
 	;; Grab the bytes after length byte, which 
 	(copy-from-system-area pc (* vm:byte-bits 4)
