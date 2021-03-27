@@ -207,28 +207,19 @@ arch_install_breakpoint(void *pc)
     unsigned char* ptr = (unsigned char *) pc;
     unsigned long result = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
 
-    fprintf(stderr, "arch_install_breakpoint at %p, old code = 0x%lx\n",
-            pc, result);
+    DPRINTF(1, (stderr, "arch_install_breakpoint at %p, old code = 0x%lx\n",
+                pc, result));
     
-#if 1
-    *(char *) pc = BREAKPOINT_INST;	/* x86 INT3       */
-#if 0
-    *((char *) pc + 1) = trap_Breakpoint;	/* Lisp trap code */
-#endif
-#else
-    *ptr++ = 0x0f;              /* UD2 */
-    *ptr++ = 0x0b;
-    *ptr++ = trap_Breakpoint;   /* Lisp trap code */
-#endif
 
+    *(char *) pc = BREAKPOINT_INST;	/* x86 INT3       */
     return result;
 }
 
 void
 arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
-    fprintf(stderr, "arch_remove_breakpoint: %p orig %lx\n",
-            pc, orig_inst);
+    DPRINTF(1, (stderr, "arch_remove_breakpoint: %p orig %lx\n",
+                pc, orig_inst));
     unsigned char *ptr = (unsigned char *) pc;
     ptr[0] = orig_inst & 0xff;
     ptr[1] = (orig_inst >> 8) & 0xff;
@@ -256,23 +247,14 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 {
     unsigned char *pc = (unsigned char *) SC_PC(context);
 
-    fprintf(stderr, "arch_do_displaced_inst: pc %p orig_inst %lx\n",
-            pc, orig_inst);
+    DPRINTF(1, (stderr, "arch_do_displaced_inst: pc %p orig_inst %lx\n",
+                 pc, orig_inst));
     
     /*
      * Put the original instruction back.
      */
 
-#if 1
     *((char *) pc) = orig_inst & 0xff;
-#if 0
-    *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
-#endif
-#else
-    pc[0] = orig_inst & 0xff;
-    pc[1] = (orig_inst >> 8) & 0xff;
-    pc[2] = (orig_inst >> 16) & 0xff;
-#endif
 
 #ifdef SC_EFLAGS
     /* Enable single-stepping */
@@ -318,21 +300,15 @@ sigill_handler(HANDLER_ARGS)
     unsigned int trap;
     os_context_t* os_context = (os_context_t *) context;
 #if 1
-#if 0
-    fprintf(stderr, "x86sigtrap: %8x %x\n",
-            SC_PC(os_os_context), *(unsigned char *) (SC_PC(os_context) - 1));
-#else
-    fprintf(stderr,"x86sigill: fp=%lx sp=%lx pc=%lx { %x, %x, %x, %x, %x }\n",
+    fprintf(stderr,"sigill: fp=%lx sp=%lx pc=%lx { %x, %x, %x, %x, %x }\n",
             SC_REG(context, reg_FP),
             SC_REG(context, reg_SP),
             SC_PC(context),
-            *(unsigned char*)(SC_PC(context) + 0), /* 0x0F */
-            *(unsigned char*)(SC_PC(context) + 1), /* 0x0B */
-            *(unsigned char*)(SC_PC(context) + 2),
-            *(unsigned char*)(SC_PC(context) + 3),
-            *(unsigned char*)(SC_PC(context) + 4));
-#endif    
-    fprintf(stderr, "sigtrap(%d %d %p)\n", signal, CODE(code), os_context);
+            *((unsigned char*)SC_PC(context) + 0), /* 0x0F */
+            *((unsigned char*)SC_PC(context) + 1), /* 0x0B */
+            *((unsigned char*)SC_PC(context) + 2),
+            *((unsigned char*)SC_PC(context) + 3),
+            *((unsigned char*)SC_PC(context) + 4));
 #endif
 
 #if 0
@@ -437,6 +413,7 @@ sigill_handler(HANDLER_ARGS)
 	  break;
 
       case trap_Breakpoint:
+          lose("Unexpected breakpoint trap in sigill-hander.\n");
 #if 1
 	  fprintf(stderr, "*C break\n");
 #endif
@@ -491,10 +468,10 @@ sigtrap_handler(HANDLER_ARGS)
             SC_REG(context, reg_FP),
             SC_REG(context, reg_SP),
             SC_PC(context),
-            *(unsigned char*)(SC_PC(context) + 0), /* 0x0F */
-            *(unsigned char*)(SC_PC(context) + 1), /* 0x0B */
-            *(unsigned char*)(SC_PC(context) + 2),
-            *(unsigned char*)(SC_PC(context) + 3),
+            *((unsigned char*)SC_PC(context) + 0), /* 0x0F */
+            *((unsigned char*)SC_PC(context) + 1), /* 0x0B */
+            *((unsigned char*)SC_PC(context) + 2),
+            *((unsigned char*)SC_PC(context) + 3),
             *(unsigned char*)(SC_PC(context) + 4));
 #endif    
     if (single_stepping && (signal == SIGTRAP)) {
@@ -524,9 +501,8 @@ sigtrap_handler(HANDLER_ARGS)
 	else {
 	    char *ptr = (char *) single_stepping;
 
-#if 0
+#if 1
 	    ptr[0] = BREAKPOINT_INST;	/* x86 INT3 */
-	    ptr[1] = trap_Breakpoint;
 #else
             ptr[0] = 0x0f;
             ptr[1] = 0x0b;
