@@ -311,52 +311,12 @@ sigill_handler(HANDLER_ARGS)
             *((unsigned char*)SC_PC(context) + 4));
 #endif
 
-#if 0
-    if (single_stepping && (signal == SIGTRAP)) {
-#if 1
-	fprintf(stderr, "* Single step trap %p\n", single_stepping);
-#endif
-
-#ifdef SC_EFLAGS
-	/* Disable single-stepping */
-	SC_EFLAGS(os_context) ^= 0x100;
-#else
-	/* Un-install single step helper instructions. */
-	*(single_stepping - 3) = single_step_save1;
-	*(single_stepping - 2) = single_step_save2;
-	*(single_stepping - 1) = single_step_save3;
-        DPRINTF(0, (stderr, "Uninstalling helper instructions\n"));
-#endif
-
-	/*
-	 * Re-install the breakpoint if possible.
-	 */
-        fprintf(stderr, "* Maybe reinstall breakpoint for pc %p with single_stepping %p\n",
-                (void*) SC_PC(os_context), single_stepping);
-        
-	if ((int) SC_PC(os_context) < (int) single_stepping + 3)
-	    fprintf(stderr, "* Breakpoint not re-install\n");
-	else {
-	    char *ptr = (char *) single_stepping;
-
-#if 0
-	    ptr[0] = BREAKPOINT_INST;	/* x86 INT3 */
-	    ptr[1] = trap_Breakpoint;
-#else
-            ptr[0] = 0x0f;
-            ptr[1] = 0x0b;
-            ptr[2] = trap_Breakpoint;
-#endif            
-	}
-
-	single_stepping = NULL;
-	return;
+    if (single_stepping) {
+        lose("sigill handler with single-stepping enabled?\n");
     }
-#endif
     
     /* This is just for info in case monitor wants to print an approx */
     current_control_stack_pointer = (unsigned long *) SC_SP(os_context);
-
 
     /*
      * In many places in the switch below, we eventually throw instead
@@ -414,23 +374,9 @@ sigill_handler(HANDLER_ARGS)
 
       case trap_Breakpoint:
           lose("Unexpected breakpoint trap in sigill-hander.\n");
-#if 1
-	  fprintf(stderr, "*C break\n");
-#endif
-#if 0
-	  SC_PC(os_context) -= 1;
-#endif          
-
-	  handle_breakpoint(signal, CODE(code), os_context);
-#if 1
-	  fprintf(stderr, "*C break return\n");
-#endif
 	  break;
 
       case trap_FunctionEndBreakpoint:
-#if 0
-	  SC_PC(os_context) -= 1;
-#endif          
 	  SC_PC(os_context) =
 	      (int) handle_function_end_breakpoint(signal, CODE(code), os_context);
 	  break;
@@ -474,6 +420,7 @@ sigtrap_handler(HANDLER_ARGS)
             *((unsigned char*)SC_PC(context) + 3),
             *(unsigned char*)(SC_PC(context) + 4));
 #endif    
+
     if (single_stepping && (signal == SIGTRAP)) {
 #if 1
 	fprintf(stderr, "* Single step trap %p\n", single_stepping);
@@ -501,28 +448,21 @@ sigtrap_handler(HANDLER_ARGS)
 	else {
 	    char *ptr = (char *) single_stepping;
 
-#if 1
 	    ptr[0] = BREAKPOINT_INST;	/* x86 INT3 */
-#else
-            ptr[0] = 0x0f;
-            ptr[1] = 0x0b;
-            ptr[2] = trap_Breakpoint;
-#endif            
 	}
 
 	single_stepping = NULL;
 	return;
     }
 #if 1
-	  fprintf(stderr, "*C break\n");
+    fprintf(stderr, "*C break\n");
 #endif
-#if 1
-	  SC_PC(os_context) -= 1;
-#endif          
 
-	  handle_breakpoint(signal, CODE(code), os_context);
+    SC_PC(os_context) -= 1;
+
+    handle_breakpoint(signal, CODE(code), os_context);
 #if 1
-	  fprintf(stderr, "*C break return\n");
+    fprintf(stderr, "*C break return\n");
 #endif
 }
 
