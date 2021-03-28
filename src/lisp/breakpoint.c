@@ -192,8 +192,6 @@ compute_offset(os_context_t * scp, lispobj code, boolean function_end)
 static int
 compute_offset(os_context_t * scp, lispobj code, boolean function_end)
 {
-    extern unsigned int debug_handlers;
-    
     DPRINTF(debug_handlers, (stderr, "compute_offset: code = 0x%lx\n", code));
     
     if (code == NIL)
@@ -257,8 +255,6 @@ handle_breakpoint(int signal, int subcode, os_context_t * scp)
 void
 handle_breakpoint(int signal, int subcode, os_context_t * scp)
 {
-    extern unsigned int debug_handlers;
-
     lispobj code, scp_sap = alloc_sap(scp);
 
     fake_foreign_function_call(scp);

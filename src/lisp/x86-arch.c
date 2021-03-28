@@ -153,7 +153,8 @@ arch_skip_instruction(os_context_t * context)
     /* Get and skip the lisp error code. */
     char* pc = (char *) SC_PC(context);
     
-    pc += 2;        /* skip 0x0f and 0x0b */
+    /* Skip over the UD2 inst (0x0f, 0x0b) */
+    pc += 2;
 
     code = *pc++;
     SC_PC(context) = (unsigned long) pc;
@@ -173,6 +174,8 @@ arch_skip_instruction(os_context_t * context)
 	  break;
 
       case trap_Breakpoint:
+          lose("Unexpected breakpoint trap in arch_skip_instruction\n");
+          break;
       case trap_FunctionEndBreakpoint:
 	  break;
 
@@ -231,6 +234,11 @@ arch_remove_breakpoint(void *pc, unsigned long orig_inst)
             (stderr, "arch_remove_breakpoint: %p orig %lx\n",
              pc, orig_inst));
     unsigned char *ptr = (unsigned char *) pc;
+    /*
+     * Just restore all the bytes from orig_inst.  Should we just
+     * re-install just the one byte that was taken by the int3
+     * instruction?
+     */
     ptr[0] = orig_inst & 0xff;
     ptr[1] = (orig_inst >> 8) & 0xff;
     ptr[2] = (orig_inst >> 16) & 0xff;
@@ -267,8 +275,12 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 
     *((char *) pc) = orig_inst & 0xff;
 
+    /*
+     * If we have the SC_EFLAGS macro, we can enable single-stepping
+     * by setting the bit.  Otherwise, we need a more complicated way
+     * of enabling single-stepping.
+     */
 #ifdef SC_EFLAGS
-    /* Enable single-stepping */
     SC_EFLAGS(context) |= 0x100;
 #else
 
@@ -305,6 +317,11 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 }
 
 
+/*
+ * Handles the break instruction from lisp, which is now UD2 followed
+ * by the trap code.  In particular, this does not handle the
+ * breakpoint traps.
+ */
 void
 sigill_handler(HANDLER_ARGS)
 {
@@ -322,9 +339,6 @@ sigill_handler(HANDLER_ARGS)
              *((unsigned char*)SC_PC(context) + 3),
              *((unsigned char*)SC_PC(context) + 4)));
 
-    if (single_stepping) {
-        lose("sigill handler with single-stepping enabled?\n");
-    }
     
     /* This is just for info in case monitor wants to print an approx */
     current_control_stack_pointer = (unsigned long *) SC_SP(os_context);
@@ -346,6 +360,14 @@ sigill_handler(HANDLER_ARGS)
     DPRINTF(debug_handlers,
             (stderr, "pc %x\n",  *(unsigned short *)SC_PC(context)));
 
+    /*
+     * Make sure the trapping instruction is UD2.  Abort if not.
+     *
+     * TODO: aborting is probably not the best idea.  Could get here
+     * from other illegal instructions in, say, C code?  Maybe we
+     * should call interrupt_handle_now, as we do below for an unknown
+     * trap code?
+     */
     if (*(unsigned short *) SC_PC(context) == 0x0b0f) {
         trap = *(((char *)SC_PC(context)) + 2);
     } else {
@@ -413,6 +435,9 @@ sigill_handler(HANDLER_ARGS)
     }
 }
 
+/*
+ * Handles the breakpoint trap (int3) and also single-stepping
+ */
 void
 sigtrap_handler(HANDLER_ARGS) 
 {
@@ -464,6 +489,13 @@ sigtrap_handler(HANDLER_ARGS)
 
     DPRINTF(debug_handlers, (stderr, "*C break\n"));
 
+    /*
+     * The int3 instruction causes a trap that leaves us just after
+     * the instruction.  Backup one so we're at the beginning.  This
+     * is really important so that when we handle the breakpoint, the
+     * offset of the instruction matches where Lisp thinks the
+     * breakpoint was placed.
+     */
     SC_PC(os_context) -= 1;
 
     handle_breakpoint(signal, CODE(code), os_context);
