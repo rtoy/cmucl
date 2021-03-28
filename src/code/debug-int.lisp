@@ -4477,9 +4477,6 @@ The result is a symbol or nil if the routine cannot be found."
 ;;;
 (defun handle-breakpoint (offset component signal-context)
   (let ((data (breakpoint-data component offset nil)))
-    (format t "(handle-breakpoint ~A ~A ~A)~%"
-	    offset component signal-context)
-    (format t "  data = ~A~%" data)
     (unless data
       (error (intl:gettext "Unknown breakpoint in ~S at offset ~S.")
 	      (debug-function-name (debug-function-from-pc component offset))
