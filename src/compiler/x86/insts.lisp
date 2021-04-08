@@ -1778,8 +1778,8 @@
 (disassem:define-instruction-format
     (bit-test-reg/mem 24
 		      :default-printer '(:name :tab reg/mem ", " reg))
-  (prefix	:field (byte 8 0)	:value #b0001111)
-  (op		:field (byte 3 11))
+  (prefix	:field (byte 8 0) :value #b0001111)
+  (op		:field (byte 8 8))
   ;;(test		:fields (list (byte 2 14) (byte 3 8)))
   (reg/mem	:fields (list (byte 2 22) (byte 3 16))
 		:type 'reg/mem)
@@ -1788,22 +1788,22 @@
   (imm))
 
 (define-instruction bt (segment src index)
-  (:printer bit-test-reg/mem ((op #b100)))
+  (:printer bit-test-reg/mem ((op #b10100011)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b100)))
 
 (define-instruction btc (segment src index)
-  (:printer bit-test-reg/mem ((op #b111)))
+  (:printer bit-test-reg/mem ((op #b10111011)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b111)))
 
 (define-instruction btr (segment src index)
-  (:printer bit-test-reg/mem ((op #b110)))
+  (:printer bit-test-reg/mem ((op #b10110011)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b110)))
 
 (define-instruction bts (segment src index)
-  (:printer bit-test-reg/mem ((op #b101)))
+  (:printer bit-test-reg/mem ((op #b10101011)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b101)))
 
@@ -2062,11 +2062,11 @@
  (code :field (byte 8 8)))
 
 
-(disassem:define-instruction-format (break 24 :default-printer '(:name :tab code))
-  (op :fields (list (byte 8 0) (byte 8 8)) :value '(#xb00001111 #b00001011))
+(disassem:define-instruction-format (ud1 24 :default-printer '(:name :tab code))
+  (op :fields (list (byte 8 0) (byte 8 8)) :value '(#xb00001111 #b10111001))
   (code :field (byte 8 16)))
 
-(define-emitter emit-break-inst 24
+(define-emitter emit-ud1-inst 24
   (byte 8 0) (byte 8 8) (byte 8 16))
 
 (defun snarf-error-junk (sap offset &optional length-only)
@@ -2102,7 +2102,7 @@
 (defun break-control (chunk inst stream dstate)
   (declare (ignore inst))
   (flet ((nt (x) (if stream (disassem:note x dstate))))
-    (case (break-code chunk dstate)
+    (case (ud1-code chunk dstate)
       (#.vm:error-trap
        (nt "Error trap")
        (disassem:handle-break-args #'snarf-error-junk stream dstate))
@@ -2122,11 +2122,11 @@
 ;; This is really the int3 instruction.
 (define-instruction break (segment code)
   (:declare (type (unsigned-byte 8) code))
-  (:printer break ((op '(#b00001111 #b00001011)))
+  (:printer ud1 ((op '(#b00001111 #b10111001)))
 	    '(:name :tab code)
 	    :control #'break-control)
   (:emitter
-   (emit-break-inst segment #b00001111 #b00001011 code)))
+   (emit-ud1-inst segment #b00001111 #b10111001 code)))
 
 #+nil
 (define-instruction ud2 (segment)

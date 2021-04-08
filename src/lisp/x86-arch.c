@@ -361,14 +361,14 @@ sigill_handler(HANDLER_ARGS)
             (stderr, "pc %x\n",  *(unsigned short *)SC_PC(context)));
 
     /*
-     * Make sure the trapping instruction is UD2.  Abort if not.
+     * Make sure the trapping instruction is UD1.  Abort if not.
      *
      * TODO: aborting is probably not the best idea.  Could get here
      * from other illegal instructions in, say, C code?  Maybe we
      * should call interrupt_handle_now, as we do below for an unknown
      * trap code?
      */
-    if (*(unsigned short *) SC_PC(context) == 0x0b0f) {
+    if (*(unsigned short *) SC_PC(context) == 0xb90f) {
         trap = *(((char *)SC_PC(context)) + 2);
     } else {
         abort();
