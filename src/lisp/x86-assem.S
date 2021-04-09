@@ -18,6 +18,11 @@
 #include "internals.h"
 #include "lispregs.h"
 
+#define TRAP_CODE(code) \
+	.byte 0x0f		; \
+	.byte 0xb9		; \
+	.byte 0xc0 + code
+
 /* Minimize conditionalization for different OS naming schemes */
 #ifdef DARWIN	
 #define GNAME(var) _##var
@@ -244,7 +249,9 @@ ENDFUNC(sse_restore)
  * The undefined-function trampoline.
  */
 FUNCDEF(undefined_tramp)
-	INT3
+	# UD1
+	.byte	0x0f
+	.byte	0xb9
 	.byte	trap_Error
         /* Number of argument bytes */
         .byte   2
@@ -286,8 +293,17 @@ multiple_value_return:
 	
 	.globl GNAME(function_end_breakpoint_trap)
 GNAME(function_end_breakpoint_trap):
-	UD2
-	.byte 	trap_FunctionEndBreakpoint
+	/*
+	ud1	0(%ecx), %ecx
+	ud1	%ecx, %edx
+	.byte	0x0f
+	.byte	0xb9
+	.byte 	0xc0 + trap_PendingInterrupt
+	*/
+	# UD1
+	.byte	0x0f
+	.byte	0xb9
+	.byte 	0xc0 + trap_FunctionEndBreakpoint
 	hlt			# Should never return here.
 
 	.globl GNAME(function_end_breakpoint_end)
@@ -295,14 +311,18 @@ GNAME(function_end_breakpoint_end):
 
 
 FUNCDEF(do_pending_interrupt)
-	ud2
+	# UD1
+	.byte	0x0f
+	.byte	0xb9
 	.byte 	trap_PendingInterrupt
 	ret
 ENDFUNC(do_pending_interrupt)
 	
 #ifdef trap_DynamicSpaceOverflowError
 FUNCDEF(do_dynamic_space_overflow_error)
-	ud2
+	# UD1
+	.byte	0x0f
+	.byte	0xb9
 	.byte 	trap_DynamicSpaceOverflowError
 	ret
 ENDFUNC(do_dynamic_space_overflow_error)
@@ -310,7 +330,9 @@ ENDFUNC(do_dynamic_space_overflow_error)
 	
 #ifdef trap_DynamicSpaceOverflowWarning
 FUNCDEF(do_dynamic_space_overflow_warning)
-	ud2
+	# UD1
+	.byte	0x0f
+	.byte	0xb9
 	.byte 	trap_DynamicSpaceOverflowWarning
 	ret
 ENDFUNC(do_dynamic_space_overflow_warning)
@@ -493,7 +515,9 @@ FUNCDEF(undefined_foreign_symbol_trap)
         movl 8(%ebp),%eax
 
 	/* Now trap to Lisp */
-	ud2
+	# UD1
+	.byte	0x0f
+	.byte	0xb9
 	.byte	trap_Error
         /* Number of argument bytes */
         .byte   2

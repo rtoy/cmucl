@@ -2062,12 +2062,13 @@
  (code :field (byte 8 8)))
 
 
-(disassem:define-instruction-format (ud1 24 :default-printer '(:name :tab code))
-  (op :fields (list (byte 8 0) (byte 8 8)) :value '(#xb00001111 #b10111001))
-  (code :field (byte 8 16)))
-
-(define-emitter emit-ud1-inst 24
-  (byte 8 0) (byte 8 8) (byte 8 16))
+(disassem:define-instruction-format
+    (ud1 24 :default-printer '(:name :tab reg ", " reg/mem))
+  (prefix    :field (byte 8 0) :value #b00001111)
+  (op        :field (byte 8 8) :value #b10111001)
+  (reg/mem   :fields (list (byte 2 22) (byte 3 16))
+	     :type 'reg/mem)
+  (reg	     :field (byte 3 19) :type 'word-reg))
 
 (defun snarf-error-junk (sap offset &optional length-only)
   (let* ((length (system:sap-ref-8 sap offset))
@@ -2099,34 +2100,41 @@
                        (sc-offsets)
                        (lengths))))))))
 
-(defun break-control (chunk inst stream dstate)
+(defun ud1-control (chunk inst stream dstate)
   (declare (ignore inst))
   (flet ((nt (x) (if stream (disassem:note x dstate))))
-    (case (ud1-code chunk dstate)
+    (case (ldb (byte 6 16) chunk)
       (#.vm:error-trap
-       (nt "Error trap")
+       (nt #.(format nil "Error trap: ~D" vm:error-trap))
        (disassem:handle-break-args #'snarf-error-junk stream dstate))
       (#.vm:cerror-trap
-       (nt "Cerror trap")
+       (nt #.(format nil "Cerror trap: ~D" vm:cerror-trap))
        (disassem:handle-break-args #'snarf-error-junk stream dstate))
       (#.vm:breakpoint-trap
-       (nt "Breakpoint trap"))
+       (nt #.(format nil "Breakpoint trap: ~D" vm:breakpoint-trap)))
       (#.vm:pending-interrupt-trap
-       (nt "Pending interrupt trap"))
+       (nt #.(format nil "Pending interrupt trap: ~D" vm:pending-interrupt-trap)))
       (#.vm:halt-trap
-       (nt "Halt trap"))
+       (nt #.(format nil "Halt trap: ~D" vm:halt-trap)))
       (#.vm:function-end-breakpoint-trap
-       (nt "Function end breakpoint trap"))
+       (nt #.(format nil "Function end breakpoint trap: ~D" vm:function-end-breakpoint-trap)))
     )))
 
-;; This is really the int3 instruction.
-(define-instruction break (segment code)
+;; The ud1 instruction where we smash the code (trap type) into the
+;; mod r/m byte.  We don't care about what that actually encodes to.
+;; We just want the trap code in the third byte of the instruction.
+(define-instruction ud1 (segment code)
   (:declare (type (unsigned-byte 8) code))
-  (:printer ud1 ((op '(#b00001111 #b10111001)))
-	    '(:name :tab code)
-	    :control #'break-control)
+  (:printer ud1 ((op #b10111001))
+	    :default
+	    :control #'ud1-control)
   (:emitter
-   (emit-ud1-inst segment #b00001111 #b10111001 code)))
+   (emit-byte segment #x0f)
+   (emit-byte segment #xb9)
+   (emit-mod-reg-r/m-byte segment
+			  #b11
+			  (ldb (byte 3 3) code)
+			  (ldb (byte 3 0) code))))
 
 #+nil
 (define-instruction ud2 (segment)

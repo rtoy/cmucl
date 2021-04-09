@@ -246,7 +246,7 @@
       `((let ((vop ,vop))
   	  (when vop
 	    (note-this-location vop :internal-error)))
-	(inst break ,kind)		; eg trap_Xyyy
+	(inst ud1 ,kind)		; eg trap_Xyyy
 	(let ((,vector (make-array 8 :element-type '(unsigned-byte 8)
 				   :fill-pointer 0 :adjustable t)))
 	  (write-var-integer (error-number-or-lose ',code) ,vector)
@@ -340,7 +340,7 @@
 				    (- other-pointer-type)))
 	      0)
 	(inst jmp :eq ,label)
-	(inst break pending-interrupt-trap)
+	(inst ud1 pending-interrupt-trap)
 	(emit-label ,label)))))
 
 
