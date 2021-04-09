@@ -18,6 +18,16 @@
 #include "internals.h"
 #include "lispregs.h"
 
+/*
+ * Emit the appropriate instruction used for implementing traps.
+ * Currently, this is the UD1 instruction.  However, it make it
+ * easy to add the trap code, use a sequence of bytes.  The code
+ * is smashed into the mod r/m byte with the mod bits set to
+ * #b11.  This MUST be coordinated with the Lisp code and the C
+ * code.
+ *
+ * Also, clang doesn't recognize the ud1 instruction.
+ */
 #define TRAP_CODE(code) \
 	.byte 0x0f		; \
 	.byte 0xb9		; \
@@ -249,10 +259,7 @@ ENDFUNC(sse_restore)
  * The undefined-function trampoline.
  */
 FUNCDEF(undefined_tramp)
-	# UD1
-	.byte	0x0f
-	.byte	0xb9
-	.byte	trap_Error
+	TRAP_CODE(trap_Error)
         /* Number of argument bytes */
         .byte   2
 	.byte	UNDEFINED_SYMBOL_ERROR
@@ -300,40 +307,28 @@ GNAME(function_end_breakpoint_trap):
 	.byte	0xb9
 	.byte 	0xc0 + trap_PendingInterrupt
 	*/
-	# UD1
-	.byte	0x0f
-	.byte	0xb9
-	.byte 	0xc0 + trap_FunctionEndBreakpoint
+	TRAP_CODE(trap_FunctionEndBreakpoint)
 	hlt			# Should never return here.
+ENDFUNC(function_end_breakpoint_trap)
 
 	.globl GNAME(function_end_breakpoint_end)
 GNAME(function_end_breakpoint_end):
 
-
 FUNCDEF(do_pending_interrupt)
-	# UD1
-	.byte	0x0f
-	.byte	0xb9
-	.byte 	trap_PendingInterrupt
+	TRAP_CODE(trap_PendingInterrupt)
 	ret
 ENDFUNC(do_pending_interrupt)
 	
 #ifdef trap_DynamicSpaceOverflowError
 FUNCDEF(do_dynamic_space_overflow_error)
-	# UD1
-	.byte	0x0f
-	.byte	0xb9
-	.byte 	trap_DynamicSpaceOverflowError
+	TRAP_CODE(trap_DynamicSpaceOverflowError)
 	ret
 ENDFUNC(do_dynamic_space_overflow_error)
 #endif				
 	
 #ifdef trap_DynamicSpaceOverflowWarning
 FUNCDEF(do_dynamic_space_overflow_warning)
-	# UD1
-	.byte	0x0f
-	.byte	0xb9
-	.byte 	trap_DynamicSpaceOverflowWarning
+	TRAP_CODE(trap_DynamicSpaceOverflowWarning)
 	ret
 ENDFUNC(do_dynamic_space_overflow_warning)
 #endif				
@@ -515,10 +510,7 @@ FUNCDEF(undefined_foreign_symbol_trap)
         movl 8(%ebp),%eax
 
 	/* Now trap to Lisp */
-	# UD1
-	.byte	0x0f
-	.byte	0xb9
-	.byte	trap_Error
+	TRAP_CODE(trap_Error)
         /* Number of argument bytes */
         .byte   2
 	.byte	UNDEFINED_FOREIGN_SYMBOL_ERROR
