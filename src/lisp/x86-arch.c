@@ -369,7 +369,12 @@ sigill_handler(HANDLER_ARGS)
      * trap code?
      */
     if (*(unsigned short *) SC_PC(context) == 0xb90f) {
-        trap = *(((char *)SC_PC(context)) + 2);
+        /*
+         * This must match what the lisp code is doing.  The trap
+         * number is placed in the low 6-bits of the 3rd byte of the
+         * instruction.
+         */
+        trap = *(((char *)SC_PC(context)) + 2) & 63;
     } else {
         abort();
     }
