@@ -707,11 +707,24 @@
 
 ;;; INSTANCE-USAGE  --  Public
 ;;;
-(defun instance-usage (space &key (top-n 15))
-  (declare (type spaces space) (type (or fixnum null) top-n))
-  "Print a breakdown by instance type of all the instances allocated in
-  Space.  If TOP-N is true, print only information for the the TOP-N types with
-  largest usage."
+(defun instance-usage (space &key 
+			       (top-n 15) 
+			       entries-var 
+			       (call-source "Unknown Caller"))
+  "Print a breakdown by instance type of all the allocation in Space.  
+
+  :TOP-N 
+      If true, print only the TOP-N types by largest usage.
+
+  :ENTRIES-VAR
+      If bound, contains the name of the symbol used to store the hash-table
+      of allocated entries for later processing.
+
+  :CALL-SOURCE
+      A string identifying the location from which instance-usage was called."
+
+  (declare (type spaces space) (type (or fixnum null) top-n)
+	   (type (or symbol null) entries-var) (type string call-source))
   (format t (intl:gettext "~2&~@[Top ~D ~]~(~A~) instance types:~%") top-n space)
   (let ((totals (make-hash-table :test #'eq))
 	(total-objects 0)
@@ -734,6 +747,10 @@
      space)
 
     (collect ((totals-list))
+      ;; set entries-var to the list of entries in totals
+      (when entries-var
+	(setf (symbol-value entries-var) (list call-source totals)))
+
       (maphash #'(lambda (class what)
 		   (totals-list (cons (prin1-to-string
 				       (class-proper-name class))

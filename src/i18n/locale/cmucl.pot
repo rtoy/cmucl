@@ -6333,10 +6333,19 @@ msgstr ""
 
 #: src/code/room.lisp
 msgid ""
-"Print a breakdown by instance type of all the instances allocated in\n"
-"  Space.  If TOP-N is true, print only information for the the TOP-N types "
-"with\n"
-"  largest usage."
+"Print a breakdown by instance type of all the allocation in Space.  \n"
+"\n"
+"  :TOP-N \n"
+"      If true, print only the TOP-N types by largest usage.\n"
+"\n"
+"  :ENTRIES-VAR\n"
+"      If bound, contains the name of the symbol used to store the hash-table"
+"\n"
+"      of allocated entries for later processing.\n"
+"\n"
+"  :CALL-SOURCE\n"
+"      A string identifying the location from which instance-usage was "
+"called."
 msgstr ""
 
 #: src/code/room.lisp
