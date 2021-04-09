@@ -2062,13 +2062,20 @@
  (code :field (byte 8 8)))
 
 
+;; The UD1 instruction.  The mod bits of the mod r/m byte MUST be #b11
+;; so that the reg/mem field is actually a register.  This is a hack
+;; to allow us to print out the reg/mem reg as a 32 reg.  Using just
+;; reg/mem, the register sometimes printed out as a byte reg and I
+;; (toy.raymond) don't know why.
 (disassem:define-instruction-format
     (ud1 24 :default-printer '(:name :tab reg ", " reg/mem))
   (prefix    :field (byte 8 0) :value #b00001111)
   (op        :field (byte 8 8) :value #b10111001)
-  (reg/mem   :fields (list (byte 2 22) (byte 3 16))
-	     :type 'reg/mem)
-  (reg	     :field (byte 3 19) :type 'word-reg))
+  ;; The mod bits ensure that the reg/mem field is interpreted as a
+  ;; register, not memory.
+  (reg/mem   :field (byte 3 16) :type 'word-reg)
+  (reg	     :field (byte 3 19) :type 'word-reg)
+  (mod       :field (byte 2 22) :value #b11))
 
 (defun snarf-error-junk (sap offset &optional length-only)
   (let* ((length (system:sap-ref-8 sap offset))
@@ -2125,7 +2132,7 @@
 ;; We just want the trap code in the third byte of the instruction.
 (define-instruction ud1 (segment code)
   (:declare (type (unsigned-byte 8) code))
-  (:printer ud1 ((op #b10111001))
+  (:printer ud1 ((op #b10111001) (reg nil :type 'word-reg))
 	    :default
 	    :control #'ud1-control)
   (:emitter
