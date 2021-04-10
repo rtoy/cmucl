@@ -260,6 +260,23 @@ unsigned int single_step_save2;
 unsigned int single_step_save3;
 #endif
 
+/*
+ * This is called when we need to continue after a breakpoint.  This
+ * works by putting the original byte back into the code, and then
+ * enabling single-step mode to step one instruction.  When we return,
+ * the instruction will get run and a sigtrap will get triggered when
+ * the one instruction is done.
+ *
+ * TODO: Be more like other archs where the original inst is put back,
+ * and the next inst is replaced with a afterBreakpoint trap.  When we
+ * run, the afterBreakpoint trap is hit at the next instruction and
+ * then we can put back the original breakpoint and replace the
+ * afterBreakpoint trap with the original inst there too.
+ *
+ * For x86, this means computing how many bytes are used in the
+ * current instruction, and then placing an int3 (or maybe ud1) after
+ * it.
+ */
 void
 arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 {
@@ -273,7 +290,7 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
      * Put the original instruction back.
      */
 
-    *((char *) pc) = orig_inst & 0xff;
+    *pc = orig_inst & 0xff;
 
     /*
      * If we have the SC_EFLAGS macro, we can enable single-stepping
@@ -318,9 +335,8 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 
 
 /*
- * Handles the break instruction from lisp, which is now UD2 followed
- * by the trap code.  In particular, this does not handle the
- * breakpoint traps.
+ * Handles the ud1 instruction from lisp that is used to signal
+ * errors.  In particular, this does not handle the breakpoint traps.
  */
 void
 sigill_handler(HANDLER_ARGS)
@@ -351,10 +367,10 @@ sigill_handler(HANDLER_ARGS)
     RESTORE_FPU(os_context);
 
     /*
-     * On entry %eip points just after the INT3 byte and aims at the
-     * 'kind' value (eg trap_Cerror). For error-trap and Cerror-trap a
-     * number of bytes will follow, the first is the length of the byte
-     * arguments to follow.
+     * On entry %eip points just to the beginning of the UD1
+     * instruction.  For error-trap and cerror-trap a number of bytes
+     * will follow, the first is the length of the byte arguments to
+     * follow.
      */
 
     DPRINTF(debug_handlers,
@@ -459,7 +475,13 @@ sigtrap_handler(HANDLER_ARGS)
              *((unsigned char*)SC_PC(context) + 3),
              *(unsigned char*)(SC_PC(context) + 4)));
 
-    if (single_stepping && (signal == SIGTRAP)) {
+    if (single_stepping) {
+        /*
+         * We were single-stepping so we now need to disable
+         * single-stepping.  We want to put back the breakpoint (int3)
+         * instruction so that the next time the breakpoint will be
+         * hit again as expected.
+         */
 	DPRINTF(debug_handlers, (stderr, "* Single step trap %p\n", single_stepping));
 
 #ifdef SC_EFLAGS
@@ -492,6 +514,9 @@ sigtrap_handler(HANDLER_ARGS)
 	return;
     }
 
+    /*
+     * We weren't single-stepping, so this we've just hit the breakpoint (int3).  Handle it.
+     */
     DPRINTF(debug_handlers, (stderr, "*C break\n"));
 
     /*
