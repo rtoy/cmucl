@@ -2110,32 +2110,39 @@
 (defun ud1-control (chunk inst stream dstate)
   (declare (ignore inst))
   (flet ((nt (x) (if stream (disassem:note x dstate))))
-    (case (ldb (byte 6 16) chunk)
-      (#.vm:error-trap
-       (nt #.(format nil "Trap ~D: Error trap" vm:error-trap))
-       (disassem:handle-break-args #'snarf-error-junk stream dstate))
-      (#.vm:cerror-trap
-       (nt #.(format nil "Trap ~D: Cerror trap" vm:cerror-trap))
-       (disassem:handle-break-args #'snarf-error-junk stream dstate))
-      (#.vm:breakpoint-trap
-       (nt #.(format nil "Trap ~D: Breakpoint trap" vm:breakpoint-trap)))
-      (#.vm:pending-interrupt-trap
-       (nt #.(format nil "Trap ~D: Pending interrupt trap" vm:pending-interrupt-trap)))
-      (#.vm:halt-trap
-       (nt #.(format nil "Trap ~D: Halt trap" vm:halt-trap)))
-      (#.vm:function-end-breakpoint-trap
-       (nt #.(format nil "Trap ~D: Function end breakpoint trap" vm:function-end-breakpoint-trap)))
-    )))
+    (let ((code (ldb (byte 6 16) chunk)))
+      (case code
+	(#.vm:error-trap
+	 (nt #.(format nil "Trap ~D: Error trap" vm:error-trap))
+	 (disassem:handle-break-args #'snarf-error-junk stream dstate))
+	(#.vm:cerror-trap
+	 (nt #.(format nil "Trap ~D: Cerror trap" vm:cerror-trap))
+	 (disassem:handle-break-args #'snarf-error-junk stream dstate))
+	(#.vm:pending-interrupt-trap
+	 (nt #.(format nil "Trap ~D: Pending interrupt trap" vm:pending-interrupt-trap)))
+	(#.vm:halt-trap
+	 (nt #.(format nil "Trap ~D: Halt trap" vm:halt-trap)))
+	(#.vm:function-end-breakpoint-trap
+	 (nt #.(format nil "Trap ~D: Function end breakpoint trap"
+		       vm:function-end-breakpoint-trap)))
+	(t
+	 (nt #.(format nil "Trap ~D: Unexpected trap type!!!!" )))))))
 
 ;; The ud1 instruction where we smash the code (trap type) into the
-;; mod r/m byte.  We don't care about what that actually encodes to.
-;; We just want the trap code in the third byte of the instruction.
+;; low 6 bits of the mod r/m byte.  The mod bits are set to #b11 to
+;; make sure the reg/mem part is interpreted to be a register and not
+;; memory.
 (define-instruction ud1 (segment code)
   (:declare (type (unsigned-byte 8) code))
   (:printer ud1 ((op #b10111001) (reg nil :type 'word-reg))
 	    :default
 	    :control #'ud1-control)
   (:emitter
+   ;; We should not be using the breakpoint trap with UD1 anymore.
+   ;; Breakpoint traps are handled in C now, using plain int3.
+   (assert (/= code vm:breakpoint-trap))
+
+   ;; Emit the bytes of the instruction.
    (emit-byte segment #x0f)
    (emit-byte segment #xb9)
    (emit-mod-reg-r/m-byte segment
