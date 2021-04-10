@@ -2126,7 +2126,7 @@
 	 (nt #.(format nil "Trap ~D: Function end breakpoint trap"
 		       vm:function-end-breakpoint-trap)))
 	(t
-	 (nt #.(format nil "Trap ~D: Unexpected trap type!!!!" code)))))))
+	 (nt (format nil "Trap ~D: Unexpected trap type!!!!" code)))))))
 
 ;; The ud1 instruction where we smash the code (trap type) into the
 ;; low 6 bits of the mod r/m byte.  The mod bits are set to #b11 to
