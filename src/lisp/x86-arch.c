@@ -213,17 +213,21 @@ arch_set_pseudo_atomic_interrupted(os_context_t * context)
 
 
 
+/*
+ * Installs a breakpoint (INT3) at |pc|.  We return the byte that was
+ * replaced by the int3 instruction.
+ */
 unsigned long
 arch_install_breakpoint(void *pc)
 {
     unsigned char* ptr = (unsigned char *) pc;
-    unsigned long result = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
+    unsigned long result = *ptr;
 
     DPRINTF(debug_handlers,
             (stderr, "arch_install_breakpoint at %p, old code = 0x%lx\n",
              pc, result));
 
-    *(char *) pc = BREAKPOINT_INST;	/* x86 INT3       */
+    *ptr = BREAKPOINT_INST;	/* x86 INT3       */
     return result;
 }
 
@@ -235,14 +239,9 @@ arch_remove_breakpoint(void *pc, unsigned long orig_inst)
              pc, orig_inst));
     unsigned char *ptr = (unsigned char *) pc;
     /*
-     * Just restore all the bytes from orig_inst.  Should we just
-     * re-install just the one byte that was taken by the int3
-     * instruction?
+     * Just restore the byte from orig_inst.
      */
     ptr[0] = orig_inst & 0xff;
-    ptr[1] = (orig_inst >> 8) & 0xff;
-    ptr[2] = (orig_inst >> 16) & 0xff;
-    ptr[3] = (orig_inst >> 24) & 0xff;
 }
 
 
