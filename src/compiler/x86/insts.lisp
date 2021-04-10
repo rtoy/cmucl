@@ -2112,19 +2112,19 @@
   (flet ((nt (x) (if stream (disassem:note x dstate))))
     (case (ldb (byte 6 16) chunk)
       (#.vm:error-trap
-       (nt #.(format nil "Error trap: ~D" vm:error-trap))
+       (nt #.(format nil "Trap ~D: Error trap" vm:error-trap))
        (disassem:handle-break-args #'snarf-error-junk stream dstate))
       (#.vm:cerror-trap
-       (nt #.(format nil "Cerror trap: ~D" vm:cerror-trap))
+       (nt #.(format nil "Trap ~D: Cerror trap" vm:cerror-trap))
        (disassem:handle-break-args #'snarf-error-junk stream dstate))
       (#.vm:breakpoint-trap
-       (nt #.(format nil "Breakpoint trap: ~D" vm:breakpoint-trap)))
+       (nt #.(format nil "Trap ~D: Breakpoint trap" vm:breakpoint-trap)))
       (#.vm:pending-interrupt-trap
-       (nt #.(format nil "Pending interrupt trap: ~D" vm:pending-interrupt-trap)))
+       (nt #.(format nil "Trap ~D: Pending interrupt trap" vm:pending-interrupt-trap)))
       (#.vm:halt-trap
-       (nt #.(format nil "Halt trap: ~D" vm:halt-trap)))
+       (nt #.(format nil "Trap ~D: Halt trap" vm:halt-trap)))
       (#.vm:function-end-breakpoint-trap
-       (nt #.(format nil "Function end breakpoint trap: ~D" vm:function-end-breakpoint-trap)))
+       (nt #.(format nil "Trap ~D: Function end breakpoint trap" vm:function-end-breakpoint-trap)))
     )))
 
 ;; The ud1 instruction where we smash the code (trap type) into the
