@@ -33,6 +33,9 @@ linux:build:
   artifacts:
     paths:
       - dist/
+      - linux-2/*.log
+      - linux-3/*.log
+      - linux-4/*.log
   needs:
     - job: linux:install
       artifacts: true
@@ -117,6 +120,9 @@ osx:build:
   artifacts:
     paths:
       - dist/
+      - darwin-2/*.log
+      - darwin-3/*.log
+      - darwin-4/*.log
   needs:
     - job: osx:install
       artifacts: true
