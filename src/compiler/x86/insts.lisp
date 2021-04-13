@@ -1778,7 +1778,7 @@
 (disassem:define-instruction-format
     (bit-test-reg/mem 24
 		      :default-printer '(:name :tab reg/mem ", " reg))
-  (prefix	:field (byte 8 0) :value #b0001111)
+  (prefix	:field (byte 8 0)	:value #b0001111)
   (op		:field (byte 8 8))
   ;;(test		:fields (list (byte 2 14) (byte 3 8)))
   (reg/mem	:fields (list (byte 2 22) (byte 3 16))
@@ -2064,9 +2064,9 @@
 
 ;; The UD1 instruction.  The mod bits of the mod r/m byte MUST be #b11
 ;; so that the reg/mem field is actually a register.  This is a hack
-;; to allow us to print out the reg/mem reg as a 32 reg.  Using just
-;; reg/mem, the register sometimes printed out as a byte reg and I
-;; (toy.raymond) don't know why.
+;; to allow us to print out the reg/mem reg as a 32-bit reg.  Using
+;; just reg/mem, the register sometimes printed out as a byte reg and
+;; I (toy.raymond) don't know why.
 (disassem:define-instruction-format
     (ud1 24 :default-printer '(:name :tab reg ", " reg/mem))
   (prefix    :field (byte 8 0) :value #b00001111)
@@ -2149,12 +2149,6 @@
 			  #b11
 			  (ldb (byte 3 3) code)
 			  (ldb (byte 3 0) code))))
-
-#+nil
-(define-instruction ud2 (segment)
-  (:emitter
-   (emit-byte segment #b00001111)
-   (emit-byte segment #b00001011)))
 
 (define-instruction int (segment number)
   (:declare (type (unsigned-byte 8) number))

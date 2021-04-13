@@ -220,14 +220,13 @@ arch_set_pseudo_atomic_interrupted(os_context_t * context)
 unsigned long
 arch_install_breakpoint(void *pc)
 {
-    unsigned char* ptr = (unsigned char *) pc;
-    unsigned long result = *ptr;
+    unsigned long result = (unsigned char *) pc;
 
     DPRINTF(debug_handlers,
             (stderr, "arch_install_breakpoint at %p, old code = 0x%lx\n",
              pc, result));
 
-    *ptr = BREAKPOINT_INST;	/* x86 INT3       */
+    *(unsigned char *) pc = BREAKPOINT_INST;
     return result;
 }
 
@@ -237,11 +236,11 @@ arch_remove_breakpoint(void *pc, unsigned long orig_inst)
     DPRINTF(debug_handlers,
             (stderr, "arch_remove_breakpoint: %p orig %lx\n",
              pc, orig_inst));
-    unsigned char *ptr = (unsigned char *) pc;
+
     /*
      * Just restore the byte from orig_inst.
      */
-    ptr[0] = orig_inst & 0xff;
+    *(unsigned char *) pc = orig_inst & 0xff;
 }
 
 

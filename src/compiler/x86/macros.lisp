@@ -254,8 +254,8 @@
 			`(let ((tn ,tn))
 			   (write-var-integer
 			    (make-sc-offset (sc-number (tn-sc tn))
-					    ;; tn-offset is zero for constant tns.
-					    (or (tn-offset tn) 0))
+			     ;; tn-offset is zero for constant tns.
+			     (or (tn-offset tn) 0))
 			    ,vector)))
 		    values)
 	  (let ((,length (length ,vector)))

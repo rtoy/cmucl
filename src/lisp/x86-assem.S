@@ -300,13 +300,6 @@ multiple_value_return:
 	
 	.globl GNAME(function_end_breakpoint_trap)
 GNAME(function_end_breakpoint_trap):
-	/*
-	ud1	0(%ecx), %ecx
-	ud1	%ecx, %edx
-	.byte	0x0f
-	.byte	0xb9
-	.byte 	0xc0 + trap_PendingInterrupt
-	*/
 	TRAP_CODE(trap_FunctionEndBreakpoint)
 	hlt			# Should never return here.
 ENDFUNC(function_end_breakpoint_trap)
