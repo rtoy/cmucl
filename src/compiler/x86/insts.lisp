@@ -2164,7 +2164,7 @@
   (:declare (type (unsigned-byte 8) number))
   (:printer byte-imm ((op #b11001101)))
   (:printer byte ((op #b11001100))
-	    `(:name :tab 3))
+	    `(:name 3))
   (:emitter
    (etypecase number
      ((member 3)
