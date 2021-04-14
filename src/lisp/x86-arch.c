@@ -220,13 +220,13 @@ arch_set_pseudo_atomic_interrupted(os_context_t * context)
 unsigned long
 arch_install_breakpoint(void *pc)
 {
-    unsigned long result = (unsigned char *) pc;
+    unsigned long result = *(unsigned char *) pc;
+    *(unsigned char *) pc = BREAKPOINT_INST;
 
     DPRINTF(debug_handlers,
             (stderr, "arch_install_breakpoint at %p, old code = 0x%lx\n",
              pc, result));
 
-    *(unsigned char *) pc = BREAKPOINT_INST;
     return result;
 }
 

@@ -2064,9 +2064,13 @@
 
 ;; The UD1 instruction.  The mod bits of the mod r/m byte MUST be #b11
 ;; so that the reg/mem field is actually a register.  This is a hack
-;; to allow us to print out the reg/mem reg as a 32-bit reg.  Using
-;; just reg/mem, the register sometimes printed out as a byte reg and
-;; I (toy.raymond) don't know why.
+;; to allow us to print out the reg/mem reg as a 32-bit reg.
+;;
+;; While the instruction looks like an ext-reg-reg/mem format with
+;; fixed width value of 1, it isn't because we need to disassemble the
+;; reg/mem field as a 32-bit reg. ext-reg-reg/mem needs a width prefix
+;; byte to specify that, and we definitely don't want that.  Hence,
+;; use a special instruction format for the UD1 instruction.
 (disassem:define-instruction-format
     (ud1 24 :default-printer '(:name :tab reg ", " reg/mem))
   (prefix    :field (byte 8 0) :value #b00001111)
