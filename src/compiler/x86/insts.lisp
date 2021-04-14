@@ -2154,9 +2154,17 @@
 			  (ldb (byte 3 3) code)
 			  (ldb (byte 3 0) code))))
 
+;; Handles both int and int3.  To get int3 you have to say (inst int
+;; 3).  But int3 should not be used in Lisp code.  This is mainly so
+;; that int3 gets disassembled correctly if a breakpoint has been set
+;; in Lisp code.  (But in general the disassembly will be messed up
+;; because the following byte will in general be the second byte of
+;; some instruction, and not the first byte of an instruction.)
 (define-instruction int (segment number)
   (:declare (type (unsigned-byte 8) number))
   (:printer byte-imm ((op #b11001101)))
+  (:printer byte ((op #b11001100))
+	    `(:name :tab 3))
   (:emitter
    (etypecase number
      ((member 3)
