@@ -15,18 +15,15 @@
    ;; need to list anything here.  We list them here anyway as a
    ;; record of typical features for all x86 ports.
    '(:x86 
-     :i486
-     :pentium
      :stack-checking			; Catches stack overflow
      :heap-overflow-check		; Catches heap overflows
      :relative-package-names		; relative package names
      :mp				; multiprocessing
      :gencgc				; Generational GC
-     :conservative-float-type
      :complex-fp-vops
      :hash-new
-     :random-mt19937
-     :cmu :cmu20 :cmu20b		; Version features
+     :random-xoroshiro
+     :cmu :cmu21 :cmu21d		; Version features
      :double-double			; double-double float support
      :linkage-table
 
