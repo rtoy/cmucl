@@ -237,16 +237,19 @@
   (with-alien ((scp (* unix:sigcontext) scp))
     (let ((pc (sigcontext-program-counter scp)))
       (declare (type system-area-pointer pc))
-      ;; The pc should point to the start of the UD1 instruction.  So we have something like:
+      ;; The pc should point to the start of the UD1 instruction.  So
+      ;; we have something like:
+      ;;
       ;;   offset  contents
       ;;   0       UD1 (contains the trap code)
       ;;   3       length
-      ;;   4       bytes
+      ;;   4...    bytes
       (let* ((length (sap-ref-8 pc 3))
 	     (vector (make-array length :element-type '(unsigned-byte 8))))
 	(declare (type (unsigned-byte 8) length)
 		 (type (simple-array (unsigned-byte 8) (*)) vector))
-	;; Grab the length bytes after the length byte.
+	;; Grab bytes after the length byte where the number of bytes is
+	;; given by value of the length byte.
 	(copy-from-system-area pc (* vm:byte-bits 4)
 			       vector (* vm:word-bits
 					 vm:vector-data-offset)

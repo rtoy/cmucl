@@ -2115,7 +2115,7 @@
   (declare (ignore inst))
   (flet ((nt (x) (if stream (disassem:note x dstate))))
     (let ((code (ldb (byte 6 16) chunk)))
-      (case code
+      (ecase code
 	(#.vm:error-trap
 	 (nt #.(format nil "Trap ~D: Error trap" vm:error-trap))
 	 (disassem:handle-break-args #'snarf-error-junk stream dstate))
@@ -2128,9 +2128,7 @@
 	 (nt #.(format nil "Trap ~D: Halt trap" vm:halt-trap)))
 	(#.vm:function-end-breakpoint-trap
 	 (nt #.(format nil "Trap ~D: Function end breakpoint trap"
-		       vm:function-end-breakpoint-trap)))
-	(t
-	 (nt (format nil "Trap ~D: Unexpected trap type!!!!" code)))))))
+		       vm:function-end-breakpoint-trap)))))))
 
 ;; The ud1 instruction where we smash the code (trap type) into the
 ;; low 6 bits of the mod r/m byte.  The mod bits are set to #b11 to

@@ -23,7 +23,12 @@
 
 #define BREAKPOINT_INST 0xcc	/* INT3 */
 
-unsigned long fast_random_state = 1;
+/*
+ * The first two bytes of the UD1 instruction.  The mod r/m byte isn't
+ * included here.
+ */
+static const unsigned char ud1[] = {0x0f, 0xb9};
+      
 
 /*
  * Set to positive value to enabled debug prints related to the sigill
@@ -153,8 +158,10 @@ arch_skip_instruction(os_context_t * context)
     /* Get and skip the lisp error code. */
     char* pc = (char *) SC_PC(context);
     
-    /* Skip over the UD2 inst (0x0f, 0x0b) */
-    pc += 2;
+    /*
+     * Skip over the part of the UD1 inst (0x0f, 0xb9) so we can get to the mod r/m byte
+     */
+    pc += sizeof(ud1);
 
     code = *pc++;
     SC_PC(context) = (unsigned long) pc;
@@ -167,10 +174,7 @@ arch_skip_instruction(os_context_t * context)
           SC_PC(context) = (unsigned long) pc;
           
 	  /* Skip lisp error arg data bytes */
-	  while (vlen-- > 0) {
-              pc++;
-              SC_PC(context) = (unsigned long) pc;
-          }
+          SC_PC(context) = (unsigned long) (pc + vlen);
 	  break;
 
       case trap_Breakpoint:
@@ -382,75 +386,75 @@ sigill_handler(HANDLER_ARGS)
      * should call interrupt_handle_now, as we do below for an unknown
      * trap code?
      */
-    if (*(unsigned short *) SC_PC(context) == 0xb90f) {
-        /*
-         * This must match what the lisp code is doing.  The trap
-         * number is placed in the low 6-bits of the 3rd byte of the
-         * instruction.
-         */
-        trap = *(((char *)SC_PC(context)) + 2) & 63;
-    } else {
-        abort();
-    }
+    if (memcmp((void *)SC_PC(context), ud1, sizeof(ud1)) == 0) {
+      /*
+       * This must match what the lisp code is doing.  The trap
+       * number is placed in the low 6-bits of the 3rd byte of the
+       * instruction.
+       */
+      trap = *(((char *)SC_PC(context)) + 2) & 63;
 
-    DPRINTF(debug_handlers, (stderr, "code = %x\n", trap));
+      DPRINTF(debug_handlers, (stderr, "code = %x\n", trap));
 
-    switch (trap) {
+      switch (trap) {
       case trap_PendingInterrupt:
-	  DPRINTF(debug_handlers, (stderr, "<trap Pending Interrupt.>\n"));
-	  arch_skip_instruction(os_context);
-	  interrupt_handle_pending(os_context);
-	  break;
+        DPRINTF(debug_handlers, (stderr, "<trap Pending Interrupt.>\n"));
+        arch_skip_instruction(os_context);
+        interrupt_handle_pending(os_context);
+        break;
 
       case trap_Halt:
-	  {
-              FPU_STATE(fpu_state);
-              save_fpu_state(fpu_state);
+        {
+          FPU_STATE(fpu_state);
+          save_fpu_state(fpu_state);
 
-	      fake_foreign_function_call(os_context);
-	      lose("%%primitive halt called; the party is over.\n");
-	      undo_fake_foreign_function_call(os_context);
+          fake_foreign_function_call(os_context);
+          lose("%%primitive halt called; the party is over.\n");
+          undo_fake_foreign_function_call(os_context);
 
-              restore_fpu_state(fpu_state);
-	      arch_skip_instruction(os_context);
-	      break;
-	  }
+          restore_fpu_state(fpu_state);
+          arch_skip_instruction(os_context);
+          break;
+        }
 
       case trap_Error:
       case trap_Cerror:
-	  DPRINTF(debug_handlers, (stderr, "<trap Error %x>\n", CODE(code)));
-	  interrupt_internal_error(signal, code, os_context, CODE(code) == trap_Cerror);
-	  break;
+        DPRINTF(debug_handlers, (stderr, "<trap Error %x>\n", CODE(code)));
+        interrupt_internal_error(signal, code, os_context, CODE(code) == trap_Cerror);
+        break;
 
       case trap_Breakpoint:
-          lose("Unexpected breakpoint trap in sigill-hander.\n");
-	  break;
+        lose("Unexpected breakpoint trap in sigill-hander.\n");
+        break;
 
       case trap_FunctionEndBreakpoint:
-	  SC_PC(os_context) =
-	      (int) handle_function_end_breakpoint(signal, CODE(code), os_context);
-	  break;
+        SC_PC(os_context) =
+          (int) handle_function_end_breakpoint(signal, CODE(code), os_context);
+        break;
 
 #ifdef trap_DynamicSpaceOverflowWarning
       case trap_DynamicSpaceOverflowWarning:
-	  interrupt_handle_space_overflow(SymbolFunction
-					  (DYNAMIC_SPACE_OVERFLOW_WARNING_HIT),
-					  os_context);
-	  break;
+        interrupt_handle_space_overflow(SymbolFunction
+                                        (DYNAMIC_SPACE_OVERFLOW_WARNING_HIT),
+                                        os_context);
+        break;
 #endif
 #ifdef trap_DynamicSpaceOverflowError
       case trap_DynamicSpaceOverflowError:
-	  interrupt_handle_space_overflow(SymbolFunction
-					  (DYNAMIC_SPACE_OVERFLOW_ERROR_HIT),
-					  os_context);
-	  break;
+        interrupt_handle_space_overflow(SymbolFunction
+                                        (DYNAMIC_SPACE_OVERFLOW_ERROR_HIT),
+                                        os_context);
+        break;
 #endif
       default:
-	  DPRINTF(debug_handlers,
-		  (stderr, "[C--trap default %d %d %p]\n", signal, CODE(code),
-		   os_context));
-	  interrupt_handle_now(signal, code, os_context);
-	  break;
+        DPRINTF(debug_handlers,
+                (stderr, "[C--trap default %d %d %p]\n", signal, CODE(code),
+                 os_context));
+        interrupt_handle_now(signal, code, os_context);
+        break;
+      }
+    } else {
+      interrupt_handle_now(signal, code, os_context);
     }
 }
 
