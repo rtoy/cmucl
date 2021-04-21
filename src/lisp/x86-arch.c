@@ -379,12 +379,9 @@ sigill_handler(HANDLER_ARGS)
             (stderr, "pc %x\n",  *(unsigned short *)SC_PC(context)));
 
     /*
-     * Make sure the trapping instruction is UD1.  Abort if not.
-     *
-     * TODO: aborting is probably not the best idea.  Could get here
-     * from other illegal instructions in, say, C code?  Maybe we
-     * should call interrupt_handle_now, as we do below for an unknown
-     * trap code?
+     * If the trapping instruction is UD1, assume it's a Lisp trap
+     * that we handle here.  Otherwise, just call interrupt_handle_now
+     * for other cases.
      */
     if (memcmp((void *)SC_PC(context), ud1, sizeof(ud1)) == 0) {
       /*
@@ -392,7 +389,7 @@ sigill_handler(HANDLER_ARGS)
        * number is placed in the low 6-bits of the 3rd byte of the
        * instruction.
        */
-      trap = *(((char *)SC_PC(context)) + 2) & 63;
+      trap = *(((char *)SC_PC(context)) + 2) & 0x3f;
 
       DPRINTF(debug_handlers, (stderr, "code = %x\n", trap));
 
