@@ -6,6 +6,8 @@
 */
 #ifndef __X86_ARCH_H
 
+#include <stdint.h>
+
 extern int arch_support_sse2(void);
 extern boolean os_support_sse2(void);
 
@@ -25,6 +27,6 @@ extern boolean os_support_sse2(void);
  * Just use the SSE size for both x87 and sse2 since the SSE size is
  * enough for either.  Make sure it's on a 16-byte boundary.
  */
-#define FPU_STATE(name)    u_int8_t name[SSE_STATE_SIZE] __attribute__((aligned(16)))
+#define FPU_STATE(name)    uint8_t name[SSE_STATE_SIZE] __attribute__((aligned(16)))
 
 #endif
