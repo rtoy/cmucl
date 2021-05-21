@@ -28,7 +28,7 @@
  *
  * Also, clang doesn't recognize the ud1 instruction.
  */
-#define TRAP_CODE(code) \
+#define UD1(code) \
 	.byte 0x0f		; \
 	.byte 0xb9		; \
 	.byte 0xc0 + code
@@ -259,7 +259,7 @@ ENDFUNC(sse_restore)
  * The undefined-function trampoline.
  */
 FUNCDEF(undefined_tramp)
-	TRAP_CODE(trap_Error)
+	UD1(trap_Error)
         /* Number of argument bytes */
         .byte   2
 	.byte	UNDEFINED_SYMBOL_ERROR
@@ -300,7 +300,7 @@ multiple_value_return:
 	
 	.globl GNAME(function_end_breakpoint_trap)
 GNAME(function_end_breakpoint_trap):
-	TRAP_CODE(trap_FunctionEndBreakpoint)
+	UD1(trap_FunctionEndBreakpoint)
 	hlt			# Should never return here.
 ENDFUNC(function_end_breakpoint_trap)
 
@@ -308,20 +308,20 @@ ENDFUNC(function_end_breakpoint_trap)
 GNAME(function_end_breakpoint_end):
 
 FUNCDEF(do_pending_interrupt)
-	TRAP_CODE(trap_PendingInterrupt)
+	UD1(trap_PendingInterrupt)
 	ret
 ENDFUNC(do_pending_interrupt)
 	
 #ifdef trap_DynamicSpaceOverflowError
 FUNCDEF(do_dynamic_space_overflow_error)
-	TRAP_CODE(trap_DynamicSpaceOverflowError)
+	UD1(trap_DynamicSpaceOverflowError)
 	ret
 ENDFUNC(do_dynamic_space_overflow_error)
 #endif				
 	
 #ifdef trap_DynamicSpaceOverflowWarning
 FUNCDEF(do_dynamic_space_overflow_warning)
-	TRAP_CODE(trap_DynamicSpaceOverflowWarning)
+	UD1(trap_DynamicSpaceOverflowWarning)
 	ret
 ENDFUNC(do_dynamic_space_overflow_warning)
 #endif				
@@ -503,7 +503,7 @@ FUNCDEF(undefined_foreign_symbol_trap)
         movl 8(%ebp),%eax
 
 	/* Now trap to Lisp */
-	TRAP_CODE(trap_Error)
+	UD1(trap_Error)
         /* Number of argument bytes */
         .byte   2
 	.byte	UNDEFINED_FOREIGN_SYMBOL_ERROR
