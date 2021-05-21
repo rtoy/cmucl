@@ -2161,15 +2161,14 @@
 (define-instruction int (segment number)
   (:declare (type (unsigned-byte 8) number))
   (:printer byte-imm ((op #b11001101)))
-  (:printer byte ((op #b11001100))
-	    `(:name 3))
   (:emitter
-   (etypecase number
-     ((member 3)
-      (emit-byte segment #b11001100))
-     ((unsigned-byte 8)
-      (emit-byte segment #b11001101)
-      (emit-byte segment number)))))
+   (emit-byte segment #b11001101)
+   (emit-byte segment number)))
+
+(define-instruction int3 (segment)
+  (:printer byte ((op #b11001100)))
+  (:emitter
+   (emit-byte segment #b11001100)))
 
 (define-instruction into (segment)
   (:printer byte ((op #b11001110)))
