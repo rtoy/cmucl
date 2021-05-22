@@ -501,13 +501,20 @@ sigtrap_handler(HANDLER_ARGS)
                 (stderr, "* Maybe reinstall breakpoint for pc %p with single_stepping %p\n",
                  (void*) SC_PC(os_context), single_stepping));
         
-	if ((unsigned long) SC_PC(os_context) <= (unsigned long) single_stepping)
-	    fprintf(stderr, "* Breakpoint not re-install\n");
-	else {
-	    char *ptr = (char *) single_stepping;
+        /*
+         * Lose if single-stepping didn't move us past where the
+         * breakpoint instruction was inserted.
+         */
+        if ((unsigned long) SC_PC(os_context) <= (unsigned long) single_stepping) {
+            lose("Single-stepping did not advance past the breakpoint at %p\n",
+                 single_stepping);
+        }
 
-	    ptr[0] = BREAKPOINT_INST;	/* x86 INT3 */
-	}
+        /*
+         * Put back the breakpoint since we skipped over it.
+         */
+        char *ptr = (char *) single_stepping;
+        ptr[0] = BREAKPOINT_INST;	/* x86 INT3 */
 
 	single_stepping = NULL;
 	return;
