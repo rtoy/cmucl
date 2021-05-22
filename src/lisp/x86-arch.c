@@ -141,12 +141,9 @@ arch_init(fpu_mode_t mode)
 
 
 /*
- * Assuming we get here via an INT3 xxx instruction, the PC now
- * points to the interrupt code (lisp value) so we just move past
- * it. Skip the code, then if the code is an error-trap or
- * Cerror-trap then skip the data bytes that follow.
+ * Skip the UD1 instruction, and any data bytes associated with the
+ * trap.
  */
-
 void
 arch_skip_instruction(os_context_t * context)
 {
@@ -155,7 +152,7 @@ arch_skip_instruction(os_context_t * context)
     DPRINTF(debug_handlers,
             (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
 
-    /* Get and skip the lisp error code. */
+    /* Get the address of the beginning of the UD1 instruction */
     char* pc = (char *) SC_PC(context);
     
     /*

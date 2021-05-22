@@ -13,7 +13,14 @@
 
 extern char *arch_init(fpu_mode_t);
 
+/*
+ * Skip over the trap instructions for an error trap and also skip
+ * over anly following bytes used to encode information for an
+ * error-trap or cerror-trap.  The PC in the context is set to address
+ * just past the trap instruction and data bytes (if any).
+ */
 extern void arch_skip_instruction(os_context_t * scp);
+
 extern boolean arch_pseudo_atomic_atomic(os_context_t * scp);
 extern void arch_set_pseudo_atomic_interrupted(os_context_t * scp);
 extern os_vm_address_t arch_get_bad_addr(HANDLER_ARGS);
