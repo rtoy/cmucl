@@ -1779,7 +1779,7 @@
     (bit-test-reg/mem 24
 		      :default-printer '(:name :tab reg/mem ", " reg))
   (prefix	:field (byte 8 0)	:value #b0001111)
-  (op		:field (byte 3 11))
+  (op		:field (byte 8 8))
   ;;(test		:fields (list (byte 2 14) (byte 3 8)))
   (reg/mem	:fields (list (byte 2 22) (byte 3 16))
 		:type 'reg/mem)
@@ -1788,22 +1788,22 @@
   (imm))
 
 (define-instruction bt (segment src index)
-  (:printer bit-test-reg/mem ((op #b100)))
+  (:printer bit-test-reg/mem ((op #b10100011)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b100)))
 
 (define-instruction btc (segment src index)
-  (:printer bit-test-reg/mem ((op #b111)))
+  (:printer bit-test-reg/mem ((op #b10111011)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b111)))
 
 (define-instruction btr (segment src index)
-  (:printer bit-test-reg/mem ((op #b110)))
+  (:printer bit-test-reg/mem ((op #b10110011)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b110)))
 
 (define-instruction bts (segment src index)
-  (:printer bit-test-reg/mem ((op #b101)))
+  (:printer bit-test-reg/mem ((op #b10101011)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b101)))
 
@@ -2061,6 +2061,26 @@
  (op :field (byte 8 0))
  (code :field (byte 8 8)))
 
+
+;; The UD1 instruction.  The mod bits of the mod r/m byte MUST be #b11
+;; so that the reg/mem field is actually a register.  This is a hack
+;; to allow us to print out the reg/mem reg as a 32-bit reg.
+;;
+;; While the instruction looks like an ext-reg-reg/mem format with
+;; fixed width value of 1, it isn't because we need to disassemble the
+;; reg/mem field as a 32-bit reg. ext-reg-reg/mem needs a width prefix
+;; byte to specify that, and we definitely don't want that.  Hence,
+;; use a special instruction format for the UD1 instruction.
+(disassem:define-instruction-format
+    (ud1 24 :default-printer '(:name :tab reg ", " reg/mem))
+  (prefix    :field (byte 8 0) :value #b00001111)
+  (op        :field (byte 8 8) :value #b10111001)
+  ;; The mod bits ensure that the reg/mem field is interpreted as a
+  ;; register, not memory.
+  (reg/mem   :field (byte 3 16) :type 'word-reg)
+  (reg	     :field (byte 3 19) :type 'word-reg)
+  (mod       :field (byte 2 22) :value #b11))
+
 (defun snarf-error-junk (sap offset &optional length-only)
   (let* ((length (system:sap-ref-8 sap offset))
          (vector (make-array length :element-type '(unsigned-byte 8))))
@@ -2091,53 +2111,64 @@
                        (sc-offsets)
                        (lengths))))))))
 
-(defmacro break-cases (breaknum &body cases)
-  (let ((bn-temp (gensym)))
-    (collect ((clauses))
-      (dolist (case cases)
-        (clauses `((= ,bn-temp ,(car case)) ,@(cdr case))))
-      `(let ((,bn-temp ,breaknum))
-         (cond ,@(clauses))))))
-
-(defun break-control (chunk inst stream dstate)
+(defun ud1-control (chunk inst stream dstate)
   (declare (ignore inst))
   (flet ((nt (x) (if stream (disassem:note x dstate))))
-    (case (byte-imm-code chunk dstate)
-      (#.vm:error-trap
-       (nt "Error trap")
-       (disassem:handle-break-args #'snarf-error-junk stream dstate))
-      (#.vm:cerror-trap
-       (nt "Cerror trap")
-       (disassem:handle-break-args #'snarf-error-junk stream dstate))
-      (#.vm:breakpoint-trap
-       (nt "Breakpoint trap"))
-      (#.vm:pending-interrupt-trap
-       (nt "Pending interrupt trap"))
-      (#.vm:halt-trap
-       (nt "Halt trap"))
-      (#.vm:function-end-breakpoint-trap
-       (nt "Function end breakpoint trap"))
-    )))
+    (let ((code (ldb (byte 6 16) chunk)))
+      (ecase code
+	(#.vm:error-trap
+	 (nt #.(format nil "Trap ~D: Error trap" vm:error-trap))
+	 (disassem:handle-break-args #'snarf-error-junk stream dstate))
+	(#.vm:cerror-trap
+	 (nt #.(format nil "Trap ~D: Cerror trap" vm:cerror-trap))
+	 (disassem:handle-break-args #'snarf-error-junk stream dstate))
+	(#.vm:pending-interrupt-trap
+	 (nt #.(format nil "Trap ~D: Pending interrupt trap" vm:pending-interrupt-trap)))
+	(#.vm:halt-trap
+	 (nt #.(format nil "Trap ~D: Halt trap" vm:halt-trap)))
+	(#.vm:function-end-breakpoint-trap
+	 (nt #.(format nil "Trap ~D: Function end breakpoint trap"
+		       vm:function-end-breakpoint-trap)))))))
 
-;; This is really the int3 instruction.
-(define-instruction break (segment code)
+;; The ud1 instruction where we smash the code (trap type) into the
+;; low 6 bits of the mod r/m byte.  The mod bits are set to #b11 to
+;; make sure the reg/mem part is interpreted to be a register and not
+;; memory.
+(define-instruction ud1 (segment code)
   (:declare (type (unsigned-byte 8) code))
-  (:printer byte-imm ((op #b11001100)) '(:name :tab code)
-	    :control #'break-control)
+  (:printer ud1 ((op #b10111001) (reg nil :type 'word-reg))
+	    :default
+	    :control #'ud1-control)
   (:emitter
-   (emit-byte segment #b11001100)
-   (emit-byte segment code)))
+   ;; We should not be using the breakpoint trap with UD1 anymore.
+   ;; Breakpoint traps are handled in C now, using plain int3.
+   (assert (/= code vm:breakpoint-trap))
 
+   ;; Emit the bytes of the instruction.
+   (emit-byte segment #x0f)
+   (emit-byte segment #xb9)
+   (emit-mod-reg-r/m-byte segment
+			  #b11
+			  (ldb (byte 3 3) code)
+			  (ldb (byte 3 0) code))))
+
+;; Handles both int and int3.  To get int3 you have to say (inst int
+;; 3).  But int3 should not be used in Lisp code.  This is mainly so
+;; that int3 gets disassembled correctly if a breakpoint has been set
+;; in Lisp code.  (But in general the disassembly will be messed up
+;; because the following byte will in general be the second byte of
+;; some instruction, and not the first byte of an instruction.)
 (define-instruction int (segment number)
   (:declare (type (unsigned-byte 8) number))
   (:printer byte-imm ((op #b11001101)))
   (:emitter
-   (etypecase number
-     ((member 3)
-      (emit-byte segment #b11001100))
-     ((unsigned-byte 8)
-      (emit-byte segment #b11001101)
-      (emit-byte segment number)))))
+   (emit-byte segment #b11001101)
+   (emit-byte segment number)))
+
+(define-instruction int3 (segment)
+  (:printer byte ((op #b11001100)))
+  (:emitter
+   (emit-byte segment #b11001100)))
 
 (define-instruction into (segment)
   (:printer byte ((op #b11001110)))

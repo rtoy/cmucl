@@ -284,11 +284,11 @@
   (:policy :fast-safe)
   (:translate unix::do-pending-interrupt)
   (:generator 1
-    (inst break pending-interrupt-trap)))
+    (inst ud1 pending-interrupt-trap)))
 
 (define-vop (halt)
   (:generator 1
-    (inst break halt-trap)))
+    (inst ud1 halt-trap)))
 
 (defknown float-wait () (values))
 (define-vop (float-wait)
