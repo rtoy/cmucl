@@ -12,4 +12,4 @@ ARCH_SRC = x86-arch.c
 
 OS_SRC = solaris-os.c os-common.c undefineds.c elf.c
 OS_LINK_FLAGS=
-OS_LIBS= -lsocket -lnsl -ldl
+OS_LIBS= -lsocket -lnsl -ldl -lrt
