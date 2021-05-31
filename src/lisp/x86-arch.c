@@ -23,7 +23,19 @@
 
 #define BREAKPOINT_INST 0xcc	/* INT3 */
 
-unsigned long fast_random_state = 1;
+/*
+ * The first two bytes of the UD1 instruction.  The mod r/m byte isn't
+ * included here.
+ */
+static const unsigned char ud1[] = {0x0f, 0xb9};
+      
+
+/*
+ * Set to positive value to enabled debug prints related to the sigill
+ * and sigtrap handlers.  Also enables prints related to handling of
+ * breakpoints.
+ */
+unsigned int debug_handlers = 0;
 
 #if defined(SOLARIS)
 /*
@@ -129,32 +141,42 @@ arch_init(fpu_mode_t mode)
 
 
 /*
- * Assuming we get here via an INT3 xxx instruction, the PC now
- * points to the interrupt code (lisp value) so we just move past
- * it. Skip the code, then if the code is an error-trap or
- * Cerror-trap then skip the data bytes that follow.
+ * Skip the UD1 instruction, and any data bytes associated with the
+ * trap.
  */
-
 void
 arch_skip_instruction(os_context_t * context)
 {
     int vlen, code;
 
-    DPRINTF(0, (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
+    DPRINTF(debug_handlers,
+            (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
 
-    /* Get and skip the lisp error code. */
-    code = *(char *) SC_PC(context)++;
+    /* Get the address of the beginning of the UD1 instruction */
+    char* pc = (char *) SC_PC(context);
+    
+    /*
+     * Skip over the part of the UD1 inst (0x0f, 0xb9) so we can get to the mod r/m byte
+     */
+    pc += sizeof(ud1);
+
+    code = *pc++;
+    SC_PC(context) = (unsigned long) pc;
+
     switch (code) {
       case trap_Error:
       case trap_Cerror:
 	  /* Lisp error arg vector length */
-	  vlen = *(char *) SC_PC(context)++;
+          vlen = *pc++;
+          SC_PC(context) = (unsigned long) pc;
+          
 	  /* Skip lisp error arg data bytes */
-	  while (vlen-- > 0)
-	      SC_PC(context)++;
+          SC_PC(context) = (unsigned long) (pc + vlen);
 	  break;
 
       case trap_Breakpoint:
+          lose("Unexpected breakpoint trap in arch_skip_instruction\n");
+          break;
       case trap_FunctionEndBreakpoint:
 	  break;
 
@@ -168,7 +190,8 @@ arch_skip_instruction(os_context_t * context)
 	  break;
     }
 
-    DPRINTF(0, (stderr, "[arch_skip_inst resuming at %lx>]\n", SC_PC(context)));
+    DPRINTF(debug_handlers,
+            (stderr, "[arch_skip_inst resuming at %lx>]\n", SC_PC(context)));
 }
 
 unsigned char *
@@ -191,13 +214,19 @@ arch_set_pseudo_atomic_interrupted(os_context_t * context)
 
 
 
+/*
+ * Installs a breakpoint (INT3) at |pc|.  We return the byte that was
+ * replaced by the int3 instruction.
+ */
 unsigned long
 arch_install_breakpoint(void *pc)
 {
-    unsigned long result = *(unsigned long *) pc;
+    unsigned long result = *(unsigned char *) pc;
+    *(unsigned char *) pc = BREAKPOINT_INST;
 
-    *(char *) pc = BREAKPOINT_INST;	/* x86 INT3       */
-    *((char *) pc + 1) = trap_Breakpoint;	/* Lisp trap code */
+    DPRINTF(debug_handlers,
+            (stderr, "arch_install_breakpoint at %p, old code = 0x%lx\n",
+             pc, result));
 
     return result;
 }
@@ -205,8 +234,14 @@ arch_install_breakpoint(void *pc)
 void
 arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
-    *((char *) pc) = orig_inst & 0xff;
-    *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
+    DPRINTF(debug_handlers,
+            (stderr, "arch_remove_breakpoint: %p orig %lx\n",
+             pc, orig_inst));
+
+    /*
+     * Just restore the byte from orig_inst.
+     */
+    *(unsigned char *) pc = orig_inst & 0xff;
 }
 
 
@@ -224,20 +259,44 @@ unsigned int single_step_save2;
 unsigned int single_step_save3;
 #endif
 
+/*
+ * This is called when we need to continue after a breakpoint.  This
+ * works by putting the original byte back into the code, and then
+ * enabling single-step mode to step one instruction.  When we return,
+ * the instruction will get run and a sigtrap will get triggered when
+ * the one instruction is done.
+ *
+ * TODO: Be more like other archs where the original inst is put back,
+ * and the next inst is replaced with a afterBreakpoint trap.  When we
+ * run, the afterBreakpoint trap is hit at the next instruction and
+ * then we can put back the original breakpoint and replace the
+ * afterBreakpoint trap with the original inst there too.
+ *
+ * For x86, this means computing how many bytes are used in the
+ * current instruction, and then placing an int3 (or maybe ud1) after
+ * it.
+ */
 void
 arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 {
-    unsigned int *pc = (unsigned int *) SC_PC(context);
+    unsigned char *pc = (unsigned char *) SC_PC(context);
 
+    DPRINTF(debug_handlers,
+            (stderr, "arch_do_displaced_inst: pc %p orig_inst %lx\n",
+             pc, orig_inst));
+    
     /*
      * Put the original instruction back.
      */
 
-    *((char *) pc) = orig_inst & 0xff;
-    *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
+    *pc = orig_inst & 0xff;
 
+    /*
+     * If we have the SC_EFLAGS macro, we can enable single-stepping
+     * by setting the bit.  Otherwise, we need a more complicated way
+     * of enabling single-stepping.
+     */
 #ifdef SC_EFLAGS
-    /* Enable single-stepping */
     SC_EFLAGS(context) |= 0x100;
 #else
 
@@ -274,21 +333,152 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 }
 
 
+/*
+ * Handles the ud1 instruction from lisp that is used to signal
+ * errors.  In particular, this does not handle the breakpoint traps.
+ */
 void
-sigtrap_handler(HANDLER_ARGS)
+sigill_handler(HANDLER_ARGS)
 {
     unsigned int trap;
     os_context_t* os_context = (os_context_t *) context;
-#if 0
-    fprintf(stderr, "x86sigtrap: %8x %x\n",
-            SC_PC(os_os_context), *(unsigned char *) (SC_PC(os_context) - 1));
-    fprintf(stderr, "sigtrap(%d %d %x)\n", signal, CODE(code), os_context);
-#endif
 
-    if (single_stepping && (signal == SIGTRAP)) {
-#if 0
-	fprintf(stderr, "* Single step trap %p\n", single_stepping);
+    DPRINTF(debug_handlers,
+            (stderr,"sigill: fp=%lx sp=%lx pc=%lx { %x, %x, %x, %x, %x }\n",
+             SC_REG(context, reg_FP),
+             SC_REG(context, reg_SP),
+             SC_PC(context),
+             *((unsigned char*)SC_PC(context) + 0), /* 0x0F */
+             *((unsigned char*)SC_PC(context) + 1), /* 0x0B */
+             *((unsigned char*)SC_PC(context) + 2),
+             *((unsigned char*)SC_PC(context) + 3),
+             *((unsigned char*)SC_PC(context) + 4)));
+
+    
+    /* This is just for info in case monitor wants to print an approx */
+    current_control_stack_pointer = (unsigned long *) SC_SP(os_context);
+
+    /*
+     * In many places in the switch below, we eventually throw instead
+     * of returning from the signal handler.  So, just in case, set
+     * the current FPU modes from the saved context.
+     */
+    RESTORE_FPU(os_context);
+
+    /*
+     * On entry %eip points just to the beginning of the UD1
+     * instruction.  For error-trap and cerror-trap a number of bytes
+     * will follow, the first is the length of the byte arguments to
+     * follow.
+     */
+
+    DPRINTF(debug_handlers,
+            (stderr, "pc %x\n",  *(unsigned short *)SC_PC(context)));
+
+    /*
+     * If the trapping instruction is UD1, assume it's a Lisp trap
+     * that we handle here.  Otherwise, just call interrupt_handle_now
+     * for other cases.
+     */
+    if (memcmp((void *)SC_PC(context), ud1, sizeof(ud1)) == 0) {
+      /*
+       * This must match what the lisp code is doing.  The trap
+       * number is placed in the low 6-bits of the 3rd byte of the
+       * instruction.
+       */
+      trap = *(((char *)SC_PC(context)) + 2) & 0x3f;
+
+      DPRINTF(debug_handlers, (stderr, "code = %x\n", trap));
+
+      switch (trap) {
+      case trap_PendingInterrupt:
+        DPRINTF(debug_handlers, (stderr, "<trap Pending Interrupt.>\n"));
+        arch_skip_instruction(os_context);
+        interrupt_handle_pending(os_context);
+        break;
+
+      case trap_Halt:
+        {
+          FPU_STATE(fpu_state);
+          save_fpu_state(fpu_state);
+
+          fake_foreign_function_call(os_context);
+          lose("%%primitive halt called; the party is over.\n");
+          undo_fake_foreign_function_call(os_context);
+
+          restore_fpu_state(fpu_state);
+          arch_skip_instruction(os_context);
+          break;
+        }
+
+      case trap_Error:
+      case trap_Cerror:
+        DPRINTF(debug_handlers, (stderr, "<trap Error %x>\n", CODE(code)));
+        interrupt_internal_error(signal, code, os_context, CODE(code) == trap_Cerror);
+        break;
+
+      case trap_Breakpoint:
+        lose("Unexpected breakpoint trap in sigill-hander.\n");
+        break;
+
+      case trap_FunctionEndBreakpoint:
+        SC_PC(os_context) =
+          (int) handle_function_end_breakpoint(signal, CODE(code), os_context);
+        break;
+
+#ifdef trap_DynamicSpaceOverflowWarning
+      case trap_DynamicSpaceOverflowWarning:
+        interrupt_handle_space_overflow(SymbolFunction
+                                        (DYNAMIC_SPACE_OVERFLOW_WARNING_HIT),
+                                        os_context);
+        break;
 #endif
+#ifdef trap_DynamicSpaceOverflowError
+      case trap_DynamicSpaceOverflowError:
+        interrupt_handle_space_overflow(SymbolFunction
+                                        (DYNAMIC_SPACE_OVERFLOW_ERROR_HIT),
+                                        os_context);
+        break;
+#endif
+      default:
+        DPRINTF(debug_handlers,
+                (stderr, "[C--trap default %d %d %p]\n", signal, CODE(code),
+                 os_context));
+        interrupt_handle_now(signal, code, os_context);
+        break;
+      }
+    } else {
+      interrupt_handle_now(signal, code, os_context);
+    }
+}
+
+/*
+ * Handles the breakpoint trap (int3) and also single-stepping
+ */
+void
+sigtrap_handler(HANDLER_ARGS) 
+{
+    os_context_t* os_context = (os_context_t *) context;
+
+    DPRINTF(debug_handlers,
+            (stderr,"sigtrap: fp=%lx sp=%lx pc=%lx { %x, %x, %x, %x, %x }\n",
+             SC_REG(context, reg_FP),
+             SC_REG(context, reg_SP),
+             SC_PC(context),
+             *((unsigned char*)SC_PC(context) + 0), /* 0x0F */
+             *((unsigned char*)SC_PC(context) + 1), /* 0x0B */
+             *((unsigned char*)SC_PC(context) + 2),
+             *((unsigned char*)SC_PC(context) + 3),
+             *(unsigned char*)(SC_PC(context) + 4)));
+
+    if (single_stepping) {
+        /*
+         * We were single-stepping so we now need to disable
+         * single-stepping.  We want to put back the breakpoint (int3)
+         * instruction so that the next time the breakpoint will be
+         * hit again as expected.
+         */
+	DPRINTF(debug_handlers, (stderr, "* Single step trap %p\n", single_stepping));
 
 #ifdef SC_EFLAGS
 	/* Disable single-stepping */
@@ -304,111 +494,53 @@ sigtrap_handler(HANDLER_ARGS)
 	/*
 	 * Re-install the breakpoint if possible.
 	 */
-	if ((int) SC_PC(os_context) == (int) single_stepping + 1)
-	    fprintf(stderr, "* Breakpoint not re-install\n");
-	else {
-	    char *ptr = (char *) single_stepping;
+        DPRINTF(debug_handlers,
+                (stderr, "* Maybe reinstall breakpoint for pc %p with single_stepping %p\n",
+                 (void*) SC_PC(os_context), single_stepping));
+        
+        /*
+         * Lose if single-stepping didn't move us past where the
+         * breakpoint instruction was inserted.
+         */
+        if ((unsigned long) SC_PC(os_context) <= (unsigned long) single_stepping) {
+            lose("Single-stepping did not advance past the breakpoint at %p\n",
+                 single_stepping);
+        }
 
-	    ptr[0] = BREAKPOINT_INST;	/* x86 INT3 */
-	    ptr[1] = trap_Breakpoint;
-	}
+        /*
+         * Put back the breakpoint since we skipped over it.
+         */
+        char *ptr = (char *) single_stepping;
+        ptr[0] = BREAKPOINT_INST;	/* x86 INT3 */
 
 	single_stepping = NULL;
 	return;
     }
 
-    /* This is just for info in case monitor wants to print an approx */
-    current_control_stack_pointer = (unsigned long *) SC_SP(os_context);
-
+    /*
+     * We weren't single-stepping, so this we've just hit the breakpoint (int3).  Handle it.
+     */
+    DPRINTF(debug_handlers, (stderr, "*C break\n"));
 
     /*
-     * In many places in the switch below, we eventually throw instead
-     * of returning from the signal handler.  So, just in case, set
-     * the current FPU modes from the saved context.
+     * The int3 instruction causes a trap that leaves us just after
+     * the instruction.  Backup one so we're at the beginning.  This
+     * is really important so that when we handle the breakpoint, the
+     * offset of the instruction matches where Lisp thinks the
+     * breakpoint was placed.
      */
-    RESTORE_FPU(os_context);
+    SC_PC(os_context) -= 1;
 
-    /*
-     * On entry %eip points just after the INT3 byte and aims at the
-     * 'kind' value (eg trap_Cerror). For error-trap and Cerror-trap a
-     * number of bytes will follow, the first is the length of the byte
-     * arguments to follow.
-     */
+    handle_breakpoint(signal, CODE(code), os_context);
 
-    trap = *(unsigned char *) SC_PC(os_context);
-
-    switch (trap) {
-      case trap_PendingInterrupt:
-	  DPRINTF(0, (stderr, "<trap Pending Interrupt.>\n"));
-	  arch_skip_instruction(os_context);
-	  interrupt_handle_pending(os_context);
-	  break;
-
-      case trap_Halt:
-	  {
-              FPU_STATE(fpu_state);
-              save_fpu_state(fpu_state);
-
-	      fake_foreign_function_call(os_context);
-	      lose("%%primitive halt called; the party is over.\n");
-	      undo_fake_foreign_function_call(os_context);
-
-              restore_fpu_state(fpu_state);
-	      arch_skip_instruction(os_context);
-	      break;
-	  }
-
-      case trap_Error:
-      case trap_Cerror:
-	  DPRINTF(0, (stderr, "<trap Error %x>\n", CODE(code)));
-	  interrupt_internal_error(signal, code, os_context, CODE(code) == trap_Cerror);
-	  break;
-
-      case trap_Breakpoint:
-#if 0
-	  fprintf(stderr, "*C break\n");
-#endif
-	  SC_PC(os_context) -= 1;
-
-	  handle_breakpoint(signal, CODE(code), os_context);
-#if 0
-	  fprintf(stderr, "*C break return\n");
-#endif
-	  break;
-
-      case trap_FunctionEndBreakpoint:
-	  SC_PC(os_context) -= 1;
-	  SC_PC(os_context) =
-	      (int) handle_function_end_breakpoint(signal, CODE(code), os_context);
-	  break;
-
-#ifdef trap_DynamicSpaceOverflowWarning
-      case trap_DynamicSpaceOverflowWarning:
-	  interrupt_handle_space_overflow(SymbolFunction
-					  (DYNAMIC_SPACE_OVERFLOW_WARNING_HIT),
-					  os_context);
-	  break;
-#endif
-#ifdef trap_DynamicSpaceOverflowError
-      case trap_DynamicSpaceOverflowError:
-	  interrupt_handle_space_overflow(SymbolFunction
-					  (DYNAMIC_SPACE_OVERFLOW_ERROR_HIT),
-					  os_context);
-	  break;
-#endif
-      default:
-	  DPRINTF(0,
-		  (stderr, "[C--trap default %d %d %p]\n", signal, CODE(code),
-		   os_context));
-	  interrupt_handle_now(signal, code, os_context);
-	  break;
-    }
+    DPRINTF(debug_handlers, (stderr, "*C break return\n"));
 }
+
 
 void
 arch_install_interrupt_handlers(void)
 {
-    interrupt_install_low_level_handler(SIGILL, sigtrap_handler);
+    interrupt_install_low_level_handler(SIGILL, sigill_handler);
     interrupt_install_low_level_handler(SIGTRAP, sigtrap_handler);
 }
 
