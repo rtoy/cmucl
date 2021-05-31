@@ -24,6 +24,8 @@ public domain.
     * Update to ASDF 3.3.4
   * ANSI compliance fixes:
   * Bug fixes:
+    * ~~#97~~ Fixes stepping through the source forms in the debugger.  This has been broken for quite some time, but it works now.
+
   * Gitlab tickets:
     * ~~#68~~ gcc8.1.1 can't build lisp.  Change optimization from `-O2` to `-O1`
     * ~~#72~~ CMU user manual now part of cmucl-site
@@ -37,8 +39,11 @@ public domain.
     * ~~#90~~ Some static symbols have been removed.  This probably makes the fasl files incompatible with older versions.
     * ~~#91~~ Loop destructuring no longer incorrectly signals an error
     * ~~#95~~ Disassembler syntax of x86 je and movzx is incorrect
+    * ~~#97~~ Define and use ud2 instruction isntead of int3.  Fixes single-stepping.
     * ~~#98~~ fstpd is not an Intel instruction; disassemble as `fstp dword ptr [addr]`
     * ~~#100~~ ldb prints out unicode base-chars correctly instead of just the low 8 bits.
+    * ~~#103~~ RANDOM-MT19937-UPDATE assembly routine still exists
+    * ~~#107~~ Replace u_int8_t with uint8_t
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
