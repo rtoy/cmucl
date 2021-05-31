@@ -243,12 +243,10 @@
   (defun emit-error-break (vop kind code values)
     (let ((vector (gensym))
 	  (length (gensym)))
-      `((inst int 3)				; i386 breakpoint instruction
-	;; The return PC points here; note the location for the debugger.
-	(let ((vop ,vop))
+      `((let ((vop ,vop))
   	  (when vop
-		(note-this-location vop :internal-error)))
-	(inst byte ,kind)			; eg trap_Xyyy
+	    (note-this-location vop :internal-error)))
+	(inst ud1 ,kind)		; eg trap_Xyyy
 	(let ((,vector (make-array 8 :element-type '(unsigned-byte 8)
 				   :fill-pointer 0 :adjustable t)))
 	  (write-var-integer (error-number-or-lose ',code) ,vector)
@@ -342,7 +340,7 @@
 				    (- other-pointer-type)))
 	      0)
 	(inst jmp :eq ,label)
-	(inst break pending-interrupt-trap)
+	(inst ud1 pending-interrupt-trap)
 	(emit-label ,label)))))
 
 
