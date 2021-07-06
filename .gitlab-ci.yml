@@ -1,6 +1,6 @@
 variables:
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2021/01"
-  version: "2021-01-x86"
+  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2021/07"
+  version: "2021-07-x86"
   bootstrap: ""
 
 stages:
