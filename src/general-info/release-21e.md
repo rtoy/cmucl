@@ -21,7 +21,7 @@ public domain.
   * Known issues:
   * Feature enhancements
   * Changes
-    * Update to ASDF 3.3.4
+    * Update to ASDF 3.3.5
   * ANSI compliance fixes:
   * Bug fixes:
     * ~~#97~~ Fixes stepping through the source forms in the debugger.  This has been broken for quite some time, but it works now.
@@ -44,6 +44,7 @@ public domain.
     * ~~#100~~ ldb prints out unicode base-chars correctly instead of just the low 8 bits.
     * ~~#103~~ RANDOM-MT19937-UPDATE assembly routine still exists
     * ~~#107~~ Replace u_int8_t with uint8_t
+    * ~~#108~~ Update ASDF
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
