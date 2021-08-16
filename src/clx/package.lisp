@@ -24,13 +24,14 @@
   (:use common-lisp)
   (:size 3000)
   #+(or kcl ibcl) (:shadow rational)
-  #+allegro (:import-from excl without-interrupts)
+  #+(or sbcl clasp) (:shadow defconstant)
   #+excl (:import-from excl arglist)
   #+Genera (:import-from zwei indentation)
   #+lcl3.0 (:import-from lcl arglist)
   #+lispm (:import-from lisp char-bit)
   #+lispm (:import-from sys arglist with-stack-list with-stack-list*)
-  #+(or sbcl ecl) (:use sb-bsd-sockets)
+  #+clasp (:shadow arglist)
+  #+(or sbcl ecl clasp) (:use sb-bsd-sockets)
   (:export
     *version* access-control access-error access-hosts
     activate-screen-saver add-access-host add-resource add-to-save-set
@@ -177,93 +178,4 @@
     wm-size-hints-user-specified-position-p wm-size-hints-user-specified-size-p
     wm-size-hints-width wm-size-hints-width-inc wm-size-hints-win-gravity
     wm-size-hints-x wm-size-hints-y wm-zoom-hints write-bitmap-file
-    write-resources xatom
-    picture-subwindow-mode picture-format-id
-    mode-info-hsyncstart
-    mode-info
-    xfree86-vidmode-get-mode-line
-    picture-drawable
-    picture-alpha-y-origin
-    make-mode-info
-    shape-mask
-    xfree86-vidmode-get-viewport
-    render-query-version
-    shape-rectangles
-    xfree86-vidmode-select-next-mode
-    xfree86-vidmode-set-gamma
-    render-composite-glyphs
-    xfree86-vidmode-get-dotclocks
-    render-trapezoids
-    xfree86-vidmode-get-all-mode-lines
-    mode-info-hskew
-    picture-format-type
-    xfree86-vidmode-get-gamma-ramp
-    render-create-picture
-    picture-format-blue-byte
-    shape-query-extents
-    xfree86-vidmode-validate-mode-line
-    shape-offset
-    shape-input-selected-p
-    mode-info-vsyncend
-    shape-select-input
-    screen-saver-get-idle
-    mode-info-vtotal
-    picture-format-depth
-    picture-clip-x-origin
-    picture-format-alpha-byte
-    screen-saver-query-info
-    xfree86-vidmode-set-gamma-ramp
-    xfree86-vidmode-switch-to-mode
-    mode-info-vdisplay
-    xfree86-vidmode-delete-mode-line
-    xfree86-vidmode-set-viewport
-    picture-dither
-    picture-format-colormap
-    xfree86-vidmode-lock-mode-switch
-    render-triangles
-    xfree86-vidmode-add-mode-line
-    picture-component-alpha
-    xfree86-vidmode-get-permissions
-    shape-get-rectangles
-    shape-query-version
-    mode-info-hsyncend
-    mode-info-hdisplay
-    picture-repeat
-    picture-graphics-exposures
-    xfree86-vidmode-query-version
-    screen-saver-query-version
-    find-window-picture-format
-    render-add-glyph-from-picture
-    mode-info-private
-    xfree86-vidmode-get-gamma
-    picture-alpha-map
-    xfree86-vidmode-mod-mode-line
-    mode-info-htotal
-    render-free-picture
-    picture-poly-mode
-    picture-format-green-byte
-    render-free-glyph-set
-    render-free-glyphs
-    shape-combine
-    render-free-glyph
-    mode-info-flags
-    render-fill-rectangle
-    picture-clip-y-origin
-    mode-info-vsyncstart
-    mode-info-privsize
-    picture-poly-edge
-    render-composite
-    picture-format-red-byte
-    render-add-glyph
-    picture-format-display
-    render-reference-glyph-set
-    xfree86-vidmode-get-gamma-ramp-size
-    find-matching-picture-formats
-    mode-info-dotclock
-    xfree86-vidmode-set-client-version
-    picture-clip-mask
-    picture-alpha-x-origin
-    xfree86-vidmode-get-monitor
-    render-create-glyph-set
-    xfree86-vidmode-switch-mode
-    xfree86-vidmode-select-prev-mode))
+    write-resources xatom))
