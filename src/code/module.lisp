@@ -37,6 +37,11 @@
 (defvar *require-verbose* t
   "*load-verbose* is bound to this before loading files.")
 
+(defvar *cmucl-provider-functions*
+  '(module-provide-cmucl-defmodule module-provide-cmucl-library)
+  "Provider functions for cmucl modules and libraries.  These are
+  searched first before trying *module-provider-functions*")
+
 (defvar *module-provider-functions*
     '(module-provide-cmucl-defmodule module-provide-cmucl-library)
   "See function documentation for REQUIRE")
@@ -114,9 +119,14 @@
         (if pathname
             (dolist (file (if (consp pathname) pathname (list pathname)) t)
 	      (load file))
-            (unless (some (lambda (p) (funcall p module-name))
-                          *module-provider-functions*)
-              (error (intl:gettext "Don't know how to load ~A") module-name)))))
+	    ;; Search *cmucl-provider-functions* first so that we'll
+	    ;; load our version of clx (and friends) before loading
+	    ;; any asdf version, if asdf is loaded.
+	    (or (some (lambda (p) (funcall p module-name))
+                      *cmucl-provider-functions*)
+		(some (lambda (p) (funcall p module-name))
+		      *module-provider-functions*)
+		(error (intl:gettext "Don't know how to load ~A") module-name)))))
     (set-difference *modules* saved-modules)))
 
 ;;;; Default module providers
