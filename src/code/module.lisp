@@ -43,7 +43,7 @@
   searched first before trying *module-provider-functions*")
 
 (defvar *module-provider-functions*
-    '(module-provide-cmucl-defmodule module-provide-cmucl-library)
+  nil
   "See function documentation for REQUIRE")
 
 ;;;; Defmodule.
