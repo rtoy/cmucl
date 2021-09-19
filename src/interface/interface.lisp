@@ -64,6 +64,13 @@
 (defconstant +header-tag+ "header")
 (defconstant +italic-tag+ "italic")
 
+;; Default fonts. Users are allowed to customize these. Note that
+;; changing them only takes effect the next time these interface
+;; programs start a fresh motifd process.
+(defvar *default-font-name* "Helvetica-12:Regular")
+(defvar *header-font-name* "Helvetica-12:Bold")
+(defvar *italic-font-name* "Helvetica-12:Italic")
+
 
 
 ;;;; Functions for dealing with interface widgets
@@ -74,7 +81,10 @@
       (let ((con (xt::open-motif-connection
 		  *default-server-host* *default-display*
 		  "lisp" "Lisp"
-		  nil ;; fallback resources go here.
+		  (generate-heuristicated-font-resources
+		   (list "" +header-tag+ +italic-tag+)
+		   (list *default-font-name* *header-font-name*
+			 *italic-font-name*))
 		  (and *system-motif-server*
 		       (ext:process-pid *system-motif-server*)))))
 	(with-motif-connection (con)

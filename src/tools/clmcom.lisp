@@ -48,6 +48,7 @@
     "target:motif/lisp/callbacks"
     "target:motif/lisp/widgets"
 ;    "target:motif/lisp/timer-support"
+    "target:motif/lisp/fonts"
     "target:motif/lisp/main"))
 
 (defparameter interface-files
