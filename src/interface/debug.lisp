@@ -157,9 +157,10 @@
 	  (di:do-debug-function-variables (v debug-fun)
 	    (unless any-p
 	      (setf any-p t)
-	      (push (create-label frame-view "localsLabel"
-					 :font-list *header-font*
-					 :label-string "Local variables:")
+	      (push (with-compound-strings ((label-string "Local variables:"
+							  +header-tag+))
+		      (create-label frame-view "localsLabel"
+				   :label-string label-string))
 		    widgets))
 	    (when (eq (di:debug-variable-validity v location) :valid)
 	      (let ((value (di:debug-variable-value v frame))
@@ -176,23 +177,23 @@
 	  (cond
 	   ((not any-p)
 	    (push
-	     (create-label frame-view "noLocals"
-				  :font-list *italic-font*
-				  :label-string
-				  "   No local variables in function.")
+	     (with-compound-strings
+		 ((label-string "   No local variables in function." +italic-tag+))
+	       (create-label frame-view "noLocals"
+			    :label-string label-string))
 	     widgets))
 	   ((not any-valid-p)
 	    (push
-	     (create-label frame-view "noValidLocals"
-				  :font-list *italic-font*
-				  :label-string
-				  "   All variables have invalid values.")
+	     (with-compound-strings
+		 ((label-string "   All variables have invalid values." +italic-tag+))
+	       (create-label frame-view "noValidLocals"
+			    :label-string label-string))
 	     widgets))))
 
-	(push (create-label frame-view "noVariableInfo"
-				   :font-list *italic-font*
-				   :label-string
-				   "   No variable information available.")
+	(push (with-compound-strings
+		  ((label-string "   No variable information available." +italic-tag+))
+		(create-label frame-view "noVariableInfo"
+			      :label-string label-string))
 	      widgets))
     (apply #'manage-children widgets)))
 
@@ -203,9 +204,9 @@
 ;;;
 (defun debug-display-frame-prompt (frame frame-view)
   (let* ((form (create-form frame-view "promptForm"))
-	 (label (create-label form "framePrompt"
-				     :label-string "Frame Eval:"
-				     :font-list *header-font*))
+	 (label (with-compound-strings ((label "Frame Eval:" +header-tag+))
+		  (create-label form "framePrompt"
+				:label-string label)))
 	 (entry (create-text form "frameEval"
 			     :top-attachment :attach-widget
 			     :top-widget label
@@ -254,9 +255,9 @@
 				 :callback 'frame-view-callback
 				 :client-data
 				 (di:debug-function-function debug-fun)))
-	 (slabel (create-label frame-view "sourceLabel"
-				      :font-list *header-font*
-				      :label-string "Source form:"))
+	 (slabel (with-compound-strings ((label "Source form:" +header-tag+))
+		   (create-label frame-view "sourceLabel"
+				 :label-string label)))
 	 (swindow (create-scrolled-window frame-view "frameSourceWindow"
 					  :scrolling-policy :automatic
 					  :scroll-bar-placement :bottom-right))
@@ -378,12 +379,13 @@
 		   '(("Close All Frames" close-all-callback)
 		     ("Dump Backtrace" dump-backtrace-callback)
 		     ("Quit Debugger" quit-debugger-callback))))
- 	 (errlabel (create-label form "errorLabel"
-					:top-attachment :attach-widget
-					:top-widget menu-bar
-					:left-attachment :attach-form
-					:font-list *header-font*
-					:label-string "Error Message:"))
+	 (errlabel (with-compound-strings
+		       ((label "Error Message:" +header-tag+))
+		     (create-label form "errorLabel"
+				   :top-attachment :attach-widget
+				   :top-widget menu-bar
+				   :left-attachment :attach-form
+				   :label-string label)))
 	 (errmsg (create-label form "errorMessage"
 				      :top-attachment :attach-widget
 				      :top-widget errlabel
@@ -392,8 +394,7 @@
 	 (rlabel (create-label form "restartLabel"
 				      :top-attachment :attach-widget
 				      :top-widget errmsg
-				      :left-attachment :attach-form
-				      :font-list *header-font*))
+				      :left-attachment :attach-form))
 	 (restarts (create-row-column form "debugRestarts"
 				      :adjust-last nil
 				      :top-attachment :widget
@@ -401,12 +402,12 @@
 				      :left-attachment :attach-form
 				      :right-attachment :attach-form
 				      :left-offset 10))
-	 (btlabel (create-label form "backtraceLabel"
-				       :label-string "Stack Backtrace:"
-				       :font-list *header-font*
-				       :top-attachment :attach-widget
-				       :top-widget restarts
-				       :left-attachment :attach-form))
+	 (btlabel (with-compound-strings ((label "Stack Backtrace:" +header-tag+))
+		    (create-label form "backtraceLabel"
+				 :label-string label
+				 :top-attachment :attach-widget
+				 :top-widget restarts
+				 :left-attachment :attach-form)))
 	 (btwindow (create-scrolled-window form "backtraceWindow"
 					   :scrolling-policy :automatic
 					   :scroll-bar-placement :bottom-right
@@ -431,9 +432,11 @@
     
     (if *debug-restarts*
 	(progn
-	  (set-values rlabel :label-string "Restarts:")
+	  (with-compound-strings ((label "Restarts:" +header-tag+))
+	    (set-values rlabel :label-string label))
 	  (debug-display-restarts restarts))
-	(set-values rlabel :label-string "No restarts available"))
+	(with-compound-strings ((label "No restarts available" +header-tag+))
+	  (set-values rlabel :label-string label)))
 
     (let ((quick-stack (create-highlight-button backtrace "quickStack"
 						"Display Stack")))

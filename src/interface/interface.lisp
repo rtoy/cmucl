@@ -22,15 +22,6 @@
 
 ;;;; Globally defined variables
 
-(defparameter entry-font-name "-adobe-helvetica-medium-r-normal--*-120-75-*")
-(defparameter header-font-name "-adobe-helvetica-bold-r-normal--*-120-75-*")
-(defparameter italic-font-name "-adobe-helvetica-medium-o-normal--*-120-75-*")
-
-
-(defvar *header-font*)
-(defvar *italic-font*)
-(defvar *entry-font*)
-(defvar *all-fonts*)
 
 (defvar *system-motif-server* nil)
 
@@ -62,6 +53,17 @@
   "This specifies the default interface mode for the debugger and inspector.
    The allowable values are :GRAPHICS and :TTY.")
 
+;; Tags for compound strings' rendering of non-default text. Compound
+;; strings' tags are the keys Motif uses to look up style info in
+;; RenderTables. Tags are part of the "public" interface to
+;; customizing the GUI, so they're constants. We define them as
+;; (constant) variables here to avoid the possibility of typographical
+;; errors at call sites (typos would not be detectable errors; they'd
+;; simply be tags that aren't keys in any RenderTables). They're
+;; exported from INTERFACE only because the CLM debugger needs them.
+(defconstant +header-tag+ "header")
+(defconstant +italic-tag+ "italic")
+
 
 
 ;;;; Functions for dealing with interface widgets
@@ -78,19 +80,7 @@
 	(with-motif-connection (con)
 	  (setf (xti:motif-connection-close-hook *motif-connection*)
 		#'close-connection-hook)
-	  (setf *header-font*
-		(build-simple-font-list "HeaderFont" header-font-name))
-	  (setf *italic-font*
-		(build-simple-font-list "ItalicFont" italic-font-name))
-	  (setf *entry-font*
-		(build-simple-font-list "EntryFont" entry-font-name))
-	  (setf *all-fonts*
-		(build-font-list `(("EntryFont" ,entry-font-name)
-				   ("HeaderFont" ,header-font-name)
- 				   ("ItalicFont" ,italic-font-name))))
-
-	  (let ((shell (create-application-shell
-			:default-font-list *entry-font*)))
+	  (let ((shell (create-application-shell)))
 	    (setf *lisp-interface-panes* (make-hash-table))
 	    (setf *lisp-interface-menus* (make-hash-table :test #'equal))
 	    (setf *lisp-interface-connection* con)
@@ -110,7 +100,6 @@
 	 (pane (or existing
 		   (create-popup-shell "interfacePaneShell"
 				       :top-level-shell shell
-				       :default-font-list *entry-font*
 				       :keyboard-focus-policy :pointer
 				       :title title
 				       :icon-name title))))
@@ -193,17 +182,17 @@
 				:margin-height 0
 				:margin-width 0
 				:orientation :horizontal))
-	 (label (create-label rc "valueLabel"
-				     :font-list *header-font*
-				     :label-string name))
+	 (label (with-compound-strings ((name name +header-tag+))
+		  (create-label rc "valueLabel"
+				:label-string name)))
 	 (button (if activep
 		     (create-highlight-button rc "valueObject"
 					      (print-for-widget-display
 					       "~S" value))
-		     (create-label rc "valueObject"
-					  :font-list *italic-font*
-					  :label-string
-					  (format nil "~A" value)))))
+		     (with-compound-strings
+			 ((value (format nil "~A" value) +italic-tag+))
+		       (create-label rc "valueObject"
+				     :label-string value)))))
     (manage-children label button)
     (when (and callback activep)
       (add-callback button :activate-callback
@@ -633,11 +622,12 @@
 				 :bottom-attachment :attach-form
 				 :right-attachment :attach-position
 				 :right-position 50))
-	 (prompt (create-label form "inspectPrompt"
-				      :top-attachment :attach-widget
-				      :top-widget menu-bar
-				      :font-list *header-font*
-				      :label-string "Inspect new object:"))
+	 (prompt (with-compound-strings ((prompt
+					  "Inspect new object:" +header-tag+))
+		   (create-label form "inspectPrompt"
+				 :top-attachment :attach-widget
+				 :top-widget menu-bar
+				 :label-string prompt)))
 	 (entry (create-text form "inspectEval"
 			     :top-attachment :attach-widget
 			     :top-widget prompt
@@ -646,11 +636,12 @@
 			     :left-attachment :attach-form
 			     :right-attachment :attach-widget
 			     :right-widget vsep))
-	 (hlabel (create-label form "inspectHistoryLabel"
-				      :top-attachment :attach-widget
-				      :top-widget entry
-				      :font-list *header-font*
-				      :label-string "Inspector History:"))
+	 (hlabel (with-compound-strings ((prompt
+					  "Inspector History:" +header-tag+))
+		   (create-label form "inspectHistoryLabel"
+				 :top-attachment :attach-widget
+				 :top-widget entry
+				 :label-string prompt)))
 	 (hview (create-scrolled-list form "inspectHistory"
 				      :visible-item-count 5
 				      :left-offset 4
@@ -662,13 +653,13 @@
 				      :right-attachment :attach-widget
 				      :right-widget vsep
 				      :bottom-attachment :attach-form))
-	 (flabel (create-label form "filesLabel"
-				      :left-attachment :attach-widget
-				      :left-widget vsep
-				      :top-attachment :attach-widget
-				      :top-widget menu-bar
-				      :label-string "Files:"
-				      :font-list *header-font*))
+	 (flabel (with-compound-strings ((prompt "Files:" +header-tag+))
+		   (create-label form "filesLabel"
+				 :left-attachment :attach-widget
+				 :left-widget vsep
+				 :top-attachment :attach-widget
+				 :top-widget menu-bar
+				 :label-string prompt)))
 	 (frc (create-row-column form "filesButtons" 
 				 :packing :pack-column
 				 :num-columns 2
@@ -694,13 +685,13 @@
 			       :left-offset 4
 			       :right-offset 4
 			       :bottom-offset 4))
-	 (alabel (create-label form "aproposLabel"
-				      :label-string "Apropos:"
-				      :font-list *header-font*
-				      :left-attachment :attach-widget
-				      :left-widget vsep
-				      :bottom-attachment :attach-widget
-				      :bottom-widget apropos))
+	 (alabel (with-compound-strings ((prompt "Apropos:" +header-tag+))
+		   (create-label form "aproposLabel"
+				:label-string prompt
+				:left-attachment :attach-widget
+				:left-widget vsep
+				:bottom-attachment :attach-widget
+				:bottom-widget apropos)))
 	 (hsep (create-separator  form "separator"
 					:left-attachment :attach-widget
 					:left-widget vsep

@@ -89,6 +89,16 @@
 	(popdown target))
       (popdown widget)))
 
+;; Another randomly placed useful thing.
+(defmacro with-compound-strings ((&rest specs) &body body)
+  `(let ,(mapcar
+	  (lambda (spec)
+	    `(,(car spec)
+	      (compound-string-create ,(cadr spec) (or ,(caddr spec) ""))))
+	  specs)
+     (unwind-protect (progn ,@body)
+       ,@(mapcar (lambda (spec) `(compound-string-free ,(car spec))) specs))))
+
 
 
 ;;;; A convenient (and CLM compatible) way to start Motif applications

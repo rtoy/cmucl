@@ -77,10 +77,10 @@
   (declare (ignore widget call-data))
   (multiple-value-bind (form shell)
 		       (create-form-dialog pane "evalDialog")
-    (let* ((s1 (compound-string-create "Eval: " "HeaderFont"))
+    (let* ((s1 (compound-string-create "Eval: " +header-tag+))
 	   (s2 (compound-string-create
 		(format nil "[~a]" (print-for-widget-display "~S" object))
-		"EntryFont"))
+		""))
 	   (s3 (compound-string-concat s1 s2))
 	   (done (create-push-button-gadget form "evalDone"
 					    :label-string "Done"
@@ -98,7 +98,6 @@
 	   (prompt (create-label-gadget form "evalPrompt"
 					:bottom-attachment :attach-widget
 					:bottom-widget entry
-					:font-list *all-fonts*
 					:label-string s3))
 	   (output (create-text form "evalOutput"
 				:edit-mode :multi-line-edit
@@ -208,14 +207,16 @@
 		       ,``(("Eval Expression" popup-eval-callback ,pane ,,object)
 			   ("Close Pane" destroy-pane-callback ,,object)
 			   ("Close All Panes" close-all-callback))))
-	      (title (create-label-gadget
-		      over-form "inspectTitle"
-		      :label-string (inspector-pane-title ,object)
-		      :font-list *header-font*
-		      :top-attachment :attach-widget
-		      :top-widget menu-bar
-		      :left-attachment :attach-form
-		      :right-attachment :attach-form))
+	      (title (with-compound-strings ((label-string
+					      (inspector-pane-title ,object)
+					      +header-tag+))
+		       (create-label-gadget
+			over-form "inspectTitle"
+			:label-string label-string
+			:top-attachment :attach-widget
+			:top-widget menu-bar
+			:left-attachment :attach-form
+			:right-attachment :attach-form)))
 	      (form (create-form over-form "inspectForm"
 				 :left-attachment :attach-form
 				 :right-attachment :attach-form
@@ -424,15 +425,17 @@
 					    :left-attachment :attach-form
 					    :right-attachment :attach-form
 					    :orientation :horizontal))
-	       (slabel (create-label-gadget controls "sequenceStartLabel"
-					    :font-list *header-font*
-					    :label-string "Start:"))
+	       (slabel (with-compound-strings ((label-string
+						"Start:" +header-tag+))
+			 (create-label-gadget controls "sequenceStartLabel"
+					      :label-string label-string)))
 	       (start (create-text controls "sequenceStart"
 				   :value "0"
 				   :columns 4))
-	       (clabel (create-label-gadget controls "sequenceCountLabel"
-					    :font-list *header-font*
-					    :label-string "Count:"))
+	       (clabel (with-compound-strings ((label-string
+						"Count:" +header-tag+))
+			 (create-label-gadget controls "sequenceCountLabel"
+					      :label-string label-string)))
 	       (count (create-text controls "sequenceCount"
 				   :value "5"
 				   :columns 4))
@@ -442,9 +445,10 @@
 					  :left-attachment :attach-form
 					  :right-attachment :attach-form
 					  :orientation :horizontal))
-	       (flabel (create-label-gadget filter "sequenceFilterLabel"
-					    :font-list *header-font*
-					    :label-string "Filter:"))
+	       (flabel (with-compound-strings ((label-string
+						"Filter:" +header-tag+))
+			(create-label-gadget filter "sequenceFilterLabel"
+					     :label-string label-string)))
 	       (fexp (create-text filter "sequenceFilterExp" :value "T"))
 	       (apply (create-push-button-gadget filter "sequenceFilterApply"
 						 :label-string "Apply"))
@@ -491,9 +495,9 @@
 	  (manage-child rc)))))
 
 (defun show-slot-list (object slot-list view allocp label)
-  (let ((label (create-label-gadget view "slotLabel"
-				    :label-string label
-				    :font-list *header-font*))
+  (let ((label (with-compound-strings ((label-string label +header-tag+))
+		 (create-label-gadget view "slotLabel"
+				      :label-string label-string)))
 	(widgets))
     (dolist (slotd slot-list)
       (with-slots ((slot pcl::name) (allocation pcl::allocation))
