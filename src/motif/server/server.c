@@ -105,6 +105,7 @@ void greet_client(int socket) {
   short byte;
   int result;
   char *dpy_name,*app_class,*app_name;
+  StringTable fallback_resources;
   message_t first;
 
   /* Read byte-swap thing */
@@ -128,6 +129,10 @@ void greet_client(int socket) {
   toolkit_read_value(first,&dpy_name,XtRString);
   toolkit_read_value(first,&app_name,XtRString);
   toolkit_read_value(first,&app_class,XtRString);
+
+  toolkit_read_value(first,&fallback_resources,XtRStringTable);
+  if (fallback_resources.length > 0)
+    XtAppSetFallbackResources(app_context, fallback_resources.data);
 
   global_app_class = XtNewString(app_class);
   global_app_name  = XtNewString(app_name);

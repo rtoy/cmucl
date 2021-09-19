@@ -146,7 +146,7 @@
 	(sleep 1))
       (setf *local-motif-server* process))))
 
-(defun open-motif-connection (host dpy-name app-name app-class &optional pid)
+(defun open-motif-connection (host dpy-name app-name app-class &optional fallback-resources pid)
   (declare (simple-string app-name app-class))
   (unless (or host pid)
     (verify-local-server-exists))
@@ -170,6 +170,7 @@
     (toolkit-write-value greeting display)
     (toolkit-write-value greeting app-name)
     (toolkit-write-value greeting app-class)
+    (toolkit-write-value greeting fallback-resources :string-table)
     (transmit-message greeting socket)
     (destroy-message greeting)
 

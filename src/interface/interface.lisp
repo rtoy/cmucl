@@ -72,6 +72,7 @@
       (let ((con (xt::open-motif-connection
 		  *default-server-host* *default-display*
 		  "lisp" "Lisp"
+		  nil ;; fallback resources go here.
 		  (and *system-motif-server*
 		       (ext:process-pid *system-motif-server*)))))
 	(with-motif-connection (con)

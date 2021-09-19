@@ -491,10 +491,13 @@ void message_read_string_table(message_t m,StringTable *items,int tag,int len)
   int i;
 
   items->length = len;
-  items->data = (char **)XtMalloc( len*sizeof(char *) );
+  /* We make this 1 larger than len in case the caller needs a
+     NULL-terminated string list, and always NULL-terminate. */
+  items->data = (char **)XtMalloc( (1+len)*sizeof(char *) );
   register_garbage(items->data,GarbageData);
   for(i=0;i<len;i++)
     toolkit_read_value(m,&(items->data[i]),XtRString);
+  items->data[len] = NULL;
 }
 
 void message_read_xm_string_table(message_t m,StringTable *items,

@@ -100,11 +100,13 @@
 			      (application-name "lisp")
 			      (server-host *default-server-host*)
 			      (display *default-display*)
-			      (sync-clx *debug-mode*))
+			      (sync-clx *debug-mode*)
+                              (fallback-resources))
   (declare (ignore sync-clx))
   (let ((connection (open-motif-connection server-host display
 					   application-name
-					   application-class)))
+					   application-class
+                                           fallback-resources)))
     (with-motif-connection (connection)
       (apply init-function init-args))
     connection))
