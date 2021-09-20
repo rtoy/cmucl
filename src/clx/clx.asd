@@ -31,92 +31,92 @@
 (defclass legacy-file (static-file) ())
 
 (defsystem #:clx
-    :description "An implementation of the X Window System protocol in Lisp."
-    :author "Texas Instruments Incorporated.
+  :description "An implementation of the X Window System protocol in Lisp."
+  :author "Texas Instruments Incorporated.
 Franz Inc, Berkeley, Ca.
 Independent FOSS developers"
-    :maintainer "sharplispers"
-    :license "MIT"
-    :depends-on (#+(or ecl sbcl) sb-bsd-sockets)
-    :version "0.7.5"
-    :serial t
-    :default-component-class clx-source-file
-    :in-order-to ((test-op (test-op "clx/test")))
-    :components
-    ((:file "package")
-     (:file "depdefs")
-     (:file "clx")
-     #-(or openmcl allegro lispworks) (:file "dependent")
-     #+openmcl (:file "dep-openmcl")
-     #+allegro (:file "dep-allegro")
-     #+lispworks (:file "dep-lispworks")
-     (:file "macros")
-     (:file "bufmac")
-     (:file "buffer")
-     (:file "display")
-     (:file "gcontext")
-     (:file "input")
-     (:file "requests")
-     (:file "fonts")
-     (:file "graphics")
-     (:file "text")
-     (:file "attributes")
-     (:file "translate")
-     (:file "keysyms")
-     (:file "manager")
-     (:file "image")
-     (:file "resource")
-     #+allegro
-     (:file "excldep" :pathname "excldep.lisp")
-     (:module "extensions"
-	      :components
-	      ((:file "shape")
-	       (:file "big-requests")
-	       (:file "xvidmode")
-	       (:xrender-source-file "xrender")
-               (:file "glx")
-               (:file "gl" :depends-on ("glx"))
-	       (:file "dpms")
-               (:file "xtest")
-               (:file "screensaver")
-               (:file "randr")
-               (:file "xinerama")
-               (:file "dbe")
-               (:file "xc-misc")
-               (:file "dri2")
-               (:file "composite")))
-     (:static-file "NEWS")
-     (:static-file "CHANGES")
-     (:static-file "README.md")
-     (:static-file "README-R5")
-     (:legacy-file "exclMakefile")
-     (:legacy-file "exclREADME")
-     (:legacy-file "exclcmac" :pathname "exclcmac.lisp")
-     (:legacy-file "excldepc" :pathname "excldep.c")
-     (:legacy-file "sockcl" :pathname "sockcl.lisp")
-     (:legacy-file "socket" :pathname "socket.c")
-     (:legacy-file "defsystem" :pathname "defsystem.lisp")
-     (:legacy-file "provide" :pathname "provide.lisp")
-     (:legacy-file "cmudep" :pathname "cmudep.lisp")
-     (:module "manual"
-	      ;; TODO: teach asdf how to process texinfo files
-	      :components ((:static-file "clx.texinfo")))
-     (:module "debug"
-	      :default-component-class legacy-file
-	      :components
-	      ((:file "debug" :pathname "debug.lisp")
-	       (:file "describe" :pathname "describe.lisp")
-	       (:file "event-test" :pathname "event-test.lisp")
-	       (:file "keytrans" :pathname "keytrans.lisp")
-	       (:file "trace" :pathname "trace.lisp")
-	       (:file "util" :pathname "util.lisp")))))
+  :maintainer "sharplispers"
+  :license "MIT"
+  :depends-on (#+(or ecl sbcl) sb-bsd-sockets)
+  :version "0.7.5"
+  :serial t
+  :default-component-class clx-source-file
+  :in-order-to ((test-op (test-op "clx/test")))
+  :components
+  ((:file "package")
+   (:file "depdefs")
+   (:file "clx")
+   #-(or openmcl allegro lispworks) (:file "dependent")
+   #+openmcl (:file "dep-openmcl")
+   #+allegro (:file "dep-allegro")
+   #+lispworks (:file "dep-lispworks")
+   (:file "macros")
+   (:file "bufmac")
+   (:file "buffer")
+   (:file "display")
+   (:file "gcontext")
+   (:file "input")
+   (:file "requests")
+   (:file "fonts")
+   (:file "graphics")
+   (:file "text")
+   (:file "attributes")
+   (:file "translate")
+   (:file "keysyms")
+   (:file "manager")
+   (:file "image")
+   (:file "resource")
+   #+allegro (:file "excldep")
+   (:module "extensions"
+	    :components
+	    ((:file "shape")
+	     (:file "big-requests")
+	     (:file "xvidmode")
+	     (:xrender-source-file "xrender")
+             (:file "glx")
+             (:file "gl" :depends-on ("glx"))
+	     (:file "dpms")
+             (:file "xtest")
+             (:file "screensaver")
+             (:file "randr")
+             (:file "xinerama")
+             (:file "dbe")
+             (:file "xc-misc")
+             (:file "dri2")
+             (:file "composite")))
+   (:static-file "NEWS")
+   (:static-file "CHANGES")
+   (:static-file "README.md")
+   (:static-file "README-R5")
+   (:legacy-file "exclMakefile")
+   (:legacy-file "exclREADME")
+   (:legacy-file "exclcmac" :pathname "exclcmac.lisp")
+   (:legacy-file "excldepc" :pathname "excldep.c")
+   (:legacy-file "sockcl" :pathname "sockcl.lisp")
+   (:legacy-file "socket" :pathname "socket.c")
+   (:legacy-file "defsystem" :pathname "defsystem.lisp")
+   (:legacy-file "provide" :pathname "provide.lisp")
+   (:legacy-file "cmudep" :pathname "cmudep.lisp")
+   (:module "manual"
+	    ;; TODO: teach asdf how to process texinfo files
+	    :components ((:static-file "clx.texinfo")))
+   (:module "debug"
+	    :default-component-class legacy-file
+	    :components
+	    ((:file "debug" :pathname "debug.lisp")
+	     (:file "describe" :pathname "describe.lisp")
+	     (:file "event-test" :pathname "event-test.lisp")
+	     (:file "keytrans" :pathname "keytrans.lisp")
+	     (:file "trace" :pathname "trace.lisp")
+	     (:file "util" :pathname "util.lisp")))))
 
 (defsystem #:clx/demo
   :depends-on ("clx")
   :components
   ((:module "demo"
 	    :components
-	    ((:file "bezier")
+	    ((:file "menu")
+             (:file "bezier")
 	     (:file "beziertest" :depends-on ("bezier"))
 	     (:file "clclock")
 	     (:file "clipboard")
@@ -126,7 +126,6 @@ Independent FOSS developers"
 	     ;; deletion notes.  Find out why, and either fix or
 	     ;; workaround the problem.
 	     (:file "mandel")
-	     (:file "menu")
 	     (:file "zoid")
 	     (:file "image")
 	     (:file "trapezoid" :depends-on ("zoid"))))))
@@ -174,42 +173,3 @@ Independent FOSS developers"
         (progv (list sadx-var) (list t)
           (call-next-method))
         (call-next-method))))
-
-#+sbcl
-(defmethod perform :around (o (f clx-source-file))
-  ;; SBCL signals an error if DEFCONSTANT is asked to redefine a
-  ;; constant unEQLly.  For CLX's purposes, however, we are defining
-  ;; structured constants (lists and arrays) not for EQLity, but for
-  ;; the purposes of constant-folding operations such as (MEMBER FOO
-  ;; +BAR+), so it is safe to abort the redefinition provided the
-  ;; structured data is sufficiently equal.
-  (handler-bind
-      ((sb-ext:defconstant-uneql
-	   (lambda (c)
-	     ;; KLUDGE: this really means "don't warn me about
-	     ;; efficiency of generic array access, please"
-	     (declare (optimize (sb-ext:inhibit-warnings 3)))
-	     (let ((old (sb-ext:defconstant-uneql-old-value c))
-		   (new (sb-ext:defconstant-uneql-new-value c)))
-	       (typecase old
-		 (list (when (equal old new) (abort c)))
-		 (string (when (and (typep new 'string)
-				    (string= old new))
-			   (abort c)))
-		 (simple-vector
-		  (when (and (typep new 'simple-vector)
-			     (= (length old) (length new))
-			     (every #'eql old new))
-		    (abort c)))
-		 (array
-		  (when (and (typep new 'array)
-			     (equal (array-dimensions old)
-				    (array-dimensions new))
-			     (equal (array-element-type old)
-				    (array-element-type new))
-			     (dotimes (i (array-total-size old) t)
-			       (unless (eql (row-major-aref old i)
-					    (row-major-aref new i))
-				 (return nil))))
-		    (abort c))))))))
-    (call-next-method)))
