@@ -107,11 +107,6 @@
   \"contrib-games-feebs\", \"contrib-hist\", \"contrib-psgraph\",
   \"contrib-ops\", \"contrib-embedded-c\", \"contrib-sprof\", and
   \"contrib-packed-sse2\". "
-  ;; First, load asdf if it's not already loaded.  This is needed to
-  ;; load easily the contribs that use asdf.  There are no contribs
-  ;; that use defsystem, so we won't autoload defsystem.
-  (unless (featurep :asdf)
-    (load "modules:asdf/asdf"))
   (let ((saved-modules (copy-list *modules*))
         (module-name (module-name-string module-name)))
     (unless (member module-name *modules* :test #'string=)
@@ -124,8 +119,14 @@
 	    ;; any asdf version, if asdf is loaded.
 	    (or (some (lambda (p) (funcall p module-name))
                       *cmucl-provider-functions*)
-		(some (lambda (p) (funcall p module-name))
-		      *module-provider-functions*)
+		(progn
+		  ;; Load asdf if it's not already loaded.  This is needed to
+		  ;; load easily the contribs that use asdf.  There are no contribs
+		  ;; that use defsystem, so we won't autoload defsystem.
+		  (unless (featurep :asdf)
+		    (load "modules:asdf/asdf"))
+		  (some (lambda (p) (funcall p module-name))
+			*module-provider-functions*))
 		(error (intl:gettext "Don't know how to load ~A") module-name)))))
     (set-difference *modules* saved-modules)))
 
