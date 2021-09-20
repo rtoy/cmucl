@@ -10398,6 +10398,12 @@ msgid "*load-verbose* is bound to this before loading files."
 msgstr ""
 
 #: src/code/module.lisp
+msgid ""
+"Provider functions for cmucl modules and libraries.  These are\n"
+"  searched first before trying *module-provider-functions*"
+msgstr ""
+
+#: src/code/module.lisp
 msgid "See function documentation for REQUIRE"
 msgstr ""
 
