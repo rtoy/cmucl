@@ -43,8 +43,11 @@ public domain.
     * ~~#98~~ fstpd is not an Intel instruction; disassemble as `fstp dword ptr [addr]`
     * ~~#100~~ ldb prints out unicode base-chars correctly instead of just the low 8 bits.
     * ~~#103~~ RANDOM-MT19937-UPDATE assembly routine still exists
+    * ~~#104~~ Single-stepping broken (fixed via #97).
     * ~~#107~~ Replace u_int8_t with uint8_t
     * ~~#108~~ Update ASDF
+    * ~~#112~~ CLX can't connect to X server via inet sockets
+    * ~~#113~~ REQUIRE on contribs can pull in the wrong things vai ASDF.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
