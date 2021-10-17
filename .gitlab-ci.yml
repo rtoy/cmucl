@@ -161,8 +161,8 @@ osx:ansi-test:
     - job: osx:build
       artifacts: true
   before_script:
-    - git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
-    - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
+    - /opt/local/bin/git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
+    - (cd ansi-test; /opt/local/bin/git checkout rtoy-cmucl-expected-failures)
   script:
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
