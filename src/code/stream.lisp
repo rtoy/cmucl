@@ -1928,7 +1928,10 @@ output to Output-stream"
 	 (let ((found (position #\newline string :test #'char=
 				:end end :from-end t)))
 	   (if found
-	       (- end (the fixnum found))
+	       ;; END points to where the next character goes, not the
+	       ;; last character.  FOUND is where the newline is.
+	       ;; Subtract 1 to adjust for the difference.
+	       (- end (the fixnum found) 1)
 	       current)))))
      (:element-type 'base-char)))
 

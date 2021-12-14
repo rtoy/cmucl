@@ -556,3 +556,17 @@
   (assert-equalp
    3.0380154777955097d205
    (expt 1.7976931348623157d308 0.6666)))
+
+(define-test issue.121
+    (:tag :issues)
+  ;; Output should only have one newline character in it.  Previously,
+  ;; we printed two.
+  (assert-equalp
+   (concatenate 'string "xxx" (string #\Newline))
+   (let ((a (make-array 0 :element-type 'character :fill-pointer 0
+                              :adjustable t)))
+           (with-output-to-string (s a)
+             (format s "xxx")
+             (terpri s)
+             (fresh-line s))
+           a)))
