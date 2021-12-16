@@ -48,6 +48,7 @@ public domain.
     * ~~#108~~ Update ASDF
     * ~~#112~~ CLX can't connect to X server via inet sockets
     * ~~#113~~ REQUIRE on contribs can pull in the wrong things vai ASDF.
+    * ~~#121~~ Wrong column index in FILL-POINTER-OUTPUT-STREAM
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
