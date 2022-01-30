@@ -405,7 +405,11 @@ interrupt_maybe_gc(HANDLER_ARGS)
 * Noise to install handlers.                                     *
 \****************************************************************/
 
+#if defined(__linux__)
+char* altstack;
+#else
 char altstack[SIGNAL_STACK_SIZE];
+#endif
 
 void
 interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
@@ -431,6 +435,9 @@ interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
 #if defined(SIGNAL_STACK_START)
 	sigstack.ss_sp = (void *) SIGNAL_STACK_START;
 #else
+#if defined(__linux__)
+        altstack = malloc(SIGSTKSZ);
+#endif
 	sigstack.ss_sp = (void *) altstack;
 #endif
 	sigstack.ss_flags = 0;
