@@ -406,7 +406,7 @@ interrupt_maybe_gc(HANDLER_ARGS)
 \****************************************************************/
 
 #if defined(__linux__)
-char* altstack;
+char* altstack = NULL;
 #else
 char altstack[SIGNAL_STACK_SIZE];
 #endif
@@ -436,7 +436,14 @@ interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
 	sigstack.ss_sp = (void *) SIGNAL_STACK_START;
 #else
 #if defined(__linux__)
-        altstack = malloc(SIGSTKSZ);
+        /*
+         * For gcc 11.2 (clang 13.0), we need to allocate altstack
+         * dynamically.  Do this here, but only if we haven't already
+         * allocated space.
+         */
+        if (altstack == NULL) {
+            altstack = malloc(SIGSTKSZ);
+        }
 #endif
 	sigstack.ss_sp = (void *) altstack;
 #endif
