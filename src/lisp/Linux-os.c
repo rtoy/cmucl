@@ -17,6 +17,11 @@
  *
  */
 
+#if defined(__linux__)
+/* Needed to define REG_foo to get indices into the mcontext gregs. */
+#define _GNU_SOURCE
+#endif
+
 #include <stdio.h>
 #include <sys/param.h>
 #include <sys/file.h>
@@ -198,6 +203,8 @@ os_sigcontext_reg(ucontext_t *scp, int offset)
 	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESI];
     case 14:
 	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDI];
+    case 16:
+        return (unsigned long*) &scp->uc_mcontext.gregs[REG_EFL];
     }
     return NULL;
 }
