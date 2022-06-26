@@ -17,11 +17,8 @@
  *
  */
 
-#if defined(__linux__)
-/* Needed to define REG_foo to get indices into the mcontext gregs. */
 #define _GNU_SOURCE
-#endif
-
+#include <signal.h>  /* for reg_* constants in uc_mcontext.gregs  */
 #include <stdio.h>
 #include <sys/param.h>
 #include <sys/file.h>
