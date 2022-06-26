@@ -17,8 +17,8 @@
  *
  */
 
-#define _GNU_SOURCE
-#include <signal.h>  /* for reg_* constants in uc_mcontext.gregs  */
+#define _GNU_SOURCE /* for reg_* constants in uc_mcontext.gregs  */
+#include <signal.h>
 #include <stdio.h>
 #include <sys/param.h>
 #include <sys/file.h>
