@@ -30,6 +30,7 @@
 #define reg_EBP REG(10)
 #define reg_ESI REG(12)
 #define reg_EDI REG(14)
+#define reg_EFL REG(16)
 
 #define reg_SP reg_ESP
 #define reg_FP reg_EBP
@@ -60,7 +61,7 @@
 #define SC_EFLAGS(sc) ((sc)->uc_mcontext->ss.eflags)
 #endif
 #elif defined(__linux__)
-#define SC_EFLAGS(sc) ((sc)->uc_mcontext.gregs[REG_EFL])
+#define SC_EFLAGS(sc) SC_REG(sc, reg_EFL)
 #elif defined(__NetBSD__)
 #define SC_EFLAGS(sc) ((sc)->uc_mcontext.__gregs[_REG_EFL])
 #elif defined(SOLARIS)
