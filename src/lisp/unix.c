@@ -12,7 +12,7 @@
 
 int unix_stat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
               uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-              long *atime, long *mtime, long *ctime,
+              time_t *atime, time_t *mtime, time_t *ctime,
               long *blksize, off_t *blocks)
 {
     int rc;
@@ -54,7 +54,7 @@ int unix_stat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *n
 
 int unix_fstat(int fd, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
                uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-               long *atime, long *mtime, long *ctime,
+               time_t *atime, time_t *mtime, time_t *ctime,
                long *blksize, off_t *blocks)
 {
     int rc;
@@ -81,7 +81,7 @@ int unix_fstat(int fd, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
 
 int unix_lstat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
                uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-               long *atime, long *mtime, long *ctime,
+               time_t *atime, time_t *mtime, time_t *ctime,
                long *blksize, off_t *blocks)
 {
     int rc;
