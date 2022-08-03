@@ -497,14 +497,14 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Unix-lstat is similar to unix-stat except the specified\n"
-"   file must be a symbolic link."
+"Unix-fstat is similar to unix-stat except the file is specified\n"
+"   by the file descriptor fd."
 msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Unix-fstat is similar to unix-stat except the file is specified\n"
-"   by the file descriptor fd."
+"Unix-lstat is similar to unix-stat except the specified\n"
+"   file must be a symbolic link."
 msgstr ""
 
 #: src/code/unix.lisp
