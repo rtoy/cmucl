@@ -53,12 +53,9 @@
 (def-alien-type u-int32-t unsigned-int)
 
 (def-alien-type ino-t
-    #+netbsd u-int64-t
+    #+(or netbsd linux darwin) u-int64-t
     #+alpha unsigned-int
-    #-(or alpha netbsd) unsigned-long)
-
-#+linux
-(def-alien-type ino64-t u-int64-t)
+    #-(or alpha netbsd linux darwin) unsigned-long)
 
 (def-alien-type size-t
     #-(or linux alpha) long
@@ -1300,7 +1297,7 @@
     #+glibc2.1
     (d-ino ino-t)                       ; inode number of entry
     #-glibc2.1
-    (d-ino ino64-t)                     ; inode number of entry
+    (d-ino ino-t)                     ; inode number of entry
     (d-off off-t)                       ; offset of next disk directory entry
     (d-reclen unsigned-short)		; length of this record
     (d_type unsigned-char)
@@ -1346,15 +1343,16 @@
     (d-name (array char 256))))		; name must be no longer than this
 
 
+;; unix-stat and friends
 (macrolet
     ((call-stat (c-func-name first-arg-type first-arg)
        ;; Call the stat function named C-FUNC-NAME.  The type of the
-       ;; first arg is FIRST-ARG_TYPE and FIRST-ARG is the first arg
+       ;; first arg is FIRST-ARG-TYPE and FIRST-ARG is the first arg
        ;; to the stat function.  fstat is different from stat and
        ;; lstat since it takes an fd for the first arg instead of
        ;; string.
        `(with-alien ((dev dev-t)
-		     (ino ino64-t)
+		     (ino ino-t)
 		     (mode mode-t)
 		     (nlink nlink-t)
 		     (uid uid-t)
@@ -1372,7 +1370,7 @@
 				 (function int
 					   ,first-arg-type
 					   (* dev-t)
-					   (* ino64-t)
+					   (* ino-t)
 					   (* mode-t)
 					   (* nlink-t)
 					   (* uid-t)
