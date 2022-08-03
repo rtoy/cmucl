@@ -74,8 +74,7 @@
 
 (def-alien-type dev-t
     #-(or alpha svr4 bsd linux) short
-    #+(and linux (not amd64)) uquad-t
-    #+(and linux amd64) u-int64-t
+    #+linux u-int64-t
     #+netbsd u-int64-t
     #+alpha int
     #+(and (not linux) (not netbsd) (or bsd svr4)) unsigned-long)
@@ -1591,10 +1590,10 @@
 	       (gid gid-t)
 	       (rdev dev-t)
 	       (size off-t)
-	       (atime (struct timespec-t))
-	       (mtime (struct timespec-t))
-	       (ctime (struct timespec-t))
-	       (blksize off-t)
+	       (atime c-call:long)
+	       (mtime c-call:long)
+	       (ctime c-call:long)
+	       (blksize c-call:long)
 	       (blocks off-t))
     (let ((result
 	    (alien-funcall
@@ -1609,10 +1608,10 @@
 				     (* gid-t)
 				     (* dev-t)
 				     (* off-t)
-				     (* (struct timespec-t))
-				     (* (struct timespec-t))
-				     (* (struct timespec-t))
-				     (* off-t)
+				     (* c-call:long)
+				     (* c-call:long)
+				     (* c-call:long)
+				     (* c-call:long)
 				     (* off-t)))
 	     (%name->file name)
 	     (addr dev)
@@ -1630,19 +1629,20 @@
 	     (addr blocks))))
       (if (eql -1 result)
 	  (values nil (unix-errno))
-	  (flet ((make-64bit (x)
-		   (+ (alien:deref x 0)
-		      (ash (alien:deref x 1) 32)))
-		 (make-time (x)
-		   (alien:slot x 'unix::ts-sec)))
-	    (values t
-		    (make-64bit dev) ino mode nlink uid gid
-		    (make-64bit rdev)
-		    size
-		    (make-time atime)
-		    (make-time mtime)
-		    (make-time ctime)
-		    blksize blocks))))))
+	  (values t
+		  dev
+		  ino
+		  mode
+		  nlink
+		  uid
+		  gid
+		  rdev
+		  size
+		  atime
+		  mtime
+		  ctime
+		  blksize
+		  blocks)))))
 
 (defun unix-lstat (name)
   "Unix-lstat is similar to unix-stat except the specified
@@ -1656,10 +1656,10 @@
 	       (gid gid-t)
 	       (rdev dev-t)
 	       (size off-t)
-	       (atime (struct timespec-t))
-	       (mtime (struct timespec-t))
-	       (ctime (struct timespec-t))
-	       (blksize off-t)
+	       (atime c-call:long)
+	       (mtime c-call:long)
+	       (ctime c-call:long)
+	       (blksize c-call:long)
 	       (blocks off-t))
     (let ((result
 	    (alien-funcall
@@ -1674,10 +1674,10 @@
 				     (* gid-t)
 				     (* dev-t)
 				     (* off-t)
-				     (* (struct timespec-t))
-				     (* (struct timespec-t))
-				     (* (struct timespec-t))
-				     (* off-t)
+				     (* c-call:long)
+				     (* c-call:long)
+				     (* c-call:long)
+				     (* c-call:long)
 				     (* off-t)))
 	     (%name->file name)
 	     (addr dev)
@@ -1695,19 +1695,20 @@
 	     (addr blocks))))
       (if (eql -1 result)
 	  (values nil (unix-errno))
-	  (flet ((make-64bit (x)
-		   (+ (alien:deref x 0)
-		      (ash (alien:deref x 1) 32)))
-		 (make-time (x)
-		   (alien:slot x 'unix::ts-sec)))
-	    (values t
-		    (make-64bit dev) ino mode nlink uid gid
-		    (make-64bit rdev)
-		    size
-		    (make-time atime)
-		    (make-time mtime)
-		    (make-time ctime)
-		    blksize blocks))))))
+	  (values t
+		  dev
+		  ino
+		  mode
+		  nlink
+		  uid
+		  gid
+		  rdev
+		  size
+		  atime
+		  mtime
+		  ctime
+		  blksize
+		  blocks)))))
 
 (defun unix-fstat (fd)
   _N"Unix-fstat is similar to unix-stat except the file is specified
@@ -1721,10 +1722,10 @@
 	       (gid gid-t)
 	       (rdev dev-t)
 	       (size off-t)
-	       (atime (struct timespec-t))
-	       (mtime (struct timespec-t))
-	       (ctime (struct timespec-t))
-	       (blksize off-t)
+	       (atime c-call:long)
+	       (mtime c-call:long)
+	       (ctime c-call:long)
+	       (blksize c-call:long)
 	       (blocks off-t))
     (let ((result
 	    (alien-funcall
@@ -1739,10 +1740,10 @@
 				     (* gid-t)
 				     (* dev-t)
 				     (* off-t)
-				     (* (struct timespec-t))
-				     (* (struct timespec-t))
-				     (* (struct timespec-t))
-				     (* off-t)
+				     (* c-call:long)
+				     (* c-call:long)
+				     (* c-call:long)
+				     (* c-call:long)
 				     (* off-t)))
 	     fd
 	     (addr dev)
@@ -1760,19 +1761,20 @@
 	     (addr blocks))))
       (if (eql -1 result)
 	  (values nil (unix-errno))
-	  (flet ((make-64bit (x)
-		   (+ (alien:deref x 0)
-		      (ash (alien:deref x 1) 32)))
-		 (make-time (x)
-		   (alien:slot x 'unix::ts-sec)))
-	    (values t
-		    (make-64bit dev) ino mode nlink uid gid
-		    (make-64bit rdev)
-		    size
-		    (make-time atime)
-		    (make-time mtime)
-		    (make-time ctime)
-		    blksize blocks))))))
+	  (values t
+		  dev
+		  ino
+		  mode
+		  nlink
+		  uid
+		  gid
+		  rdev
+		  size
+		  atime
+		  mtime
+		  ctime
+		  blksize
+		  blocks)))))
 )
 
 ;;; 64-bit versions of stat and friends

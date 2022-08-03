@@ -2,13 +2,18 @@
  * C interfaces to unix syscalls
  */
 
+/* We want to support large files */
+
+#define _LARGEFILE_SOURCE
+#define _FILE_OFFSET_BITS 64
+
 #include <stdio.h>
 #include <sys/stat.h>
 
 int unix_stat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
               uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-              struct timespec *atime, struct timespec *mtime, struct timespec *ctime,
-              long *blksize, long *blocks)
+              long *atime, long *mtime, long *ctime,
+              long *blksize, off_t *blocks)
 {
     int rc;
     struct stat buf;
@@ -38,9 +43,9 @@ int unix_stat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *n
     *gid = buf.st_gid;
     *rdev = buf.st_rdev;
     *size = buf.st_size;
-    *atime = buf.st_atim;
-    *mtime = buf.st_mtim;
-    *ctime = buf.st_ctim;
+    *atime = buf.st_atime;
+    *mtime = buf.st_mtime;
+    *ctime = buf.st_ctime;
     *blksize = buf.st_blksize;
     *blocks = buf.st_blocks;
 
@@ -49,8 +54,8 @@ int unix_stat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *n
 
 int unix_fstat(int fd, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
                uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-               struct timespec *atime, struct timespec *mtime, struct timespec *ctime,
-               long *blksize, long *blocks)
+               long *atime, long *mtime, long *ctime,
+               long *blksize, off_t *blocks)
 {
     int rc;
     struct stat buf;
@@ -65,9 +70,9 @@ int unix_fstat(int fd, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
     *gid = buf.st_gid;
     *rdev = buf.st_rdev;
     *size = buf.st_size;
-    *atime = buf.st_atim;
-    *mtime = buf.st_mtim;
-    *ctime = buf.st_ctim;
+    *atime = buf.st_atime;
+    *mtime = buf.st_mtime;
+    *ctime = buf.st_ctime;
     *blksize = buf.st_blksize;
     *blocks = buf.st_blocks;
 
@@ -76,8 +81,8 @@ int unix_fstat(int fd, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
 
 int unix_lstat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
                uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-               struct timespec *atime, struct timespec *mtime, struct timespec *ctime,
-               long *blksize, long *blocks)
+               long *atime, long *mtime, long *ctime,
+               long *blksize, off_t *blocks)
 {
     int rc;
     struct stat buf;
@@ -92,9 +97,9 @@ int unix_lstat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *
     *gid = buf.st_gid;
     *rdev = buf.st_rdev;
     *size = buf.st_size;
-    *atime = buf.st_atim;
-    *mtime = buf.st_mtim;
-    *ctime = buf.st_ctim;
+    *atime = buf.st_atime;
+    *mtime = buf.st_mtime;
+    *ctime = buf.st_ctime;
     *blksize = buf.st_blksize;
     *blocks = buf.st_blocks;
 
