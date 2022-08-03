@@ -1572,210 +1572,96 @@
 ;;
 ;; This should be updated so that all OSes do this.
 #+linux
-(progn
-(defun unix-stat (name)
-  _N"Unix-stat retrieves information about the specified
+(macrolet
+    ((call-stat (c-func-name first-arg-type first-arg)
+       ;; Call the stat function named C-FUNC-NAME.  The type of the
+       ;; first arg is FIRST-ARG_TYPE and FIRST-ARG is the first arg
+       ;; to the stat function.  fstat is different from stat and
+       ;; lstat since it takes an fd for the first arg instead of
+       ;; string.
+       `(with-alien ((dev dev-t)
+		     (ino ino64-t)
+		     (mode mode-t)
+		     (nlink nlink-t)
+		     (uid uid-t)
+		     (gid gid-t)
+		     (rdev dev-t)
+		     (size off-t)
+		     (atime time-t)
+		     (mtime time-t)
+		     (ctime time-t)
+		     (blksize c-call:long)
+		     (blocks off-t))
+	  (let ((result
+		  (alien-funcall
+		   (extern-alien ,c-func-name
+				 (function int
+					   ,first-arg-type
+					   (* dev-t)
+					   (* ino64-t)
+					   (* mode-t)
+					   (* nlink-t)
+					   (* uid-t)
+					   (* gid-t)
+					   (* dev-t)
+					   (* off-t)
+					   (* time-t)
+					   (* time-t)
+					   (* time-t)
+					   (* c-call:long)
+					   (* off-t)))
+		   ,first-arg
+		   (addr dev)
+		   (addr ino)
+		   (addr mode)
+		   (addr nlink)
+		   (addr uid)
+		   (addr gid)
+		   (addr rdev)
+		   (addr size)
+		   (addr atime)
+		   (addr mtime)
+		   (addr ctime)
+		   (addr blksize)
+		   (addr blocks))))
+	    (if (eql -1 result)
+		(values nil (unix-errno))
+		(values t
+			dev
+			ino
+			mode
+			nlink
+			uid
+			gid
+			rdev
+			size
+			atime
+			mtime
+			ctime
+			blksize
+			blocks))))))
+  (defun unix-stat (name)
+    _N"Unix-stat retrieves information about the specified
    file returning them in the form of multiple values.
    See the UNIX Programmer's Manual for a description
    of the values returned.  If the call fails, then NIL
    and an error number is returned instead."
-  (declare (type unix-pathname name))
-  (when (string= name "")
-    (setf name "."))
-  (with-alien ((dev dev-t)
-	       (ino ino64-t)
-	       (mode mode-t)
-	       (nlink nlink-t)
-	       (uid uid-t)
-	       (gid gid-t)
-	       (rdev dev-t)
-	       (size off-t)
-	       (atime time-t)
-	       (mtime time-t)
-	       (ctime time-t)
-	       (blksize c-call:long)
-	       (blocks off-t))
-    (let ((result
-	    (alien-funcall
-	     (extern-alien "unix_stat"
-			   (function int
-				     c-call::c-string
-				     (* dev-t)
-				     (* ino64-t)
-				     (* mode-t)
-				     (* nlink-t)
-				     (* uid-t)
-				     (* gid-t)
-				     (* dev-t)
-				     (* off-t)
-				     (* time-t)
-				     (* time-t)
-				     (* time-t)
-				     (* c-call:long)
-				     (* off-t)))
-	     (%name->file name)
-	     (addr dev)
-	     (addr ino)
-	     (addr mode)
-	     (addr nlink)
-	     (addr uid)
-	     (addr gid)
-	     (addr rdev)
-	     (addr size)
-	     (addr atime)
-	     (addr mtime)
-	     (addr ctime)
-	     (addr blksize)
-	     (addr blocks))))
-      (if (eql -1 result)
-	  (values nil (unix-errno))
-	  (values t
-		  dev
-		  ino
-		  mode
-		  nlink
-		  uid
-		  gid
-		  rdev
-		  size
-		  atime
-		  mtime
-		  ctime
-		  blksize
-		  blocks)))))
+    (declare (type unix-pathname name))
+    (when (string= name "")
+      (setf name "."))
+    (call-stat "unix_stat" c-call:c-string (%name->file name)))
 
-(defun unix-lstat (name)
-  "Unix-lstat is similar to unix-stat except the specified
+  (defun unix-lstat (name)
+    "Unix-lstat is similar to unix-stat except the specified
    file must be a symbolic link."
-  (declare (type unix-pathname name))
-  (with-alien ((dev dev-t)
-	       (ino ino64-t)
-	       (mode mode-t)
-	       (nlink nlink-t)
-	       (uid uid-t)
-	       (gid gid-t)
-	       (rdev dev-t)
-	       (size off-t)
-	       (atime time-t)
-	       (mtime time-t)
-	       (ctime time-t)
-	       (blksize c-call:long)
-	       (blocks off-t))
-    (let ((result
-	    (alien-funcall
-	     (extern-alien "unix_lstat"
-			   (function int
-				     c-call::c-string
-				     (* dev-t)
-				     (* ino64-t)
-				     (* mode-t)
-				     (* nlink-t)
-				     (* uid-t)
-				     (* gid-t)
-				     (* dev-t)
-				     (* off-t)
-				     (* time-t)
-				     (* time-t)
-				     (* time-t)
-				     (* c-call:long)
-				     (* off-t)))
-	     (%name->file name)
-	     (addr dev)
-	     (addr ino)
-	     (addr mode)
-	     (addr nlink)
-	     (addr uid)
-	     (addr gid)
-	     (addr rdev)
-	     (addr size)
-	     (addr atime)
-	     (addr mtime)
-	     (addr ctime)
-	     (addr blksize)
-	     (addr blocks))))
-      (if (eql -1 result)
-	  (values nil (unix-errno))
-	  (values t
-		  dev
-		  ino
-		  mode
-		  nlink
-		  uid
-		  gid
-		  rdev
-		  size
-		  atime
-		  mtime
-		  ctime
-		  blksize
-		  blocks)))))
+    (declare (type unix-pathname name))
+    (call-stat "unix_lstat" c-call:c-string (%name->file name)))
 
-(defun unix-fstat (fd)
-  _N"Unix-fstat is similar to unix-stat except the file is specified
+  (defun unix-fstat (fd)
+    _N"Unix-fstat is similar to unix-stat except the file is specified
    by the file descriptor fd."
-  (declare (type unix-fd fd))
-  (with-alien ((dev dev-t)
-	       (ino ino64-t)
-	       (mode mode-t)
-	       (nlink nlink-t)
-	       (uid uid-t)
-	       (gid gid-t)
-	       (rdev dev-t)
-	       (size off-t)
-	       (atime time-t)
-	       (mtime time-t)
-	       (ctime time-t)
-	       (blksize c-call:long)
-	       (blocks off-t))
-    (let ((result
-	    (alien-funcall
-	     (extern-alien "unix_fstat"
-			   (function int
-				     int
-				     (* dev-t)
-				     (* ino64-t)
-				     (* mode-t)
-				     (* nlink-t)
-				     (* uid-t)
-				     (* gid-t)
-				     (* dev-t)
-				     (* off-t)
-				     (* time-t)
-				     (* time-t)
-				     (* time-t)
-				     (* c-call:long)
-				     (* off-t)))
-	     fd
-	     (addr dev)
-	     (addr ino)
-	     (addr mode)
-	     (addr nlink)
-	     (addr uid)
-	     (addr gid)
-	     (addr rdev)
-	     (addr size)
-	     (addr atime)
-	     (addr mtime)
-	     (addr ctime)
-	     (addr blksize)
-	     (addr blocks))))
-      (if (eql -1 result)
-	  (values nil (unix-errno))
-	  (values t
-		  dev
-		  ino
-		  mode
-		  nlink
-		  uid
-		  gid
-		  rdev
-		  size
-		  atime
-		  mtime
-		  ctime
-		  blksize
-		  blocks)))))
-)
+    (declare (type unix-fd fd))
+    (call-stat "unix_fstat" int fd)))
 
 ;;; 64-bit versions of stat and friends
 #+solaris
