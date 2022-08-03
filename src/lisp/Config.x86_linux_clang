@@ -12,7 +12,7 @@ CFLAGS += -msse2 -mtune=pentium4 -ftrapping-math
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC +=  linux-stubs.S
-OS_SRC += Linux-os.c elf.c
+OS_SRC += Linux-os.c elf.c unix.c
 OS_LIBS = -ldl
 OS_LINK_FLAGS = -m32 -rdynamic -Xlinker --export-dynamic -Xlinker -Map -Xlinker foo
 OS_LINK_FLAGS += -Wl,-z,noexecstack

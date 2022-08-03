@@ -1400,12 +1400,12 @@
     #-linux (st-fstype (array char 16))
     #-linux (st-pad4 (array long 8))))
 
-#+linux
+#+(and nil linux)
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
     #-(or alpha amd64) (st-pad1 unsigned-short)
-    (st-ino ino-t)
+    (st-ino ino64-t)
     #+alpha (st-pad1 unsigned-int)
     #-amd64 (st-mode mode-t)
     (st-nlink  nlink-t)
@@ -1529,7 +1529,7 @@
 	   (slot ,buf 'st-blksize)
 	   (slot ,buf 'st-blocks)))
 
-#-solaris
+#-(or linux solaris)
 (progn
 (defun unix-stat (name)
   _N"Unix-stat retrieves information about the specified
@@ -1565,6 +1565,214 @@
               int (* (struct stat)))
 	     (extract-stat-results buf)
 	     fd (addr buf))))
+)
+
+;; On linux we call out to our own C routine to return the appropriate
+;; parts so that we don't have to mess around with making sure the
+;; struct stat is consistent with the library.
+;;
+;; This should be updated so that all OSes do this.
+#+linux
+(progn
+(defun unix-stat (name)
+  _N"Unix-stat retrieves information about the specified
+   file returning them in the form of multiple values.
+   See the UNIX Programmer's Manual for a description
+   of the values returned.  If the call fails, then NIL
+   and an error number is returned instead."
+  (declare (type unix-pathname name))
+  (when (string= name "")
+    (setf name "."))
+  (with-alien ((dev dev-t)
+	       (ino ino64-t)
+	       (mode mode-t)
+	       (nlink nlink-t)
+	       (uid uid-t)
+	       (gid gid-t)
+	       (rdev dev-t)
+	       (size off-t)
+	       (atime (struct timespec-t))
+	       (mtime (struct timespec-t))
+	       (ctime (struct timespec-t))
+	       (blksize off-t)
+	       (blocks off-t))
+    (let ((result
+	    (alien-funcall
+	     (extern-alien "unix_stat"
+			   (function int
+				     c-call::c-string
+				     (* dev-t)
+				     (* ino64-t)
+				     (* mode-t)
+				     (* nlink-t)
+				     (* uid-t)
+				     (* gid-t)
+				     (* dev-t)
+				     (* off-t)
+				     (* (struct timespec-t))
+				     (* (struct timespec-t))
+				     (* (struct timespec-t))
+				     (* off-t)
+				     (* off-t)))
+	     (%name->file name)
+	     (addr dev)
+	     (addr ino)
+	     (addr mode)
+	     (addr nlink)
+	     (addr uid)
+	     (addr gid)
+	     (addr rdev)
+	     (addr size)
+	     (addr atime)
+	     (addr mtime)
+	     (addr ctime)
+	     (addr blksize)
+	     (addr blocks))))
+      (if (eql -1 result)
+	  (values nil (unix-errno))
+	  (flet ((make-64bit (x)
+		   (+ (alien:deref x 0)
+		      (ash (alien:deref x 1) 32)))
+		 (make-time (x)
+		   (alien:slot x 'unix::ts-sec)))
+	    (values t
+		    (make-64bit dev) ino mode nlink uid gid
+		    (make-64bit rdev)
+		    size
+		    (make-time atime)
+		    (make-time mtime)
+		    (make-time ctime)
+		    blksize blocks))))))
+
+(defun unix-lstat (name)
+  "Unix-lstat is similar to unix-stat except the specified
+   file must be a symbolic link."
+  (declare (type unix-pathname name))
+  (with-alien ((dev dev-t)
+	       (ino ino64-t)
+	       (mode mode-t)
+	       (nlink nlink-t)
+	       (uid uid-t)
+	       (gid gid-t)
+	       (rdev dev-t)
+	       (size off-t)
+	       (atime (struct timespec-t))
+	       (mtime (struct timespec-t))
+	       (ctime (struct timespec-t))
+	       (blksize off-t)
+	       (blocks off-t))
+    (let ((result
+	    (alien-funcall
+	     (extern-alien "unix_lstat"
+			   (function int
+				     c-call::c-string
+				     (* dev-t)
+				     (* ino64-t)
+				     (* mode-t)
+				     (* nlink-t)
+				     (* uid-t)
+				     (* gid-t)
+				     (* dev-t)
+				     (* off-t)
+				     (* (struct timespec-t))
+				     (* (struct timespec-t))
+				     (* (struct timespec-t))
+				     (* off-t)
+				     (* off-t)))
+	     (%name->file name)
+	     (addr dev)
+	     (addr ino)
+	     (addr mode)
+	     (addr nlink)
+	     (addr uid)
+	     (addr gid)
+	     (addr rdev)
+	     (addr size)
+	     (addr atime)
+	     (addr mtime)
+	     (addr ctime)
+	     (addr blksize)
+	     (addr blocks))))
+      (if (eql -1 result)
+	  (values nil (unix-errno))
+	  (flet ((make-64bit (x)
+		   (+ (alien:deref x 0)
+		      (ash (alien:deref x 1) 32)))
+		 (make-time (x)
+		   (alien:slot x 'unix::ts-sec)))
+	    (values t
+		    (make-64bit dev) ino mode nlink uid gid
+		    (make-64bit rdev)
+		    size
+		    (make-time atime)
+		    (make-time mtime)
+		    (make-time ctime)
+		    blksize blocks))))))
+
+(defun unix-fstat (fd)
+  _N"Unix-fstat is similar to unix-stat except the file is specified
+   by the file descriptor fd."
+  (declare (type unix-fd fd))
+  (with-alien ((dev dev-t)
+	       (ino ino64-t)
+	       (mode mode-t)
+	       (nlink nlink-t)
+	       (uid uid-t)
+	       (gid gid-t)
+	       (rdev dev-t)
+	       (size off-t)
+	       (atime (struct timespec-t))
+	       (mtime (struct timespec-t))
+	       (ctime (struct timespec-t))
+	       (blksize off-t)
+	       (blocks off-t))
+    (let ((result
+	    (alien-funcall
+	     (extern-alien "unix_fstat"
+			   (function int
+				     int
+				     (* dev-t)
+				     (* ino64-t)
+				     (* mode-t)
+				     (* nlink-t)
+				     (* uid-t)
+				     (* gid-t)
+				     (* dev-t)
+				     (* off-t)
+				     (* (struct timespec-t))
+				     (* (struct timespec-t))
+				     (* (struct timespec-t))
+				     (* off-t)
+				     (* off-t)))
+	     fd
+	     (addr dev)
+	     (addr ino)
+	     (addr mode)
+	     (addr nlink)
+	     (addr uid)
+	     (addr gid)
+	     (addr rdev)
+	     (addr size)
+	     (addr atime)
+	     (addr mtime)
+	     (addr ctime)
+	     (addr blksize)
+	     (addr blocks))))
+      (if (eql -1 result)
+	  (values nil (unix-errno))
+	  (flet ((make-64bit (x)
+		   (+ (alien:deref x 0)
+		      (ash (alien:deref x 1) 32)))
+		 (make-time (x)
+		   (alien:slot x 'unix::ts-sec)))
+	    (values t
+		    (make-64bit dev) ino mode nlink uid gid
+		    (make-64bit rdev)
+		    size
+		    (make-time atime)
+		    (make-time mtime)
+		    (make-time ctime)
+		    blksize blocks))))))
 )
 
 ;;; 64-bit versions of stat and friends
