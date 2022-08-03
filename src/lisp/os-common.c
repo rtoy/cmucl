@@ -5,10 +5,12 @@
 
 */
 
+#ifdef __linux__
+/* Needed to get 64-bit objects for stat and friends on Linux. */
 #define _LARGEFILE_SOURCE
 #define _FILE_OFFSET_BITS 64
+#endif
 
-#include <stdio.h>
 #include <errno.h>
 #include <math.h>
 #include <netdb.h>
@@ -595,16 +597,23 @@ os_sleep(double seconds)
     }
 }
 
-int unix_stat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
-              uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-              time_t *atime, time_t *mtime, time_t *ctime,
-              long *blksize, off_t *blocks)
+int
+unix_stat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
+          uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
+          time_t *atime, time_t *mtime, time_t *ctime,
+          long *blksize, off_t *blocks)
 {
     int rc;
     struct stat buf;
 
     rc = stat(path, &buf);
 
+#if 0
+    /*
+     * Useful prints to see the actual size of the various
+     * fields. Helpful for porting this to other OSes that we haven't
+     * tested on.
+     */
     fprintf(stderr, "size dev %d\n", sizeof(buf.st_dev));
     fprintf(stderr, "size ino %d\n", sizeof(buf.st_ino));
     fprintf(stderr, "size mode %d\n", sizeof(buf.st_mode));
@@ -618,6 +627,7 @@ int unix_stat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *n
     fprintf(stderr, "size ctime %d\n", sizeof(buf.st_ctime));
     fprintf(stderr, "size blksize %d\n", sizeof(buf.st_blksize));
     fprintf(stderr, "size blocks %d\n", sizeof(buf.st_blocks));
+#endif    
     
     *dev = buf.st_dev;
     *ino = buf.st_ino;
@@ -636,10 +646,11 @@ int unix_stat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *n
     return rc;
 }
 
-int unix_fstat(int fd, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
-               uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-               time_t *atime, time_t *mtime, time_t *ctime,
-               long *blksize, off_t *blocks)
+int
+unix_fstat(int fd, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
+           uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
+           time_t *atime, time_t *mtime, time_t *ctime,
+           long *blksize, off_t *blocks)
 {
     int rc;
     struct stat buf;
@@ -663,10 +674,11 @@ int unix_fstat(int fd, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
     return rc;
 }
 
-int unix_lstat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
-               uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-               time_t *atime, time_t *mtime, time_t *ctime,
-               long *blksize, off_t *blocks)
+int
+unix_lstat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
+           uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
+           time_t *atime, time_t *mtime, time_t *ctime,
+           long *blksize, off_t *blocks)
 {
     int rc;
     struct stat buf;
