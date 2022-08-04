@@ -597,11 +597,19 @@ os_sleep(double seconds)
     }
 }
 
+/*
+ * Interface to stat/fstat/lstat.
+ *
+ * The arg types are chosen such that they can hold the largest
+ * possible value that any OS would use for the particular slot in the
+ * stat structure.  That way we can just use one OS-independent
+ * function that works across all OSes.
+ */
 int
-unix_stat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
-          uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-          time_t *atime, time_t *mtime, time_t *ctime,
-          long *blksize, off_t *blocks)
+unix_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+          unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+          int64_t *atime, int64_t *mtime, int64_t *ctime,
+          long *blksize, int64_t *blocks)
 {
     int rc;
     struct stat buf;
@@ -647,10 +655,10 @@ unix_stat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink
 }
 
 int
-unix_fstat(int fd, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
-           uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-           time_t *atime, time_t *mtime, time_t *ctime,
-           long *blksize, off_t *blocks)
+unix_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+           unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+           int64_t *atime, int64_t *mtime, int64_t *ctime,
+           long *blksize, int64_t *blocks)
 {
     int rc;
     struct stat buf;
@@ -675,10 +683,10 @@ unix_fstat(int fd, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
 }
 
 int
-unix_lstat(const char* path, dev_t *dev, ino_t *ino, mode_t *mode, nlink_t *nlink,
-           uid_t *uid, gid_t *gid, dev_t *rdev, off_t *size,
-           time_t *atime, time_t *mtime, time_t *ctime,
-           long *blksize, off_t *blocks)
+unix_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+           unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+           int64_t *atime, int64_t *mtime, int64_t *ctime,
+           long *blksize, int64_t *blocks)
 {
     int rc;
     struct stat buf;

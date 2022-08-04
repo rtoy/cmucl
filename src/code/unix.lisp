@@ -69,6 +69,7 @@
     #+(and bsd netbsd) int64-t
     #+alpha unsigned-int)
 
+#+nil
 (def-alien-type dev-t
     #-(or alpha svr4 bsd linux) short
     #+linux u-int64-t
@@ -1351,37 +1352,37 @@
        ;; to the stat function.  fstat is different from stat and
        ;; lstat since it takes an fd for the first arg instead of
        ;; string.
-       `(with-alien ((dev dev-t)
-		     (ino ino-t)
-		     (mode mode-t)
-		     (nlink nlink-t)
-		     (uid uid-t)
-		     (gid gid-t)
-		     (rdev dev-t)
-		     (size off-t)
-		     (atime time-t)
-		     (mtime time-t)
-		     (ctime time-t)
+       `(with-alien ((dev u-int64-t)
+		     (ino u-int64-t)
+		     (mode c-call:unsigned-int)
+		     (nlink u-int64-t)
+		     (uid c-call:unsigned-int)
+		     (gid c-call:unsigned-int)
+		     (rdev u-int64-t)
+		     (size int64-t)
+		     (atime int64-t)
+		     (mtime int64-t)
+		     (ctime int64-t)
 		     (blksize c-call:long)
-		     (blocks off-t))
+		     (blocks int64-t))
 	  (let ((result
 		  (alien-funcall
 		   (extern-alien ,c-func-name
 				 (function int
 					   ,first-arg-type
-					   (* dev-t)
-					   (* ino-t)
-					   (* mode-t)
-					   (* nlink-t)
-					   (* uid-t)
-					   (* gid-t)
-					   (* dev-t)
-					   (* off-t)
-					   (* time-t)
-					   (* time-t)
-					   (* time-t)
+					   (* u-int64-t)
+					   (* u-int64-t)
+					   (* c-call:unsigned-int)
+					   (* u-int64-t)
+					   (* c-call:unsigned-int)
+					   (* c-call:unsigned-int)
+					   (* u-int64-t)
+					   (* int64-t)
+					   (* int64-t)
+					   (* int64-t)
+					   (* int64-t)
 					   (* c-call:long)
-					   (* off-t)))
+					   (* int64-t)))
 		   ,first-arg
 		   (addr dev)
 		   (addr ino)
