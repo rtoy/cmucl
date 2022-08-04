@@ -175,7 +175,7 @@
 	  TIOCSIGSEND
 
 	  KBDCGET KBDCSET KBDCRESET KBDCRST KBDCSSTD KBDSGET KBDGCLICK
-	  KBDSCLICK FIONREAD	  unix-exit unix-stat unix-lstat unix-fstat
+	  KBDSCLICK FIONREAD	  unix-exit 
 	  unix-getrusage unix-fast-getrusage rusage_self rusage_children
 	  unix-gettimeofday
 	  unix-utimes unix-sched-yield unix-setreuid

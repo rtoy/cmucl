@@ -159,7 +159,7 @@
 
 	  KBDCGET KBDCSET KBDCRESET KBDCRST KBDCSSTD KBDSGET KBDGCLICK
 	  KBDSCLICK FIONREAD #+(or hpux bsd) siocspgrp
-	  unix-exit unix-stat unix-lstat unix-fstat
+	  unix-exit 
 	  unix-getrusage unix-fast-getrusage rusage_self rusage_children
 	  unix-gettimeofday
 	  #-hpux unix-utimes #-(or svr4 hpux) unix-setreuid
@@ -230,50 +230,6 @@
 ;;;
 
 
-;;; From sys/stat.h
-;; oh boy, in linux-> 2 stat(s)!!
-
-#-(or svr4 bsd linux)		; eg hpux and alpha
-(def-alien-type nil
-  (struct stat
-    (st-dev dev-t)
-    (st-ino ino-t)
-    (st-mode mode-t)
-    (st-nlink nlink-t)
-    (st-uid uid-t)
-    (st-gid gid-t)
-    (st-rdev dev-t)
-    (st-size off-t)
-    (st-atime time-t)
-    (st-spare1 int)
-    (st-mtime time-t)
-    (st-spare2 int)
-    (st-ctime time-t)
-    (st-spare3 int)
-    (st-blksize #-alpha long #+alpha unsigned-int)
-    (st-blocks #-alpha long #+alpha int)
-    (st-spare4 (array long 2))))
-
-#+netbsd
-(def-alien-type nil
-  (struct stat
-    (st-dev dev-t)
-    (st-mode mode-t)
-    (st-ino ino-t)
-    (st-nlink nlink-t)
-    (st-uid uid-t)
-    (st-gid gid-t)
-    (st-rdev dev-t)
-    (st-atime (struct timespec-t))
-    (st-mtime (struct timespec-t))
-    (st-ctime (struct timespec-t))
-    (st-birthtime (struct timespec-t))
-    (st-size off-t)
-    (st-blocks off-t)
-    (st-blksize long)
-    (st-flags   unsigned-long)
-    (st-gen     unsigned-long)
-    (st-spare (array unsigned-long 2))))
 
 ;;; From sys/resource.h
 
