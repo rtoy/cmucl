@@ -69,14 +69,6 @@
     #+(and bsd netbsd) int64-t
     #+alpha unsigned-int)
 
-#+nil
-(def-alien-type dev-t
-    #-(or alpha svr4 bsd linux) short
-    #+linux u-int64-t
-    #+netbsd u-int64-t
-    #+alpha int
-    #+(and (not linux) (not netbsd) (or bsd svr4)) unsigned-long)
-
 #-BSD
 (progn
   (deftype file-offset () '(signed-byte 32))
@@ -127,13 +119,6 @@
 	(bit (gensym)))
     `(multiple-value-bind (,word ,bit) (floor ,offset 32)
        (logbitp ,bit (deref (slot ,fd-set 'fds-bits) ,word)))))
-
-(def-alien-type nlink-t
-    #-(or svr4 netbsd linux) unsigned-short
-    #+netbsd unsigned-long
-    #+svr4 unsigned-long
-    #+(and linux (not amd64)) unsigned-int
-    #+(and linux amd64) u-int64-t)
 
 (defconstant fd-setsize
   #-(or hpux alpha linux FreeBSD) 256
@@ -1415,10 +1400,24 @@
 			blocks))))))
   (defun unix-stat (name)
     _N"Unix-stat retrieves information about the specified
-   file returning them in the form of multiple values.
-   See the UNIX Programmer's Manual for a description
-   of the values returned.  If the call fails, then NIL
-   and an error number is returned instead."
+   file returning them in the form of multiple values.  If the call
+   fails, then NIL and an error number is returned.  If the call
+   succeeds, then T is returned in addition to the following values
+   from the stat struct st:
+
+     st_dev        Device ID
+     st_ino        File serial number
+     st_mode       Mode of file
+     st_nlink      Number of hard links to the file
+     st_uid        User ID
+     st_gid        Group ID
+     st_rdev       Device ID (if file is character or block special)
+     st_atime      Last data access time, in sec
+     st_mtime      Last data modification time, in sec
+     st_ctime      Last file status change time, in sec
+     st_blksize    Preferred I/O block size
+     st_blocks     Number of blocks allocated. (Block size is implementation dependent.)
+"
     (declare (type unix-pathname name))
     (when (string= name "")
       (setf name "."))
@@ -1426,13 +1425,45 @@
 
   (defun unix-lstat (name)
     "Unix-lstat is similar to unix-stat except the specified
-   file must be a symbolic link."
+   file must be a symbolic link.  If the call fails, then NIL and an
+   error number is returned.  If the call succeeds, then T is returned
+   in addition to the following values from the stat struct st:
+
+     st_dev        Device ID
+     st_ino        File serial number
+     st_mode       Mode of file
+     st_nlink      Number of hard links to the file
+     st_uid        User ID
+     st_gid        Group ID
+     st_rdev       Device ID (if file is character or block special)
+     st_atime      Last data access time, in sec
+     st_mtime      Last data modification time, in sec
+     st_ctime      Last file status change time, in sec
+     st_blksize    Preferred I/O block size
+     st_blocks     Number of blocks allocated. (Block size is implementation dependent.)
+"
     (declare (type unix-pathname name))
     (call-stat "unix_lstat" c-call:c-string (%name->file name)))
 
   (defun unix-fstat (fd)
     _N"Unix-fstat is similar to unix-stat except the file is specified
-   by the file descriptor fd."
+   by the file descriptor fd.  If the call fails, then NIL and an
+   error number is returned.  If the call succeeds, then T is returned
+   in addition to the following values from the stat struct st:
+
+     st_dev        Device ID
+     st_ino        File serial number
+     st_mode       Mode of file
+     st_nlink      Number of hard links to the file
+     st_uid        User ID
+     st_gid        Group ID
+     st_rdev       Device ID (if file is character or block special)
+     st_atime      Last data access time, in sec
+     st_mtime      Last data modification time, in sec
+     st_ctime      Last file status change time, in sec
+     st_blksize    Preferred I/O block size
+     st_blocks     Number of blocks allocated. (Block size is implementation dependent.)
+"
     (declare (type unix-fd fd))
     (call-stat "unix_fstat" int fd)))
 
