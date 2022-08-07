@@ -570,3 +570,12 @@
              (terpri s)
              (fresh-line s))
            a)))
+
+(define-test issue.127
+    (:tag :issues)
+  ;; Let's just start at uid 10000 and keep going up until we fail.
+  ;; There should be no segfaults when we find an invalid uid.
+  (loop for uid from 10000
+	with user-info = (unix:unix-getpwuid uid)
+	while user-info
+	finally (assert-false user-info)))
