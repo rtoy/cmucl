@@ -49,6 +49,8 @@ public domain.
     * ~~#112~~ CLX can't connect to X server via inet sockets
     * ~~#113~~ REQUIRE on contribs can pull in the wrong things vai ASDF.
     * ~~#121~~ Wrong column index in FILL-POINTER-OUTPUT-STREAM
+    * ~~#122~~ gcc 11 can't build cmucl
+    * ~~#127~~ Linux unix-getpwuid segfaults when given non-existent uid.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
