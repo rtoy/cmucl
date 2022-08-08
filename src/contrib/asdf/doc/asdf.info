@@ -1,5 +1,4 @@
-This is asdf.info, produced by makeinfo version 6.7dev from
-asdf.texinfo.
+This is asdf.info, produced by makeinfo version 6.8 from asdf.texinfo.
 
 This manual describes ASDF, a system definition facility for Common Lisp
 programs and libraries.
@@ -44,7 +43,7 @@ File: asdf.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 ASDF: Another System Definition Facility
 ****************************************
 
-Manual for Version 3.3.5
+Manual for Version 3.3.6
 
    This manual describes ASDF, a system definition facility for Common
 Lisp programs and libraries.
@@ -250,6 +249,7 @@ Issues with using and extending ASDF to define systems
 * How do I work with readtables?::
 * How can I capture ASDF's output?::
 * LOAD-PATHNAME has a weird value::
+* How can I produce a binary at a specific path from sources at a specific path::
 
 ASDF development FAQs
 
@@ -828,7 +828,7 @@ system definition, the default operation will be loading.
 _components_, it also provides a generic function ‘operate’, so you may
 arbitrarily operate on your systems beyond the default operations.  (At
 the interactive REPL, users often use its shorter alias ‘oos’, which
-stands for operate-on-system, a name inherited from ‘mk-defsystem’.)
+stands for ‘operate-on-system’, a name inherited from ‘mk-defsystem’.)
 You’ll use ‘operate’ whenever you want to do something beyond compiling,
 loading and testing.
 
@@ -2183,6 +2183,10 @@ They are invoked via the ‘operate’ generic function.
      ASDF itself is delivered as a single source file this way, using
      ‘monolithic-concatenate-source-op’, prepending a prelude and the
      ‘uiop’ library before the ‘asdf/defsystem’ system itself.
+
+   See also FAQ entries *note What happened to the bundle operations::
+and *note How can I produce a binary at a specific path from sources at
+a specific path::.
 
 
 File: asdf.info,  Node: Creating new operations,  Prev: Predefined operations of ASDF,  Up: Operations
@@ -3717,7 +3721,7 @@ File: asdf.info,  Node: Output Configuration DSL,  Next: Output Configuration Di
 Here is the grammar of the SEXP DSL for ‘asdf-output-translations’
 configuration:
 
-;; A configuration is single SEXP starting with keyword :source-registry
+;; A configuration is single SEXP starting with keyword :output-translations
 ;; followed by a list of directives.
 CONFIGURATION := (:output-translations DIRECTIVE ...)
 
@@ -5383,6 +5387,7 @@ File: asdf.info,  Node: Issues with using and extending ASDF to define systems, 
 * How do I work with readtables?::
 * How can I capture ASDF's output?::
 * LOAD-PATHNAME has a weird value::
+* How can I produce a binary at a specific path from sources at a specific path::
 
 
 File: asdf.info,  Node: How can I cater for unit-testing in my system?,  Next: How can I cater for documentation generation in my system?,  Prev: Issues with using and extending ASDF to define systems,  Up: Issues with using and extending ASDF to define systems
@@ -5626,7 +5631,7 @@ Output from ASDF and ASDF extensions are sent to the CL stream
 ‘asdf:operate’ should redirect all output from ASDF operations.
 
 
-File: asdf.info,  Node: LOAD-PATHNAME has a weird value,  Prev: How can I capture ASDF's output?,  Up: Issues with using and extending ASDF to define systems
+File: asdf.info,  Node: LOAD-PATHNAME has a weird value,  Next: How can I produce a binary at a specific path from sources at a specific path,  Prev: How can I capture ASDF's output?,  Up: Issues with using and extending ASDF to define systems
 
 13.6.9 *LOAD-PATHNAME* and *LOAD-TRUENAME* have weird values, help!
 -------------------------------------------------------------------
@@ -5650,6 +5655,37 @@ directory, and useless to you for finding other system components.
      you can capture the value of ‘(or *compile-file-pathname*
      *load-truename*)’ (or ‘*LOAD-PATHNAME*’, if you prefer) in a macro
      expansion or other compile-time evaluated context.
+
+
+File: asdf.info,  Node: How can I produce a binary at a specific path from sources at a specific path,  Prev: LOAD-PATHNAME has a weird value,  Up: Issues with using and extending ASDF to define systems
+
+13.6.10 How can I produce a binary at a specific path from sources at a specific path?
+--------------------------------------------------------------------------------------
+
+Especially when integrating with outside build systems, it’s useful to
+have fine-grained control over where ASDF puts output files.  The
+following is an example of a build script that takes the directory to
+find the source and the path to put the resulting binary at, and
+compiles a system there.
+
+     (in-package :cl-user)
+
+     ;; Tell ASDF where to find your source files. This may not
+     ;; be necessary if you've already configured this elsewhere.
+     (asdf:initialize-source-registry
+       `(:source-registry
+          :inherit-configuration
+          (:directory ,(uiop:getenv-absolute-directory "SRC"))))
+
+     ;; Set the output pathname when building the system.
+     (defmethod asdf:output-files ((o asdf:image-op)
+                                   (system (eql (asdf:find-system FOO))))
+       (declare (ignorable system))
+       (values (list (uiop:getenv-pathname "OUT")) t))
+
+     ;; Build the system.
+     (asdf:operate-on-system 'asdf:program-op FOO)
+     (uiop:quit)
 
 
 File: asdf.info,  Node: ASDF development FAQs,  Prev: Issues with using and extending ASDF to define systems,  Up: FAQ
@@ -5868,6 +5904,12 @@ Concept Index
                                                               (line   6)
 * build-operation:                       Convenience Functions.
                                                               (line  61)
+* bundle operations:                     Predefined operations of ASDF.
+                                                              (line  94)
+* bundle operations <1>:                 What happened to the bundle operations.
+                                                              (line   6)
+* bundle operations <2>:                 How can I produce a binary at a specific path from sources at a specific path.
+                                                              (line   6)
 * Capturing ASDF output:                 How can I capture ASDF's output?.
                                                               (line   6)
 * compile-check keyword:                 Controlling file compilation.
@@ -6188,6 +6230,10 @@ Class and Type Index
                                                               (line  46)
 * program-op:                            Predefined operations of ASDF.
                                                               (line 105)
+* program-op <1>:                        What happened to the bundle operations.
+                                                              (line   6)
+* program-op <2>:                        How can I produce a binary at a specific path from sources at a specific path.
+                                                              (line   6)
 * source-file:                           Pre-defined subclasses of component.
                                                               (line   6)
 * system:                                Pre-defined subclasses of component.
@@ -6199,186 +6245,187 @@ Class and Type Index
 
 
 Tag Table:
-Node: Top1692
-Node: Introduction7909
-Node: Quick start summary10338
-Node: Loading ASDF12101
-Node: Loading a pre-installed ASDF12403
-Ref: Loading a pre-installed ASDF-Footnote-114238
-Node: Checking whether ASDF is loaded14438
-Node: Upgrading ASDF15352
-Node: Replacing your implementation's ASDF16350
-Node: Loading ASDF from source17802
-Node: Configuring ASDF18925
-Node: Configuring ASDF to find your systems19698
-Ref: Configuring ASDF to find your systems-Footnote-123099
-Ref: Configuring ASDF to find your systems-Footnote-223350
-Ref: Configuring ASDF to find your systems-Footnote-323652
-Node: Configuring ASDF to find your systems --- old style24125
-Ref: Configuring ASDF to find your systems --- old style-Footnote-127801
-Ref: Configuring ASDF to find your systems --- old style-Footnote-228039
-Ref: Configuring ASDF to find your systems --- old style-Footnote-328842
-Node: Configuring where ASDF stores object files28998
-Node: Resetting the ASDF configuration30407
-Node: Using ASDF31500
-Node: Loading a system31711
-Node: Convenience Functions32786
-Ref: Convenience Functions-Footnote-138263
-Node: Moving on38345
-Node: Defining systems with defsystem38718
-Node: The defsystem form39146
-Node: A more involved example42681
-Ref: A more involved example-Footnote-149934
-Node: The defsystem grammar50642
-Ref: rule-system-definition50847
-Ref: rule-system-designator51013
-Ref: rule-simple-component-name51334
-Ref: rule-complex-component-name51455
-Ref: rule-system-option51503
-Ref: rule-system-option/asdf352291
-Ref: rule-source-control52752
-Ref: rule-module-option52795
-Ref: rule-option52931
-Ref: rule-person-or-persons53919
-Ref: rule-system-list53967
-Ref: rule-component-list54073
-Ref: rule-component-def54158
-Ref: rule-component-type54360
-Ref: rule-other-component-type54494
-Ref: rule-dependency-def54666
-Ref: rule-dependency55275
-Ref: rule-requirement55402
-Ref: rule-dependent-op55496
-Ref: rule-required-op55576
-Ref: rule-pathname-specifier55769
-Ref: rule-version-specifier55824
-Ref: rule-line-specifier56211
-Ref: rule-form-specifier56258
-Ref: rule-method-form56313
-Ref: rule-qual56448
-Ref: rule-method-qualifier56527
-Ref: rule-feature-expression56580
-Ref: rule-operation-name56938
-Ref: Simple component names57233
-Ref: Complex component names58244
-Ref: Component types58960
-Ref: System class names59442
-Ref: Build-operation60651
-Ref: Pathname specifiers62237
-Ref: Version specifiers66273
-Ref: Feature dependencies68522
-Ref: Using logical pathnames69393
-Ref: if-feature option74034
-Ref: Entry point75171
-Ref: feature requirement75901
-Node: Other code in .asd files76319
-Node: The package-inferred-system extension77491
-Node: The object model of ASDF83256
-Ref: The object model of ASDF-Footnote-185674
-Ref: The object model of ASDF-Footnote-286038
-Node: Operations86373
-Ref: operate87500
-Ref: make-operation90280
-Node: Predefined operations of ASDF90725
-Ref: test-op92957
-Node: Creating new operations101198
-Node: Components106603
-Ref: System names110225
-Ref: Components-Footnote-1115043
-Ref: Components-Footnote-2115355
-Node: Common attributes of components115685
-Ref: required-features117207
-Node: Pre-defined subclasses of component123147
-Node: Creating new component types125647
-Node: Dependencies126955
-Node: Functions128884
-Node: Parsing system definitions130776
-Node: Controlling where ASDF searches for systems133024
-Node: Configurations133646
-Node: Truenames and other dangers137213
-Node: XDG base directory138521
-Node: Backward Compatibility139967
-Node: Configuration DSL140698
-Node: Configuration Directories146261
-Node: The here directive148128
-Node: Shell-friendly syntax for configuration150055
-Node: Search Algorithm151130
-Node: Caching Results153024
-Node: Configuration API156332
-Node: Introspection158415
-Node: *source-registry-parameter* variable158679
-Node: Information about system dependencies159258
-Node: Status160178
-Node: Rejected ideas160641
-Node: TODO163094
-Node: Credits for the source-registry163281
-Node: Controlling where ASDF saves compiled files163817
-Ref: Controlling where ASDF saves compiled files-Footnote-1165247
-Node: Output Configurations165299
-Ref: Output Configurations-Footnote-1168188
-Node: Output Backward Compatibility168258
-Node: Output Configuration DSL171066
-Node: Output Configuration Directories176637
-Node: Output Shell-friendly syntax for configuration178226
-Node: Semantics of Output Translations179789
-Node: Output Caching Results181358
-Node: Output location API181838
-Node: Credits for output translations184306
-Node: Error handling184835
-Node: Miscellaneous additional functionality185696
-Node: Controlling file compilation186168
-Node: Controlling source file character encoding189506
-Node: Miscellaneous Functions196557
-Ref: system-relative-pathname196854
-Ref: Miscellaneous Functions-Footnote-1203416
-Node: Some Utility Functions203531
-Node: Getting the latest version214699
-Node: FAQ215662
-Node: Where do I report a bug?216057
-Node: Mailing list216612
-Node: What has changed between ASDF 1 ASDF 2 and ASDF 3?216951
-Node: What are ASDF 1 2 3?219146
-Node: How do I detect the ASDF version?220191
-Node: ASDF can portably name files in subdirectories222550
-Node: Output translations224277
-Node: Source Registry Configuration225320
-Node: Usual operations are made easier to the user226957
-Node: Many bugs have been fixed227577
-Node: ASDF itself is versioned229677
-Node: ASDF can be upgraded230662
-Node: Decoupled release cycle231816
-Node: Pitfalls of the transition to ASDF 2232747
-Node: Pitfalls of the upgrade to ASDF 3237137
-Ref: reinitializeASDFAfterUpgrade240889
-Ref: Pitfalls of the upgrade to ASDF 3-Footnote-1241765
-Node: What happened to the bundle operations241939
-Node: Issues with installing the proper version of ASDF243188
-Node: My Common Lisp implementation comes with an outdated version of ASDF. What to do?243751
-Node: I'm a Common Lisp implementation vendor. When and how should I upgrade ASDF?244690
-Node: After upgrading ASDF248716
-Node: Issues with configuring ASDF250377
-Node: How can I customize where fasl files are stored?250802
-Node: How can I wholly disable the compiler output cache?251924
-Node: How can I debug problems finding ASDF systems253385
-Node: Issues with using and extending ASDF to define systems254814
-Node: How can I cater for unit-testing in my system?255611
-Node: How can I cater for documentation generation in my system?256515
-Node: How can I maintain non-Lisp (e.g. C) source files?257044
-Ref: report-bugs257490
-Node: I want to put my module's files at the top level. How do I do this?257490
-Node: How do I create a system definition where all the source files have a .cl extension?260696
-Node: How do I mark a source file to be loaded only and not compiled?262701
-Node: How do I work with readtables?263703
-Node: How can I capture ASDF's output?267528
-Node: LOAD-PATHNAME has a weird value268009
-Node: ASDF development FAQs269523
-Node: How do I run the tests interactively in a REPL?269762
-Node: Ongoing Work271331
-Node: Bibliography271614
-Node: Concept Index277646
-Node: Function and Macro Index285663
-Node: Variable Index294894
-Node: Class and Type Index297215
+Node: Top1689
+Node: Introduction7988
+Node: Quick start summary10417
+Node: Loading ASDF12180
+Node: Loading a pre-installed ASDF12482
+Ref: Loading a pre-installed ASDF-Footnote-114317
+Node: Checking whether ASDF is loaded14517
+Node: Upgrading ASDF15431
+Node: Replacing your implementation's ASDF16429
+Node: Loading ASDF from source17881
+Node: Configuring ASDF19004
+Node: Configuring ASDF to find your systems19777
+Ref: Configuring ASDF to find your systems-Footnote-123178
+Ref: Configuring ASDF to find your systems-Footnote-223429
+Ref: Configuring ASDF to find your systems-Footnote-323731
+Node: Configuring ASDF to find your systems --- old style24204
+Ref: Configuring ASDF to find your systems --- old style-Footnote-127880
+Ref: Configuring ASDF to find your systems --- old style-Footnote-228118
+Ref: Configuring ASDF to find your systems --- old style-Footnote-328921
+Node: Configuring where ASDF stores object files29077
+Node: Resetting the ASDF configuration30486
+Node: Using ASDF31579
+Node: Loading a system31790
+Node: Convenience Functions32865
+Ref: Convenience Functions-Footnote-138348
+Node: Moving on38430
+Node: Defining systems with defsystem38803
+Node: The defsystem form39231
+Node: A more involved example42766
+Ref: A more involved example-Footnote-150019
+Node: The defsystem grammar50727
+Ref: rule-system-definition50932
+Ref: rule-system-designator51098
+Ref: rule-simple-component-name51419
+Ref: rule-complex-component-name51540
+Ref: rule-system-option51588
+Ref: rule-system-option/asdf352376
+Ref: rule-source-control52837
+Ref: rule-module-option52880
+Ref: rule-option53016
+Ref: rule-person-or-persons54004
+Ref: rule-system-list54052
+Ref: rule-component-list54158
+Ref: rule-component-def54243
+Ref: rule-component-type54445
+Ref: rule-other-component-type54579
+Ref: rule-dependency-def54751
+Ref: rule-dependency55360
+Ref: rule-requirement55487
+Ref: rule-dependent-op55581
+Ref: rule-required-op55661
+Ref: rule-pathname-specifier55854
+Ref: rule-version-specifier55909
+Ref: rule-line-specifier56296
+Ref: rule-form-specifier56343
+Ref: rule-method-form56398
+Ref: rule-qual56533
+Ref: rule-method-qualifier56612
+Ref: rule-feature-expression56665
+Ref: rule-operation-name57023
+Ref: Simple component names57318
+Ref: Complex component names58329
+Ref: Component types59045
+Ref: System class names59527
+Ref: Build-operation60736
+Ref: Pathname specifiers62322
+Ref: Version specifiers66358
+Ref: Feature dependencies68607
+Ref: Using logical pathnames69478
+Ref: if-feature option74119
+Ref: Entry point75256
+Ref: feature requirement75986
+Node: Other code in .asd files76404
+Node: The package-inferred-system extension77576
+Node: The object model of ASDF83341
+Ref: The object model of ASDF-Footnote-185759
+Ref: The object model of ASDF-Footnote-286123
+Node: Operations86458
+Ref: operate87585
+Ref: make-operation90365
+Node: Predefined operations of ASDF90810
+Ref: test-op93042
+Node: Creating new operations101446
+Node: Components106851
+Ref: System names110473
+Ref: Components-Footnote-1115291
+Ref: Components-Footnote-2115603
+Node: Common attributes of components115933
+Ref: required-features117455
+Node: Pre-defined subclasses of component123395
+Node: Creating new component types125895
+Node: Dependencies127203
+Node: Functions129132
+Node: Parsing system definitions131024
+Node: Controlling where ASDF searches for systems133272
+Node: Configurations133894
+Node: Truenames and other dangers137461
+Node: XDG base directory138769
+Node: Backward Compatibility140215
+Node: Configuration DSL140946
+Node: Configuration Directories146509
+Node: The here directive148376
+Node: Shell-friendly syntax for configuration150303
+Node: Search Algorithm151378
+Node: Caching Results153272
+Node: Configuration API156580
+Node: Introspection158663
+Node: *source-registry-parameter* variable158927
+Node: Information about system dependencies159506
+Node: Status160426
+Node: Rejected ideas160889
+Node: TODO163342
+Node: Credits for the source-registry163529
+Node: Controlling where ASDF saves compiled files164065
+Ref: Controlling where ASDF saves compiled files-Footnote-1165495
+Node: Output Configurations165547
+Ref: Output Configurations-Footnote-1168436
+Node: Output Backward Compatibility168506
+Node: Output Configuration DSL171314
+Node: Output Configuration Directories176889
+Node: Output Shell-friendly syntax for configuration178478
+Node: Semantics of Output Translations180041
+Node: Output Caching Results181610
+Node: Output location API182090
+Node: Credits for output translations184558
+Node: Error handling185087
+Node: Miscellaneous additional functionality185948
+Node: Controlling file compilation186420
+Node: Controlling source file character encoding189758
+Node: Miscellaneous Functions196809
+Ref: system-relative-pathname197106
+Ref: Miscellaneous Functions-Footnote-1203668
+Node: Some Utility Functions203783
+Node: Getting the latest version214951
+Node: FAQ215914
+Node: Where do I report a bug?216309
+Node: Mailing list216864
+Node: What has changed between ASDF 1 ASDF 2 and ASDF 3?217203
+Node: What are ASDF 1 2 3?219398
+Node: How do I detect the ASDF version?220443
+Node: ASDF can portably name files in subdirectories222802
+Node: Output translations224529
+Node: Source Registry Configuration225572
+Node: Usual operations are made easier to the user227209
+Node: Many bugs have been fixed227829
+Node: ASDF itself is versioned229929
+Node: ASDF can be upgraded230914
+Node: Decoupled release cycle232068
+Node: Pitfalls of the transition to ASDF 2232999
+Node: Pitfalls of the upgrade to ASDF 3237389
+Ref: reinitializeASDFAfterUpgrade241141
+Ref: Pitfalls of the upgrade to ASDF 3-Footnote-1242017
+Node: What happened to the bundle operations242191
+Node: Issues with installing the proper version of ASDF243440
+Node: My Common Lisp implementation comes with an outdated version of ASDF. What to do?244003
+Node: I'm a Common Lisp implementation vendor. When and how should I upgrade ASDF?244942
+Node: After upgrading ASDF248968
+Node: Issues with configuring ASDF250629
+Node: How can I customize where fasl files are stored?251054
+Node: How can I wholly disable the compiler output cache?252176
+Node: How can I debug problems finding ASDF systems253637
+Node: Issues with using and extending ASDF to define systems255066
+Node: How can I cater for unit-testing in my system?255945
+Node: How can I cater for documentation generation in my system?256849
+Node: How can I maintain non-Lisp (e.g. C) source files?257378
+Ref: report-bugs257824
+Node: I want to put my module's files at the top level. How do I do this?257824
+Node: How do I create a system definition where all the source files have a .cl extension?261030
+Node: How do I mark a source file to be loaded only and not compiled?263035
+Node: How do I work with readtables?264037
+Node: How can I capture ASDF's output?267862
+Node: LOAD-PATHNAME has a weird value268343
+Node: How can I produce a binary at a specific path from sources at a specific path269943
+Node: ASDF development FAQs271317
+Node: How do I run the tests interactively in a REPL?271556
+Node: Ongoing Work273125
+Node: Bibliography273408
+Node: Concept Index279440
+Node: Function and Macro Index287949
+Node: Variable Index297180
+Node: Class and Type Index299501
 
 End Tag Table
 

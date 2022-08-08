@@ -21,7 +21,7 @@ public domain.
   * Known issues:
   * Feature enhancements
   * Changes
-    * Update to ASDF 3.3.5
+    * Update to ASDF 3.3.6
   * ANSI compliance fixes:
   * Bug fixes:
     * ~~#97~~ Fixes stepping through the source forms in the debugger.  This has been broken for quite some time, but it works now.
