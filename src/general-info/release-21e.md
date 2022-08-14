@@ -51,6 +51,7 @@ public domain.
     * ~~#121~~ Wrong column index in FILL-POINTER-OUTPUT-STREAM
     * ~~#122~~ gcc 11 can't build cmucl
     * ~~#127~~ Linux unix-getpwuid segfaults when given non-existent uid.
+    * ~~#128~~ `QUIT` accepts an exit code
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
