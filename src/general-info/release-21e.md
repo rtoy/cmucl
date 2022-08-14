@@ -1,10 +1,10 @@
 # CMUCL 21e
 
-## Work in prograss
+## Work in progress
 
 The CMUCL project is pleased to announce the release of CMUCL 21e.
 This is a major release which contains numerous enhancements and bug
-fixes from the 21a release.
+fixes from the 21d release.
 
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
@@ -39,15 +39,15 @@ public domain.
     * ~~#90~~ Some static symbols have been removed.  This probably makes the fasl files incompatible with older versions.
     * ~~#91~~ Loop destructuring no longer incorrectly signals an error
     * ~~#95~~ Disassembler syntax of x86 je and movzx is incorrect
-    * ~~#97~~ Define and use ud2 instruction isntead of int3.  Fixes single-stepping.
+    * ~~#97~~ Define and use ud2 instruction instead of int3.  Fixes single-stepping.
     * ~~#98~~ fstpd is not an Intel instruction; disassemble as `fstp dword ptr [addr]`
-    * ~~#100~~ ldb prints out unicode base-chars correctly instead of just the low 8 bits.
+    * ~~#100~~ ldb prints out Unicode base-chars correctly instead of just the low 8 bits.
     * ~~#103~~ RANDOM-MT19937-UPDATE assembly routine still exists
     * ~~#104~~ Single-stepping broken (fixed via #97).
     * ~~#107~~ Replace u_int8_t with uint8_t
     * ~~#108~~ Update ASDF
     * ~~#112~~ CLX can't connect to X server via inet sockets
-    * ~~#113~~ REQUIRE on contribs can pull in the wrong things vai ASDF.
+    * ~~#113~~ REQUIRE on contribs can pull in the wrong things via ASDF.
     * ~~#121~~ Wrong column index in FILL-POINTER-OUTPUT-STREAM
     * ~~#122~~ gcc 11 can't build cmucl
     * ~~#127~~ Linux unix-getpwuid segfaults when given non-existent uid.
