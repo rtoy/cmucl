@@ -5,12 +5,6 @@
 
 */
 
-#ifdef __linux__
-/* Needed to get 64-bit objects for stat and friends on Linux. */
-#define _LARGEFILE_SOURCE
-#define _FILE_OFFSET_BITS 64
-#endif
-
 #include <errno.h>
 #include <math.h>
 #include <netdb.h>
@@ -606,17 +600,21 @@ os_sleep(double seconds)
  * function that works across all OSes.
  */
 int
-unix_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-          unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
-          int64_t *atime, int64_t *mtime, int64_t *ctime,
-          long *blksize, int64_t *blocks)
+os_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+        unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+        int64_t *atime, int64_t *mtime, int64_t *ctime,
+        long *blksize, int64_t *blocks)
 {
     int rc;
     struct stat buf;
 
     rc = stat(path, &buf);
 
-#if 0
+    if (rc != 0) {
+        return rc;
+    }
+        
+#if 1
     /*
      * Useful prints to see the actual size of the various
      * fields. Helpful for porting this to other OSes that we haven't
@@ -655,15 +653,19 @@ unix_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, 
 }
 
 int
-unix_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-           unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
-           int64_t *atime, int64_t *mtime, int64_t *ctime,
-           long *blksize, int64_t *blocks)
+os_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+         int64_t *atime, int64_t *mtime, int64_t *ctime,
+         long *blksize, int64_t *blocks)
 {
     int rc;
     struct stat buf;
 
     rc = fstat(fd, &buf);
+
+    if (rc != 0) {
+        return rc;
+    }
 
     *dev = buf.st_dev;
     *ino = buf.st_ino;
@@ -683,15 +685,19 @@ unix_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t
 }
 
 int
-unix_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-           unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
-           int64_t *atime, int64_t *mtime, int64_t *ctime,
-           long *blksize, int64_t *blocks)
+os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+         int64_t *atime, int64_t *mtime, int64_t *ctime,
+         long *blksize, int64_t *blocks)
 {
     int rc;
     struct stat buf;
 
     rc = lstat(path, &buf);
+
+    if (rc != 0) {
+        return rc;
+    }
 
     *dev = buf.st_dev;
     *ino = buf.st_ino;

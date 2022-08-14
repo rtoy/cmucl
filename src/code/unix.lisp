@@ -1337,37 +1337,37 @@
        ;; to the stat function.  fstat is different from stat and
        ;; lstat since it takes an fd for the first arg instead of
        ;; string.
-       `(with-alien ((dev u-int64-t)
-		     (ino u-int64-t)
+       `(with-alien ((dev c-call:long-long)
+		     (ino c-call:unsigned-long-long)
 		     (mode c-call:unsigned-int)
-		     (nlink u-int64-t)
+		     (nlink c-call:unsigned-long-long)
 		     (uid c-call:unsigned-int)
 		     (gid c-call:unsigned-int)
-		     (rdev u-int64-t)
-		     (size int64-t)
-		     (atime int64-t)
-		     (mtime int64-t)
-		     (ctime int64-t)
+		     (rdev c-call:unsigned-long-long)
+		     (size c-call:long-long)
+		     (atime c-call:long-long)
+		     (mtime c-call:long-long)
+		     (ctime c-call:long-long)
 		     (blksize c-call:long)
-		     (blocks int64-t))
+		     (blocks c-call:long-long))
 	  (let ((result
 		  (alien-funcall
 		   (extern-alien ,c-func-name
 				 (function int
 					   ,first-arg-type
-					   (* u-int64-t)
-					   (* u-int64-t)
+					   (* c-call:long-long)
+					   (* c-call:unsigned-long-long)
 					   (* c-call:unsigned-int)
-					   (* u-int64-t)
+					   (* c-call:unsigned-long-long)
 					   (* c-call:unsigned-int)
 					   (* c-call:unsigned-int)
-					   (* u-int64-t)
-					   (* int64-t)
-					   (* int64-t)
-					   (* int64-t)
-					   (* int64-t)
+					   (* c-call:unsigned-long-long)
+					   (* c-call:long-long)
+					   (* c-call:long-long)
+					   (* c-call:long-long)
+					   (* c-call:long-long)
 					   (* c-call:long)
-					   (* int64-t)))
+					   (* c-call:long-long)))
 		   ,first-arg
 		   (addr dev)
 		   (addr ino)
@@ -1421,7 +1421,7 @@
     (declare (type unix-pathname name))
     (when (string= name "")
       (setf name "."))
-    (call-stat "unix_stat" c-call:c-string (%name->file name)))
+    (call-stat "os_stat" c-call:c-string (%name->file name)))
 
   (defun unix-lstat (name)
     "Unix-lstat is similar to unix-stat except the specified
@@ -1443,7 +1443,7 @@
      st_blocks     Number of blocks allocated. (Block size is implementation dependent.)
 "
     (declare (type unix-pathname name))
-    (call-stat "unix_lstat" c-call:c-string (%name->file name)))
+    (call-stat "os_lstat" c-call:c-string (%name->file name)))
 
   (defun unix-fstat (fd)
     _N"Unix-fstat is similar to unix-stat except the file is specified
@@ -1465,7 +1465,7 @@
      st_blocks     Number of blocks allocated. (Block size is implementation dependent.)
 "
     (declare (type unix-fd fd))
-    (call-stat "unix_fstat" int fd)))
+    (call-stat "os_fstat" int fd)))
 
 (def-alien-type nil
   (struct rusage
