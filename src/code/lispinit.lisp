@@ -492,15 +492,15 @@
 
 ;;; Quit gets us out, one way or another.
 
-(defun quit (&optional recklessly-p (exit-code 0))
+(defun quit (&optional recklessly-p (code 0))
   "Terminates the current Lisp.  Things are cleaned up unless
   Recklessly-P is non-Nil.  On quitting, Lisp sets the return code to
-  exit-code, defaulting to 0."
+  Code, defaulting to 0."
   (if recklessly-p
-      (unix:unix-exit exit-code)
+      (unix:unix-exit code)
       (progn
         (mapc (lambda (fn) (ignore-errors (funcall fn))) *cleanup-functions*)
-        (throw '%end-of-the-world exit-code))))
+        (throw '%end-of-the-world code))))
 
 
 #-mp ; Multi-processing version defined in multi-proc.lisp.

@@ -311,7 +311,7 @@ msgstr ""
 msgid ""
 "Terminates the current Lisp.  Things are cleaned up unless\n"
 "  Recklessly-P is non-Nil.  On quitting, Lisp sets the return code to\n"
-"  exit-code, defaulting to 0."
+"  Code, defaulting to 0."
 msgstr ""
 
 #: src/code/lispinit.lisp
