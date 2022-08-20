@@ -557,27 +557,6 @@ msgid ""
 msgstr ""
 
 #: src/code/unix.lisp
-msgid ""
-"Unix-stat retrieves information about the specified\n"
-"   file returning them in the form of multiple values.\n"
-"   See the UNIX Programmer's Manual for a description\n"
-"   of the values returned.  If the call fails, then NIL\n"
-"   and an error number is returned instead."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-lstat is similar to unix-stat except the specified\n"
-"   file must be a symbolic link."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-fstat is similar to unix-stat except the file is specified\n"
-"   by the file descriptor fd."
-msgstr ""
-
-#: src/code/unix.lisp
 msgid "The calling process."
 msgstr ""
 
