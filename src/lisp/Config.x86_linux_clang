@@ -9,6 +9,7 @@ CFLAGS += $(COPT)
 # (-mtune=pentium4), the first chip to have sse2; and finally generate
 # code assuming instructions can trap (-ftrapping-math).
 CFLAGS += -msse2 -mtune=pentium4 -ftrapping-math
+CFLAGS += -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC +=  linux-stubs.S

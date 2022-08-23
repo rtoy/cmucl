@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 
 #include "os.h"
@@ -588,4 +589,129 @@ os_sleep(double seconds)
     while (nanosleep(&requested, &remaining) == -1 && errno == EINTR) {
 	requested = remaining;
     }
+}
+
+/*
+ * Interface to stat/fstat/lstat.
+ *
+ * The arg types are chosen such that they can hold the largest
+ * possible value that any OS would use for the particular slot in the
+ * stat structure.  That way we can just use one OS-independent
+ * function that works across all OSes.
+ */
+int
+os_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+        unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+        int64_t *atime, int64_t *mtime, int64_t *ctime,
+        long *blksize, int64_t *blocks)
+{
+    int rc;
+    struct stat buf;
+
+    rc = stat(path, &buf);
+
+    if (rc != 0) {
+        return rc;
+    }
+        
+#if 0
+    /*
+     * Useful prints to see the actual size of the various
+     * fields. Helpful for porting this to other OSes that we haven't
+     * tested on.
+     */
+    fprintf(stderr, "size dev %d\n", sizeof(buf.st_dev));
+    fprintf(stderr, "size ino %d\n", sizeof(buf.st_ino));
+    fprintf(stderr, "size mode %d\n", sizeof(buf.st_mode));
+    fprintf(stderr, "size nlink %d\n", sizeof(buf.st_nlink));
+    fprintf(stderr, "size uid %d\n", sizeof(buf.st_uid));
+    fprintf(stderr, "size gid %d\n", sizeof(buf.st_gid));
+    fprintf(stderr, "size rdev %d\n", sizeof(buf.st_rdev));
+    fprintf(stderr, "size size %d\n", sizeof(buf.st_size));
+    fprintf(stderr, "size atime %d\n", sizeof(buf.st_atime));
+    fprintf(stderr, "size mtime %d\n", sizeof(buf.st_mtime));
+    fprintf(stderr, "size ctime %d\n", sizeof(buf.st_ctime));
+    fprintf(stderr, "size blksize %d\n", sizeof(buf.st_blksize));
+    fprintf(stderr, "size blocks %d\n", sizeof(buf.st_blocks));
+#endif    
+    
+    *dev = buf.st_dev;
+    *ino = buf.st_ino;
+    *mode = buf.st_mode;
+    *nlink = buf.st_nlink;
+    *uid = buf.st_uid;
+    *gid = buf.st_gid;
+    *rdev = buf.st_rdev;
+    *size = buf.st_size;
+    *atime = buf.st_atime;
+    *mtime = buf.st_mtime;
+    *ctime = buf.st_ctime;
+    *blksize = buf.st_blksize;
+    *blocks = buf.st_blocks;
+
+    return rc;
+}
+
+int
+os_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+         int64_t *atime, int64_t *mtime, int64_t *ctime,
+         long *blksize, int64_t *blocks)
+{
+    int rc;
+    struct stat buf;
+
+    rc = fstat(fd, &buf);
+
+    if (rc != 0) {
+        return rc;
+    }
+
+    *dev = buf.st_dev;
+    *ino = buf.st_ino;
+    *mode = buf.st_mode;
+    *nlink = buf.st_nlink;
+    *uid = buf.st_uid;
+    *gid = buf.st_gid;
+    *rdev = buf.st_rdev;
+    *size = buf.st_size;
+    *atime = buf.st_atime;
+    *mtime = buf.st_mtime;
+    *ctime = buf.st_ctime;
+    *blksize = buf.st_blksize;
+    *blocks = buf.st_blocks;
+
+    return rc;
+}
+
+int
+os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
+         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+         int64_t *atime, int64_t *mtime, int64_t *ctime,
+         long *blksize, int64_t *blocks)
+{
+    int rc;
+    struct stat buf;
+
+    rc = lstat(path, &buf);
+
+    if (rc != 0) {
+        return rc;
+    }
+
+    *dev = buf.st_dev;
+    *ino = buf.st_ino;
+    *mode = buf.st_mode;
+    *nlink = buf.st_nlink;
+    *uid = buf.st_uid;
+    *gid = buf.st_gid;
+    *rdev = buf.st_rdev;
+    *size = buf.st_size;
+    *atime = buf.st_atime;
+    *mtime = buf.st_mtime;
+    *ctime = buf.st_ctime;
+    *blksize = buf.st_blksize;
+    *blocks = buf.st_blocks;
+
+    return rc;
 }
