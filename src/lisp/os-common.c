@@ -10,8 +10,8 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #include "os.h"
 #include "internals.h"
