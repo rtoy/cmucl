@@ -53,12 +53,9 @@
 (def-alien-type u-int32-t unsigned-int)
 
 (def-alien-type ino-t
-    #+netbsd u-int64-t
+    #+(or netbsd linux darwin) u-int64-t
     #+alpha unsigned-int
-    #-(or alpha netbsd) unsigned-long)
-
-#+linux
-(def-alien-type ino64-t u-int64-t)
+    #-(or alpha netbsd linux darwin) unsigned-long)
 
 (def-alien-type size-t
     #-(or linux alpha) long
@@ -71,14 +68,6 @@
     #+(and bsd (not netbsd)) long
     #+(and bsd netbsd) int64-t
     #+alpha unsigned-int)
-
-(def-alien-type dev-t
-    #-(or alpha svr4 bsd linux) short
-    #+(and linux (not amd64)) uquad-t
-    #+(and linux amd64) u-int64-t
-    #+netbsd u-int64-t
-    #+alpha int
-    #+(and (not linux) (not netbsd) (or bsd svr4)) unsigned-long)
 
 #-BSD
 (progn
@@ -130,13 +119,6 @@
 	(bit (gensym)))
     `(multiple-value-bind (,word ,bit) (floor ,offset 32)
        (logbitp ,bit (deref (slot ,fd-set 'fds-bits) ,word)))))
-
-(def-alien-type nlink-t
-    #-(or svr4 netbsd linux) unsigned-short
-    #+netbsd unsigned-long
-    #+svr4 unsigned-long
-    #+(and linux (not amd64)) unsigned-int
-    #+(and linux amd64) u-int64-t)
 
 (defconstant fd-setsize
   #-(or hpux alpha linux FreeBSD) 256
@@ -1301,7 +1283,7 @@
     #+glibc2.1
     (d-ino ino-t)                       ; inode number of entry
     #-glibc2.1
-    (d-ino ino64-t)                     ; inode number of entry
+    (d-ino ino-t)                     ; inode number of entry
     (d-off off-t)                       ; offset of next disk directory entry
     (d-reclen unsigned-short)		; length of this record
     (d_type unsigned-char)
@@ -1347,261 +1329,143 @@
     (d-name (array char 256))))		; name must be no longer than this
 
 
-#+(and bsd (not netbsd))
-(def-alien-type nil
-  (struct stat
-    (st-dev dev-t)
-    (st-ino ino-t)
-    (st-mode mode-t)
-    (st-nlink nlink-t)
-    (st-uid uid-t)
-    (st-gid gid-t)
-    (st-rdev dev-t)
-    (st-atime (struct timespec-t))
-    (st-mtime (struct timespec-t))
-    (st-ctime (struct timespec-t))
-    (st-size off-t)
-    (st-blocks off-t)
-    (st-blksize unsigned-long)
-    (st-flags   unsigned-long)
-    (st-gen     unsigned-long)
-    (st-lspare  long)
-    (st-qspare (array long 4))))
+;; unix-stat and friends
+(macrolet
+    ((call-stat (c-func-name first-arg-type first-arg)
+       ;; Call the stat function named C-FUNC-NAME.  The type of the
+       ;; first arg is FIRST-ARG-TYPE and FIRST-ARG is the first arg
+       ;; to the stat function.  fstat is different from stat and
+       ;; lstat since it takes an fd for the first arg instead of
+       ;; string.
+       `(with-alien ((dev c-call:long-long)
+		     (ino c-call:unsigned-long-long)
+		     (mode c-call:unsigned-int)
+		     (nlink c-call:unsigned-long-long)
+		     (uid c-call:unsigned-int)
+		     (gid c-call:unsigned-int)
+		     (rdev c-call:unsigned-long-long)
+		     (size c-call:long-long)
+		     (atime c-call:long-long)
+		     (mtime c-call:long-long)
+		     (ctime c-call:long-long)
+		     (blksize c-call:long)
+		     (blocks c-call:long-long))
+	  (let ((result
+		  (alien-funcall
+		   (extern-alien ,c-func-name
+				 (function int
+					   ,first-arg-type
+					   (* c-call:long-long)
+					   (* c-call:unsigned-long-long)
+					   (* c-call:unsigned-int)
+					   (* c-call:unsigned-long-long)
+					   (* c-call:unsigned-int)
+					   (* c-call:unsigned-int)
+					   (* c-call:unsigned-long-long)
+					   (* c-call:long-long)
+					   (* c-call:long-long)
+					   (* c-call:long-long)
+					   (* c-call:long-long)
+					   (* c-call:long)
+					   (* c-call:long-long)))
+		   ,first-arg
+		   (addr dev)
+		   (addr ino)
+		   (addr mode)
+		   (addr nlink)
+		   (addr uid)
+		   (addr gid)
+		   (addr rdev)
+		   (addr size)
+		   (addr atime)
+		   (addr mtime)
+		   (addr ctime)
+		   (addr blksize)
+		   (addr blocks))))
+	    (if (eql -1 result)
+		(values nil (unix-errno))
+		(values t
+			dev
+			ino
+			mode
+			nlink
+			uid
+			gid
+			rdev
+			size
+			atime
+			mtime
+			ctime
+			blksize
+			blocks))))))
+  (defun unix-stat (name)
+    _N"Unix-stat retrieves information about the specified
+   file returning them in the form of multiple values.  If the call
+   fails, then NIL and an error number is returned.  If the call
+   succeeds, then T is returned in addition to the following values
+   from the stat struct st:
 
-#+svr4
-(def-alien-type nil
-  (struct stat
-    (st-dev dev-t)
-    (st-pad1 #-linux (array long 3) #+linux unsigned-short)
-    (st-ino ino-t)
-    (st-mode #-linux unsigned-long #+linux unsigned-short)
-    (st-nlink #-linux short #+linux unsigned-short)
-    (st-uid #-linux uid-t #+linux unsigned-short)
-    (st-gid #-linux gid-t #+linux unsigned-short)
-    (st-rdev dev-t)
-    (st-pad2 #-linux (array long 2) #+linux unsigned-short)
-    (st-size off-t)
-    #-linux (st-pad3 long)
-    #+linux (st-blksize unsigned-long)
-    #+linux (st-blocks unsigned-long)
-    #-linux (st-atime (struct timestruc-t))
-    #+linux (st-atime unsigned-long)
-    #+linux (unused-1 unsigned-long)
-    #-linux (st-mtime (struct timestruc-t))
-    #+linux (st-mtime unsigned-long)
-    #+linux (unused-2 unsigned-long)
-    #-linux (st-ctime (struct timestruc-t))
-    #+linux (st-ctime unsigned-long)
-    #+linux (unused-3 unsigned-long)
-    #+linux (unused-4 unsigned-long)
-    #+linux (unused-5 unsigned-long)
-    #-linux(st-blksize long)
-    #-linux (st-blocks long)
-    #-linux (st-fstype (array char 16))
-    #-linux (st-pad4 (array long 8))))
+     st_dev        Device ID
+     st_ino        File serial number
+     st_mode       Mode of file
+     st_nlink      Number of hard links to the file
+     st_uid        User ID
+     st_gid        Group ID
+     st_rdev       Device ID (if file is character or block special)
+     st_atime      Last data access time, in sec
+     st_mtime      Last data modification time, in sec
+     st_ctime      Last file status change time, in sec
+     st_blksize    Preferred I/O block size
+     st_blocks     Number of blocks allocated. (Block size is implementation dependent.)
+"
+    (declare (type unix-pathname name))
+    (when (string= name "")
+      (setf name "."))
+    (call-stat "os_stat" c-call:c-string (%name->file name)))
 
-#+linux
-(def-alien-type nil
-  (struct stat
-    (st-dev dev-t)
-    #-(or alpha amd64) (st-pad1 unsigned-short)
-    (st-ino ino-t)
-    #+alpha (st-pad1 unsigned-int)
-    #-amd64 (st-mode mode-t)
-    (st-nlink  nlink-t)
-    #+amd64 (st-mode mode-t)
-    (st-uid  uid-t)
-    (st-gid  gid-t)
-    (st-rdev dev-t)
-    #-alpha (st-pad2  unsigned-short)
-    (st-size off-t)
-    #-alpha (st-blksize unsigned-long)
-    #-alpha (st-blocks blkcnt-t)
-    (st-atime time-t)
-    #-alpha (unused-1 unsigned-long)
-    (st-mtime time-t)
-    #-alpha (unused-2 unsigned-long)
-    (st-ctime time-t)
-    #+alpha (st-blocks int)
-    #+alpha (st-pad2 unsigned-int)
-    #+alpha (st-blksize unsigned-int)
-    #+alpha (st-flags unsigned-int)
-    #+alpha (st-gen unsigned-int)
-    #+alpha (st-pad3 unsigned-int)
-    #+alpha (unused-1 unsigned-long)
-    #+alpha (unused-2 unsigned-long)
-    (unused-3 unsigned-long)
-    (unused-4 unsigned-long)
-    #-alpha (unused-5 unsigned-long)))
+  (defun unix-lstat (name)
+    "Unix-lstat is similar to unix-stat except the specified
+   file must be a symbolic link.  If the call fails, then NIL and an
+   error number is returned.  If the call succeeds, then T is returned
+   in addition to the following values from the stat struct st:
 
-;;; 64-bit stat for Solaris
-#+solaris
-(def-alien-type nil
-  (struct stat64
-    (st-dev dev-t)
-    (st-pad1 (array long 3))		; Pad so ino is 64-bit aligned
-    (st-ino ino64-t)
-    (st-mode unsigned-long)
-    (st-nlink short)
-    (st-uid uid-t)
-    (st-gid gid-t)
-    (st-rdev dev-t)
-    (st-pad2 (array long 3))		; Pad so size is 64-bit aligned
-    (st-size off64-t)
-    (st-atime (struct timestruc-t))
-    (st-mtime (struct timestruc-t))
-    (st-ctime (struct timestruc-t))
-    (st-blksize long)
-    (st-pad3 (array long 1))		; Pad so blocks is 64-bit aligned
-    (st-blocks blkcnt64-t)
-    (st-fstype (array char 16))
-    (st-pad4 (array long 8))))
+     st_dev        Device ID
+     st_ino        File serial number
+     st_mode       Mode of file
+     st_nlink      Number of hard links to the file
+     st_uid        User ID
+     st_gid        Group ID
+     st_rdev       Device ID (if file is character or block special)
+     st_atime      Last data access time, in sec
+     st_mtime      Last data modification time, in sec
+     st_ctime      Last file status change time, in sec
+     st_blksize    Preferred I/O block size
+     st_blocks     Number of blocks allocated. (Block size is implementation dependent.)
+"
+    (declare (type unix-pathname name))
+    (call-stat "os_lstat" c-call:c-string (%name->file name)))
 
-#+netbsd
-(def-alien-type nil
-  (struct stat
-    (st-dev dev-t)
-    (st-mode mode-t)
-    (st-ino ino-t)
-    (st-nlink nlink-t)
-    (st-uid uid-t)
-    (st-gid gid-t)
-    (st-rdev dev-t)
-    (st-atime (struct timespec-t))
-    (st-mtime (struct timespec-t))
-    (st-ctime (struct timespec-t))
-    (st-birthtime (struct timespec-t))
-    (st-size off-t)
-    (st-blocks off-t)
-    (st-blksize long)
-    (st-flags   unsigned-long)
-    (st-gen     unsigned-long)
-    (st-spare (array unsigned-long 2))))
+  (defun unix-fstat (fd)
+    _N"Unix-fstat is similar to unix-stat except the file is specified
+   by the file descriptor fd.  If the call fails, then NIL and an
+   error number is returned.  If the call succeeds, then T is returned
+   in addition to the following values from the stat struct st:
 
-#-linux
-(defmacro extract-stat-results (buf)
-  `(values T
-	   (slot ,buf 'st-dev)
-	   (slot ,buf 'st-ino)
-	   (slot ,buf 'st-mode)
-	   (slot ,buf 'st-nlink)
-	   (slot ,buf 'st-uid)
-	   (slot ,buf 'st-gid)
-	   (slot ,buf 'st-rdev)
-	   (slot ,buf 'st-size)
-	   #-(or svr4 BSD) (slot ,buf 'st-atime)
-	   #+svr4    (slot (slot ,buf 'st-atime) 'tv-sec)
-           #+BSD (slot (slot ,buf 'st-atime) 'ts-sec)
-	   #-(or svr4 BSD)(slot ,buf 'st-mtime)
-	   #+svr4   (slot (slot ,buf 'st-mtime) 'tv-sec)
-           #+BSD(slot (slot ,buf 'st-mtime) 'ts-sec)
-	   #-(or svr4 BSD) (slot ,buf 'st-ctime)
-	   #+svr4   (slot (slot ,buf 'st-ctime) 'tv-sec)
-           #+BSD(slot (slot ,buf 'st-ctime) 'ts-sec)
-	   #+netbsd (slot (slot ,buf 'st-birthtime) 'ts-sec)
-	   (slot ,buf 'st-blksize)
-	   (slot ,buf 'st-blocks)))
-
-#+linux
-(defmacro extract-stat-results (buf)
-  `(values T
-           #+(or alpha amd64)
-	   (slot ,buf 'st-dev)
-           #-(or alpha amd64)
-           (+ (deref (slot ,buf 'st-dev) 0)
-	      (* (+ +max-u-long+  1)
-	         (deref (slot ,buf 'st-dev) 1)))   ;;; let's hope this works..
-	   (slot ,buf 'st-ino)
-	   (slot ,buf 'st-mode)
-	   (slot ,buf 'st-nlink)
-	   (slot ,buf 'st-uid)
-	   (slot ,buf 'st-gid)
-           #+(or alpha amd64)
-	   (slot ,buf 'st-rdev)
-           #-(or alpha amd64)
-           (+ (deref (slot ,buf 'st-rdev) 0)
-	      (* (+ +max-u-long+  1)
-	         (deref (slot ,buf 'st-rdev) 1)))   ;;; let's hope this works..
-	   (slot ,buf 'st-size)
-	   (slot ,buf 'st-atime)
-	   (slot ,buf 'st-mtime)
-	   (slot ,buf 'st-ctime)
-	   (slot ,buf 'st-blksize)
-	   (slot ,buf 'st-blocks)))
-
-#-solaris
-(progn
-(defun unix-stat (name)
-  _N"Unix-stat retrieves information about the specified
-   file returning them in the form of multiple values.
-   See the UNIX Programmer's Manual for a description
-   of the values returned.  If the call fails, then NIL
-   and an error number is returned instead."
-  (declare (type unix-pathname name))
-  (when (string= name "")
-    (setf name "."))
-  (with-alien ((buf (struct stat)))
-    (syscall (#+linux "stat64" #+netbsd "__stat50" #-(or linux netbsd) "stat"
-	      c-string (* (struct stat)))
-	     (extract-stat-results buf)
-	     (%name->file name) (addr buf))))
-
-(defun unix-lstat (name)
-  _N"Unix-lstat is similar to unix-stat except the specified
-   file must be a symbolic link."
-  (declare (type unix-pathname name))
-  (with-alien ((buf (struct stat)))
-    (syscall (#+linux "lstat64" #+netbsd "__lstat50" #-(or linux netbsd) "lstat"
-              c-string (* (struct stat)))
-	     (extract-stat-results buf)
-	     (%name->file name) (addr buf))))
-
-(defun unix-fstat (fd)
-  _N"Unix-fstat is similar to unix-stat except the file is specified
-   by the file descriptor fd."
-  (declare (type unix-fd fd))
-  (with-alien ((buf (struct stat)))
-    (syscall (#+linux "fstat64" #+netbsd "__fstat50" #-(or linux netbsd) "fstat" 
-              int (* (struct stat)))
-	     (extract-stat-results buf)
-	     fd (addr buf))))
-)
-
-;;; 64-bit versions of stat and friends
-#+solaris
-(progn
-(defun unix-stat (name)
-  _N"Unix-stat retrieves information about the specified
-   file returning them in the form of multiple values.
-   See the UNIX Programmer's Manual for a description
-   of the values returned.  If the call fails, then NIL
-   and an error number is returned instead."
-  (declare (type unix-pathname name))
-  (when (string= name "")
-    (setf name "."))
-  (with-alien ((buf (struct stat64)))
-    (syscall ("stat64" c-string (* (struct stat64)))
-	     (extract-stat-results buf)
-	     (%name->file name) (addr buf))))
-
-(defun unix-lstat (name)
-  _N"Unix-lstat is similar to unix-stat except the specified
-   file must be a symbolic link."
-  (declare (type unix-pathname name))
-  (with-alien ((buf (struct stat64)))
-    (syscall ("lstat64" c-string (* (struct stat64)))
-	     (extract-stat-results buf)
-	     (%name->file name) (addr buf))))
-
-(defun unix-fstat (fd)
-  _N"Unix-fstat is similar to unix-stat except the file is specified
-   by the file descriptor fd."
-  (declare (type unix-fd fd))
-  (with-alien ((buf (struct stat64)))
-    (syscall ("fstat64" int (* (struct stat64)))
-	     (extract-stat-results buf)
-	     fd (addr buf))))
-)
+     st_dev        Device ID
+     st_ino        File serial number
+     st_mode       Mode of file
+     st_nlink      Number of hard links to the file
+     st_uid        User ID
+     st_gid        Group ID
+     st_rdev       Device ID (if file is character or block special)
+     st_atime      Last data access time, in sec
+     st_mtime      Last data modification time, in sec
+     st_ctime      Last file status change time, in sec
+     st_blksize    Preferred I/O block size
+     st_blocks     Number of blocks allocated. (Block size is implementation dependent.)
+"
+    (declare (type unix-fd fd))
+    (call-stat "os_fstat" int fd)))
 
 (def-alien-type nil
   (struct rusage
