@@ -614,7 +614,7 @@ os_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_
         return rc;
     }
         
-#if 1
+#if 0
     /*
      * Useful prints to see the actual size of the various
      * fields. Helpful for porting this to other OSes that we haven't
