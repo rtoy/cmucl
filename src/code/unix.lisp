@@ -2726,6 +2726,14 @@
     (domainname (array char 65))))
 
 (defun unix-uname ()
+  _N"Unix-uname returns information from the uname(2) system call.
+  The return values are
+
+    Name of the operating system
+    Name of this node within some implementation-defined network, if any
+    Release level of this operating system
+    Version level of this operating system release
+    Name of the hardware type on which the system is running"
   (with-alien ((names (struct utsname)))
     (syscall* (#-(or freebsd (and x86 solaris)) "uname"
 	       #+(and x86 solaris) "nuname"	; See /usr/include/sys/utsname.h
