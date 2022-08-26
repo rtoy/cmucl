@@ -1061,6 +1061,7 @@ optionally keeping some of the most recent old versions."
 
 ;;; File-Author  --  Public
 ;;;
+#+nil
 (defun file-author (file)
   "Returns the file author as a string, or nil if the author cannot be
  determined.  Signals an error of type file-error if file doesn't exist,
@@ -1082,6 +1083,31 @@ optionally keeping some of the most recent old versions."
             (let ((user-info (unix:unix-getpwuid uid)))
               (when user-info
                 (unix:user-info-name user-info))))))))
+
+(defun file-author (file)
+  "Returns the file author as a string, or nil if the author cannot be
+ determined.  Signals an error of type file-error if file doesn't exist,
+ or file is a wild pathname."
+  (if (wild-pathname-p file)
+      (error 'simple-file-error
+	     :pathname file
+	     :format-control (intl:gettext "Bad place for a wild pathname."))
+      (let ((name (unix-namestring (merge-pathnames file) t)))
+	(unless name
+	  (error 'simple-file-error
+		 :pathname file
+		 :format-control (intl:gettext "~S doesn't exist.")
+		 :format-arguments (list file)))
+	(alien:with-alien ((author (array c-call:char 1024)))
+	  (unix::syscall* ("os_file_author" c-call:c-string
+					    (alien:array c-call:char 1024)
+					    c-call:int)
+			  ;; Return
+			  (alien:cast author c-call:c-string)
+			  ;; Args
+			  (unix::%name->file name)
+			  author
+			  1024)))))
 
 
 ;;;; DIRECTORY.

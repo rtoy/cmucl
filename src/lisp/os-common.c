@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <math.h>
 #include <netdb.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -715,3 +716,37 @@ os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u
 
     return rc;
 }
+
+int
+os_file_author(const char *path, char* author, int len)
+{
+    int rc;
+    struct stat statbuf;
+    char buf[16384];
+    struct passwd pwd;
+    struct passwd *result;
+    
+    rc = stat(path, &statbuf);
+
+    if (rc != 0) {
+        return rc;
+    }
+
+    rc = getpwuid_r(statbuf.st_uid, &pwd, buf, sizeof(buf), &result);
+
+    if (result) {
+        if (strlen(result->pw_name) < len) {
+            strcpy(author, result->pw_name);
+        } else {
+            strcpy(author, "");
+            rc = -1;
+        }
+    }
+
+    return rc;
+}
+
+    
+        
+    
+    
