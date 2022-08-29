@@ -717,36 +717,35 @@ os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u
     return rc;
 }
 
-int
-os_file_author(const char *path, char* author, int len)
+/*
+ * Interface for file-author.  Given a pathname, returns a new string
+ * holding the author of the file or NULL if some error occurred.  The
+ * caller is responsible for freeing the memory used by the string.
+ */
+char *
+os_file_author(const char *path)
 {
     int rc;
     struct stat statbuf;
     char buf[16384];
+    char* author = NULL;
     struct passwd pwd;
-    struct passwd *result;
+    struct passwd *result = NULL;
     
     rc = stat(path, &statbuf);
 
     if (rc != 0) {
-        return rc;
+        return NULL;
     }
 
     rc = getpwuid_r(statbuf.st_uid, &pwd, buf, sizeof(buf), &result);
 
     if (result) {
-        if (strlen(result->pw_name) < len) {
+        author = malloc(strlen(result->pw_name + 1));
+        if (author) {
             strcpy(author, result->pw_name);
-        } else {
-            strcpy(author, "");
-            rc = -1;
         }
     }
 
-    return rc;
+    return author;
 }
-
-    
-        
-    
-    

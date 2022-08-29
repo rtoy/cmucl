@@ -1098,16 +1098,22 @@ optionally keeping some of the most recent old versions."
 		 :pathname file
 		 :format-control (intl:gettext "~S doesn't exist.")
 		 :format-arguments (list file)))
-	(alien:with-alien ((author (array c-call:char 1024)))
-	  (unix::syscall* ("os_file_author" c-call:c-string
-					    (alien:array c-call:char 1024)
-					    c-call:int)
-			  ;; Return
-			  (alien:cast author c-call:c-string)
-			  ;; Args
-			  (unix::%name->file name)
-			  author
-			  1024)))))
+	;; unix-namestring converts "." to "".  Convert it back to
+	;; "." so we can stat the current directory.  (Perhaps
+	;; that's a bug in unix-namestring?)
+	(when (string= name "")
+	  (setf name "."))
+	(let (author)
+	  (unwind-protect
+	       (progn
+		 (setf author (alien:alien-funcall
+			       (alien:extern-alien "os_file_author"
+						   (function (alien:* c-call:c-string) c-call:c-string))
+			       (unix::%name->file name)))
+		 (unless (zerop (sap-int (alien:alien-sap author)))
+		   (alien:cast author c-call:c-string)))
+	    (when author
+	      (alien:free-alien author)))))))
 
 
 ;;;; DIRECTORY.
