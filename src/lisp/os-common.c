@@ -9,6 +9,7 @@
 #include <math.h>
 #include <netdb.h>
 #include <pwd.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -725,27 +726,68 @@ os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u
 char *
 os_file_author(const char *path)
 {
-    int rc;
+    int status;
     struct stat statbuf;
-    char buf[16384];
     char* author = NULL;
+    bool nomem = false;
+    size_t bufsize;
+    char* buf = NULL;
+    char* buf2 = NULL;
     struct passwd pwd;
     struct passwd *result = NULL;
     
-    rc = stat(path, &statbuf);
+    status = stat(path, &statbuf);
 
-    if (rc != 0) {
+    if (status != 0) {
         return NULL;
     }
 
-    rc = getpwuid_r(statbuf.st_uid, &pwd, buf, sizeof(buf), &result);
+    bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
 
+    /*
+     * If sysconf fails, just use a small initial buffer size that we
+     * will keep growing up to some maximum size.
+     */
+    if (bufsize == -1) {
+        bufsize = 1024;
+    }
+    
+    while (1) {
+        buf2 = realloc(buf, bufsize);
+        fprintf(stderr, "buf2 = %p, size %zu\n", buf2, bufsize);
+        
+        if (buf2 == NULL) {
+            result = NULL;
+            nomem = true;
+            break;
+        }
+        
+        buf = buf2;
+        status = getpwuid_r(statbuf.st_uid, &pwd, buf, bufsize, &result);
+
+        if (status != 0) {
+            result = NULL;
+        }
+        if ((result != NULL) || (status != ERANGE)) {
+            break;
+        }
+        /* If bufsize exceeds some large size, give up. */
+        if (bufsize > 16384) {
+            nomem = true;
+            break;
+        }
+
+        bufsize <<= 1;
+    }
+    
     if (result) {
         author = malloc(strlen(result->pw_name + 1));
         if (author) {
             strcpy(author, result->pw_name);
         }
     }
+
+    free(buf);
 
     return author;
 }
