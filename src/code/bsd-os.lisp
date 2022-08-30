@@ -42,6 +42,7 @@
 #+executable
 (register-lisp-runtime-feature :executable)
 
+#+nil
 (setq *software-type* #+OpenBSD "OpenBSD"
                       #+NetBSD "NetBSD"
                       #+freebsd "FreeBSD"

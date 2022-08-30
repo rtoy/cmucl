@@ -757,3 +757,23 @@ os_software_version()
 
     return version;
 }
+#undef UNAME_RELEASE_AND_VERSION
+
+char*
+os_software_type()
+{
+    int status;
+    struct utsname uts;
+    char *os_name = NULL;
+    
+    status = uname(&uts);
+    if (status == 0) {
+        os_name = malloc(strlen(uts.sysname) + 1);
+        if (os_name) {
+            strcpy(os_name, uts.sysname);
+        }
+    }
+
+    return os_name;
+}
+    

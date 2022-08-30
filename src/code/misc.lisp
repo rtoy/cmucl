@@ -183,11 +183,25 @@
   "Returns a string giving the name of the local machine."
   (unix:unix-gethostname))
 
-(defvar *software-type* "Unix"
-  "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp.")
+(defvar *software-type* nil
+  _N"The value of SOFTWARE-TYPE.")
 
 (defun software-type ()
-  "Returns a string describing the supporting software."
+  _N"Returns a string describing the supporting software."
+  (unless *software-type*
+    (setf *software-type*
+	  (let (software-type)
+	    ;; Get the software-type from the C function os_software_type.
+	    (unwind-protect
+		 (progn
+		   (setf software-type
+			 (alien:alien-funcall
+			  (alien:extern-alien "os_software_type"
+					      (function (alien:* c-call:c-string)))))
+		   (unless (zerop (sap-int (alien:alien-sap software-type)))
+		     (alien:cast software-type c-call:c-string)))
+	      (when software-type
+		(alien:free-alien software-type))))))
   *software-type*)
 
 (defvar *short-site-name* (intl:gettext "Unknown")

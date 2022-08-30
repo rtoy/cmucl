@@ -26,7 +26,7 @@
 (register-lisp-feature :elf)
 (register-lisp-runtime-feature :executable)
 
-(setq *software-type* "Linux")
+;;(setq *software-type* "Linux")
 
 (defvar *software-version* nil
   "Version string for supporting software")
