@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/utsname.h>
 #include <time.h>
 
 #include "os.h"
@@ -714,4 +715,45 @@ os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u
     *blocks = buf.st_blocks;
 
     return rc;
+}
+
+/*
+ * For Linux and solaris, software-version returns the concatenation
+ * of the uname release and version fields.  For BSD (including
+ * Darwin), it's just the uname release (not version).
+ */
+#if defined(__linux__) || defined(SOLARIS)
+#define UNAME_RELEASE_AND_VERSION
+#else
+#undef UNAME_RELEASE_AND_VERSION
+#endif        
+
+char*
+os_software_version()
+{
+    int status;
+    struct utsname uts;
+    char *version = NULL;
+    
+    status = uname(&uts);
+    if (status == 0) {
+        int version_length;
+#if defined(UNAME_RELEASE_AND_VERSION)
+        version_length = strlen(uts.release) + strlen(uts.version) + 2;
+#else
+        version_length = strlen(uts.version) + 1;
+#endif        
+        version = malloc(version_length);
+        if (version) {
+#if defined(UNAME_RELEASE_AND_VERSION)
+            strcpy(version, uts.release);
+            strcat(version, " ");
+            strcat(version, uts.version);
+#else
+            strcpy(version, uts.version)
+#endif            
+        }
+    }
+
+    return version;
 }

@@ -28,15 +28,39 @@
 
 (setq *software-type* "Linux")
 
+(defvar *software-version* nil
+  "Version string for supporting software")
+
 ;;; Instead of reading /proc/version (which has some bugs with
 ;;; select() in Linux kernel 2.6.x) and instead of running uname -r,
 ;;; let's just get the info from uname().
 (defun software-version ()
   "Returns a string describing version of the supporting software."
-  (multiple-value-bind (sysname nodename release version)
-      (unix:unix-uname)
-    (declare (ignore sysname nodename))
-    (concatenate 'string release " " version)))
+  (unless *software-version*
+    (setf *software-version*
+	  (multiple-value-bind (sysname nodename release version)
+	      (unix:unix-uname)
+	    (declare (ignore sysname nodename))
+	    (concatenate 'string release " " version))))
+  *software-version*)
+
+#+nil
+(defun software-version ()
+  "Returns a string describing version of the supporting software."
+  (unless *software-version*
+    (setf *software-version*
+	  (let (version)
+	    (unwind-protect
+		 (progn
+		   (setf version
+			 (alien:alien-funcall
+			  (alien:extern-alien "os_software_version"
+					      (function (alien:* c-call:c-string)))))
+		   (unless (zerop (sap-int (alien:alien-sap version)))
+		     (alien:cast version c-call:c-string)))
+	      (when version
+		(alien:free-alien version)))))
+    *software-version*))
 
 
 ;;; OS-Init initializes our operating-system interface.
