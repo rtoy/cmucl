@@ -579,3 +579,11 @@
 	with user-info = (unix:unix-getpwuid uid)
 	while user-info
 	finally (assert-false user-info)))
+
+(define-test issue.130
+    (:tag :issues)
+  ;; Just verify that file-author works.  In particular "." should
+  ;; work and not return NIL.
+  (assert-true (file-author "."))
+  (assert-true (file-author "bin/build.sh"))
+  (assert-true (file-author "tests/안녕하십니까.txt")))
