@@ -1,188 +1,167 @@
+# You can override the included template(s) by including variable overrides
+# SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
+# Secret Detection customization: https://docs.gitlab.com/ee/user/application_security/secret_detection/#customizing-settings
+# Dependency Scanning customization: https://docs.gitlab.com/ee/user/application_security/dependency_scanning/#customizing-the-dependency-scanning-settings
+# Note that environment variables can be set in several places
+# See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
 variables:
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2021/07"
-  version: "2021-07-x86"
-  bootstrap: ""
-
+  download_url: https://common-lisp.net/project/cmucl/downloads/snapshots/2021/07
+  version: 2021-07-x86
+  bootstrap: ''
 stages:
-  - install
-  - build
-  - test
-  - ansi-test
-  - benchmark
-
-cache:
-
-
+- install
+- build
+- test
+- ansi-test
+- benchmark
+cache: 
 linux:install:
   stage: install
   tags:
-    - linux
+  - linux
   artifacts:
     paths:
-      - snapshot/
+    - snapshot/
   script:
-    - wget -nv $download_url/cmucl-$version-linux.tar.bz2
-    - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
-    - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
-
+  - wget -nv $download_url/cmucl-$version-linux.tar.bz2
+  - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
+  - mkdir snapshot
+  - "(cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)"
 linux:build:
   stage: build
   tags:
-    - linux
+  - linux
   artifacts:
     paths:
-      - dist/
-      - linux-2/*.log
-      - linux-3/*.log
-      - linux-4/*.log
+    - dist/
+    - linux-2/*.log
+    - linux-3/*.log
+    - linux-4/*.log
   needs:
-    - job: linux:install
-      artifacts: true
+  - job: linux:install
+    artifacts: true
   script:
-    # Do cross compile first
-    #- bin/create-target.sh xtarget x86_linux_clang
-    #- bin/create-target.sh xcross x86_linux_clang
-    #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
-    # Regular build using the cross-compiled result or snapshot
-    - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o snapshot/bin/lisp
-    - bin/make-dist.sh -I dist linux-4
-
+  - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o snapshot/bin/lisp
+  - bin/make-dist.sh -I dist linux-4
 linux:test:
   stage: test
   tags:
-    - linux
+  - linux
   artifacts:
     paths:
-      - ansi-test/test.out
-      - test.log
+    - ansi-test/test.out
+    - test.log
   needs:
-    # Needs artifacts from build (dist/)
-    - job: linux:build
-      artifacts: true
+  - job: linux:build
+    artifacts: true
   script:
-    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
-
+  - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 linux:ansi-test:
   stage: ansi-test
   tags:
-    - linux
+  - linux
   artifacts:
     paths:
-      - ansi-test/test.out
+    - ansi-test/test.out
   needs:
-    # Needs artifacts from build (dist/)
-    - job: linux:build
-      artifacts: true
+  - job: linux:build
+    artifacts: true
   before_script:
-    - git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
-    - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
+  - git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
+  - "(cd ansi-test; git checkout rtoy-cmucl-expected-failures)"
   script:
-    - cd ansi-test
-    - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
-    - grep 'No unexpected \(successes\|failures\)' test.out
-    
+  - cd ansi-test
+  - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
+  - grep 'No unexpected \(successes\|failures\)' test.out
 linux:benchmark:
   stage: benchmark
   tags:
-    - linux
+  - linux
   artifacts:
     paths:
-      - benchmarks/cl-bench/results
+    - benchmarks/cl-bench/results
   needs:
-    # Needs artifacts from install (snapshot/) and build (dist/)
-    - job: linux:install
-      artifacts: true
-    - job: linux:build
+  - job: linux:install
+    artifacts: true
+  - job: linux:build
   script:
-    - cd benchmarks/cl-bench
-    - mkdir tmp
-    - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
-    - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
-    - ../../snapshot/bin/lisp -load report
-
+  - cd benchmarks/cl-bench
+  - mkdir tmp
+  - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
+  - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
+  - "../../snapshot/bin/lisp -load report"
 osx:install:
   stage: install
   tags:
-    - osx
+  - osx
   artifacts:
     paths:
-      - snapshot/
+    - snapshot/
   script:
-    - /opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
-    - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
-
+  - "/opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2"
+  - mkdir snapshot
+  - "(cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)"
 osx:build:
   stage: build
   tags:
-    - osx
+  - osx
   artifacts:
     paths:
-      - dist/
-      - darwin-2/*.log
-      - darwin-3/*.log
-      - darwin-4/*.log
+    - dist/
+    - darwin-2/*.log
+    - darwin-3/*.log
+    - darwin-4/*.log
   needs:
-    - job: osx:install
-      artifacts: true
+  - job: osx:install
+    artifacts: true
   script:
-    # Do cross compile first
-    #- bin/create-target.sh xtarget x86_darwin
-    #- bin/create-target.sh xcross x86_darwin
-    #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
-    # Regular build using the cross-compiled result or snapshot
-    - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
-    - bin/make-dist.sh -I dist darwin-4
-
+  - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
+  - bin/make-dist.sh -I dist darwin-4
 osx:test:
   stage: test
   tags:
-    - osx
+  - osx
   artifacts:
     paths:
-      - test.log
+    - test.log
   needs:
-    # Needs artifacts from build (dist/)
-    - job: osx:build
-      artifacts: true
+  - job: osx:build
+    artifacts: true
   script:
-    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
-
+  - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 osx:ansi-test:
   stage: ansi-test
   tags:
-    - osx
+  - osx
   artifacts:
     paths:
-      - ansi-test/test.out
+    - ansi-test/test.out
   needs:
-    # Needs artifacts from build (dist/)
-    - job: osx:build
-      artifacts: true
+  - job: osx:build
+    artifacts: true
   before_script:
-    - /opt/local/bin/git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
-    - (cd ansi-test; /opt/local/bin/git checkout rtoy-cmucl-expected-failures)
+  - "/opt/local/bin/git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git"
+  - "(cd ansi-test; /opt/local/bin/git checkout rtoy-cmucl-expected-failures)"
   script:
-    - cd ansi-test
-    - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
-    - grep 'No unexpected \(successes\|failures\)' test.out 
-  
+  - cd ansi-test
+  - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
+  - grep 'No unexpected \(successes\|failures\)' test.out
 osx:benchmark:
   stage: benchmark
   tags:
-    - osx
+  - osx
   artifacts:
     paths:
-      - benchmarks/cl-bench/results
+    - benchmarks/cl-bench/results
   needs:
-    # Needs artifacts from install (snapshot/) and build (dist/)
-    - job: osx:install
-      artifacts: true
-    - job:  osx:build
+  - job: osx:install
+    artifacts: true
+  - job: osx:build
   script:
-    - cd benchmarks/cl-bench
-    - mkdir tmp
-    - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
-    - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
-    - ../../snapshot/bin/lisp -load report
+  - cd benchmarks/cl-bench
+  - mkdir tmp
+  - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
+  - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
+  - "../../snapshot/bin/lisp -load report"
+include:
+- template: Security/Secret-Detection.gitlab-ci.yml
