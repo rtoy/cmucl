@@ -783,13 +783,20 @@ os_file_author(const char *path)
     }
     
     if (result) {
+        fprintf(stderr, "Allocate %d bytes for author\n",
+                strlen(result->pw_name + 1));
+        
         author = malloc(strlen(result->pw_name + 1));
         if (author) {
+            fprintf(stderr, "author = %p\n", author);
             strcpy(author, result->pw_name);
         }
     }
 
-    free(buf);
+    fprintf(stderr, "Free buf %p\n", buf);
+    if (buf) {
+        free(buf);
+    }
 
     return author;
 }
