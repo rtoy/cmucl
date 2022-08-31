@@ -31,7 +31,7 @@
 #+executable
 (register-lisp-runtime-feature :executable)
 
-(setq *software-type* "SunOS")
+;;(setq *software-type* "SunOS")
 
 (defvar *software-version* nil "Version string for supporting software")
 
