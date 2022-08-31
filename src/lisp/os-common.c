@@ -750,7 +750,7 @@ os_software_version()
             strcat(version, " ");
             strcat(version, uts.version);
 #else
-            strcpy(version, uts.version)
+            strcpy(version, uts.version);
 #endif            
         }
     }
