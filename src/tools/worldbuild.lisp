@@ -113,6 +113,7 @@
     "target:code/string"
     "target:code/mipsstrops"
     "target:code/misc"
+    "target:code/misc-doc"
     "target:code/dfixnum"
     ,@(unless (c:backend-featurep :gengc)
 	'("target:code/gc"))

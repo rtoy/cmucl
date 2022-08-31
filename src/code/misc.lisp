@@ -17,7 +17,7 @@
 (in-package "LISP")
 (intl:textdomain "cmucl")
 
-(export '(documentation *features* variable room
+(export '(*features* variable room
 	  lisp-implementation-type lisp-implementation-version machine-type
 	  machine-version machine-instance software-type software-version
 	  short-site-name long-site-name dribble compiler-macro))
