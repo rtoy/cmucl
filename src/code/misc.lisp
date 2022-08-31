@@ -204,6 +204,26 @@
 		(alien:free-alien software-type))))))
   *software-type*)
 
+(defvar *software-version* nil
+  _N"Version string for supporting software")
+
+(defun software-version ()
+  _N"Returns a string describing version of the supporting software."
+  (unless *software-version*
+    (setf *software-version*
+	  (let (version)
+	    (unwind-protect
+		 (progn
+		   (setf version
+			 (alien:alien-funcall
+			  (alien:extern-alien "os_software_version"
+					      (function (alien:* c-call:c-string)))))
+		   (unless (zerop (sap-int (alien:alien-sap version)))
+		     (alien:cast version c-call:c-string)))
+	      (when version
+		(alien:free-alien version)))))
+    *software-version*))
+
 (defvar *short-site-name* (intl:gettext "Unknown")
   "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp.")
 

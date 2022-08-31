@@ -42,32 +42,13 @@
 #+executable
 (register-lisp-runtime-feature :executable)
 
-#+nil
-(setq *software-type* #+OpenBSD "OpenBSD"
-                      #+NetBSD "NetBSD"
-                      #+freebsd "FreeBSD"
-		      #+Darwin "Darwin"
-		      #-(or freebsd NetBSD OpenBSD Darwin) "BSD")
-
-(defvar *software-version* nil "Version string for supporting software")
-
-(defun software-version ()
-  "Returns a string describing version of the supporting software."
-  (unless *software-version*
-    (setf *software-version*
-	  (string-trim '(#\newline)
-		       (with-output-to-string (stream)
-			 (run-program "/usr/bin/uname"
-				      '("-r")
-				      :output stream)))))
-  *software-version*)
-
 
 ;;; OS-Init initializes our operating-system interface.  It sets the values
 ;;; of the global port variables to what they should be and calls the functions
 ;;; that set up the argument blocks for the server interfaces.
 
 (defun os-init ()
+  ;; Decache version on save, because it might not be the same when we restart.
   (setf *software-version* nil))
 
 ;;; GET-SYSTEM-INFO  --  Interface
