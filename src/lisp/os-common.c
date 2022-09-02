@@ -782,10 +782,7 @@ os_file_author(const char *path)
     }
     
     if (result) {
-        author = malloc(strlen(result->pw_name) + 1);
-        if (author) {
-            strcpy(author, result->pw_name);
-        }
+        author = strdup(result->pw_name);
     }
 
     if (buf) {
