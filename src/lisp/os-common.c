@@ -740,19 +740,15 @@ os_software_version()
         int version_length;
 #if defined(UNAME_RELEASE_AND_VERSION)
         version_length = strlen(uts.release) + strlen(uts.version) + 2;
-#else
-        version_length = strlen(uts.version) + 1;
-#endif        
         version = malloc(version_length);
         if (version) {
-#if defined(UNAME_RELEASE_AND_VERSION)
             strcpy(version, uts.release);
             strcat(version, " ");
             strcat(version, uts.version);
-#else
-            strcpy(version, uts.version);
-#endif            
         }
+#else
+        version = strdup(uts.version);
+#endif            
     }
 
     return version;
@@ -768,10 +764,7 @@ os_software_type()
     
     status = uname(&uts);
     if (status == 0) {
-        os_name = malloc(strlen(uts.sysname) + 1);
-        if (os_name) {
-            strcpy(os_name, uts.sysname);
-        }
+        os_name = strdup(uts.sysname);
     }
 
     return os_name;
