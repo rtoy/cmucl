@@ -950,7 +950,7 @@
   File after it was renamed."
   (let* ((original (truename file))
 	 (original-namestring (unix-namestring original t))
-	 (new-name (merge-pathnames new-name file))
+	 (new-name (merge-pathnames new-name original))
 	 (new-namestring (unix-namestring new-name nil)))
     (unless new-namestring
       (error 'simple-file-error
