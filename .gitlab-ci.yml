@@ -80,7 +80,7 @@ linux:ansi-test:
   script:
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
-    - grep 'No unexpected \(successes\|failures\)' test.out
+    - grep -a 'No unexpected \(successes\|failures\)' test.out
     
 linux:benchmark:
   stage: benchmark
