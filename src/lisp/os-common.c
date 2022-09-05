@@ -744,22 +744,22 @@ os_file_author(const char *path)
     assert(sysconf(_SC_GETPW_R_SIZE_MAX) <= 16384));
     while (size <= 16384) {
         switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
-        case 0:
-            /* Success, though we might not have a matching entry */
-            result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
-            goto exit;
-        case ERANGE:
-            /* Buffer is too small, double its size and try again */
-            size *= 2;
-            obuffer = (buffer == initial) ? NULL : buffer;
-            if ((buffer = realloc(obuffer, size)) == NULL) {
-                free(obuffer); 
-                goto exit;
-            }
-            continue;
-        default:
-            /* All other errors */
-            goto exit;
+          case 0:
+              /* Success, though we might not have a matching entry */
+              result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
+              goto exit;
+          case ERANGE:
+              /* Buffer is too small, double its size and try again */
+              size *= 2;
+              obuffer = (buffer == initial) ? NULL : buffer;
+              if ((buffer = realloc(obuffer, size)) == NULL) {
+                  free(obuffer); 
+                  goto exit;
+              }
+              continue;
+          default:
+              /* All other errors */
+              goto exit;
         }
     }
 exit:
