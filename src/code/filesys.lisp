@@ -1078,7 +1078,7 @@ optionally keeping some of the most recent old versions."
 	;; unix-namestring converts "." to "".  Convert it back to
 	;; "." so we can stat the current directory.  (Perhaps
 	;; that's a bug in unix-namestring?)
-	(when (string= name "")
+	(when (zerop (length name))
 	  (setf name "."))
 	(let (author)
 	  (unwind-protect
