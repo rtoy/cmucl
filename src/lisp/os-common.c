@@ -727,66 +727,42 @@ os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u
 char *
 os_file_author(const char *path)
 {
-    int status;
-    struct stat statbuf;
-    char* author = NULL;
-    bool nomem = false;
-    size_t bufsize;
-    char* buf = NULL;
-    char* buf2 = NULL;
+    struct stat sb;
+    char initial[1024];
+    char *buffer, *obuffer;
+    size_t size;
     struct passwd pwd;
-    struct passwd *result = NULL;
-    
-    status = stat(path, &statbuf);
+    struct passwd *ppwd;
+    char *result;
 
-    if (status != 0) {
+    if (stat(path, &sb) != 0) {
         return NULL;
     }
-
-    bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
-
-    /*
-     * If sysconf fails, just use a small initial buffer size that we
-     * will keep growing up to some maximum size.
-     */
-    if (bufsize == -1) {
-        bufsize = 1024;
-    }
-    
-    while (1) {
-        buf2 = realloc(buf, bufsize);
-        
-        if (buf2 == NULL) {
-            result = NULL;
-            nomem = true;
-            break;
+    result = NULL;
+    buffer = initial;
+    size = ARRAYSIZE(initial);
+    assert(sysconf(_SC_GETPW_R_SIZE_MAX) <= 16384));
+    while (size <= 16384) {
+        switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
+        case 0:
+            /* Success, though we might not have a matching entry */
+            result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
+            goto exit;
+        case ERANGE:
+            /* Buffer is too small, double its size and try again */
+            size *= 2;
+            obuffer = (buffer == initial) ? NULL : buffer;
+            if ((buffer = realloc(obuffer, size)) == NULL) {
+                free(obuffer); 
+                goto exit;
+            }
+            continue;
+        default:
+            /* All other errors */
+            goto exit;
         }
-        
-        buf = buf2;
-        status = getpwuid_r(statbuf.st_uid, &pwd, buf, bufsize, &result);
-
-        if (status != 0) {
-            result = NULL;
-        }
-        if ((result != NULL) || (status != ERANGE)) {
-            break;
-        }
-        /* If bufsize exceeds some large size, give up. */
-        if (bufsize > 16384) {
-            nomem = true;
-            break;
-        }
-
-        bufsize <<= 1;
     }
-    
-    if (result) {
-        author = strdup(result->pw_name);
-    }
-
-    if (buf) {
-        free(buf);
-    }
-
-    return author;
+exit:
+    free(buffer);
+    return result;
 }
