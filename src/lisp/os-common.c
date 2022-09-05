@@ -5,6 +5,7 @@
 
 */
 
+#include <assert.h>
 #include <errno.h>
 #include <math.h>
 #include <netdb.h>
@@ -741,7 +742,7 @@ os_file_author(const char *path)
 
     result = NULL;
     buffer = initial;
-    size = ARRAYSIZE(initial);
+    size = sizeof(initial) / sizeof(initial[0]);
 
     /*
      * Assume a buffer of size 16384 is enough to for getpwuid_r to do
@@ -773,6 +774,8 @@ os_file_author(const char *path)
         }
     }
 exit:
+    fprintf(stderr, "buffer, initial = %p %p\n", buffer, initial);
+    
     free(buffer);
     return result;
 }
