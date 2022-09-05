@@ -738,10 +738,20 @@ os_file_author(const char *path)
     if (stat(path, &sb) != 0) {
         return NULL;
     }
+
     result = NULL;
     buffer = initial;
     size = ARRAYSIZE(initial);
-    assert(sysconf(_SC_GETPW_R_SIZE_MAX) <= 16384));
+
+    /*
+     * Assume a buffer of size 16384 is enough to for getpwuid_r to do
+     * it's thing.
+     */
+    assert(sysconf(_SC_GETPW_R_SIZE_MAX) <= 16384);
+
+    /*
+     * Keep trying with larger buffers until a maximum is reached.
+     */
     while (size <= 16384) {
         switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
           case 0:
