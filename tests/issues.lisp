@@ -579,3 +579,27 @@
 	with user-info = (unix:unix-getpwuid uid)
 	while user-info
 	finally (assert-false user-info)))
+
+(define-test issue.132
+    (:tag :issues)
+  ;; From a message on cmucl-imp 2008/06/01.  If "d1" is a directory,
+  ;; (rename "d1" "d2") should rename the directory "d1" to "d2".
+  ;; Previously that produced an error trying to rename "d1" to
+  ;; "d1/d2".
+  ;;
+  ;; Create the test directory (that is a subdirectory of "dir").
+  (assert (ensure-directories-exist "dir/orig-dir/"))
+  (let ((*default-pathname-defaults* (merge-pathnames "dir/" (ext:default-directory))))
+    (multiple-value-bind (defaulted-new-name old-truename new-truename)
+	;; Rename "dir/orig-dir" to "orig/new-dir".
+	(rename-file "orig-dir/" "new-dir")
+      (let ((orig (merge-pathnames
+		   (make-pathname :directory '(:relative "orig-dir"))))
+	    (new (merge-pathnames
+		  (make-pathname :directory '(:relative "new-dir")))))
+	;; Ensure that the rename worked and that the returned values
+	;; have the expected values.
+	(assert defaulted-new-name)
+	(assert (equalp old-truename orig))
+	(assert (equalp new-truename new))))))
+  

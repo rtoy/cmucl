@@ -940,7 +940,7 @@
 
 ;;; Rename-File  --  Public
 ;;;
-(defun rename-file (file new-name)
+(defun rename-file (file new-file-name)
   "Rename File to have the specified New-Name.  If file is a stream
   open to a file, then the associated file is renamed.
 
@@ -950,7 +950,11 @@
   File after it was renamed."
   (let* ((original (truename file))
 	 (original-namestring (unix-namestring original t))
-	 (new-name (merge-pathnames new-name original))
+	 ;; First, merge NEW-FILE-NAME with *DEFAULT-PATHNAME-DEFAULTS* to
+	 ;; fill in the missing components and then merge again with
+	 ;; the FILE to get any missing components from FILE.
+	 (new-name (merge-pathnames (merge-pathnames new-file-name)
+				    file))
 	 (new-namestring (unix-namestring new-name nil)))
     (unless new-namestring
       (error 'simple-file-error
@@ -968,7 +972,9 @@
 				       (unix:get-unix-error-msg error))))
       (when (streamp file)
 	(file-name file new-namestring))
-      (values new-name original (truename new-name)))))
+      (values new-name
+	      original
+	      (truename new-name)))))
 
 ;;; Delete-File  --  Public
 ;;;
