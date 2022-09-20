@@ -579,3 +579,9 @@
 	with user-info = (unix:unix-getpwuid uid)
 	while user-info
 	finally (assert-false user-info)))
+
+(define-test issue.135
+    (:tag :issues)
+  (assert-equalp "." (ext:unix-namestring "."))
+  (assert-equalp "./abc.txt" (ext:unix-namestring "abc.txt"))
+  (assert-equalp "./abc/def/foo.txt" (ext:unix-namestring "abc/def/foo.txt")))
