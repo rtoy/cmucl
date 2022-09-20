@@ -690,7 +690,7 @@
 				   verify-existence follow-links
 				   nil function))
 	  (:relative
-	   (%enumerate-directories "" (cdr directory) pathname
+	   (%enumerate-directories "./" (cdr directory) pathname
 				   verify-existence follow-links
 				   nil function)))
 	(%enumerate-files "" pathname verify-existence function))))
@@ -786,6 +786,7 @@
   (let ((name (%pathname-name pathname))
 	(type (%pathname-type pathname))
 	(version (%pathname-version pathname)))
+    (format t "name type version = ~S ~S ~S~%" name type version)
     (cond ((member name '(nil :unspecific))
 	   (when (or (not verify-existence)
 		     (unix:unix-file-kind directory))
@@ -883,6 +884,7 @@
 	(when (or (not executable-only)
 		  (and (eq (unix:unix-file-kind name) :file)
 		       (unix:unix-access name unix:x_ok)))
+	  (format t "unix-namestring:  name = ~A~%" name)
 	  (names name)))
       (let ((names (names)))
 	(when names
