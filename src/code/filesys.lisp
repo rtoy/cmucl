@@ -1087,10 +1087,9 @@ optionally keeping some of the most recent old versions."
 			       (alien:extern-alien "os_file_author"
 						   (function (alien:* c-call:c-string) c-call:c-string))
 			       (unix::%name->file name)))
-		 (unless (zerop (sap-int (alien:alien-sap author)))
+		 (unless (alien:null-alien author)
 		   (alien:cast author c-call:c-string)))
-	    (when author
-	      (alien:free-alien author)))))))
+	    (alien:free-alien author))))))
 
 
 ;;;; DIRECTORY.

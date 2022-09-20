@@ -774,8 +774,6 @@ os_file_author(const char *path)
         }
     }
 exit:
-    fprintf(stderr, "buffer, initial = %p %p\n", buffer, initial);
-    
     if (buffer != initial) {
         free(buffer);
     }
