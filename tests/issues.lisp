@@ -587,7 +587,11 @@
   (assert-eql :utf-8 (stream-external-format sys:*stdin*))
   (assert-eql :utf-8 (stream-external-format sys:*stdout*))
   (assert-eql :utf-8 (stream-external-format sys:*stderr*))
-  (assert-eql :utf-8 (stream-external-format sys:*tty*))
+  ;; *tty* can either be an fd-stream, in which case the format is
+  ;; utf8, or a two-way-stream, in which case it is :default.  
+  (if (typep sys:*tty* 'two-way-stream)
+        (assert-eql :default (stream-external-format sys:*tty*))
+	(assert-eql :utf-8 (stream-external-format sys:*tty*)))
   ;; Check that printing to *standard-output* is correctly encoded.
   (dribble "test-format.txt")
   ;; Print a Greek lower-case alpha character
