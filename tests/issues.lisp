@@ -579,3 +579,20 @@
 	with user-info = (unix:unix-getpwuid uid)
 	while user-info
 	finally (assert-false user-info)))
+
+(define-test issue-139.1
+    (:tag :issues)
+  ;; Verify the value of the default external format and that system streams use :utf-8.
+  (assert-eql :utf-8 stream:*default-external-format*)
+  (assert-eql :utf-8 (stream-external-format sys:*stdin*))
+  (assert-eql :utf-8 (stream-external-format sys:*stdout*))
+  (assert-eql :utf-8 (stream-external-format sys:*stderr*))
+  (assert-eql :utf-8 (stream-external-format sys:*tty*))
+  ;; Check that printing to *standard-output* is correctly encoded.
+  (dribble "test-format.txt")
+  ;; Print a Greek lower-case alpha character
+  (princ #\u+3b1)
+  (dribble)
+  (with-open-file (s "test-format.txt" :direction :input)
+    (let ((c (read-char s)))
+      (assert-equal #\u+3b1 c))))
