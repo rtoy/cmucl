@@ -22,7 +22,8 @@
 	  describe-external-format))
 
 (defvar *default-external-format*
-  :iso8859-1
+  #-unicode :iso8859-1
+  #+unicode :utf-8
   "The default external format to use if no other external format is
   specified")
 
@@ -460,11 +461,11 @@
 
 (defun %find-external-format (name)
   ;; avoid loading files, etc., early in the boot sequence
-  (when (or (eq name :iso8859-1)
-	    (and (eq name :default) (eq *default-external-format* :iso8859-1)))
+  (when (eq name :iso8859-1)
     (return-from %find-external-format
       (gethash :iso8859-1 *external-formats*)))
-  (when (eq name :utf-8)
+  (when (or (eq name :utf-8)
+	    (and (eq name :default) (eq *default-external-format* :utf-8)))
     (return-from %find-external-format
       (gethash :utf-8 *external-formats*)))
 
