@@ -2397,20 +2397,20 @@
   (setf *available-buffers* nil)
   (setf *stdin*
 	(make-fd-stream 0 :name "Standard Input" :input t :buffering :line
-			:external-format :default))
+			:external-format :utf-8))
   (setf *stdout*
 	(make-fd-stream 1 :name "Standard Output" :output t :buffering :line
-			:external-format :default))
+			:external-format :utf-8))
   (setf *stderr*
 	(make-fd-stream 2 :name "Standard Error" :output t :buffering :line
-			:external-format :default))
+			:external-format :utf-8))
   (let ((tty (and (not *batch-mode*)
 		  (unix:unix-open "/dev/tty" unix:o_rdwr #o666))))
     (setf *tty*
 	  (if tty
 	      (make-fd-stream tty :name "the Terminal" :input t :output t
 			      :buffering :line :auto-close t
-			      :external-format :default)
+			      :external-format :utf-8)
 	      (make-two-way-stream *stdin* *stdout*))))
   nil)
 
