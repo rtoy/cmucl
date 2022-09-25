@@ -26,6 +26,9 @@
 ;; non-Latin-1 characters "mojibake", but otherwise they'll be inaccessible.
 ;; Must be set to NIL initially to enable building Lisp!
 (defvar *filename-encoding* nil)
+(defvar *default-filename-encoding*
+  #-unicode nil
+  #+unicode :utf-8)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmacro %name->file (string)

@@ -1155,7 +1155,8 @@ character and illegal outputs are replaced by a question mark.")
 	       (not (eq unix::*filename-encoding* filenames)))
       (cerror (intl:gettext "Change it anyway.")
 	      (intl:gettext "The external-format for encoding filenames is already set.")))
-    (setq unix::*filename-encoding* filenames))
+    (setq unix::*filename-encoding* filenames)
+    (setq unix::*default-filename-encoding* filenames))
   t)
 
 

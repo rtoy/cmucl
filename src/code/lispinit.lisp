@@ -482,7 +482,9 @@
     (set-floating-point-modes :traps
 			      '(:overflow :invalid :divide-by-zero))
     ;; Clear pseudo atomic in case this core wasn't compiled with support.
-    #+(or x86 amd64) (setf lisp::*pseudo-atomic-atomic* 0))))
+    #+(or x86 amd64) (setf lisp::*pseudo-atomic-atomic* 0)
+     (unless unix::*filename-encoding*
+       (setf unix::*filename-encoding* unix::*default-filename-encoding*)))))
 
 
 ;;;; Miscellaneous external functions:
