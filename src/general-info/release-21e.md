@@ -52,6 +52,7 @@ public domain.
     * ~~#122~~ gcc 11 can't build cmucl
     * ~~#127~~ Linux unix-getpwuid segfaults when given non-existent uid.
     * ~~#128~~ `QUIT` accepts an exit code
+    * ~~#140~~ External format of `two-way-stream` returns the common format of the input and output streams if possible; otherwise, return `:default`.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
