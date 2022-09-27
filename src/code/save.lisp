@@ -142,6 +142,29 @@
   (file c-call:c-string)
   (initial-function (alien:unsigned #.vm:word-bits)))
 
+(defun setup-encodings (&optional quiet)
+  "Set up encodings based on the value of the LANG envvar.  The
+  codeset from LANG will be used to set *DEFAULT-EXTERNAL-FORMAT* and
+  sets the terminal and file name encoding to the specified codeset.
+  If Quiet is non-NIL, then messages will be suppressed."
+  (let ((lang (unix:unix-getenv "LANG")))
+    (when lang
+      ;; Simple parsing of LANG.
+      (let ((dot (position #\. lang))
+	    (at (or (position #\@ lang) nil)))
+	(when dot
+	  (let* ((codeset (subseq lang (1+ dot) at))
+		 (format (intern codeset "KEYWORD")))
+	    (cond ((stream::find-external-format format nil)
+		   (unless quiet
+		     (write-string "Default external format and filename encoding: ")
+		     (princ format)
+		     (terpri))
+		   (setf *default-external-format* format)
+		   (set-system-external-format format format))
+		  (t
+		   (warn "Unknown or unsupported external format: ~S" codeset)))))))))
+
 (defun save-lisp (core-file-name &key
 				 (purify t)
 				 (root-structures ())
@@ -294,6 +317,9 @@
 	       (when process-command-line
 		 (ext::invoke-switch-demons *command-line-switches*
 					    *command-switch-demons*))
+	       (setup-encodings (or quiet
+				    (and process-command-line
+					 (find-switch "quiet"))))
 	       (when (and print-herald
 			  (not (or quiet
 				   (and process-command-line
