@@ -579,3 +579,15 @@
 	with user-info = (unix:unix-getpwuid uid)
 	while user-info
 	finally (assert-false user-info)))
+
+(define-test issue.140
+    (:tag :issues)
+  ;; Make sure *standard-input* is a two-way-stream
+  (assert-true (typep *standard-input* 'two-way-stream))
+  (let ((input-format (stream-external-format
+		       (two-way-stream-input-stream *standard-input*)))
+	(output-format (stream-external-format
+			(two-way-stream-output-stream *standard-input*))))
+    ;; By default, the input and output formats should be the same.
+    (assert-eql input-format output-format)
+    (assert-eql input-format (stream-external-format *standard-input*))))
