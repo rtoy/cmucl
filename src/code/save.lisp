@@ -147,23 +147,50 @@
   codeset from LANG will be used to set *DEFAULT-EXTERNAL-FORMAT* and
   sets the terminal and file name encoding to the specified codeset.
   If Quiet is non-NIL, then messages will be suppressed."
-  (let ((lang (unix:unix-getenv "LANG")))
+  ;; Find the envvar that will tell us what encoding to use.
+  ;;
+  ;; See https://pubs.opengroup.org/onlinepubs/7908799/xbd/envvar.html
+  ;;
+  (let* ((lang (or (unix:unix-getenv "LC_ALL")
+		   (unix:unix-getenv "LC_MESSAGES")
+		   (unix:unix-getenv "LANG")))
+	 (length (length lang)))
+    ;; If LANG isn't set, we don't need to do anything and just use
+    ;; the builtin defaults.
     (when lang
-      ;; Simple parsing of LANG.
-      (let ((dot (position #\. lang))
-	    (at (or (position #\@ lang) nil)))
-	(when dot
-	  (let* ((codeset (subseq lang (1+ dot) at))
-		 (format (intern codeset "KEYWORD")))
-	    (cond ((stream::find-external-format format nil)
-		   (unless quiet
-		     (write-string "Default external format and filename encoding: ")
-		     (princ format)
-		     (terpri))
-		   (setf *default-external-format* format)
-		   (set-system-external-format format format))
-		  (t
-		   (warn "Unknown or unsupported external format: ~S" codeset)))))))))
+      (cond
+	((or (string-equal "C" lang :end2 (min 1 length))
+	     (string-equal "POSIX" lang :end2 (min 5 length)))
+	 ;; If the lang is "C" or "POSIX", ignoring anything after
+	 ;; that, we need to set the format accordingly.
+	 (setf *default-external-format* :iso8859-1)
+	 (set-system-external-format :iso8859-1 nil))
+	((string-equal "/" lang :end2 (min 1 length))
+	 ;; Also, we don't handle the case where the locale starts
+	 ;; with a slash which means a pathname to a file created by
+	 ;; the localdef utility.  So use our defaults for that case
+	 ;; as well.
+	 (setf *default-external-format* :iso8859-1)
+	 (set-system-external-format :iso8859-1 nil))
+	(t
+	 ;; Simple parsing of LANG.  We assume it looks like
+	 ;; "language[_territory][.codeset]".  We're only interested
+	 ;; in the codeset, if given.  Some LC_ vars also have an
+	 ;; optional @modifier after the codeset; we ignore that too.
+	 (let ((dot (position #\. lang))
+	       (at (or (position #\@ lang) nil)))
+	   (when dot
+	     (let* ((codeset (subseq lang (1+ dot) at))
+		    (format (intern codeset "KEYWORD")))
+	       (cond ((stream::find-external-format format nil)
+		      (unless quiet
+			(write-string "Default external format and filename encoding: ")
+			(princ format)
+			(terpri))
+		      (setf *default-external-format* format)
+		      (set-system-external-format format format))
+		     (t
+		      (warn "Unknown or unsupported external format: ~S" codeset)))))))))))
 
 (defun save-lisp (core-file-name &key
 				 (purify t)
