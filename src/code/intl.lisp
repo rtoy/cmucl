@@ -519,12 +519,18 @@
     (if (equal val "") nil val)))
 
 (defun setlocale (&optional locale)
-  (setf *locale* (or locale
-		     (getenv "LANGUAGE")
-		     (getenv "LC_ALL")
-		     (getenv "LC_MESSAGES")
-		     (getenv "LANG")
-		     *locale*)))
+  (let ((env-locale (or locale
+			(getenv "LANGUAGE")
+			(getenv "LC_ALL")
+			(getenv "LC_MESSAGES")
+			(getenv "LANG"))))
+    (cond
+      ((and (plusp (length env-locale))
+	    (char-equal #\/ (aref env-locale 0)))
+       (warn "Locale not changed due to unsupported locale: ~S" env-locale))
+      (t
+       (setf *locale* (or env-locale
+			  *locale*))))))
 
 (defmacro textdomain (domain)
   `(eval-when (:compile-toplevel :execute)
