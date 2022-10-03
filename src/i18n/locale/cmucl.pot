@@ -6716,6 +6716,14 @@ msgstr ""
 
 #: src/code/save.lisp
 msgid ""
+"Set up encodings based on the value of the LANG envvar.  The\n"
+"  codeset from LANG will be used to set *DEFAULT-EXTERNAL-FORMAT* and\n"
+"  sets the terminal and file name encoding to the specified codeset.\n"
+"  If Quiet is non-NIL, then messages will be suppressed."
+msgstr ""
+
+#: src/code/save.lisp
+msgid ""
 "Saves a CMU Common Lisp core image in the file of the specified name.  The\n"
 "  following keywords are defined:\n"
 "  \n"
