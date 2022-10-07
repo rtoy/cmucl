@@ -143,10 +143,11 @@
   (initial-function (alien:unsigned #.vm:word-bits)))
 
 (defun setup-encodings (&optional quiet)
-  "Set up encodings based on the value of the LANG envvar.  The
-  codeset from LANG will be used to set *DEFAULT-EXTERNAL-FORMAT* and
-  sets the terminal and file name encoding to the specified codeset.
-  If Quiet is non-NIL, then messages will be suppressed."
+  "Set up encodings based on the value of the LANG and related
+  envvars.  The codeset from LANG will be used to set
+  *DEFAULT-EXTERNAL-FORMAT* and sets the terminal encoding to the
+  specified codeset.  If Quiet is non-NIL, then messages will be
+  suppressed."
   ;; Find the envvar that will tell us what encoding to use.
   ;;
   ;; See https://pubs.opengroup.org/onlinepubs/7908799/xbd/envvar.html
@@ -164,14 +165,14 @@
 	 ;; If the lang is "C" or "POSIX", ignoring anything after
 	 ;; that, we need to set the format accordingly.
 	 (setf *default-external-format* :iso8859-1)
-	 (set-system-external-format :iso8859-1 nil))
+	 (set-system-external-format :iso8859-1))
 	((string-equal "/" lang :end2 (min 1 length))
 	 ;; Also, we don't handle the case where the locale starts
 	 ;; with a slash which means a pathname to a file created by
-	 ;; the localdef utility.  So use our defaults for that case
+	 ;; the localedef utility.  So use our defaults for that case
 	 ;; as well.
 	 (setf *default-external-format* :iso8859-1)
-	 (set-system-external-format :iso8859-1 nil))
+	 (set-system-external-format :iso8859-1))
 	(t
 	 ;; Simple parsing of LANG.  We assume it looks like
 	 ;; "language[_territory][.codeset]".  We're only interested
@@ -184,13 +185,14 @@
 		    (format (intern codeset "KEYWORD")))
 	       (cond ((stream::find-external-format format nil)
 		      (unless quiet
-			(write-string "Default external format and filename encoding: ")
+			(write-string "Default external format and terminal encoding: ")
 			(princ format)
 			(terpri))
 		      (setf *default-external-format* format)
-		      (set-system-external-format format format))
+		      (set-system-external-format format))
 		     (t
-		      (warn "Unknown or unsupported external format: ~S" codeset)))))))))))
+		      (warn "Unknown or unsupported external format: ~S; encodings unchanged"
+			    codeset)))))))))))
 
 (defun save-lisp (core-file-name &key
 				 (purify t)
