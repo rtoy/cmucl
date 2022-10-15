@@ -645,3 +645,28 @@
 	(assert-true defaulted-new-name)
 	(assert-equalp old-truename orig)
 	(assert-equalp new-truename new)))))
+
+(define-test issue.134
+    (:tag :issues)
+  ;; Verify that we can compute (3+4*%i)^%i (in Maxima format).  This
+  ;; can be written analytically as
+  ;; %i*%e^-atan(4/3)*sin(log(5))+%e^-atan(4/3)*cos(log(5)), so use
+  ;; %this as the reference value.
+  (let ((answer (complex (* (cos (log 5w0))
+			    (exp (- (atan (float (/ 4 3) 0w0)))))
+			 (* (sin (log 5w0))
+			    (exp (- (atan (float (/ 4 3) 0w0))))))))
+    (flet ((relerr (actual true)
+	     ;; Return the relative error between ACTUAL and TRUE
+	     (/ (abs (- actual true))
+		(abs true))))
+      (dolist (test '((#c(3 4) 3.5918w-8)
+		      (#c(3.0 4) 3.5918w-8)
+		      (#c(3d0 4) 9.2977w-17)
+		      (#c(3w0 4) 0w0)))
+	(destructuring-bind (base eps)
+	    test
+	  (let* ((value (expt base #c(0 1)))
+		 (err (relerr value answer)))
+	    (assert-true (<= err eps) base err eps)))))))
+
