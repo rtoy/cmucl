@@ -972,9 +972,7 @@
 				       (unix:get-unix-error-msg error))))
       (when (streamp file)
 	(file-name file new-namestring))
-      (values new-name
-	      original
-	      (truename new-name)))))
+      (values new-name original (truename new-name)))))
 
 ;;; Delete-File  --  Public
 ;;;
