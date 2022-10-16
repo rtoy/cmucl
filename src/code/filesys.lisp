@@ -1478,4 +1478,4 @@ optionally keeping some of the most recent old versions."
 			 (retry () :report "Try to create the directory again"
 				(go retry))))))
 	 ;; Only the first path in a search-list is considered.
-	 (return (values pathname created-p))))))
+	 (return (values pathspec created-p))))))
