@@ -952,7 +952,11 @@
   File after it was renamed."
   (let* ((original (truename file))
 	 (original-namestring (unix-namestring original t))
-	 (new-name (merge-pathnames new-name file))
+	 ;; First, merge NEW-FILE-NAME with *DEFAULT-PATHNAME-DEFAULTS* to
+	 ;; fill in the missing components and then merge again with
+	 ;; the FILE to get any missing components from FILE.
+	 (new-name (merge-pathnames (merge-pathnames new-name)
+				    file))
 	 (new-namestring (unix-namestring new-name nil)))
     (unless new-namestring
       (error 'simple-file-error
@@ -1476,4 +1480,4 @@ optionally keeping some of the most recent old versions."
 			 (retry () :report "Try to create the directory again"
 				(go retry))))))
 	 ;; Only the first path in a search-list is considered.
-	 (return (values pathname created-p))))))
+	 (return (values pathspec created-p))))))
