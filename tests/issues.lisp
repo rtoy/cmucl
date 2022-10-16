@@ -580,6 +580,96 @@
 	while user-info
 	finally (assert-false user-info)))
 
+(define-test issue.132.1
+    (:tag :issues)
+  ;; From a message on cmucl-imp 2008/06/01.  If "d1" is a directory,
+  ;; (rename "d1" "d2") should rename the directory "d1" to "d2".
+  ;; Previously that produced an error trying to rename "d1" to
+  ;; "d1/d2".
+  ;;
+  ;; Create the test directory (that is a subdirectory of "dir").
+  (assert-true (ensure-directories-exist "dir/orig-dir/"))
+  (let ((*default-pathname-defaults* (merge-pathnames "dir/" (ext:default-directory))))
+    (multiple-value-bind (defaulted-new-name old-truename new-truename)
+	;; Rename "dir/orig-dir" to "orig/new-dir".
+	(rename-file "orig-dir/" "new-dir")
+      (let ((orig (merge-pathnames
+		   (make-pathname :directory '(:relative "orig-dir"))))
+	    (new (merge-pathnames
+		  (make-pathname :directory '(:relative "new-dir")))))
+	;; Ensure that the rename worked and that the returned values
+	;; have the expected values.
+	(assert-true defaulted-new-name)
+	(assert-equalp old-truename orig)
+	(assert-equalp new-truename new)))))
+
+(define-test issue.132.2
+    (:tag :issues)
+  (assert-true (ensure-directories-exist "dir/orig.dir/"))
+  (let ((*default-pathname-defaults* (merge-pathnames "dir/" (ext:default-directory))))
+    (multiple-value-bind (defaulted-new-name old-truename new-truename)
+	;; Rename "dir/orig.dir" to "orig/new-dir".  Since the
+	;; original name has a pathname-name of "orig" and a
+	;; pathname-type of "dir", the new file name is merged to
+	;; produce a pathname-name of "new" with a pathname-type of
+	;; "dir".
+	(rename-file "orig.dir" "new")
+      (let ((orig (merge-pathnames
+		   (make-pathname :directory '(:relative "orig.dir"))))
+	    (new (merge-pathnames
+		  (make-pathname :directory '(:relative "new.dir")))))
+	;; Ensure that the rename worked and that the returned values
+	;; have the expected values.
+	(assert-true defaulted-new-name)
+	(assert-equalp old-truename orig)
+	(assert-equalp new-truename new)))))
+
+(define-test issue.132.3
+    (:tag :issues)
+  (assert-true (ensure-directories-exist "dir/orig.dir/"))
+  (let ((*default-pathname-defaults* (merge-pathnames "dir/" (ext:default-directory))))
+    (multiple-value-bind (defaulted-new-name old-truename new-truename)
+	;; Rename "dir/orig.dir/" to "orig/new".  Note that the
+	;; original name is "orig.dir/" which marks a directory so
+	;; that when we merge the new name with the old to fill in
+	;; missing components, there are none because the old name is
+	;; a directory with no pathname-name or pathname-type, so the
+	;; new name stays the same.
+	(rename-file "orig.dir/" "new")
+      (let ((orig (merge-pathnames
+		   (make-pathname :directory '(:relative "orig.dir"))))
+	    (new (merge-pathnames
+		  (make-pathname :directory '(:relative "new")))))
+	;; Ensure that the rename worked and that the returned values
+	;; have the expected values.
+	(assert-true defaulted-new-name)
+	(assert-equalp old-truename orig)
+	(assert-equalp new-truename new)))))
+
+(define-test issue.134
+    (:tag :issues)
+  ;; Verify that we can compute (3+4*%i)^%i (in Maxima format).  This
+  ;; can be written analytically as
+  ;; %i*%e^-atan(4/3)*sin(log(5))+%e^-atan(4/3)*cos(log(5)), so use
+  ;; %this as the reference value.
+  (let ((answer (complex (* (cos (log 5w0))
+			    (exp (- (atan (float (/ 4 3) 0w0)))))
+			 (* (sin (log 5w0))
+			    (exp (- (atan (float (/ 4 3) 0w0))))))))
+    (flet ((relerr (actual true)
+	     ;; Return the relative error between ACTUAL and TRUE
+	     (/ (abs (- actual true))
+		(abs true))))
+      (dolist (test '((#c(3 4) 3.5918w-8)
+		      (#c(3.0 4) 3.5918w-8)
+		      (#c(3d0 4) 9.2977w-17)
+		      (#c(3w0 4) 0w0)))
+	(destructuring-bind (base eps)
+	    test
+	  (let* ((value (expt base #c(0 1)))
+		 (err (relerr value answer)))
+	    (assert-true (<= err eps) base err eps)))))))
+
 (define-test issue.130
     (:tag :issues)
   ;; Just verify that file-author works.  In particular "." should
