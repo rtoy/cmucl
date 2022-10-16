@@ -56,6 +56,7 @@ public domain.
     * ~~#132~~ Ansi test `RENAME-FILE.1` no fails
     * ~~#134~~ Handle the case of `(expt complex complex-rational)`
     * ~~#136~~ `ensure-directories-exist` should return the given pathspec
+    * ~~#141~~ Disallow locales that are pathnames to a localedef file
     * ~~#142~~ `(random 0)` signals incorrect error
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
