@@ -10,7 +10,7 @@
 
 (define-test unix-namestring.1.exists
   ;; Make sure the desired directories exist.
-  (assert-equal #P"/tmp/foo/bar/hello.txt"
+  (assert-equal "/tmp/foo/bar/hello.txt"
 		(ensure-directories-exist "/tmp/foo/bar/hello.txt"))
   (dolist (path '("/tmp/hello.txt"
 		  "/tmp/foo/"
@@ -27,7 +27,7 @@
 
 (define-test unix-namestring.1.non-existent
   ;; Make sure the desired directories exist.
-  (assert-equal #P"/tmp/foo/bar/hello.txt"
+  (assert-equal "/tmp/foo/bar/hello.txt"
 		(ensure-directories-exist "/tmp/foo/bar/hello.txt"))
   ;; These paths contain directories that don't exist.
   (dolist (path '("/tmp/oops/"
@@ -42,7 +42,7 @@
 
 (define-test unix-namestring.2
   ;; Make sure the desired directories exist.
-  (assert-equal #P"/tmp/foo/bar/hello.txt"
+  (assert-equal "/tmp/foo/bar/hello.txt"
 		(ensure-directories-exist "/tmp/foo/bar/hello.txt"))
   (unwind-protect
        (progn
