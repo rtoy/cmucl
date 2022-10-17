@@ -730,7 +730,7 @@ os_file_author(const char *path)
 {
     struct stat sb;
     char initial[1024];
-    char *buffer, *newbuffer;
+    char *buffer, *obuffer;
     size_t size;
     struct passwd pwd;
     struct passwd *ppwd;
@@ -742,6 +742,7 @@ os_file_author(const char *path)
 
     result = NULL;
     buffer = initial;
+    obuffer = NULL;
     size = sizeof(initial) / sizeof(initial[0]);
 
     /*
@@ -757,11 +758,10 @@ os_file_author(const char *path)
           case ERANGE:
               /* Buffer is too small, double its size and try again */
               size *= 2;
-              if ((newbuffer = realloc((buffer == initial) ? NULL : buffer,
-                                       size)) == NULL) {
+              obuffer = (buffer == initial) ? NULL : buffer;
+              if ((buffer = realloc(obuffer, size)) == NULL) {
                   goto exit;
               }
-              buffer = newbuffer;
               continue;
           default:
               /* All other errors */
@@ -769,9 +769,7 @@ os_file_author(const char *path)
         }
     }
 exit:
-    if (buffer != initial) {
-        free(buffer);
-    }
+    free(obuffer);
     
     return result;
 }
