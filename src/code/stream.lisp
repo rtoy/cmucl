@@ -291,23 +291,12 @@
     ;; simple-stream
     (stream::%stream-external-format stream)
     ;; lisp-stream
-    (typecase stream
+    ;; The stream is a file stream; signal an error if it's not.
+    (etypecase stream
       #+unicode
       (fd-stream (fd-stream-external-format stream))
       (synonym-stream (stream-external-format
-		       (symbol-value (synonym-stream-symbol stream))))
-      (two-way-stream
-       (let ((input-format
-	       (stream-external-format (two-way-stream-input-stream stream)))
-	     (output-format
-	       (stream-external-format (two-way-stream-output-stream stream))))
-	 ;; If the input and output streams have the same format, we
-	 ;; can return the format.  If they differ, it's not clear
-	 ;; what to do, so just return :default.
-	 (if (eql input-format output-format)
-	     input-format
-	     :default)))
-      (t :default))
+		       (symbol-value (synonym-stream-symbol stream)))))
     ;; fundamental-stream
     :default))
 
