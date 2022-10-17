@@ -56,7 +56,7 @@ public domain.
     * ~~#132~~ Ansi test `RENAME-FILE.1` no fails
     * ~~#134~~ Handle the case of `(expt complex complex-rational)`
     * ~~#136~~ `ensure-directories-exist` should return the given pathspec
-    * ~~#140~~ External format of `two-way-stream` returns the common format of the input and output streams if possible; otherwise, return `:default`.
+    * ~~#140~~ External format of `two-way-stream`
     * ~~#142~~ `(random 0)` signals incorrect error
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
