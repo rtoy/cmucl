@@ -670,3 +670,10 @@
 		 (err (relerr value answer)))
 	    (assert-true (<= err eps) base err eps)))))))
 
+(define-test issue.130
+    (:tag :issues)
+  ;; Just verify that file-author works.  In particular "." should
+  ;; work and not return NIL.
+  (assert-true (file-author "."))
+  (assert-true (file-author "bin/build.sh"))
+  (assert-true (file-author "tests/안녕하십니까.txt")))

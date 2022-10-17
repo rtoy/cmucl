@@ -5,13 +5,17 @@
 
 */
 
+#include <assert.h>
 #include <errno.h>
 #include <math.h>
 #include <netdb.h>
+#include <pwd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
+#include <unistd.h>
 #include <time.h>
 
 #include "os.h"
@@ -718,6 +722,59 @@ os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u
 }
 
 /*
+ * Interface for file-author.  Given a pathname, returns a new string
+ * holding the author of the file or NULL if some error occurred.  The
+ * caller is responsible for freeing the memory used by the string.
+ */
+char *
+os_file_author(const char *path)
+{
+    struct stat sb;
+    char initial[1024];
+    char *buffer, *obuffer;
+    size_t size;
+    struct passwd pwd;
+    struct passwd *ppwd;
+    char *result;
+
+    if (stat(path, &sb) != 0) {
+        return NULL;
+    }
+
+    result = NULL;
+    buffer = initial;
+    obuffer = NULL;
+    size = sizeof(initial) / sizeof(initial[0]);
+
+    /*
+     * Keep trying with larger buffers until a maximum is reached.  We
+     * assume (1 << 20) is large enough for any OS.
+     */
+    while (size <= (1 << 20)) {
+        switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
+          case 0:
+              /* Success, though we might not have a matching entry */
+              result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
+              goto exit;
+          case ERANGE:
+              /* Buffer is too small, double its size and try again */
+              size *= 2;
+              obuffer = (buffer == initial) ? NULL : buffer;
+              if ((buffer = realloc(obuffer, size)) == NULL) {
+                  goto exit;
+              }
+              continue;
+          default:
+              /* All other errors */
+              goto exit;
+        }
+    }
+exit:
+    free(obuffer);
+    
+    return result;
+}
+/*
  * For Linux and solaris, software-version returns the concatenation
  * of the uname release and version fields.  For BSD (including
  * Darwin), it's just the uname release (not version).
@@ -769,4 +826,3 @@ os_software_type()
 
     return os_name;
 }
-    
