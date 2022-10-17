@@ -347,6 +347,7 @@
 		 (ext::invoke-switch-demons *command-line-switches*
 					    *command-switch-demons*))
 	       (set-up-locale-external-format)
+	       (set-system-external-format :locale)
 	       (when (and print-herald
 			  (not (or quiet
 				   (and process-command-line
