@@ -883,7 +883,6 @@
 	(when (or (not executable-only)
 		  (and (eq (unix:unix-file-kind name) :file)
 		       (unix:unix-access name unix:x_ok)))
-	  (format t "unix-namestring:  name = ~A~%" name)
 	  (names name)))
       (let ((names (names)))
 	(when names
