@@ -681,38 +681,26 @@
 (define-test issue.135
     (:tag :issues)
   (assert-equalp "./" (ext:unix-namestring "."))
-  (assert-true (ensure-directories-exist "/tmp/unit-test/subdir/"))
-  (let ((default-dir (ext:default-directory)))
-    (unwind-protect
-	 (progn
-	   ;; Create a few files for testing; unix-namestring requires
-	   ;; the files to exist.
-	   (with-open-file (f1 "/tmp/unit-test/foo.txt"
-			       :direction :output
-			       :if-exists :supersede)
-	     (print "foo" f1))
-	   (with-open-file (f2 "/tmp/unit-test/subdir/bar.txt"
-			       :direction :output
-			       :if-exists :supersede)
-	     (print "bar" f2))
-	   ;; Set the default directory to the test dir so that we can
-	   ;; check unix-namestring returns the desired result.
-	   (setf (ext:default-directory) "/tmp/unit-test/")
-
-	   ;; Check unix-namestring and verify that converting the
-	   ;; namestring to a pathname results in the same pathname
-	   ;; object as expected.
-	   (let ((foo (ext:unix-namestring "foo.txt")))
-	     (assert-equalp "foo.txt" foo)
-	     (assert-equalp (make-pathname :name "foo" :type "txt")
-			    (pathname foo)))
-	   (let ((bar (ext:unix-namestring "subdir/bar.txt")))
-	     (assert-equalp "./subdir/bar.txt" bar)
-	     (assert-equalp (make-pathname :directory '(:relative "subdir")
-					   :name "bar"
-					   :type "txt")
-			    (pathname bar))))
-      (assert-true (delete-file "/tmp/unit-test/foo.txt"))
-      (assert-true (delete-file "/tmp/unit-test/subdir/bar.txt"))
-      ;; Reset the directory to what it used to be.
-      (setf (ext:default-directory) default-dir)))) 
+  (unwind-protect
+       (progn
+	 ;; Create a test file in the current directory.
+	 ;; unix-namestring requires files to exist to be able to
+	 ;; return the namestring.
+	 (with-open-file (f1 "foo.txt"
+			     :direction :output
+			     :if-exists :supersede)
+	   (print "foo" f1))
+	 ;; Check unix-namestring and verify that converting the
+	 ;; namestring to a pathname results in the same pathname
+	 ;; object as expected.
+	 (let ((foo (ext:unix-namestring "foo.txt")))
+	   (assert-equalp "foo.txt" foo)
+	   (assert-equalp (make-pathname :name "foo" :type "txt")
+			  (pathname foo)))
+	 (let ((bar (ext:unix-namestring "src/code/filesys.lisp")))
+	   (assert-equalp "./src/code/filesys.lisp" bar)
+	   (assert-equalp (make-pathname :directory '(:relative "src" "code")
+					 :name "filesys"
+					 :type "lisp")
+			  (pathname bar))))
+    (assert-true (delete-file "foo.txt"))))
