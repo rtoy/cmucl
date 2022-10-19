@@ -295,8 +295,22 @@
     (etypecase stream
       #+unicode
       (fd-stream (fd-stream-external-format stream))
-      (synonym-stream (stream-external-format
-		       (symbol-value (synonym-stream-symbol stream)))))
+      (broadcast-stream
+       ;; See http://www.lispworks.com/documentation/HyperSpec/Body/t_broadc.htm
+       :default)
+      (synonym-stream
+       ;; What should happen if (synonym-stream-symbol stream) is unbound?
+       (stream-external-format
+	(symbol-value (synonym-stream-symbol stream))))
+      (two-way-stream
+       ;; Not defined by CLHS, but useful to return the common format
+       ;; of the input and output streams when they're the same;
+       ;; otherwise return :default.
+       (let ((in-format (stream-external-format (two-way-stream-input-stream stream)))
+	     (out-format (stream-external-format (two-way-stream-output-stream stream))))
+	 (if (eql in-format out-format)
+	     in-format
+	     :default))))
     ;; fundamental-stream
     :default))
 
