@@ -167,7 +167,8 @@ osx:ansi-test:
   script:
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
-    - grep 'No unexpected \(successes\|failures\)' test.out 
+    # There should be no unexpected successes or failures; check these separately.
+    - grep -a 'No unexpected successes' test.out && grep -a 'No unexpected failures' test.out
   
 osx:benchmark:
   stage: benchmark
