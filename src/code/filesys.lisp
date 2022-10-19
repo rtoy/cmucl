@@ -786,7 +786,6 @@
   (let ((name (%pathname-name pathname))
 	(type (%pathname-type pathname))
 	(version (%pathname-version pathname)))
-    (format t "name type version = ~S ~S ~S~%" name type version)
     (cond ((member name '(nil :unspecific))
 	   (when (or (not verify-existence)
 		     (unix:unix-file-kind directory))
