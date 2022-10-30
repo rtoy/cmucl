@@ -235,6 +235,9 @@
   defined for this function, although it is permissible for it to
   always return NIL."))
 
+(defmethod stream-line-column ((stream fundamental-character-output-stream))
+  nil)
+
 ;;; Stream-line-length is a CMUCL extension to Gray streams.
 (defgeneric stream-line-length (stream)
   (:documentation _N"Return the stream line length or Nil."))
