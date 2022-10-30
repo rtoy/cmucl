@@ -1079,13 +1079,21 @@ optionally keeping some of the most recent old versions."
 		 :pathname file
 		 :format-control (intl:gettext "~S doesn't exist.")
 		 :format-arguments (list file)))
-	(multiple-value-bind (winp dev ino mode nlink uid)
-			     (unix:unix-stat name)
-	  (declare (ignore dev ino mode nlink))
-	  (when winp
-            (let ((user-info (unix:unix-getpwuid uid)))
-              (when user-info
-                (unix:user-info-name user-info))))))))
+	;; unix-namestring converts "." to "".  Convert it back to
+	;; "." so we can stat the current directory.  (Perhaps
+	;; that's a bug in unix-namestring?)
+	(when (zerop (length name))
+	  (setf name "."))
+	(let (author)
+	  (unwind-protect
+	       (progn
+		 (setf author (alien:alien-funcall
+			       (alien:extern-alien "os_file_author"
+						   (function (alien:* c-call:c-string) c-call:c-string))
+			       (unix::%name->file name)))
+		 (unless (alien:null-alien author)
+		   (alien:cast author c-call:c-string)))
+	    (alien:free-alien author))))))
 
 
 ;;;; DIRECTORY.
