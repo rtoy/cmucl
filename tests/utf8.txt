@@ -1,0 +1,2 @@
+안녕하세요
+UTF8 test.  The above line is "Hello" in Hangul.
