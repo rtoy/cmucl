@@ -5,6 +5,12 @@
 
 (in-package "ISSUES-TESTS")
 
+(defparameter *test-path*
+  (merge-pathnames (make-pathname :name :unspecific :type :unspecific
+                                  :version :unspecific)
+                   *load-truename*)
+  "Path to where this file is.")
+
 (defun square (x)
   (expt x 2))
 
@@ -697,4 +703,66 @@
   ;; work and not return NIL.
   (assert-true (file-author "."))
   (assert-true (file-author "bin/build.sh"))
-  (assert-true (file-author "tests/안녕하십니까.txt")))
+  (let ((unix::*filename-encoding* :utf-8))
+    ;; Set filename encoding to utf-8 so that we can encode the
+    ;; filename properly.
+    (assert-true
+   (file-author
+    (merge-pathnames 
+     (concatenate 'string
+		  ;; Write the test file name this way so
+		  ;; that it's independent of the encoding
+		  ;; used to load this file.  The name is
+		  ;; "안녕하십니까".
+		  '(#\Hangul_Syllable_An #\Hangul_Syllable_Nyeong #\Hangul_Syllable_Ha
+		    #\Hangul_Syllable_Sib #\Hangul_Syllable_Ni #\Hangul_Syllable_Gga)
+		  ".txt")
+     *test-path*)))))
+
+(define-test issue.139-default-external-format
+    (:tag :issues)
+  (assert-eq :utf-8 stream:*default-external-format*))
+
+(define-test issue.139-default-external-format-read-file
+    (:tag :issues)
+  (let ((string (concatenate 'string
+			     ;; This is "hello" in Korean
+			     '(#\Hangul_syllable_an
+			       #\Hangul_Syllable_Nyeong
+			       #\Hangul_Syllable_Ha
+			       #\Hangul_Syllable_Se
+			       #\Hangul_Syllable_Yo))))
+    ;; Test that opening a file for reading uses the the default :utf8
+    ;; encoding.
+    (with-open-file (s (merge-pathnames "utf8.txt"
+					*test-path*)
+		       :direction :input)
+      ;; The first line should be "hello" in Hangul.
+      (assert-equal (map 'list #'char-name string)
+		    (map 'list #'char-name (read-line s))))))
+
+(define-test issue.139-default-external-format-write-file
+    (:tag :issues)
+  ;; Test that opening a file for writing uses the default :utf8.
+  ;; First write something out to the file.  Then read it back in
+  ;; using an explicit format of utf8 and verifying that we got the
+  ;; right contents.
+  (let ((string (concatenate 'string
+			     ;; This is "hello" in Korean
+			     '(#\Hangul_syllable_an
+			       #\Hangul_Syllable_Nyeong
+			       #\Hangul_Syllable_Ha
+			       #\Hangul_Syllable_Se
+			       #\Hangul_Syllable_Yo))))
+    (with-open-file (s (merge-pathnames "out-utf8.txt"
+					*test-path*)
+		       :direction :output
+		       :if-exists :supersede)
+      (write-line string s))
+    (with-open-file (s (merge-pathnames "out-utf8.txt"
+					*test-path*)
+		       :direction :input
+		       :external-format :utf-8)
+      (assert-equal (map 'list #'char-name string)
+		    (map 'list #'char-name (read-line s))))))
+  

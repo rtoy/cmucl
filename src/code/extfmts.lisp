@@ -22,8 +22,7 @@
 	  describe-external-format))
 
 (defvar *default-external-format*
-  #-unicode :iso8859-1
-  #+unicode :utf-8
+  :utf-8
   "The default external format to use if no other external format is
   specified")
 
