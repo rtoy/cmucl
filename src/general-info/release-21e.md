@@ -22,6 +22,7 @@ public domain.
   * Feature enhancements
   * Changes
     * Update to ASDF 3.3.6
+    * The default external format is `:utf-8` instead of `:iso8859-1`
   * ANSI compliance fixes:
   * Bug fixes:
     * ~~#97~~ Fixes stepping through the source forms in the debugger.  This has been broken for quite some time, but it works now.
@@ -56,6 +57,7 @@ public domain.
     * ~~#132~~ Ansi test `RENAME-FILE.1` no fails
     * ~~#134~~ Handle the case of `(expt complex complex-rational)`
     * ~~#136~~ `ensure-directories-exist` should return the given pathspec
+    * #139 `*default-external-format*` defaults to `:utf-8`
     * ~~#142~~ `(random 0)` signals incorrect error
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
