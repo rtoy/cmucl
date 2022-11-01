@@ -145,53 +145,25 @@
 (defun set-up-locale-external-format ()
   "Add external format alias for :locale to the format specified by
   the envvar LANG and friends if available."
-  ;; Find the envvar that will tell us what encoding to use.
-  ;;
-  ;; See https://pubs.opengroup.org/onlinepubs/7908799/xbd/envvar.html
-  ;;
-  (let* ((lang (or (unix:unix-getenv "LC_ALL")
-                   (unix:unix-getenv "LC_MESSAGES")
-                   (unix:unix-getenv "LANG")))
-         (length (length lang)))
-    ;; If LANG isn't set, just set :locale to alias to the
-    ;; default-external-format.
-    (unless lang
-      (setf (gethash :locale stream::*external-format-aliases*) *default-external-format*)
-      (return-from set-up-locale-external-format (values)))
-    ;; Extract the external format from the envvar and set up the
-    ;; :locale alias.
-    (let ((new-alias
-	    (cond
-	      ((or (string-equal "C" lang :end2 (min 1 length))
-		   (string-equal "POSIX" lang :end2 (min 5 length)))
-	       ;; If the lang is "C" or "POSIX", ignoring anything after
-	       ;; that, default to :iso8859-1.
-	       :iso8859-1)
-	      ((string-equal "/" lang :end2 (min 1 length))
-	       ;; Also, we don't handle the case where the locale starts
-	       ;; with a slash which means a pathname to a file created by
-	       ;; the localedef utility.  So use our defaults for that case
-	       ;; as well.
-	       :iso8859-1)
-	      (t
-	       ;; Simple parsing of LANG.  We assume it looks like
-	       ;; "language[_territory][.codeset]".  We're only interested
-	       ;; in the codeset, if given.  Some LC_ vars also have an
-	       ;; optional @modifier after the codeset; we ignore that too.
-	       (let ((dot (position #\. lang))
-		     (at (or (position #\@ lang) nil)))
-		 (when dot
-		   (let* ((codeset (subseq lang (1+ dot) at))
-			  (format (intern codeset "KEYWORD")))
-		     (cond ((stream::find-external-format format nil)
-			    format)
-			   (t
-			    (warn "Unknown or unsupported external format: ~S"
-				  codeset)
-			    *default-external-format*)))))))))
-      (assert new-alias)
-      (setf (gethash :locale stream::*external-format-aliases*) new-alias))
-    (values)))
+  (let ((codeset (unix::unix-get-locale-codeset)))
+    (cond ((zerop (length codeset))
+	   ;; Codeset was the empty string, so just set :locale to
+	   ;; alias to the default external format.  
+	   (setf (gethash :locale stream::*external-format-aliases*)
+		 *default-external-format*))
+	  (t
+	   (let ((codeset-format (intern codeset "KEYWORD")))
+	     ;; If we know the format, we can set the alias.
+	     ;; Otherwise, print a warning and use :iso8859-1 as the
+	     ;; alias.
+	     (setf (gethash :locale stream::*external-format-aliases*)
+		   (if (stream::find-external-format codeset-format nil)
+		       codeset-format
+		       (progn
+			 (warn "Unsupported external format; using :iso8859-1 instead: ~S"
+			       codeset-format)
+			 :iso8859-1)))))))
+  (values))
 
  
 (defun save-lisp (core-file-name &key
@@ -301,6 +273,7 @@
 	     (reinit)
 	     (environment-init)
 	     (dolist (f *after-save-initializations*) (funcall f))
+	     (stream::load-external-format-aliases)
 	     (intl::setlocale)
 	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)

@@ -7,6 +7,8 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <langinfo.h>
+#include <locale.h>
 #include <math.h>
 #include <netdb.h>
 #include <pwd.h>
@@ -772,4 +774,16 @@ exit:
     free(obuffer);
     
     return result;
+}
+
+void
+os_get_locale_codeset(char* codeset, int len)
+{
+    char *code;
+    
+    setlocale(LC_ALL, "");
+
+    code = nl_langinfo(CODESET);
+
+    strncpy(codeset, code, len);
 }

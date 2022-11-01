@@ -2893,3 +2893,13 @@
    of the child in the parent if it works, or NIL and an error number if it
    doesn't work."
   (int-syscall ("fork")))
+
+(defun unix-get-locale-codeset ()
+  _N"Get the codeset from the locale"
+  (with-alien ((codeset (array c-call:char 512)))
+    (alien-funcall
+	    (extern-alien "os_get_locale_codeset"
+			  (function void (* char) int))
+	    (cast codeset (* c-call:char))
+	    512)
+    (cast codeset c-string)))
