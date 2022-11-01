@@ -105,7 +105,7 @@
 
 (defun find-encoding (domain)
   (when (null (domain-entry-encoding domain))
-    (setf (domain-entry-encoding domain) :iso-8859-1)
+    (setf (domain-entry-encoding domain) :iso8859-1)
     ;; Domain lookup can call the compiler, so set the locale to "C"
     ;; so things work.
     (let* ((*locale* "C")
