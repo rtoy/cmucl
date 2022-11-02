@@ -749,7 +749,7 @@
 
 ;; Test two-way-stream where both streams have the same external
 ;; format.
-(define-test issue.140.1
+(define-test issue.140.two-way-stream-same
     (:tag :issues)
   (with-open-file (in (merge-pathnames "issues.lisp" cmucl-test-runner::*load-path*)
 		      :direction :input
@@ -759,11 +759,11 @@
 			 :external-format :utf-8
 			 :if-exists :supersede)
       (let ((two-way-stream (make-two-way-stream in out)))
-	(assert-equal :utf-8 (stream-external-format two-way-stream))))))
+	(assert-equal :default (stream-external-format two-way-stream))))))
 
 ;; Test two-way-stream where the two streams have the different
 ;; external formats.
-(define-test issue.140.2
+(define-test issue.140.two-way-stream-diff
     (:tag :issues)
   (with-open-file (in (merge-pathnames "issues.lisp" cmucl-test-runner::*load-path*)
 		      :direction :input
@@ -776,7 +776,7 @@
 	(assert-equal :default (stream-external-format two-way-stream))))))
 
 ;; Test synonym-stream returns the format of the underlying stream.
-(define-test issue.140.3
+(define-test issue.140.synonym-stream
     (:tag :issues)
   (with-open-file (s (merge-pathnames "issues.lisp" cmucl-test-runner::*load-path*)
 		     :direction :input

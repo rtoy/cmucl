@@ -290,8 +290,7 @@
   (stream-dispatch stream
     ;; simple-stream
     (stream::%stream-external-format stream)
-    ;; lisp-stream
-    ;; The stream is a file stream; signal an error if it's not.
+    ;; lisp-stream.  For unsupported streams, signal a type error.
     (etypecase stream
       #+unicode
       (fd-stream (fd-stream-external-format stream))
@@ -299,18 +298,14 @@
        ;; See http://www.lispworks.com/documentation/HyperSpec/Body/t_broadc.htm
        :default)
       (synonym-stream
-       ;; What should happen if (synonym-stream-symbol stream) is unbound?
+       ;; Not defined by CLHS.  What should happen if
+       ;; (synonym-stream-symbol stream) is unbound?
        (stream-external-format
 	(symbol-value (synonym-stream-symbol stream))))
       (two-way-stream
-       ;; Not defined by CLHS, but useful to return the common format
-       ;; of the input and output streams when they're the same;
-       ;; otherwise return :default.
-       (let ((in-format (stream-external-format (two-way-stream-input-stream stream)))
-	     (out-format (stream-external-format (two-way-stream-output-stream stream))))
-	 (if (eql in-format out-format)
-	     in-format
-	     :default))))
+       ;; Not defined by CLHS, but use default for backward
+       ;; compatibility.
+       :default))
     ;; fundamental-stream
     :default))
 
