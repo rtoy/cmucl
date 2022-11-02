@@ -784,3 +784,10 @@
     (let ((syn (make-synonym-stream '*syn-stream*)))
       (setf syn s)
       (assert-equal :iso8859-1 (stream-external-format syn)))))
+
+(define-test issue.150
+    (:tag :issues)
+  (let ((ext:*gc-verbose* nil)
+	(*compile-print* nil))
+    (assert-true (stream::find-external-format :euckr))
+    (assert-true (stream::find-external-format :cp949))))
