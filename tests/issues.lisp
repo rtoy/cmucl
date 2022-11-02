@@ -745,3 +745,10 @@
       (assert-equal (map 'list #'char-name string)
 		    (map 'list #'char-name (read-line s))))))
   
+
+(define-test issue.150
+    (:tag :issues)
+  (let ((ext:*gc-verbose* nil)
+	(*compile-print* nil))
+    (assert-true (stream::find-external-format :euckr))
+    (assert-true (stream::find-external-format :cp949))))
