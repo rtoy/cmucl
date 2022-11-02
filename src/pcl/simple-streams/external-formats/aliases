@@ -223,6 +223,8 @@ windows-cp1252	cp1252
 windows-latin1	cp1252
 ms-ansi		cp1252
 
+euckr		euc-kr
+cp949		euc-kr
 ;; These are not yet implemented
 ;;iso-2022-jp	iso2022-jp
 ;;iso2022jp	iso2022-jp
