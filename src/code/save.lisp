@@ -144,7 +144,7 @@
 
 (defun set-up-locale-external-format ()
   "Add external format alias for :locale to the format specified by
-  the envvar LANG and friends if available."
+  the locale as set by setlocale(3C)."
   (let ((codeset (unix::unix-get-locale-codeset)))
     (cond ((zerop (length codeset))
 	   ;; Codeset was the empty string, so just set :locale to
@@ -281,6 +281,8 @@
 	     (stream::load-external-format-aliases)
 	     ;; Set the locale for lisp
 	     (intl::setlocale)
+	     ;; Set up :locale format
+	     (set-up-locale-external-format)
 	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)
 	     (macrolet ((find-switch (name)
@@ -325,7 +327,6 @@
 	       (when process-command-line
 		 (ext::invoke-switch-demons *command-line-switches*
 					    *command-switch-demons*))
-	       (set-up-locale-external-format)
 	       (when (and print-herald
 			  (not (or quiet
 				   (and process-command-line

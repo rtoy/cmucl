@@ -1428,3 +1428,7 @@ msgstr ""
 msgid "Call setlocale(3c) with fixed args.  Returns 0 on success."
 msgstr ""
 
+#: src/code/unix.lisp
+msgid "Get the codeset from the locale"
+msgstr ""
+
