@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <locale.h>
 #include <math.h>
 #include <netdb.h>
 #include <pwd.h>
@@ -772,4 +773,13 @@ exit:
     free(obuffer);
     
     return result;
+}
+
+int
+os_setlocale(void)
+{
+    char *result = setlocale(LC_ALL, "");
+
+    /* Return 0 if setlocale suceeded; otherwise -1. */
+    return result != NULL ? 0 : -1;
 }
