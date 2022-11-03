@@ -276,6 +276,8 @@
 	     ;; Set the runtime locale
 	     (unless (zerop (unix::unix-setlocale))
 	       (warn "os_setlocale failed"))
+	     ;; Load external format aliases now so we can aliases to
+	     ;; specify the external format.
 	     (stream::load-external-format-aliases)
 	     ;; Set the locale for lisp
 	     (intl::setlocale)
