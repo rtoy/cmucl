@@ -790,8 +790,6 @@ os_get_locale_codeset(char* codeset, int len)
 {
     char *code;
     
-    setlocale(LC_ALL, "");
-
     code = nl_langinfo(CODESET);
 
     strncpy(codeset, code, len);
