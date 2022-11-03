@@ -51,14 +51,18 @@ public domain.
     * ~~#113~~ REQUIRE on contribs can pull in the wrong things via ASDF.
     * ~~#121~~ Wrong column index in FILL-POINTER-OUTPUT-STREAM
     * ~~#122~~ gcc 11 can't build cmucl
+    * ~~#124~~ directory with `:wild-inferiors` doesn't descend subdirectories 
     * ~~#125~~ Linux `unix-stat` returning incorrect values
     * ~~#127~~ Linux unix-getpwuid segfaults when given non-existent uid.
     * ~~#128~~ `QUIT` accepts an exit code
+    * ~~#130~~ Move file-author to C 
     * ~~#132~~ Ansi test `RENAME-FILE.1` no fails
     * ~~#134~~ Handle the case of `(expt complex complex-rational)`
     * ~~#136~~ `ensure-directories-exist` should return the given pathspec
     * #139 `*default-external-format*` defaults to `:utf-8`
     * ~~#142~~ `(random 0)` signals incorrect error
+    * ~~#147~~ `stream-line-column` method missing for `fundamental-character-output-stream`
+    * ~~#149~~ Call setlocale(3C) on startup
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

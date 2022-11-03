@@ -273,7 +273,11 @@
 	     (reinit)
 	     (environment-init)
 	     (dolist (f *after-save-initializations*) (funcall f))
+	     ;; Set the runtime locale
+	     (unless (zerop (unix::unix-setlocale))
+	       (warn "os_setlocale failed"))
 	     (stream::load-external-format-aliases)
+	     ;; Set the locale for lisp
 	     (intl::setlocale)
 	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)

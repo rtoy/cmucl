@@ -776,6 +776,15 @@ exit:
     return result;
 }
 
+int
+os_setlocale(void)
+{
+    char *result = setlocale(LC_ALL, "");
+
+    /* Return 0 if setlocale suceeded; otherwise -1. */
+    return result != NULL ? 0 : -1;
+}
+
 void
 os_get_locale_codeset(char* codeset, int len)
 {
@@ -787,3 +796,4 @@ os_get_locale_codeset(char* codeset, int len)
 
     strncpy(codeset, code, len);
 }
+

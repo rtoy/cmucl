@@ -2894,6 +2894,12 @@
    doesn't work."
   (int-syscall ("fork")))
 
+(defun unix-setlocale ()
+  _N"Call setlocale(3c) with fixed args.  Returns 0 on success."
+  (alien:alien-funcall
+   (alien:extern-alien "os_setlocale"
+		       (function c-call:int))))
+
 (defun unix-get-locale-codeset ()
   _N"Get the codeset from the locale"
   (with-alien ((codeset (array c-call:char 512)))
