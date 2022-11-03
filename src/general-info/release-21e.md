@@ -60,6 +60,7 @@ public domain.
     * ~~#134~~ Handle the case of `(expt complex complex-rational)`
     * ~~#136~~ `ensure-directories-exist` should return the given pathspec
     * #139 `*default-external-format*` defaults to `:utf-8`
+    * #139 add alias for `:locale` external format
     * ~~#142~~ `(random 0)` signals incorrect error
     * ~~#147~~ `stream-line-column` method missing for `fundamental-character-output-stream`
     * ~~#149~~ Call setlocale(3C) on startup
