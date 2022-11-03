@@ -61,7 +61,8 @@ public domain.
     * ~~#136~~ `ensure-directories-exist` should return the given pathspec
     * #139 `*default-external-format*` defaults to `:utf-8`
     * ~~#142~~ `(random 0)` signals incorrect error
-    * ~~#147~~ `stream-line-column` method missing for `fundamental-character-output-stream` 
+    * ~~#147~~ `stream-line-column` method missing for `fundamental-character-output-stream`
+    * ~~#149~~ Call setlocale(3C) on startup
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
