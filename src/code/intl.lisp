@@ -519,7 +519,8 @@
     (if (equal val "") nil val)))
 
 (defun setlocale (&optional locale)
-  (setf *locale* (or (unix::unix-getlocale)
+  (setf *locale* (or locale
+		     (unix::unix-getlocale)
 		     *locale*)))
 
 (defmacro textdomain (domain)
