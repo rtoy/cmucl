@@ -783,3 +783,16 @@ os_setlocale(void)
     /* Return 0 if setlocale suceeded; otherwise -1. */
     return result != NULL ? 0 : -1;
 }
+
+int
+os_getlocale(char *buf, int len)
+{
+    char *locale = setlocale(LC_ALL, NULL);
+    if (locale) {
+        strncpy(buf, locale, len - 1);
+        buf[len - 1] = '\0';
+    }
+
+    /* Return -1 if setlocale failed. */
+    return locale ? 0 : -1;
+}

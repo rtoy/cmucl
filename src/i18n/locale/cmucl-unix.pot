@@ -1428,3 +1428,10 @@ msgstr ""
 msgid "Call setlocale(3c) with fixed args.  Returns 0 on success."
 msgstr ""
 
+#: src/code/unix.lisp
+msgid ""
+"Get the current locale.  If we can't, return NIL.  A call to\n"
+"  UNIX-SETLOCALE must have been done previously before calling this so\n"
+"  that the correct locale is returned."
+msgstr ""
+
