@@ -785,9 +785,9 @@ os_setlocale(void)
 }
 
 int
-os_getlocale(char *buf, int len)
+os_get_lc_messages(char *buf, int len)
 {
-    char *locale = setlocale(LC_ALL, NULL);
+    char *locale = setlocale(LC_MESSAGES, NULL);
     if (locale) {
         strncpy(buf, locale, len - 1);
         buf[len - 1] = '\0';

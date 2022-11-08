@@ -520,7 +520,7 @@
 
 (defun setlocale (&optional locale)
   (setf *locale* (or locale
-		     (unix::unix-getlocale)
+		     (unix::unix-get-lc-messages)
 		     *locale*)))
 
 (defmacro textdomain (domain)
