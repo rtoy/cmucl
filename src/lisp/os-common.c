@@ -785,6 +785,19 @@ os_setlocale(void)
     return result != NULL ? 0 : -1;
 }
 
+int
+os_get_lc_messages(char *buf, int len)
+{
+    char *locale = setlocale(LC_MESSAGES, NULL);
+    if (locale) {
+        strncpy(buf, locale, len - 1);
+        buf[len - 1] = '\0';
+    }
+
+    /* Return -1 if setlocale failed. */
+    return locale ? 0 : -1;
+}
+
 void
 os_get_locale_codeset(char* codeset, int len)
 {
@@ -794,4 +807,3 @@ os_get_locale_codeset(char* codeset, int len)
 
     strncpy(codeset, code, len);
 }
-

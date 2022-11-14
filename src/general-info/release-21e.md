@@ -59,11 +59,12 @@ public domain.
     * ~~#132~~ Ansi test `RENAME-FILE.1` no fails
     * ~~#134~~ Handle the case of `(expt complex complex-rational)`
     * ~~#136~~ `ensure-directories-exist` should return the given pathspec
-    * #139 `*default-external-format*` defaults to `:utf-8`
-    * #139 add alias for `:locale` external format
+    * #139 `*default-external-format*` defaults to `:utf-8`; add alias for `:locale` external format
+    * ~~#141~~ Disallow locales that are pathnames to a localedef file
     * ~~#142~~ `(random 0)` signals incorrect error
     * ~~#147~~ `stream-line-column` method missing for `fundamental-character-output-stream`
     * ~~#149~~ Call setlocale(3C) on startup
+    * ~~#155~~ Wrap help strings neatly
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
