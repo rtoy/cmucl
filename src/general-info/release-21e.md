@@ -61,8 +61,11 @@ public domain.
     * ~~#136~~ `ensure-directories-exist` should return the given pathspec
     * #139 `*default-external-format*` defaults to `:utf-8`
     * ~~#140~~ External format of `two-way-stream`
+    * ~~#141~~ Disallow locales that are pathnames to a localedef file
     * ~~#142~~ `(random 0)` signals incorrect error
-    * ~~#147~~ `stream-line-column` method missing for `fundamental-character-output-stream` 
+    * ~~#147~~ `stream-line-column` method missing for `fundamental-character-output-stream`
+    * ~~#149~~ Call setlocale(3C) on startup
+    * ~~#155~~ Wrap help strings neatly
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

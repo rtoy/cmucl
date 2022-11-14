@@ -2893,3 +2893,25 @@
    of the child in the parent if it works, or NIL and an error number if it
    doesn't work."
   (int-syscall ("fork")))
+
+(defun unix-setlocale ()
+  _N"Call setlocale(3c) with fixed args.  Returns 0 on success."
+  (alien:alien-funcall
+   (alien:extern-alien "os_setlocale"
+		       (function c-call:int))))
+
+(defun unix-get-lc-messages ()
+  _N"Get LC_MESSAGES from the current locale.  If we can't, return
+  NIL.  A call to UNIX-SETLOCALE must have been done previously before
+  calling this so that the correct locale is returned."
+  (with-alien ((buf (array c-call:char 256)))
+    (let ((result
+	    (alien-funcall
+	     (extern-alien "os_get_lc_messages"
+			   (function c-call:int
+				     (* c-call:char)
+				     c-call:int))
+	     (cast buf (* c-call:char))
+	     256)))
+      (when (zerop result)
+	(cast buf c-call:c-string)))))

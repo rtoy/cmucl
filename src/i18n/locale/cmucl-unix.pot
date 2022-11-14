@@ -1424,3 +1424,14 @@ msgid ""
 "   doesn't work."
 msgstr ""
 
+#: src/code/unix.lisp
+msgid "Call setlocale(3c) with fixed args.  Returns 0 on success."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Get LC_MESSAGES from the current locale.  If we can't, return\n"
+"  NIL.  A call to UNIX-SETLOCALE must have been done previously before\n"
+"  calling this so that the correct locale is returned."
+msgstr ""
+
