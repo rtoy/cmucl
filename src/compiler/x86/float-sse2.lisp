@@ -953,6 +953,7 @@
              (inst jmp :e target)
              (emit-label not-lab))))))
 
+#+nil
 (define-vop (</double-float double-float-compare)
   (:translate <)
   (:info target not-p)
@@ -970,6 +971,28 @@
              (inst jmp :p not-lab)
              (inst jmp :c target)
              (emit-label not-lab))))))
+
+(define-vop (</double-float double-float-compare)
+  (:translate <)
+  (:info target not-p)
+  (:temporary (:sc double-reg) cmp-mask)
+  (:temporary (:sc unsigned-reg) bits)
+  (:generator 3
+    (inst movapd cmp-mask x)
+    (sc-case y
+      (double-reg
+       (inst cmpsd cmp-mask y :lt))
+      (descriptor-reg
+       (inst cmpsd cmp-mask (ea-for-df-desc y) :lt)))
+    ;; cmp-mask is all 1's if true and all 0's if false.  Create a new
+    ;; mask in bits consisting of the high bit of each byte of
+    ;; cmp-mask.  Thus, bits[15:0] is all 1's or all 0's.  The rest of
+    ;; bits is always 0.
+    (inst pmovmskb bits cmp-mask)
+    ;; Shift bits right into the carry so the carry is either 1 (true)
+    ;; or 0 (false).
+    (inst shr bits 1)
+    (inst jmp (if not-p :nc :c) target)))
 
 (define-vop (</single-float single-float-compare)
   (:translate <)

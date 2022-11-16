@@ -3242,6 +3242,47 @@
   (define-regular-sse-inst paddq #x66 #xd4)
   )
 
+;; Mapping of immediate value
+;;   :eq      0
+;;   :lt      1
+;;   :le      2
+;;   :unorder 3
+;;   :ne      4
+;;   :nlt     5
+;;   :nle     6
+;;   :ord     7
+(defconstant cmp-code
+  '((:eq . 0)
+    (:lt . 1)
+    (:le . 2)
+    (:unord . 3)
+    (:neq . 4)
+    (:nlt . 5)
+    (:nle . 6)
+    (:ord . 7)))
+
+(defun cmp-opcode (condition)
+  (cdr (assoc condition cmp-code)))
+
+(define-instruction cmpsd (segment dst src cond)
+  (:printer ext-xmm-xmm/mem-imm ((prefix #xf2)
+				 (op #xc2)
+				 (imm nil :type 'signed-imm-byte)))
+  (:emitter
+   (emit-sse-inst segment dst src #xf2 #xc2
+		  :operand-size :do-not-set)
+   (emit-byte segment (cmp-opcode cond))))
+   
+;; Create a mask from src and store in dst.  The high bit of each byte
+;; of src is copied to the corresponding bit of src.  src[k] =
+;; dst[8*k+7] for k = 0 to 15.  The remaining bits of dst are cleared.
+(define-instruction pmovmskb (segment dst src)
+  (:printer ext-xmm-xmm/mem ((prefix #x66)
+                             (op #xd7)
+			     (reg nil :type 'reg)))
+  (:emitter
+   (emit-sse-inst segment dst src #x66 #xd7)))
+
 (define-instruction popcnt (segment dst src)
   (:printer ext-reg-reg/mem
 	    ((prefix #xf3) (op #xb8)))
