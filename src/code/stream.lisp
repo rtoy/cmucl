@@ -296,7 +296,10 @@
       (fd-stream (fd-stream-external-format stream))
       (broadcast-stream
        ;; See http://www.lispworks.com/documentation/HyperSpec/Body/t_broadc.htm
-       :default)
+       (let ((components (broadcast-stream-streams stream)))
+	 (if (null components)
+	     :default
+	     (stream-external-format (car (last components))))))
       (synonym-stream
        ;; Not defined by CLHS.  What should happen if
        ;; (synonym-stream-symbol stream) is unbound?
