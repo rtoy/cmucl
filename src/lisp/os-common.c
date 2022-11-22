@@ -798,12 +798,8 @@ os_get_lc_messages(char *buf, int len)
     return locale ? 0 : -1;
 }
 
-void
-os_get_locale_codeset(char* codeset, int len)
+char *
+os_get_locale_codeset()
 {
-    char *code;
-    
-    code = nl_langinfo(CODESET);
-
-    strncpy(codeset, code, len);
+    return nl_langinfo(CODESET);
 }
