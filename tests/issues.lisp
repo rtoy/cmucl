@@ -727,24 +727,24 @@
   ;; using an explicit format of utf8 and verifying that we got the
   ;; right contents.
   (let ((string (concatenate 'string
-                             ;; This is "hello" in Korean
-                             '(#\Hangul_syllable_an
-                               #\Hangul_Syllable_Nyeong
-                               #\Hangul_Syllable_Ha
-                               #\Hangul_Syllable_Se
-                               #\Hangul_Syllable_Yo))))
+			     ;; This is "hello" in Korean
+			     '(#\Hangul_syllable_an
+			       #\Hangul_Syllable_Nyeong
+			       #\Hangul_Syllable_Ha
+			       #\Hangul_Syllable_Se
+			       #\Hangul_Syllable_Yo))))
     (with-open-file (s (merge-pathnames "out-utf8.txt"
-                                        *test-path*)
-                       :direction :output
-                       :if-exists :supersede)
+					*test-path*)
+		       :direction :output
+		       :if-exists :supersede)
       (write-line string s))
     (with-open-file (s (merge-pathnames "out-utf8.txt"
-                                        *test-path*)
-                       :direction :input
-                       :external-format :utf-8)
+					*test-path*)
+		       :direction :input
+		       :external-format :utf-8)
       (assert-equal (map 'list #'char-name string)
-                   (map 'list #'char-name (read-line s))))))
-
+		    (map 'list #'char-name (read-line s))))))
+  
 (define-test issue.139-locale-external-format
     (:tag :issues)
   ;; Just verify that :locale format exists
