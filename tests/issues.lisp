@@ -747,9 +747,7 @@
   
 ;;; Test stream-external-format for various types of streams.
 
-;; Test two-way-stream where both streams have the same external
-;; format.
-(define-test issue.140.two-way-stream-same
+(define-test issue.140.two-way-stream
     (:tag :issues)
   (with-open-file (in (merge-pathnames "issues.lisp" cmucl-test-runner::*load-path*)
 		      :direction :input
@@ -759,21 +757,8 @@
 			 :external-format :utf-8
 			 :if-exists :supersede)
       (let ((two-way-stream (make-two-way-stream in out)))
-	(assert-equal :default (stream-external-format two-way-stream))))))
-
-;; Test two-way-stream where the two streams have the different
-;; external formats.
-(define-test issue.140.two-way-stream-diff
-    (:tag :issues)
-  (with-open-file (in (merge-pathnames "issues.lisp" cmucl-test-runner::*load-path*)
-		      :direction :input
-		      :external-format :iso8859-1)
-    (with-open-file (out "/tmp/output.tst"
-			 :direction :output
-			 :external-format :utf-8
-			 :if-exists :supersede)
-      (let ((two-way-stream (make-two-way-stream in out)))
-	(assert-equal :default (stream-external-format two-way-stream))))))
+	(assert-error 'type-error
+		      (stream-external-format two-way-stream))))))
 
 ;; Test synonym-stream returns the format of the underlying stream.
 (define-test issue.140.synonym-stream
@@ -784,6 +769,29 @@
     (let ((syn (make-synonym-stream '*syn-stream*)))
       (setf syn s)
       (assert-equal :iso8859-1 (stream-external-format syn)))))
+
+(define-test issue.140.broadcast-stream
+    (:tag :issues)
+  ;; Create 3 output streams.  The exact external formats aren't
+  ;; really important here as long as they're different for each file
+  ;; so we can tell if we got the right answer.
+  (with-open-file (s1 "/tmp/broad-1"
+		      :direction :output
+		      :if-exists :supersede
+		      :external-format :latin1)
+    (with-open-file (s2 "/tmp/broad-2" 
+			:direction :output
+			:if-exists :supersede
+			:external-format :utf-8)
+      (with-open-file (s3 "/tmp/broad-3" 
+			  :direction :output
+			  :if-exists :supersede
+			  :external-format :utf-16)
+	;; The format must be the value from the last stream.
+	(assert-equal :utf-16
+		      (stream-external-format
+		       (make-broadcast-stream s1 s2 s3)))))))
+
 
 (define-test issue.150
     (:tag :issues)

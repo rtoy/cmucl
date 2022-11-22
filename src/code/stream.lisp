@@ -304,11 +304,7 @@
        ;; Not defined by CLHS.  What should happen if
        ;; (synonym-stream-symbol stream) is unbound?
        (stream-external-format
-	(symbol-value (synonym-stream-symbol stream))))
-      (two-way-stream
-       ;; Not defined by CLHS, but use default for backward
-       ;; compatibility.
-       :default))
+	(symbol-value (synonym-stream-symbol stream)))))
     ;; fundamental-stream
     :default))
 
