@@ -142,6 +142,30 @@
   (file c-call:c-string)
   (initial-function (alien:unsigned #.vm:word-bits)))
 
+(defun set-up-locale-external-format ()
+  "Add external format alias for :locale to the format specified by
+  the locale as set by setlocale(3C)."
+  (let ((codeset (unix::unix-get-locale-codeset)))
+    (cond ((zerop (length codeset))
+	   ;; Codeset was the empty string, so just set :locale to
+	   ;; alias to the default external format.  
+	   (setf (gethash :locale stream::*external-format-aliases*)
+		 *default-external-format*))
+	  (t
+	   (let ((codeset-format (intern codeset "KEYWORD")))
+	     ;; If we know the format, we can set the alias.
+	     ;; Otherwise, print a warning and use :iso8859-1 as the
+	     ;; alias.
+	     (setf (gethash :locale stream::*external-format-aliases*)
+		   (if (stream::find-external-format codeset-format nil)
+		       codeset-format
+		       (progn
+			 (warn "Unsupported external format; using :iso8859-1 instead: ~S"
+			       codeset-format)
+			 :iso8859-1)))))))
+  (values))
+
+ 
 (defun save-lisp (core-file-name &key
 				 (purify t)
 				 (root-structures ())
@@ -252,8 +276,13 @@
 	     ;; Set the runtime locale
 	     (unless (zerop (unix::unix-setlocale))
 	       (warn "os_setlocale failed"))
+	     ;; Load external format aliases now so we can aliases to
+	     ;; specify the external format.
+	     (stream::load-external-format-aliases)
 	     ;; Set the locale for lisp
 	     (intl::setlocale)
+	     ;; Set up :locale format
+	     (set-up-locale-external-format)
 	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)
 	     (macrolet ((find-switch (name)

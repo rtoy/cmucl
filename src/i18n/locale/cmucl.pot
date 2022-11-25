@@ -6716,6 +6716,12 @@ msgstr ""
 
 #: src/code/save.lisp
 msgid ""
+"Add external format alias for :locale to the format specified by\n"
+"  the locale as set by setlocale(3C)."
+msgstr ""
+
+#: src/code/save.lisp
+msgid ""
 "Saves a CMU Common Lisp core image in the file of the specified name.  The\n"
 "  following keywords are defined:\n"
 "  \n"

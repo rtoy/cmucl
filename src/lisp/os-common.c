@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <langinfo.h>
 #include <locale.h>
 #include <math.h>
 #include <netdb.h>
@@ -795,4 +796,10 @@ os_get_lc_messages(char *buf, int len)
 
     /* Return -1 if setlocale failed. */
     return locale ? 0 : -1;
+}
+
+char *
+os_get_locale_codeset()
+{
+    return nl_langinfo(CODESET);
 }

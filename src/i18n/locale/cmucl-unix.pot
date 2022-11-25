@@ -1435,3 +1435,7 @@ msgid ""
 "  calling this so that the correct locale is returned."
 msgstr ""
 
+#: src/code/unix.lisp
+msgid "Get the codeset from the locale"
+msgstr ""
+
