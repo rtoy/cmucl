@@ -745,6 +745,11 @@
       (assert-equal (map 'list #'char-name string)
 		    (map 'list #'char-name (read-line s))))))
   
+(define-test issue.139-locale-external-format
+    (:tag :issues)
+  ;; Just verify that :locale format exists
+  (assert-true (stream::find-external-format :locale nil)))
+
 ;;; Test stream-external-format for various types of streams.
 
 (define-test issue.140.two-way-stream
@@ -791,7 +796,6 @@
 	(assert-equal :utf-16
 		      (stream-external-format
 		       (make-broadcast-stream s1 s2 s3)))))))
-
 
 (define-test issue.150
     (:tag :issues)
