@@ -2918,3 +2918,10 @@
 	     256)))
       (when (zerop result)
 	(cast buf c-call:c-string)))))
+
+(defun unix-get-locale-codeset ()
+  _N"Get the codeset from the locale"
+  (cast (alien-funcall
+	    (extern-alien "os_get_locale_codeset"
+			  (function (* char))))
+	c-string))
