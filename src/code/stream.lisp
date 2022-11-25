@@ -290,13 +290,21 @@
   (stream-dispatch stream
     ;; simple-stream
     (stream::%stream-external-format stream)
-    ;; lisp-stream
-    (typecase stream
+    ;; lisp-stream.  For unsupported streams, signal a type error.
+    (etypecase stream
       #+unicode
       (fd-stream (fd-stream-external-format stream))
-      (synonym-stream (stream-external-format
-		       (symbol-value (synonym-stream-symbol stream))))
-      (t :default))
+      (broadcast-stream
+       ;; See http://www.lispworks.com/documentation/HyperSpec/Body/t_broadc.htm
+       (let ((components (broadcast-stream-streams stream)))
+	 (if (null components)
+	     :default
+	     (stream-external-format (car (last components))))))
+      (synonym-stream
+       ;; Not defined by CLHS.  What should happen if
+       ;; (synonym-stream-symbol stream) is unbound?
+       (stream-external-format
+	(symbol-value (synonym-stream-symbol stream)))))
     ;; fundamental-stream
     :default))
 
