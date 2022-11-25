@@ -749,6 +749,7 @@
     (:tag :issues)
   ;; Just verify that :locale format exists
   (assert-true (stream::find-external-format :locale nil)))
+
 ;;; Test stream-external-format for various types of streams.
 
 (define-test issue.140.two-way-stream
