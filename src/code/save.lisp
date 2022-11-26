@@ -152,13 +152,15 @@
 	   (setf (gethash :locale stream::*external-format-aliases*)
 		 *default-external-format*))
 	  (t
-	   (let ((codeset-format (intern codeset "KEYWORD")))
-	     ;; If we know the format, we can set the alias.
-	     ;; Otherwise, print a warning and use :iso8859-1 as the
+	     ;; If we know the format.  This could be an alias to
+	     ;; another format and so on, so use FIND-EXTERNAL-FORMAT
+	     ;; to determine the final format and use that as the
 	     ;; alias.
+	   (let* ((codeset-format (intern codeset "KEYWORD"))
+		  (final-format (stream::find-external-format codeset-format)))
 	     (setf (gethash :locale stream::*external-format-aliases*)
-		   (if (stream::find-external-format codeset-format nil)
-		       codeset-format
+		   (if final-format
+		       (stream::ef-name final-format)
 		       (progn
 			 (warn "Unsupported external format; using :iso8859-1 instead: ~S"
 			       codeset-format)
