@@ -701,13 +701,17 @@
 (define-test issue.139-default-external-format
     (:tag :issues)
   (assert-eq :utf-8 stream:*default-external-format*)
-  (assert-eq :utf-8 (stream-external-format sys:*stdin*))
-  (assert-eq :utf-8 (stream-external-format sys:*stdout*))
-  (assert-eq :utf-8 (stream-external-format sys:*stderr*))
-  ;; sys:*tty* can either be an fd-stream or a two-way-stream.
-  ;; stream-external-format doesn't work for a two-way-stream.
-  (unless (typep sys:*tty* 'two-way-stream)
-    (assert-eq :utf-8 (stream-external-format sys:*tty*))))
+  ;; Find the alias for :locale, and verify it exists and verify that
+  ;; the system streams have that format.
+  (let ((locale-format (gethash :locale stream::*external-format-aliases*)))
+    (assert locale-format)
+    (assert-eq locale-format (stream-external-format sys:*stdin*))
+    (assert-eq locale-format (stream-external-format sys:*stdout*))
+    (assert-eq locale-format (stream-external-format sys:*stderr*))
+    ;; sys:*tty* can either be an fd-stream or a two-way-stream.
+    ;; stream-external-format doesn't work for a two-way-stream.
+    (unless (typep sys:*tty* 'two-way-stream)
+      (assert-eq locale-format (stream-external-format sys:*tty*)))))
 
 (define-test issue.139-default-external-format-read-file
     (:tag :issues)
