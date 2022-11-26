@@ -700,7 +700,14 @@
 
 (define-test issue.139-default-external-format
     (:tag :issues)
-  (assert-eq :utf-8 stream:*default-external-format*))
+  (assert-eq :utf-8 stream:*default-external-format*)
+  (assert-eq :utf-8 (stream-external-format sys:*stdin*))
+  (assert-eq :utf-8 (stream-external-format sys:*stdout*))
+  (assert-eq :utf-8 (stream-external-format sys:*stderr*))
+  ;; sys:*tty* can either be an fd-stream or a two-way-stream.
+  ;; stream-external-format doesn't work for a two-way-stream.
+  (unless (typep sys:*tty* 'two-way-stream)
+    (assert-eq :utf-8 (stream-external-format sys:*tty*))))
 
 (define-test issue.139-default-external-format-read-file
     (:tag :issues)
