@@ -2403,7 +2403,7 @@
 			:external-format :utf-8))
   (setf *stderr*
 	(make-fd-stream 2 :name "Standard Error" :output t :buffering :line
-			:external-format :utf-8))
+			:external-format :iso8859-1))
   (let ((tty (and (not *batch-mode*)
 		  (unix:unix-open "/dev/tty" unix:o_rdwr #o666))))
     (setf *tty*

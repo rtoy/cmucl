@@ -283,6 +283,8 @@
 	     (intl::setlocale)
 	     ;; Set up :locale format
 	     (set-up-locale-external-format)
+	     ;; Set terminal encodings to :locale
+	     (set-system-external-format :locale)
 	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)
 	     (macrolet ((find-switch (name)
