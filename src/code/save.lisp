@@ -151,7 +151,8 @@
 	   (setq external-format *default-external-format*))
 	  (t
 	   (let ((name (intern codeset "KEYWORD")))
-             (setq external-format (stream::find-external-format name nil)))))
+             (setq external-format
+		   (stream::ef-name (stream::find-external-format name nil))))))
     (cond (external-format
 	   (setf (gethash :locale stream::*external-format-aliases*)
 		 external-format))
