@@ -47,10 +47,6 @@ function cleanup {
 
 trap cleanup EXIT
 
-# Set a known value for LANG here so that we can tests consistently.
-# The most important part is that the codeset is UTF-8.
-LANG=en_US.UTF-8
-
 if [ $# -eq 0 ]; then
     # No args so run all the tests
     $LISP -noinit -load tests/run-tests.lisp -eval '(cmucl-test-runner:run-all-tests)'
