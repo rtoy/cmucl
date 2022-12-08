@@ -282,8 +282,9 @@
 	     (intl::setlocale)
 	     ;; Set up :locale format
 	     (set-up-locale-external-format)
-	     ;; Set terminal encodings to :locale
-	     (set-system-external-format :locale)
+	     ;; Set terminal encodings to :locale and filename encoding to :utf-8.
+	     ;; (This needs more work on Darwin.)
+	     (set-system-external-format :locale :utf-8)
 	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)
 	     (macrolet ((find-switch (name)
