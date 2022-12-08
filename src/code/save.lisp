@@ -145,24 +145,23 @@
 (defun set-up-locale-external-format ()
   "Add external format alias for :locale to the format specified by
   the locale as set by setlocale(3C)."
-  (let ((codeset (unix::unix-get-locale-codeset)))
+  (let ((codeset (unix::unix-get-locale-codeset))
+	(external-format nil))
     (cond ((zerop (length codeset))
-	   ;; Codeset was the empty string, so just set :locale to
-	   ;; alias to the default external format.  
-	   (setf (gethash :locale stream::*external-format-aliases*)
-		 *default-external-format*))
+	   (setq external-format *default-external-format*))
 	  (t
-	   (let ((codeset-format (intern codeset "KEYWORD")))
-	     ;; If we know the format, we can set the alias.
-	     ;; Otherwise, print a warning and use :iso8859-1 as the
-	     ;; alias.
-	     (setf (gethash :locale stream::*external-format-aliases*)
-		   (if (stream::find-external-format codeset-format nil)
-		       codeset-format
-		       (progn
-			 (warn "Unsupported external format; using :iso8859-1 instead: ~S"
-			       codeset-format)
-			 :iso8859-1)))))))
+	   (let ((name (intern codeset "KEYWORD")))
+             (setq external-format
+		   (stream::ef-name (stream::find-external-format name nil))))))
+    (cond (external-format
+	   (setf (gethash :locale stream::*external-format-aliases*)
+		 external-format))
+	  (t
+	   (warn "No external format found for codeset \"~S\"; using ~S instead"
+		 codeset
+		 *default-external-format*)
+	   (setf (gethash :locale stream::*external-format-aliases*)
+		 *default-external-format*))))
   (values))
 
  
@@ -283,6 +282,8 @@
 	     (intl::setlocale)
 	     ;; Set up :locale format
 	     (set-up-locale-external-format)
+	     ;; Set terminal encodings to :locale
+	     (set-system-external-format :locale)
 	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)
 	     (macrolet ((find-switch (name)
