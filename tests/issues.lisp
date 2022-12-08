@@ -709,9 +709,14 @@
     (assert-eq locale-format (stream-external-format sys:*stdout*))
     (assert-eq locale-format (stream-external-format sys:*stderr*))
     ;; sys:*tty* can either be an fd-stream or a two-way-stream.
-    ;; stream-external-format doesn't work for a two-way-stream.
-    (unless (typep sys:*tty* 'two-way-stream)
-      (assert-eq locale-format (stream-external-format sys:*tty*)))))
+    (etypecase sys:*tty*
+      (system:fd-stream
+       (assert-eq locale-format (stream-external-format sys:*tty*)))
+      (two-way-stream
+       (assert-eq locale-format
+		  (stream-external-format (two-way-stream-input-stream sys:*tty*)))
+       (assert-eq locale-format
+		  (stream-external-format (two-way-stream-output-stream sys:*tty*)))))))
 
 (define-test issue.139-default-external-format-read-file
     (:tag :issues)
