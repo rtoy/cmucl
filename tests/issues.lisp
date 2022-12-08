@@ -682,10 +682,7 @@
   ;; work and not return NIL.
   (assert-true (file-author "."))
   (assert-true (file-author "bin/build.sh"))
-  (let ((unix::*filename-encoding* :utf-8))
-    ;; Set filename encoding to utf-8 so that we can encode the
-    ;; filename properly.
-    (assert-true
+  (assert-true
    (file-author
     (merge-pathnames 
      (concatenate 'string
@@ -696,7 +693,7 @@
 		  '(#\Hangul_Syllable_An #\Hangul_Syllable_Nyeong #\Hangul_Syllable_Ha
 		    #\Hangul_Syllable_Sib #\Hangul_Syllable_Ni #\Hangul_Syllable_Gga)
 		  ".txt")
-     *test-path*)))))
+     *test-path*))))
 
 (define-test issue.139-default-external-format
     (:tag :issues)
