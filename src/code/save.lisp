@@ -164,7 +164,29 @@
 		 *default-external-format*))))
   (values))
 
- 
+(defun decode-runtime-strings ()
+  ;; The C runtime can initialize the following strings from the
+  ;; command line or the environment.  We need to decode these into
+  ;; the utf-16 strings that Lisp uses.
+  (setf lisp::lisp-command-line-list
+	(mapcar #'(lambda (s)
+		    (stream:string-decode s :locale))
+		lisp::lisp-command-line-list))
+  (setf lisp::lisp-environment-list
+	(mapcar #'(lambda (s)
+		    (stream:string-decode s :locale))
+		lisp::lisp-environment-list))
+  (when lisp::*cmucl-lib*
+    (setf lisp::*cmucl-lib*
+	  (stream:string-decode lisp::*cmucl-lib* :locale)))
+  (setf lisp::*cmucl-core-path*
+	(stream:string-decode lisp::*cmucl-core-path* :locale))
+  ;; *unidata-path* defaults to a pathname object, but the user can
+  ;; specify a path, so we need to decode the string path if given.
+  (when (and lisp::*unidata-path* (stringp lisp::*unidata-path*))
+    (setf lisp::*unidata-path*
+	  (stream:string-decode lisp::*unidata-path* :locale))))
+
 (defun save-lisp (core-file-name &key
 				 (purify t)
 				 (root-structures ())
@@ -285,6 +307,7 @@
 	     ;; Set terminal encodings to :locale and filename encoding to :utf-8.
 	     ;; (This needs more work on Darwin.)
 	     (set-system-external-format :locale :utf-8)
+	     (decode-runtime-strings)
 	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)
 	     (macrolet ((find-switch (name)
