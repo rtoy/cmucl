@@ -168,38 +168,38 @@
   ;; The C runtime can initialize the following strings from the
   ;; command line or the environment.  We need to decode these into
   ;; the utf-16 strings that Lisp uses.
-  (setf lisp::lisp-command-line-list
+  (setf lisp-command-line-list
 	(mapcar #'(lambda (s)
 		    (stream:string-decode s :locale))
-		lisp::lisp-command-line-list))
-  (setf lisp::lisp-environment-list
+		lisp-command-line-list))
+  (setf lisp-environment-list
 	(mapcar #'(lambda (s)
 		    (stream:string-decode s :locale))
-		lisp::lisp-environment-list))
-  (when lisp::*cmucl-lib*
-    (setf lisp::*cmucl-lib*
-	  (stream:string-decode lisp::*cmucl-lib* :locale)))
-  (setf lisp::*cmucl-core-path*
-	(stream:string-decode lisp::*cmucl-core-path* :locale))
+		lisp-environment-list))
+  (when *cmucl-lib*
+    (setf *cmucl-lib*
+	  (stream:string-decode *cmucl-lib* :locale)))
+  (setf *cmucl-core-path*
+	(stream:string-decode *cmucl-core-path* :locale))
   ;; *unidata-path* defaults to a pathname object, but the user can
   ;; specify a path, so we need to decode the string path if given.
-  (when (and lisp::*unidata-path* (stringp lisp::*unidata-path*))
-    (setf lisp::*unidata-path*
-	  (stream:string-decode lisp::*unidata-path* :locale))))
+  (when (and *unidata-path* (stringp *unidata-path*))
+    (setf *unidata-path*
+	  (stream:string-decode *unidata-path* :locale))))
 
 (defun save-lisp (core-file-name &key
-				 (purify t)
-				 (root-structures ())
-				 (environment-name "Auxiliary")
-				 (init-function #'%top-level)
-				 (load-init-file t)
-				 (site-init "library:site-init")
-				 (print-herald t)
-				 (process-command-line t)
-		                  #+:executable
-		                 (executable nil)
-				 (batch-mode nil)
-				 (quiet nil))
+				   (purify t)
+				   (root-structures ())
+				   (environment-name "Auxiliary")
+				   (init-function #'%top-level)
+				   (load-init-file t)
+				   (site-init "library:site-init")
+				   (print-herald t)
+				   (process-command-line t)
+		                   #+:executable
+		                   (executable nil)
+				   (batch-mode nil)
+				   (quiet nil))
   "Saves a CMU Common Lisp core image in the file of the specified name.  The
   following keywords are defined:
   
@@ -363,14 +363,14 @@
 	 (unix:unix-exit
 	  (catch '%end-of-the-world
 	    (unwind-protect
-		(if *batch-mode*
-		    (handler-case
-			(%restart-lisp)
-		      (error (cond)
-			(format *error-output* (intl:gettext "Error in batch processing:~%~A~%")
-				cond)
-			(throw '%end-of-the-world 1)))
-		    (%restart-lisp))
+		 (if *batch-mode*
+		     (handler-case
+			 (%restart-lisp)
+		       (error (cond)
+			 (format *error-output* (intl:gettext "Error in batch processing:~%~A~%")
+				 cond)
+			 (throw '%end-of-the-world 1)))
+		     (%restart-lisp))
 	      (finish-standard-output-streams))))))
 
     ;; Record dump time and host
@@ -380,7 +380,7 @@
     (let ((initial-function (get-lisp-obj-address #'restart-lisp))
 	  (core-name (unix-namestring core-file-name nil)))
       (without-gcing
-	  #+:executable
+	#+:executable
 	(if executable
 	    (save-executable core-name initial-function)
 	    (save core-name initial-function #+sse2 1 #-sse2 0))
