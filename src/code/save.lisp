@@ -176,9 +176,15 @@
 	(mapcar #'(lambda (s)
 		    (stream:string-decode s locale))
 		lisp-environment-list))
+  ;; This needs more work..  *cmucl-lib* could be set from the the envvar
+  ;; "CMUCLLIB" or from the "-lib" command-line option, and thus
+  ;; should use the LOCALE to decode the string.
   (when *cmucl-lib*
     (setf *cmucl-lib*
 	  (stream:string-decode *cmucl-lib* file-locale)))
+  ;; This also needs more work since the core path could come from the
+  ;; "-core" command-line option and should thus use LOCALE to decode
+  ;; the string.  It could also come from the "CMUCLCORE" envvar.
   (setf *cmucl-core-path*
 	(stream:string-decode *cmucl-core-path* file-locale))
   ;; *unidata-path* defaults to a pathname object, but the user can
