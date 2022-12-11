@@ -493,7 +493,7 @@
 	     ;; encoding to NIL because we don't need any special
 	     ;; encoding to open the format files.
 	     (let* ((*print-readably* nil)
-		    (unix::*filename-encoding* nil)
+		    ;;(unix::*filename-encoding* nil)
 		    (*package* (find-package "STREAM"))
 		    (lisp::*enable-package-locked-errors* nil)
 		    (s (open (format nil "ext-formats:~(~A~).lisp" name)
