@@ -258,6 +258,13 @@
 	(assert-equal (map 'list #'char-code out-string)
 		      (map 'list #'char-code expected))))))
 
+(define-test issue.25c-setup
+    (:tag :issues)
+  ;; Get the external format before running the test issue.25c.  See
+  ;; issue #161
+  ;; (https://gitlab.common-lisp.net/cmucl/cmucl/-/issues/161).
+  (assert-true (stream::find-external-format :utf16-be)))
+
 (define-test issue.25c
     (:tag :issues)
   ;; Modified test to verify that each octet read from run-program is
@@ -267,9 +274,6 @@
 					   #\greek_small_letter_beta)))
 	 (expected (stream:string-encode in-string :utf16-be))
 	 (path #p"issue25c.txt"))
-    ;; Get the external format before opening the file.  See issue
-    ;; #161 (https://gitlab.common-lisp.net/cmucl/cmucl/-/issues/161).
-    (stream::find-external-format :utf16-be)
     (with-open-file (s path :direction :output :if-exists :supersede :external-format :utf16-be)
       (write-string in-string s)
       (force-output s)
