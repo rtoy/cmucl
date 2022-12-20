@@ -271,7 +271,24 @@
 				(upcasify name)
 				(upcasify type)
 				(upcasify version)))
-      (%make-pathname host device directory name type version)))
+      #-darwin
+      (%make-pathname host device directory name type version)
+      #+darwin
+      (flet ((normalize-name (string)
+	       ;; Normalize Darwin pathnames by converting Hangul
+	       ;; syllables to conjoining jamo, and converting the
+	       ;; string to NFD form, but skipping over a range of
+	       ;; characters.
+	       (decompose (with-output-to-string (s)
+			    (unicode::decompose-hangul string s))
+			  :compatibility nil
+			  :darwinp t)))
+	(%make-pathname host device
+			(list (car directory)
+			      (mapcar #'normalize-name (cdr directory)))
+			(normalize-name name)
+			(normalize-name type)
+			version))))
 
 ;;; *LOGICAL-HOSTS* --internal.
 ;;;

@@ -4014,6 +4014,14 @@ msgstr ""
 
 #: src/code/string.lisp
 msgid ""
+"Convert String to NFD (or NFKD).  If :darwinp is non-NIL, then\n"
+"    characters in the ranges U2000-U2FFF, UF900-UFA6A, and\n"
+"    U2F800-U2FA1D are not decomposed, as specified for Darwin\n"
+"    pathnames."
+msgstr ""
+
+#: src/code/string.lisp
+msgid ""
 "Convert a sequence of codepoints to a string.  Codepoints outside\n"
 "  the basic multilingual plane (BMP) are converted into the\n"
 "  corresponding surrogate pairs."
@@ -15261,6 +15269,23 @@ msgid ""
 "  algorithm is used to determine the word boundaries.  Otherwise, A\n"
 "  ``word'' is defined to be a string of case-modifiable characters\n"
 "  delimited by non-case-modifiable chars.  "
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Decompose the Hangul syllable codepoint CP to an equivalent sequence\n"
+"  of conjoining jamo and print the decomposed result to the stream\n"
+"  STREAM."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid "Test if CODEPOINT is a Hangul syllable"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Decompose any Hangul syllables in STRING to an equivalent sequence of\n"
+"  conjoining jamo characters."
 msgstr ""
 
 #: src/compiler/macros.lisp
