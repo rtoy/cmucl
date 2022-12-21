@@ -308,7 +308,8 @@
 ;;; in Unwind-Protects will get executed.
 
 (declaim (special *lisp-initialization-functions*
-		  *load-time-values*))
+		  *load-time-values*
+		  *enable-normalization*))
 
 (eval-when (compile)
   (defmacro print-and-call (name)
@@ -344,6 +345,7 @@
   (setf *type-system-initialized* nil)
   (setf *break-on-signals* nil)
   (setf unix::*filename-encoding* nil)
+  (setf *enable-normalization* nil)
   #+gengc (setf conditions::*handler-clusters* nil)
   (setq intl::*default-domain* "cmucl")
   (setq intl::*locale* "C")
