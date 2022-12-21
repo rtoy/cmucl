@@ -527,18 +527,19 @@
 	 (l-base #x1100)
 	 (v-base #x1161)
 	 (t-base #x11a7)
-	 (s-count 11172)
-	 (l-count 19)
 	 (v-count 21)
 	 (t-count 28)
 	 (n-count (* v-count t-count)))
     ;; Step 1: Compute index of the syllable S
     (let ((s-index (- cp s-base)))
-      ;; Step 2: If s is in the range 0 <= s <= s-count, the compute the components
+      ;; Step 2: If s is in the range 0 <= s <= s-count, the compute
+      ;; the components.
       (let ((l (+ l-base (truncate s-index n-count)))
 	    (v (+ v-base (truncate (mod s-index n-count) t-count)))
 	    (tt (+ t-base (mod s-index t-count))))
-	;; Step 3: If tt = t-base, then there is no trailing character so replace s by the sequence <l,v>.  Otherwise there is a trailing character, so replace s by the sequence <l,v,tt>
+	;; Step 3: If tt = t-base, then there is no trailing character
+	;; so replace s by the sequence <l,v>.  Otherwise there is a
+	;; trailing character, so replace s by the sequence <l,v,tt>.
 	(princ (code-char l) stream)
 	(princ (code-char v) stream)
 	(unless (= tt t-base)

@@ -252,7 +252,12 @@
 ;;; This constructor is used to make an instance of the correct type
 ;;; from parsed arguments.
 
-(defvar *enable-normalization* nil)
+(defvar *enable-darwin-path-normalization* nil
+  "When non-NIL, pathnames are on Darwin are normalized when created.
+  Otherwise, the pathnames are unchanged.
+
+  This must be NIL during bootstrapping because Unicode is not yet
+  available.")
 
 (defun normalize-name (piece)
   ;; Normalize Darwin pathnames by converting Hangul
@@ -261,7 +266,7 @@
   ;; characters.
   (typecase piece
     (string
-     (if *enable-normalization*
+     (if *enable-darwin-path-normalization*
 	 (decompose (unicode::decompose-hangul piece)
 		    :compatibility nil
 		    :darwinp t)
@@ -289,16 +294,29 @@
 				(upcasify name)
 				(upcasify type)
 				(upcasify version)))
-      #-(not nil)
+      #-darwin
       (%make-pathname host device directory name type version)
-      #+(not nil)
-      (%make-pathname host device
-		      (when directory
-			(list* (car directory)
-			       (mapcar #'normalize-name (cdr directory))))
-		      (normalize-name name)
-		      (normalize-name type)
-		      version))))
+      #+darwin
+      (flet ((normalize-name (piece)
+	       ;; Normalize Darwin pathnames by converting Hangul
+	       ;; syllables to conjoining jamo, and converting the
+	       ;; string to NFD form, but skipping over a range of
+	       ;; characters.
+	       (typecase piece
+		 (string
+		  (if *enable-darwin-path-normalization*
+		      (decompose (unicode::decompose-hangul piece)
+				 :compatibility nil
+				 :darwinp t)
+		      piece))
+		 (t
+		  ;; What should we do about lisp::pattern objects?
+		  piece))))
+	(%make-pathname host device
+			(mapcar #'normalize-name (cdr directory))
+			(normalize-name name)
+			(normalize-name type)
+			version))))
 
 ;;; *LOGICAL-HOSTS* --internal.
 ;;;

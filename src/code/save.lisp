@@ -284,13 +284,14 @@
 	     (set-up-locale-external-format)
 	     ;; Set terminal encodings to :locale
 	     (set-system-external-format :locale)
-	     ;; Get some unicode stuff needed for decomposing strings.
-	     ;; This is needed on Darwin to normalize pathname
-	     ;; objects, which needs this information.  If we don't,
-	     ;; we'll load the information at runtime when creating
-	     ;; the path to "unidata.dat", which then calls decompose
-	     ;; again, and so on.
+	     #+darwin
 	     (progn
+	       ;; Get some unicode stuff needed for decomposing strings.
+	       ;; This is needed on Darwin to normalize pathname
+	       ;; objects, which needs this information.  If we don't,
+	       ;; we'll load the information at runtime when creating
+	       ;; the path to "unidata.dat", which then calls decompose
+	       ;; again, and so on.
 	       (lisp::load-decomp)
 	       (lisp::load-combining)
 	       (setf *enable-normalization* t))
