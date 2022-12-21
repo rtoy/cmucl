@@ -373,14 +373,14 @@
 	 (unix:unix-exit
 	  (catch '%end-of-the-world
 	    (unwind-protect
-		 (if *batch-mode*
-		     (handler-case
-			 (%restart-lisp)
-		       (error (cond)
-			 (format *error-output* (intl:gettext "Error in batch processing:~%~A~%")
-				 cond)
-			 (throw '%end-of-the-world 1)))
-		     (%restart-lisp))
+		(if *batch-mode*
+		    (handler-case
+			(%restart-lisp)
+		      (error (cond)
+			(format *error-output* (intl:gettext "Error in batch processing:~%~A~%")
+				cond)
+			(throw '%end-of-the-world 1)))
+		    (%restart-lisp))
 	      (finish-standard-output-streams))))))
 
     ;; Record dump time and host
