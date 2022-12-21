@@ -310,10 +310,11 @@
 				 :darwinp t)
 		      piece))
 		 (t
-		  ;; What should we do about lisp::pattern objects?
+		  ;; What should we do about lisp::pattern objects
+		  ;; that occur in the name component?
 		  piece))))
 	(%make-pathname host device
-			(mapcar #'normalize-name (cdr directory))
+			(mapcar #'normalize-name directory)
 			(normalize-name name)
 			(normalize-name type)
 			version))))
