@@ -194,18 +194,18 @@
 	  (stream:string-decode *unidata-path* file-locale))))
 
 (defun save-lisp (core-file-name &key
-				   (purify t)
-				   (root-structures ())
-				   (environment-name "Auxiliary")
-				   (init-function #'%top-level)
-				   (load-init-file t)
-				   (site-init "library:site-init")
-				   (print-herald t)
-				   (process-command-line t)
-		                   #+:executable
-		                   (executable nil)
-				   (batch-mode nil)
-				   (quiet nil))
+				 (purify t)
+				 (root-structures ())
+				 (environment-name "Auxiliary")
+				 (init-function #'%top-level)
+				 (load-init-file t)
+				 (site-init "library:site-init")
+				 (print-herald t)
+				 (process-command-line t)
+		                 #+:executable
+		                 (executable nil)
+				 (batch-mode nil)
+				 (quiet nil))
   "Saves a CMU Common Lisp core image in the file of the specified name.  The
   following keywords are defined:
   
@@ -390,7 +390,7 @@
     (let ((initial-function (get-lisp-obj-address #'restart-lisp))
 	  (core-name (unix-namestring core-file-name nil)))
       (without-gcing
-	#+:executable
+	  #+:executable
 	(if executable
 	    (save-executable core-name initial-function)
 	    (save core-name initial-function #+sse2 1 #-sse2 0))
