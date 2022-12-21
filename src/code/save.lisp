@@ -294,7 +294,7 @@
 	       ;; again, and so on.
 	       (lisp::load-decomp)
 	       (lisp::load-combining)
-	       (setf *enable-normalization* t))
+	       (setf *enable-darwin-path-normalization* t))
 	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)
 	     (macrolet ((find-switch (name)
