@@ -370,8 +370,10 @@
 		    #() '())))))
 
 (defun load-external-format-aliases ()
+  ;; Set filename encoding to NIL to bypass any encoding; it's not
+  ;; needed to open the aliases file.  NIL means the pathname string is passed as is where only the low 8 bits of the 
   (let ((*package* (find-package "KEYWORD"))
-	(unix::*filename-encoding* :iso8859-1))
+	(unix::*filename-encoding* nil))
     (with-open-file (stm "ext-formats:aliases" :if-does-not-exist nil
 			 :external-format :iso8859-1)
       (when stm
@@ -486,11 +488,16 @@
       (and (consp name) (find-external-format name))
       (and (with-standard-io-syntax
 	     ;; Use standard IO syntax so that changes by the user
-	     ;; don't mess up compiling the external format.
-	     (let ((*package* (find-package "STREAM"))
-		   (lisp::*enable-package-locked-errors* nil)
-		   (s (open (format nil "ext-formats:~(~A~).lisp" name)
-			    :if-does-not-exist nil :external-format :iso8859-1)))
+	     ;; don't mess up compiling the external format, but we
+	     ;; don't need to print readably.  Also, set filename
+	     ;; encoding to NIL because we don't need any special
+	     ;; encoding to open the format files.
+	     (let* ((*print-readably* nil)
+		    ;;(unix::*filename-encoding* nil)
+		    (*package* (find-package "STREAM"))
+		    (lisp::*enable-package-locked-errors* nil)
+		    (s (open (format nil "ext-formats:~(~A~).lisp" name)
+			     :if-does-not-exist nil :external-format :iso8859-1)))
 	       (when s
 		 (null (nth-value 1 (ext:compile-from-stream s))))))
            (gethash name *external-formats*))))
