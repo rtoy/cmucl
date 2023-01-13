@@ -25,7 +25,12 @@
 ;; it must be set to :iso8859-1 (or left as NIL), making files with
 ;; non-Latin-1 characters "mojibake", but otherwise they'll be inaccessible.
 ;; Must be set to NIL initially to enable building Lisp!
-(defvar *filename-encoding* nil)
+(defvar *filename-encoding* nil
+  "The encoding to use for converting a namestring to a string that can
+  be used by the operations system.  It must be a valid
+  external-format name or NIL.  NIL means the string is passed as is
+  to the operating system.  The operating system will get the low 8
+  bits of each UTF-16 code unit of the string.")
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmacro %name->file (string)
