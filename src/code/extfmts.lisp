@@ -373,7 +373,7 @@
   ;; Set filename encoding to NIL to bypass any encoding; it's not
   ;; needed to open the aliases file.  NIL means the pathname string is passed as is where only the low 8 bits of the 
   (let ((*package* (find-package "KEYWORD"))
-	(unix::*filename-encoding* nil))
+	(unix::*filename-encoding* :no-encoding))
     (with-open-file (stm "ext-formats:aliases" :if-does-not-exist nil
 			 :external-format :iso8859-1)
       (when stm
@@ -493,7 +493,7 @@
 	     ;; encoding to NIL because we don't need any special
 	     ;; encoding to open the format files.
 	     (let* ((*print-readably* nil)
-		    (unix::*filename-encoding* nil)
+		    (unix::*filename-encoding* :no-encoding)
 		    (*package* (find-package "STREAM"))
 		    (lisp::*enable-package-locked-errors* nil)
 		    (s (open (format nil "ext-formats:~(~A~).lisp" name)
@@ -1157,7 +1157,7 @@ character and illegal outputs are replaced by a question mark.")
     (unless (find-external-format filenames)
       (error (intl:gettext "Can't find external-format ~S.") filenames))
     (setq filenames (ef-name (find-external-format filenames)))
-    (when (and unix::*filename-encoding*
+    (when (and (not (eq unix::*filename-encoding* :no-encoding))
 	       (not (eq unix::*filename-encoding* filenames)))
       (cerror (intl:gettext "Change it anyway.")
 	      (intl:gettext "The external-format for encoding filenames is already set.")))
