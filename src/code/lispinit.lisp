@@ -343,7 +343,7 @@
   #-gengc (setf unix::*interrupt-pending* nil)
   (setf *type-system-initialized* nil)
   (setf *break-on-signals* nil)
-  (setf unix::*filename-encoding* :no-encoding)
+  (setf unix::*filename-encoding* :null)
   #+gengc (setf conditions::*handler-clusters* nil)
   (setq intl::*default-domain* "cmucl")
   (setq intl::*locale* "C")

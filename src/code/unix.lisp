@@ -28,17 +28,17 @@
 (defvar *filename-encoding* :no-encoding
   "The encoding to use for converting a namestring to a string that can
   be used by the operations system.  It must be a valid
-  external-format name or :NO-ENCODING.  :NO-ENCODING means the string
+  external-format name or :NULL.  :NULL means the string
   is passed as is to the operating system.  The operating system will
   get the low 8 bits of each UTF-16 code unit of the string.")
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmacro %name->file (string)
-    `(if (eql *filename-encoding* :no-encoding)
+    `(if (eql *filename-encoding* :nul)
 	 ,string
 	 (string-encode ,string *filename-encoding*)))
   (defmacro %file->name (string)
-    `(if (eql *filename-encoding* :no-encoding)
+    `(if (eql *filename-encoding* :null)
 	 ,string
 	 (string-decode ,string *filename-encoding*))))
 
