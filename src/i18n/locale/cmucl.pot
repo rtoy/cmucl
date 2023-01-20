@@ -6149,6 +6149,10 @@ msgstr ""
 msgid "Same as -help."
 msgstr ""
 
+#: src/code/commandline.lisp
+msgid "Prints the cmucl version and exits"
+msgstr ""
+
 #: src/code/env-access.lisp
 msgid ""
 "Returns information about the symbol VAR in the lexical environment ENV.\n"
