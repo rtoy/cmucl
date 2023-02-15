@@ -344,7 +344,7 @@
   #-gengc (setf unix::*interrupt-pending* nil)
   (setf *type-system-initialized* nil)
   (setf *break-on-signals* nil)
-  (setf unix::*filename-encoding* nil)
+  (setf unix::*filename-encoding* :null)
   (setf *enable-darwin-path-normalization* nil)
   #+gengc (setf conditions::*handler-clusters* nil)
   (setq intl::*default-domain* "cmucl")
