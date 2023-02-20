@@ -826,3 +826,49 @@
 	(*compile-print* nil))
     (assert-true (stream::find-external-format :euckr))
     (assert-true (stream::find-external-format :cp949))))
+
+(define-test issue.158
+    (:tag :issues)
+  (let* ((name (string #\Hangul_Syllable_Gyek))
+	 (path (make-pathname :directory (list :relative name)
+			      :name name
+			      :type name)))
+    #+darwin
+    (let ((expected '(4352 4456 4543)))
+      ;; Tests that on Darwin the Hangul pathname has been normalized
+      ;; correctly.  We fill in the directory, name, and type components
+      ;; with the same thing since it shouldn't really matter.
+      ;;
+      ;; The expected value is the conjoining jamo for the character
+      ;; #\Hangul_Syllable_Gyek.
+      (assert-equal (map 'list #'char-code (second (pathname-directory path)))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-name path))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-type path))
+		    expected))
+    #-darwin
+    (let ((expected (list (char-code #\Hangul_Syllable_Gyek))))
+      ;; For other OSes, just assume that the pathname is unchanged.
+      (assert-equal (map 'list #'char-code (second (pathname-directory path)))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-name path))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-type path))
+		    expected))))
+
+(define-test issue.158.dir
+    (:tag :issues)
+  (flet ((get-file ()
+	   ;; This assumes that there is only one file in resources/darwin
+	   (let ((files (directory "resources/darwin/*.txt")))
+	     (assert-equal (length files) 1)
+	     (first files))))
+    (let ((f (get-file))
+	  (expected-name "안녕하십니까"))
+      #+darwin
+      (assert-equal (pathname-name f)
+		    (unicode::decompose-hangul expected-name))
+      #-darwin
+      (assert-equal (pathname-name f) expected-name))))
+    
