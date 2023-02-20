@@ -861,7 +861,7 @@
     (:tag :issues)
   (flet ((get-file ()
 	   ;; This assumes that there is only one file in resources/darwin
-	   (let ((files (directory "resources/darwin/*.txt")))
+	   (let ((files (directory (merge-pathnames "resources/darwin/*.txt" *test-path*))))
 	     (assert-equal (length files) 1)
 	     (first files))))
     (let ((f (get-file))
