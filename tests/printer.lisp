@@ -113,3 +113,16 @@
 
 (define-test sub-output-integer.1
     (assert-prints "-536870912" (princ most-negative-fixnum)))
+
+;;; Simple LOOP requires only compound forms. Hence NIL is not
+;;; permitted. Some FORMAT directives (like newline) return NIL
+;;; as the form when they have nothing to add to the body.
+;;; Normally this is fine since BLOCK accepts NIL as a form. On
+;;; the other hand, when the newline directive is inside of an
+;;; iteration directive this will produce something like
+;;; (LOOP (fu) nil (bar)) which is not acceptable. To verify
+;;; that this is not happening we make sure we are not getting
+;;; (BLOCK NIL NIL) since this is easier to test for.
+(define-test format-no-nil-form.1
+    (assert-equal '(block nil) (third (second (macroexpand-1 '(formatter "~
+"))))))

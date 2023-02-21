@@ -399,7 +399,8 @@
 	  (form new-directives)
 	  (expand-directive (car remaining-directives)
 			    (cdr remaining-directives))
-	(push form results)
+	(when form
+          (push form results))
 	(setf remaining-directives new-directives)))
     (reverse results)))
 
