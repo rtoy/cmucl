@@ -18,8 +18,10 @@
   (declare (ignore arg))
   form)
 
-(defparameter *test-path*
-  (merge-pathnames (make-pathname :name :unspecific :type :unspecific
+(defparameter *tmp-dir*
+  (merge-pathnames (make-pathname :directory '(:relative "tmp")
+				  :name :unspecific
+				  :type :unspecific
                                   :version :unspecific)
                    *load-truename*)
   "Directory for temporary test files.")
@@ -777,10 +779,11 @@
 
 (define-test issue.140.two-way-stream
     (:tag :issues)
+  (ensure-directories-exist *tmp-dir*)
   (with-open-file (in (merge-pathnames "issues.lisp" cmucl-test-runner::*load-path*)
 		      :direction :input
 		      :external-format :utf-8)
-    (with-open-file (out "/tmp/output.tst"
+    (with-open-file (out (merge-pathnames "output.tst" *tmp-dir*)
 			 :direction :output
 			 :external-format :utf-8
 			 :if-exists :supersede)
@@ -803,15 +806,15 @@
   ;; Create 3 output streams.  The exact external formats aren't
   ;; really important here as long as they're different for each file
   ;; so we can tell if we got the right answer.
-  (with-open-file (s1 "/tmp/broad-1"
+  (with-open-file (s1 (merge-pathnames "broad-1" *tmp-dir*)
 		      :direction :output
 		      :if-exists :supersede
 		      :external-format :latin1)
-    (with-open-file (s2 "/tmp/broad-2" 
+    (with-open-file (s2 (merge-pathnames "broad-2" *tmp-dir*)
 			:direction :output
 			:if-exists :supersede
 			:external-format :utf-8)
-      (with-open-file (s3 "/tmp/broad-3" 
+      (with-open-file (s3 (merge-pathnames "broad-3" *tmp-dir*)
 			  :direction :output
 			  :if-exists :supersede
 			  :external-format :utf-16)
