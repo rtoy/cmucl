@@ -51,7 +51,7 @@
   #-long-float 'double-float-exponent
   #+long-float 'long-float-exponent)
 (deftype float-int-exponent ()
-  'c::double-float-int-exponent)
+  'double-float-int-exponent)
 (deftype float-digits ()
   #-long-float `(integer 0 ,vm:double-float-digits)
   #+long-float `(integer 0 ,vm:long-float-digits))
