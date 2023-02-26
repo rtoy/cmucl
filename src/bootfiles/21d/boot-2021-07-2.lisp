@@ -1,3 +1,8 @@
+;; Bootstrap file for x86 to choose the non-negated forms of the
+;; condition flag for conditional jumps.
+;;
+;; Use bin/build.sh -B boot-2021-07-2 to build this.
+
 (in-package :x86)
 
 (ext:without-package-locks
