@@ -971,6 +971,24 @@
              (inst jmp :c target)
              (emit-label not-lab))))))
 
+(define-vop (>=/double-float double-float-compare)
+  (:translate >=)
+  (:info target not-p)
+  (:generator 3
+    (sc-case y
+      (double-reg
+       (inst comisd x y))
+      (descriptor-reg
+       (inst comisd x (ea-for-df-desc y))))
+    (cond (not-p
+           (inst jmp :p target)
+           (inst jmp :nae target))
+          (t
+           (let ((not-lab (gen-label)))
+             (inst jmp :p not-lab)
+             (inst jmp :ae target)
+             (emit-label not-lab))))))
+
 (define-vop (<=/double-float double-float-compare)
   (:translate <=)
   (:info target not-p)
@@ -1028,6 +1046,24 @@
            (let ((not-lab (gen-label)))
              (inst jmp :p not-lab)
              (inst jmp :c target)
+             (emit-label not-lab))))))
+
+(define-vop (>=/single-float single-float-compare)
+  (:translate >=)
+  (:info target not-p)
+  (:generator 3
+    (sc-case y
+      (single-reg
+       (inst comiss x y))
+      (descriptor-reg
+       (inst comiss x (ea-for-sf-desc y))))
+    (cond (not-p
+           (inst jmp :p target)
+           (inst jmp :nae target))
+          (t
+           (let ((not-lab (gen-label)))
+             (inst jmp :p not-lab)
+             (inst jmp :ae target)
              (emit-label not-lab))))))
 
 (define-vop (<=/single-float single-float-compare)
