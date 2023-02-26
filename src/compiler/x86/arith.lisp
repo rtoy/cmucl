@@ -1042,6 +1042,10 @@
 
 (define-conditional-vop > :g :a :le :be)
 
+(define-conditional-vop <= :le :be :g :a)
+
+(define-conditional-vop >= :ge :ae :l :b)
+
 (define-vop (fast-if-eql/signed fast-conditional/signed)
   (:translate eql)
   (:generator 6
