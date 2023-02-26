@@ -514,7 +514,7 @@
 		    (values split hvec mvec lvec))))
 	 (declare (ignorable #'read16 #'read32 #'read-ntrie))
 	 (with-open-file (,stm *unidata-path* :direction :input
-					      :element-type '(unsigned-byte 8))
+			       :element-type '(unsigned-byte 8))
 	   (unless (unidata-locate ,stm ,locn)
 	     (error (intl:gettext "No data in file.")))
 	   ,@body)))))
