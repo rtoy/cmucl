@@ -319,7 +319,7 @@
 (defknown (float-digits float-precision) (float) float-digits
   (movable foldable flushable explicit-check))
 (defknown integer-decode-float (float)
-	  (values integer float-exponent (member -1 1))
+	  (values integer float-int-exponent (member -1 1))
 	  (movable foldable flushable explicit-check))
 
 (defknown complex (real &optional real) number
