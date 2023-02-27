@@ -829,3 +829,14 @@
 	(*compile-print* nil))
     (assert-true (stream::find-external-format :euckr))
     (assert-true (stream::find-external-format :cp949))))
+
+
+
+(define-test issue.166
+    (:tag :issues)
+  ;; While this tests for the correct return value, the problem was
+  ;; that the compiler was miscompiling the function below and causing
+  ;; an error when the function run.
+  (let ((f (compile nil #'(lambda ()
+			    (nth-value 1 (integer-decode-float least-positive-double-float))))))
+    (assert-equal -1126 (funcall f))))
