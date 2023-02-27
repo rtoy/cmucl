@@ -3599,7 +3599,7 @@
 (def-source-transform < (&rest args) (multi-compare '< args nil))
 (def-source-transform > (&rest args) (multi-compare '> args nil))
 (def-source-transform <= (&rest args) (multi-compare '> args t))
-;;(def-source-transform <= (&rest args) (multi-compare '<= args nil))
+(def-source-transform <= (&rest args) (multi-compare '<= args nil))
 (def-source-transform >= (&rest args) (multi-compare '< args t))
 
 (def-source-transform char= (&rest args) (multi-compare 'char= args nil))
