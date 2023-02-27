@@ -259,21 +259,38 @@
 ;; the first one is the one that is preferred when printing the
 ;; condition code out.
 (defconstant conditions
-  '((:o . 0)
+  '(
+    ;; OF = 1
+    (:o . 0)
+    ;; OF = 0
     (:no . 1)
+    ;; Unsigned <; CF = 1
     (:b . 2) (:nae . 2) (:c . 2)
+    ;; Unsigned >=; CF = 0
     (:ae . 3) (:nb . 3) (:nc . 3)
+    ;; Equal; ZF = 1
     (:e . 4) (:eq . 4) (:z . 4)
+    ;; Not equal; ZF = 0
     (:ne . 5) (:nz . 5)
+    ;; Unsigned <=; CF = 1 or ZF = 1
     (:be . 6) (:na . 6)
+    ;; Unsigned >; CF = 1 and ZF = 0
     (:a . 7) (:nbe . 7)
+    ;; SF = 1
     (:s . 8)
+    ;; SF = 0
     (:ns . 9)
+    ;; Parity even
     (:p . 10) (:pe . 10)
+    ;; Parity odd
     (:np . 11) (:po . 11)
+    ;; Signed <; SF /= OF
     (:l . 12) (:nge . 12)
+    ;; Signed >=; SF = OF
     (:ge . 13) (:nl . 13)
+    ;; Signed <=; ZF = 1 or SF /= OF
     (:le . 14) (:ng . 14)
+    ;; Signed >; ZF =0 and SF = OF
     (:g . 15) (:nle . 15)))
 
 (defun conditional-opcode (condition)
