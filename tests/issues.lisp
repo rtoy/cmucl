@@ -831,6 +831,7 @@
     (assert-true (stream::find-external-format :cp949))))
 
 
+
 (define-test issue.158
     (:tag :issues)
   (let* ((name (string #\Hangul_Syllable_Gyek))
@@ -878,7 +879,6 @@
     
 
 
-
 (define-test issue.166
     (:tag :issues)
   ;; While this tests for the correct return value, the problem was
@@ -888,3 +888,58 @@
 			    (nth-value 1 (integer-decode-float least-positive-double-float))))))
     (assert-equal -1126 (funcall f))))
 
+
+
+(define-test issue.167.single
+    (:tag :issues)
+  (let ((df-min-expo (nth-value 1 (decode-float least-positive-single-float)))
+	(df-max-expo (nth-value 1 (decode-float most-positive-single-float))))
+    ;; Verify that the min exponent for kernel:single-float-exponent
+    ;; is the actual min exponent from decode-float.
+    (assert-true (typep df-min-expo 'kernel:single-float-exponent))
+    (assert-true (typep (1+ df-min-expo) 'kernel:single-float-exponent))
+    (assert-false (typep (1- df-min-expo) 'kernel:single-float-exponent))
+
+    ;; Verify that the max exponent for kernel:single-float-exponent
+    ;; is the actual max exponent from decode-float.
+    (assert-true (typep df-max-expo 'kernel:single-float-exponent))
+    (assert-true (typep (1- df-max-expo) 'kernel:single-float-exponent))
+    (assert-false (typep (1+ df-max-expo) 'kernel:single-float-exponent)))
+
+  ;; Same as for decode-float, but for integer-decode-float.
+  (let ((idf-min-expo (nth-value 1 (integer-decode-float least-positive-single-float)))
+	(idf-max-expo (nth-value 1 (integer-decode-float most-positive-single-float))))
+    (assert-true (typep idf-min-expo 'kernel:single-float-int-exponent))
+    (assert-true (typep (1+ idf-min-expo) 'kernel:single-float-int-exponent))
+    (assert-false (typep (1- idf-min-expo) 'kernel:single-float-int-exponent))
+
+    (assert-true (typep idf-max-expo 'kernel:single-float-int-exponent))
+    (assert-true (typep (1- idf-max-expo) 'kernel:single-float-int-exponent))
+    (assert-false (typep (1+ idf-max-expo) 'kernel:single-float-int-exponent))))
+
+(define-test issue.167.double
+    (:tag :issues)
+  (let ((df-min-expo (nth-value 1 (decode-float least-positive-double-float)))
+	(df-max-expo (nth-value 1 (decode-float most-positive-double-float))))
+    ;; Verify that the min exponent for kernel:double-float-exponent
+    ;; is the actual min exponent from decode-float.
+    (assert-true (typep df-min-expo 'kernel:double-float-exponent))
+    (assert-true (typep (1+ df-min-expo) 'kernel:double-float-exponent))
+    (assert-false (typep (1- df-min-expo) 'kernel:double-float-exponent))
+
+    ;; Verify that the max exponent for kernel:double-float-exponent
+    ;; is the actual max exponent from decode-float.
+    (assert-true (typep df-max-expo 'kernel:double-float-exponent))
+    (assert-true (typep (1- df-max-expo) 'kernel:double-float-exponent))
+    (assert-false (typep (1+ df-max-expo) 'kernel:double-float-exponent)))
+
+  ;; Same as for decode-float, but for integer-decode-float.
+  (let ((idf-min-expo (nth-value 1 (integer-decode-float least-positive-double-float)))
+	(idf-max-expo (nth-value 1 (integer-decode-float most-positive-double-float))))
+    (assert-true (typep idf-min-expo 'kernel:double-float-int-exponent))
+    (assert-true (typep (1+ idf-min-expo) 'kernel:double-float-int-exponent))
+    (assert-false (typep (1- idf-min-expo) 'kernel:double-float-int-exponent))
+
+    (assert-true (typep idf-max-expo 'kernel:double-float-int-exponent))
+    (assert-true (typep (1- idf-max-expo) 'kernel:double-float-int-exponent))
+    (assert-false (typep (1+ idf-max-expo) 'kernel:double-float-int-exponent))))
