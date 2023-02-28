@@ -1841,49 +1841,54 @@ When annotations are present, invoke them at the right positions."
   (declare (ignore noise))
   (pprint-logical-block (stream list :prefix "(" :suffix ")")
     ;; Output "define-vop"
-    (kernel:output-object (pprint-pop) stream)
+    (output-object (pprint-pop) stream)
     (pprint-exit-if-list-exhausted)
     (write-char #\space stream)
     ;; Output vop name
-    (kernel:output-object (pprint-pop) stream)
+    (output-object (pprint-pop) stream)
     (pprint-exit-if-list-exhausted)
     (pprint-newline :mandatory stream)
     (pprint-indent :block 0 stream)
-    ;; Print out each option
+    ;; Print out each option starting on a new line
     (loop
       (write-char #\space stream)
       (let ((vop-option (pprint-pop)))
-	  (case (car vop-option)
-	    ((:args :results)
-	     (pprint-logical-block (stream vop-option :prefix "(" :suffix ")")
-	       ;; Output :args
-	       (kernel:output-object (pprint-pop) stream)
+	;; Figure out what option we have and print it neatly
+	(case (car vop-option)
+	  ((:args :results)
+	   ;; :args and :results print out each arg/result indented neatly
+	   (pprint-logical-block (stream vop-option :prefix "(" :suffix ")")
+	     ;; Output :args/:results
+	     (output-object (pprint-pop) stream)
+	     (pprint-exit-if-list-exhausted)
+	     (write-char #\space stream)
+	     (pprint-indent :current 0 stream)
+	     ;; Print each value indented the same amount so the line
+	     ;; up neatly.
+	     (loop
+	       (output-object (pprint-pop) stream)
 	       (pprint-exit-if-list-exhausted)
-	       (write-char #\space stream)
-	       (pprint-indent :current 0 stream)
-	       (loop
-		 (kernel:output-object (pprint-pop) stream)
-		 (pprint-exit-if-list-exhausted)
-		 (pprint-newline :mandatory stream))))
-	    ((:generator)
-	     (pprint-logical-block (stream vop-option :prefix "(" :suffix ")")
-	       ;; Output :generator
-	       (kernel:output-object (pprint-pop) stream)
+	       (pprint-newline :mandatory stream))))
+	  ((:generator)
+	   (pprint-logical-block (stream vop-option :prefix "(" :suffix ")")
+	     ;; Output :generator
+	     (output-object (pprint-pop) stream)
+	     (pprint-exit-if-list-exhausted)
+	     (write-char #\space stream)
+	     ;; Output cost
+	     (output-object (pprint-pop) stream)
+	     (pprint-exit-if-list-exhausted)
+	     ;; Newline and then the body of the generator
+	     (pprint-newline :mandatory stream)
+	     (write-char #\space stream)
+	     (pprint-indent :current 0 stream)
+	     (loop
+	       (output-object (pprint-pop) stream)
 	       (pprint-exit-if-list-exhausted)
-	       (write-char #\space stream)
-	       ;; Output cost
-	       (kernel:output-object (pprint-pop) stream)
-	       (pprint-exit-if-list-exhausted)
-	       ;; Newline and then the body of the generator
-	       (pprint-newline :mandatory stream)
-	       (write-char #\space stream)
-	       (pprint-indent :current 0 stream)
-	       (loop
-		 (kernel:output-object (pprint-pop) stream)
-		 (pprint-exit-if-list-exhausted)
-		 (pprint-newline :mandatory stream))))
-	    (t
-	     (kernel:output-object vop-option stream))))
+	       (pprint-newline :mandatory stream))))
+	  (t
+	   ;; Everything else just get printed as usual.
+	   (output-object vop-option stream))))
       (pprint-exit-if-list-exhausted)
       (pprint-newline :linear stream))))
 
@@ -1891,26 +1896,26 @@ When annotations are present, invoke them at the right positions."
   (declare (ignore noise))
   (pprint-logical-block (stream list :prefix "(" :suffix ")")
     ;; Output "sc-case"
-    (kernel:output-object (pprint-pop) stream)
+    (output-object (pprint-pop) stream)
     (pprint-exit-if-list-exhausted)
     (write-char #\space stream)
-    ;; Output variable
-    (kernel:output-object (pprint-pop) stream)
+    ;; Output variable name
+    (output-object (pprint-pop) stream)
     (pprint-exit-if-list-exhausted)
+    ;; Start the cases on a new line, indented.
     (pprint-newline :mandatory stream)
-    ;; Indent for the cases
     (pprint-indent :block 0 stream)
     ;; Print out each case.
     (loop
       (write-char #\space stream)
       (pprint-logical-block (stream (pprint-pop) :prefix "(" :suffix ")")
 	;; Output the case item
-	(kernel:output-object (pprint-pop) stream)
+	(output-object (pprint-pop) stream)
 	(pprint-exit-if-list-exhausted)
 	(pprint-newline :mandatory stream)
-	;; Output everything else
+	;; Output everything else, starting on a new line.
 	(loop
-	  (kernel:output-object (pprint-pop) stream)
+	  (output-object (pprint-pop) stream)
 	  (pprint-exit-if-list-exhausted)
 	  (pprint-newline :mandatory stream)))
       (pprint-exit-if-list-exhausted)
