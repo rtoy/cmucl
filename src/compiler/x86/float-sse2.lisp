@@ -902,14 +902,25 @@
 ;;; could (should, indeed) extend these to cope with descriptor args
 ;;; and stack args
 
+#+nil
 (define-vop (single-float-compare float-compare)
   (:args (x :scs (single-reg)) (y :scs (single-reg descriptor-reg)))
   (:conditional)
   (:arg-types single-float single-float))
+#+nil
 (define-vop (double-float-compare float-compare)
   (:args (x :scs (double-reg)) (y :scs (double-reg descriptor-reg)))
   (:conditional)
   (:arg-types double-float double-float))
+
+(macrolet
+    ((frob (name sc ptype)
+       `(define-vop (,name float-compare)
+	  (:args (x :scs (,sc))
+		 (y :scs (,sc descriptor-reg)))
+	  (:arg-types ,ptype ,ptype))))
+  (frob single-float-compare single-reg single-float)
+  (frob double-float-compare double-reg double-float))
 
 (macrolet
     ((frob (size inst)
