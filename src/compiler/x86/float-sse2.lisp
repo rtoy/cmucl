@@ -911,6 +911,41 @@
   (:conditional)
   (:arg-types double-float double-float))
 
+(macrolet
+    ((frob (size inst)
+       (let ((ea (ecase size
+		   (single
+		    'ea-for-sf-desc)
+		   (double
+		    'ea-for-df-desc)))
+	     (name (symbolicate "=/" size "-FLOAT"))
+	     (sc-type (symbolicate size "-REG"))
+	     (inherit (symbolicate size "-FLOAT-COMPARE")))
+	 `(define-vop (,name ,inherit)
+	    (:translate =)
+	    (:info target not-p)
+	    (:vop-var vop)
+	    (:generator 3
+	      (note-this-location vop :internal-error)
+	      (sc-case y
+		(,sc-type
+		 (inst ,inst x y))
+		(descriptor-reg
+		 (inst ,inst x (,ea y))))
+	      ;; if PF&CF, there was a NaN involved => not equal
+	      ;; otherwise, ZF => equal
+	      (cond (not-p
+		     (inst jmp :p target)
+		     (inst jmp :ne target))
+		    (t
+		     (let ((not-lab (gen-label)))
+		       (inst jmp :p not-lab)
+		       (inst jmp :e target)
+		       (emit-label not-lab)))))))))
+  (frob single ucomiss)
+  (frob double ucomisd))
+
+#+nil
 (define-vop (=/single-float single-float-compare)
     (:translate =)
   (:info target not-p)
@@ -933,6 +968,7 @@
              (inst jmp :e target)
              (emit-label not-lab))))))
 
+#+nil
 (define-vop (=/double-float double-float-compare)
     (:translate =)
   (:info target not-p)
@@ -953,6 +989,71 @@
              (inst jmp :e target)
              (emit-label not-lab))))))
 
+(macrolet
+    ((frob (op size inst yep nope)
+       (let ((ea (ecase size
+		   (single
+		    'ea-for-sf-desc)
+		   (double
+		    'ea-for-df-desc)))
+	     (name (symbolicate op "/" size "-FLOAT"))
+	     (sc-type (symbolicate size "-REG"))
+	     (inherit (symbolicate size "-FLOAT-COMPARE")))
+	 `(define-vop (,name ,inherit)
+	    (:translate ,op)
+	    (:info target not-p)
+	    (:generator 3
+	      (sc-case y
+		(,sc-type
+		 (inst ,inst x y))
+		(descriptor-reg
+		 (inst ,inst x (,ea y))))
+	      (cond (not-p
+		     (inst jmp :p target)
+		     (inst jmp ,nope target))
+		    (t
+		     (let ((not-lab (gen-label)))
+		       (inst jmp :p not-lab)
+		       (inst jmp ,yep target)
+		       (emit-label not-lab)))))))))
+  (frob < single ucomiss :b :nb)
+  (frob < double ucomisd :b :nb)
+  (frob > single ucomiss :a :na)
+  (frob > double ucomisd :a :na))
+
+#+nil
+(defmacro frob-float-compare (op size inst yep nope)
+  (let ((ea (ecase size
+	      (single
+	       'ea-for-sf-desc)
+	      (double
+	       'ea-for-df-desc)))
+	(name (symbolicate op "/" size "-FLOAT"))
+	(sc-type (symbolicate size "-REG"))
+	(inherit (symbolicate size "-FLOAT-COMPARE")))
+    `(define-vop (,name ,inherit)
+       (:translate ,op)
+       (:info target not-p)
+       (:generator 3
+	 (sc-case y
+	   (,sc-type
+	    (inst ,inst x y))
+	   (descriptor-reg
+	    (inst ,inst x (,ea y))))
+	 (cond (not-p
+		(inst jmp :p target)
+		(inst jmp ,nope target))
+	       (t
+		(let ((not-lab (gen-label)))
+		  (inst jmp :p not-lab)
+		  (inst jmp ,yep target)
+		  (emit-label not-lab))))))))
+
+#+nil
+(frob-float-compare < single ucomiss :b :nb)
+#+nil
+(frob-float-compare < double ucomisd :b :nb)
+#+nil
 (define-vop (</double-float double-float-compare)
   (:translate <)
   (:info target not-p)
@@ -971,6 +1072,7 @@
              (inst jmp :c target)
              (emit-label not-lab))))))
 
+#+nil
 (define-vop (</single-float single-float-compare)
   (:translate <)
   (:info target not-p)
@@ -989,6 +1091,7 @@
              (inst jmp :c target)
              (emit-label not-lab))))))
 
+#+nil
 (define-vop (>/double-float double-float-compare)
   (:translate >)
   (:info target not-p)
@@ -1007,6 +1110,7 @@
              (inst jmp :a target)
              (emit-label not-lab))))))
 
+#+nil
 (define-vop (>/single-float single-float-compare)
   (:translate >)
   (:info target not-p)
