@@ -347,25 +347,25 @@
 ;;;
 
 (deftype single-float-exponent ()
-  `(integer ,(- vm:single-float-normal-exponent-min vm:single-float-bias
-		vm:single-float-digits)
+  `(integer (,(- vm:single-float-normal-exponent-min vm:single-float-bias
+		 vm:single-float-digits))
 	    ,(- vm:single-float-normal-exponent-max vm:single-float-bias)))
 
 (deftype double-float-exponent ()
-  `(integer ,(- vm:double-float-normal-exponent-min vm:double-float-bias
-		vm:double-float-digits)
+  `(integer (,(- vm:double-float-normal-exponent-min vm:double-float-bias
+		 vm:double-float-digits))
 	    ,(- vm:double-float-normal-exponent-max vm:double-float-bias)))
 
 
 (deftype single-float-int-exponent ()
-  `(integer ,(- vm:single-float-normal-exponent-min vm:single-float-bias
-		(* vm:single-float-digits 2))
+  `(integer (,(- vm:single-float-normal-exponent-min vm:single-float-bias
+		 (* vm:single-float-digits 2)))
 	    ,(- vm:single-float-normal-exponent-max vm:single-float-bias
 		vm:single-float-digits)))
 
 (deftype double-float-int-exponent ()
-  `(integer ,(- vm:double-float-normal-exponent-min vm:double-float-bias
-		(* vm:double-float-digits 2))
+  `(integer (,(- vm:double-float-normal-exponent-min vm:double-float-bias
+		 (* vm:double-float-digits 2)))
 	    ,(- vm:double-float-normal-exponent-max vm:double-float-bias
 		vm:double-float-digits)))
 
