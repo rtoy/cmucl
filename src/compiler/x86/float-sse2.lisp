@@ -901,18 +901,6 @@
 ;;; comiss and comisd can cope with one or other arg in memory: we
 ;;; could (should, indeed) extend these to cope with descriptor args
 ;;; and stack args
-
-#+nil
-(define-vop (single-float-compare float-compare)
-  (:args (x :scs (single-reg)) (y :scs (single-reg descriptor-reg)))
-  (:conditional)
-  (:arg-types single-float single-float))
-#+nil
-(define-vop (double-float-compare float-compare)
-  (:args (x :scs (double-reg)) (y :scs (double-reg descriptor-reg)))
-  (:conditional)
-  (:arg-types double-float double-float))
-
 (macrolet
     ((frob (name sc ptype)
        `(define-vop (,name float-compare)
@@ -956,50 +944,6 @@
   (frob single ucomiss)
   (frob double ucomisd))
 
-#+nil
-(define-vop (=/single-float single-float-compare)
-    (:translate =)
-  (:info target not-p)
-  (:vop-var vop)
-  (:generator 3
-    (note-this-location vop :internal-error)
-    (sc-case y
-      (single-reg
-       (inst ucomiss x y))
-      (descriptor-reg
-       (inst ucomiss x (ea-for-sf-desc y))))
-    ;; if PF&CF, there was a NaN involved => not equal
-    ;; otherwise, ZF => equal
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :ne target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :e target)
-             (emit-label not-lab))))))
-
-#+nil
-(define-vop (=/double-float double-float-compare)
-    (:translate =)
-  (:info target not-p)
-  (:vop-var vop)
-  (:generator 3
-    (note-this-location vop :internal-error)
-    (sc-case y
-      (double-reg
-       (inst ucomisd x y))
-      (descriptor-reg
-       (inst ucomisd x (ea-for-df-desc y))))
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :ne target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :e target)
-             (emit-label not-lab))))))
-
 (macrolet
     ((frob (op size inst yep nope)
        (let ((ea (ecase size
@@ -1031,115 +975,6 @@
   (frob < double comisd :b :nb)
   (frob > single comiss :a :na)
   (frob > double comisd :a :na))
-
-#+nil
-(defmacro frob-float-compare (op size inst yep nope)
-  (let ((ea (ecase size
-	      (single
-	       'ea-for-sf-desc)
-	      (double
-	       'ea-for-df-desc)))
-	(name (symbolicate op "/" size "-FLOAT"))
-	(sc-type (symbolicate size "-REG"))
-	(inherit (symbolicate size "-FLOAT-COMPARE")))
-    `(define-vop (,name ,inherit)
-       (:translate ,op)
-       (:info target not-p)
-       (:generator 3
-	 (sc-case y
-	   (,sc-type
-	    (inst ,inst x y))
-	   (descriptor-reg
-	    (inst ,inst x (,ea y))))
-	 (cond (not-p
-		(inst jmp :p target)
-		(inst jmp ,nope target))
-	       (t
-		(let ((not-lab (gen-label)))
-		  (inst jmp :p not-lab)
-		  (inst jmp ,yep target)
-		  (emit-label not-lab))))))))
-
-#+nil
-(frob-float-compare < single ucomiss :b :nb)
-#+nil
-(frob-float-compare < double ucomisd :b :nb)
-#+nil
-(define-vop (</double-float double-float-compare)
-  (:translate <)
-  (:info target not-p)
-  (:generator 3
-    (sc-case y
-      (double-reg
-       (inst comisd x y))
-      (descriptor-reg
-       (inst comisd x (ea-for-df-desc y))))
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :nc target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :c target)
-             (emit-label not-lab))))))
-
-#+nil
-(define-vop (</single-float single-float-compare)
-  (:translate <)
-  (:info target not-p)
-  (:generator 3
-    (sc-case y
-      (single-reg
-       (inst comiss x y))
-      (descriptor-reg
-       (inst comiss x (ea-for-sf-desc y))))
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :nc target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :c target)
-             (emit-label not-lab))))))
-
-#+nil
-(define-vop (>/double-float double-float-compare)
-  (:translate >)
-  (:info target not-p)
-  (:generator 3
-    (sc-case y
-      (double-reg
-       (inst comisd x y))
-      (descriptor-reg
-       (inst comisd x (ea-for-df-desc y))))
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :na target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :a target)
-             (emit-label not-lab))))))
-
-#+nil
-(define-vop (>/single-float single-float-compare)
-  (:translate >)
-  (:info target not-p)
-  (:generator 3
-    (sc-case y
-      (single-reg
-       (inst comiss x y))
-      (descriptor-reg
-       (inst comiss x (ea-for-sf-desc y))))
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :na target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :a target)
-             (emit-label not-lab))))))
-
 
 
 ;;;; Conversion:
