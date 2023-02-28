@@ -1837,6 +1837,84 @@ When annotations are present, invoke them at the right positions."
   (funcall (formatter "~:<~W~^~3I ~:_~W~I~@:_~@{ ~W~^~_~}~:>")
 	   stream list))
 
+(defun pprint-define-vop (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; Output "define-vop"
+    (kernel:output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    ;; Output vop name
+    (kernel:output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (pprint-newline :mandatory stream)
+    (pprint-indent :block 0 stream)
+    ;; Print out each option
+    (loop
+      (write-char #\space stream)
+      (let ((vop-option (pprint-pop)))
+	  (case (car vop-option)
+	    ((:args :results)
+	     (pprint-logical-block (stream vop-option :prefix "(" :suffix ")")
+	       ;; Output :args
+	       (kernel:output-object (pprint-pop) stream)
+	       (pprint-exit-if-list-exhausted)
+	       (write-char #\space stream)
+	       (pprint-indent :current 0 stream)
+	       (loop
+		 (kernel:output-object (pprint-pop) stream)
+		 (pprint-exit-if-list-exhausted)
+		 (pprint-newline :mandatory stream))))
+	    ((:generator)
+	     (pprint-logical-block (stream vop-option :prefix "(" :suffix ")")
+	       ;; Output :generator
+	       (kernel:output-object (pprint-pop) stream)
+	       (pprint-exit-if-list-exhausted)
+	       (write-char #\space stream)
+	       ;; Output cost
+	       (kernel:output-object (pprint-pop) stream)
+	       (pprint-exit-if-list-exhausted)
+	       ;; Newline and then the body of the generator
+	       (pprint-newline :mandatory stream)
+	       (write-char #\space stream)
+	       (pprint-indent :current 0 stream)
+	       (loop
+		 (kernel:output-object (pprint-pop) stream)
+		 (pprint-exit-if-list-exhausted)
+		 (pprint-newline :mandatory stream))))
+	    (t
+	     (kernel:output-object vop-option stream))))
+      (pprint-exit-if-list-exhausted)
+      (pprint-newline :linear stream))))
+
+(defun pprint-sc-case (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; Output "sc-case"
+    (kernel:output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    ;; Output variable
+    (kernel:output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (pprint-newline :mandatory stream)
+    ;; Indent for the cases
+    (pprint-indent :block 0 stream)
+    ;; Print out each case.
+    (loop
+      (write-char #\space stream)
+      (pprint-logical-block (stream (pprint-pop) :prefix "(" :suffix ")")
+	;; Output the case item
+	(kernel:output-object (pprint-pop) stream)
+	(pprint-exit-if-list-exhausted)
+	(pprint-newline :mandatory stream)
+	;; Output everything else
+	(loop
+	  (kernel:output-object (pprint-pop) stream)
+	  (pprint-exit-if-list-exhausted)
+	  (pprint-newline :mandatory stream)))
+      (pprint-exit-if-list-exhausted)
+      (pprint-newline :mandatory stream))))
 
 ;;;; Interface seen by regular (ugly) printer and initialization routines.
 
@@ -1952,7 +2030,9 @@ When annotations are present, invoke them at the right positions."
     (vm::with-fixed-allocation pprint-with-like)
     (kernel::number-dispatch pprint-with-like)
     (stream::with-stream-class pprint-with-like)
-    (lisp::with-array-data pprint-with-like)))
+    (lisp::with-array-data pprint-with-like)
+    (c:define-vop pprint-define-vop)
+    (c:sc-case pprint-sc-case)))
 
 (defun pprint-init ()
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))
