@@ -972,8 +972,8 @@
 		       (inst jmp ,yep target)
 		       (emit-label not-lab)))))))))
   (frob < single comiss :b :nb)
-  (frob < double comisd :b :nb)
   (frob > single comiss :a :na)
+  (frob < double comisd :b :nb)
   (frob > double comisd :a :na))
 
 
