@@ -1027,10 +1027,10 @@
 		       (inst jmp :p not-lab)
 		       (inst jmp ,yep target)
 		       (emit-label not-lab)))))))))
-  (frob < single ucomiss :b :nb)
-  (frob < double ucomisd :b :nb)
-  (frob > single ucomiss :a :na)
-  (frob > double ucomisd :a :na))
+  (frob < single comiss :b :nb)
+  (frob < double comisd :b :nb)
+  (frob > single comiss :a :na)
+  (frob > double comisd :a :na))
 
 #+nil
 (defmacro frob-float-compare (op size inst yep nope)
