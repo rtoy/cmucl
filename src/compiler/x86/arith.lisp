@@ -1039,8 +1039,9 @@
 	'(t t t t nil nil))))
 
 (define-conditional-vop < :l :b :ge :ae)
-
+(define-conditional-vop <= :le :be :g :a)
 (define-conditional-vop > :g :a :le :be)
+(define-conditional-vop >= :ge :ae :l :b)
 
 (define-vop (fast-if-eql/signed fast-conditional/signed)
   (:translate eql)
