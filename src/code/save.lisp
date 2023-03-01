@@ -336,8 +336,12 @@
                        *gc-verbose* nil))
 	       (when (and process-command-line
 			  (or (find-switch "help")
-			      (find-switch "-help")))
-		 ;; Don't load any init files if -help or --help is given
+			      (find-switch "-help")
+			      (find-switch "version")
+			      (find-switch "-version")))
+		 ;; Don't load any init files if -help, --help,
+		 ;; -version, or --version is given.  These exit right
+		 ;; away, so loading the init file is wasteful.
 		 (setf site-init nil)
 		 (setf load-init-file nil))
 	       (when (and site-init
