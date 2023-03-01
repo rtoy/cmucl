@@ -214,7 +214,9 @@
 ); eval-when
 
 (define-cond-assem-rtn generic-< < two-arg-< :l)
+(define-cond-assem-rtn generic-<= <= two-arg-<= :le)
 (define-cond-assem-rtn generic-> > two-arg-> :g)
+(define-cond-assem-rtn generic->= >= two-arg->= :ge)
 
 (define-assembly-routine (generic-eql
 			  (:cost 10)

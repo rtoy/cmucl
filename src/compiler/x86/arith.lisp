@@ -1506,6 +1506,13 @@
 
 (define-static-function two-arg-/ (x y) :translate /)
 
+(define-static-function two-arg-< (x y) :translate <)
+(define-static-function two-arg-<= (x y) :translate <=)
+(define-static-function two-arg-> (x y) :translate >)
+(define-static-function two-arg->= (x y) :translate >=)
+(define-static-function two-arg-= (x y) :translate =)
+(define-static-function two-arg-/= (x y) :translate /=)
+
 (define-static-function two-arg-gcd (x y) :translate gcd)
 (define-static-function two-arg-lcm (x y) :translate lcm)
 
