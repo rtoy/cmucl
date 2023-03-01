@@ -395,10 +395,14 @@
       *static-blue-bag*		; Must be last or change C code
       ))
 
+;; FIXME: This should be reordered to match more closely the order
+;; used for sparc and ppc.  However, I (rtoy) think that requires a
+;; cross-compile.
 (defparameter static-functions
   '(length
     two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-= eql
     %negate two-arg-and two-arg-ior two-arg-xor two-arg-gcd two-arg-lcm
+    two-arg-<= two-arg->= two-arg-/=
     ))
 
 ;;;
