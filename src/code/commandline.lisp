@@ -394,3 +394,17 @@
 
 (defswitch "-help" #'help-switch-demon
   "Same as -help.")
+
+(defun version-switch-demon (switch)
+  (declare (ignore switch))
+  (format t "~A~%" (lisp-implementation-version))
+  (ext:quit))
+
+(defswitch "version" #'version-switch-demon
+  "Prints the cmucl version and exits")
+
+;; Make --version work for the benefit of those who are accustomed to
+;; GNU software.
+(defswitch "-version" #'version-switch-demon
+  "Prints the cmucl version and exits; same as -version")
+
