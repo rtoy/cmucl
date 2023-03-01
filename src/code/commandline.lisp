@@ -403,8 +403,8 @@
 (defswitch "version" #'version-switch-demon
   "Prints the cmucl version and exits")
 
-;; Make --version work too since that's a common command line option
-;; for GNU software.
+;; Make --version work for the benefit of those who are accustomed to
+;; GNU software.
 (defswitch "-version" #'version-switch-demon
   "Prints the cmucl version and exits; same as -version")
 
