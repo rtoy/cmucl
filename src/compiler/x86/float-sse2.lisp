@@ -978,7 +978,7 @@
   (frob < double comisd :b :nb)
   (frob <= double comisd :be :nbe)
   (frob > double comisd :a :na)
-  (frob >= double comisd :ae :naa))
+  (frob >= double comisd :ae :nae))
 
 
 ;;;; Conversion:
