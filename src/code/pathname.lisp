@@ -1221,7 +1221,7 @@ a host-structure or string."
 
 (defun %%pathname-match-p (pathname wildname)
   (macrolet ((frob (field &optional (op 'components-match ))
-		   `(or (null (,field wildname))
+		   `(or (eq (,field wildname) :wild)
 			(,op (,field pathname) (,field wildname)))))
 	(and (or (null (%pathname-host wildname))
 		 (eq (%pathname-host wildname) (%pathname-host pathname)))
