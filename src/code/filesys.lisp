@@ -799,7 +799,8 @@
 	       (eq name :wild)
 	       (eq type :wild)
 	       (eq version :wild))
-	   (let ((dir (unix:open-dir directory)))
+	   (let ((dir (unix:open-dir directory))
+		 (dir-path (pathname directory)))
 	     (when dir
 	       (unwind-protect
 		    (loop
@@ -811,8 +812,8 @@
 			     (progn
 			       (format t "file = ~A~%" file)
 			       (describe pathname))
-			     (when (lisp::%%pathname-match-p (pathname (concatenate 'string directory file))
-							     pathname)
+			     (when (%pathname-match-p (merge-pathnames file dir-path nil)
+						     pathname)
 			       (funcall function
 					(concatenate 'string
 						     directory
