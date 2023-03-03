@@ -786,6 +786,10 @@
   (let ((name (%pathname-name pathname))
 	(type (%pathname-type pathname))
 	(version (%pathname-version pathname)))
+    #+nil
+    (progn
+      (format t "name, type = ~A ~A~%" name type)
+      (describe pathname))
     (cond ((member name '(nil :unspecific))
 	   (when (or (not verify-existence)
 		     (unix:unix-file-kind directory))
@@ -798,13 +802,24 @@
 	   (let ((dir (unix:open-dir directory)))
 	     (when dir
 	       (unwind-protect
-		   (loop
+		    (loop
 		     (let ((file (unix:read-dir dir)))
 		       (if file
 			   (unless (or (string= file ".")
 				       (string= file ".."))
+			     #+nil
+			     (progn
+			       (format t "file = ~A~%" file)
+			       (describe pathname))
+			     (when (lisp::%%pathname-match-p (pathname (concatenate 'string directory file))
+							     pathname)
+			       (funcall function
+					(concatenate 'string
+						     directory
+						     file)))
+			     #+nil
 			     (multiple-value-bind
-				 (file-name file-type file-version)
+				   (file-name file-type file-version)
 				 (let ((*ignore-wildcards* t))
 				   (extract-name-type-and-version
 				    file 0 (length file)))
@@ -1122,11 +1137,8 @@ optionally keeping some of the most recent old versions."
     (let ((results nil))
       (enumerate-search-list
 	  (pathname (merge-pathnames pathname
-				     (make-pathname :name :wild
-						    :type :wild
-						    :version :wild
-						    :defaults *default-pathname-defaults*)
-				     :wild))
+				     *default-pathname-defaults*
+				     nil))
 	(enumerate-matches (name pathname nil :follow-links follow-links)
 	  (when (or all
 		    (let ((slash (position #\/ name :from-end t)))
