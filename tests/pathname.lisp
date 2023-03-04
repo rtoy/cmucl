@@ -43,7 +43,7 @@
   (assert-true (pathname-match-p "foo:zot/foo.lisp" "/usr/**/*.lisp"))
 
   (assert-false (pathname-match-p "foo:foo" "/bin/*"))
-  
+
   ;; Tests where both args are search-lists.
   (assert-true (pathname-match-p "foo:foo.lisp" "bar:*.*")))
 
@@ -68,7 +68,12 @@
 					      :name :wild :type :wild :version nil)))
 	    ("**;*"
 	     ,(merge-pathnames (make-pathname :directory '(:relative "asdf-src" :wild-inferiors)
-					      :name :wild :type nil :version nil)))))))
+					      :name :wild :type nil :version nil)))
+	    ("tests;**;*.*"
+	     "**/*.*")))
+    (setf (logical-pathname-translations "test")
+	  '(("**;*.*" "tests/**/*.*")
+	    ("**;*.*.*" "tests/**/*.*.~*~")))))
 (setup-logical-host)
 
 (define-test pathname-match-p.logical-pathname
@@ -77,4 +82,77 @@
 			       :directory '(:absolute "system2" "module4")
 			       :name nil :type nil)
 		(parse-namestring "ASDFTEST:system2;module4;"))))
-  
+
+
+
+(define-test pathname-match-p.unspecific
+  ;; Test that a field of :unspecific matches nil.
+  (let ((wild-path #p"**/*.*"))
+    (assert-true (pathname-match-p (make-pathname :device :unspecific)
+				   wild-path))
+    (assert-true (pathname-match-p (make-pathname :name :unspecific)
+				   wild-path))
+    (assert-true (pathname-match-p (make-pathname :type :unspecific)
+				   wild-path))
+    (assert-true (pathname-match-p (make-pathname :version :unspecific)
+				   wild-path))
+    ;; Slightly more complicated pathnames with :unspecific
+    (assert-true (pathname-match-p (make-pathname :device :unspecific
+						  :name "foo"
+						  :type "bar")
+				   wild-path))
+    (assert-true (pathname-match-p (make-pathname :directory '(:relative "a")
+						  :name :unspecific
+						  :type "bar")
+				   wild-path))
+    (assert-true (pathname-match-p (make-pathname :directory '(:relative "a")
+						  :name "foo"
+						  :type :unspecific)
+				   wild-path))
+    (assert-true (pathname-match-p (make-pathname :directory '(:relative "a")
+						  :name "foo"
+						  :type "bar"
+						  :version :unspecific)
+				   wild-path))))
+
+(define-test directory-pathname-match-p
+  ;; Test that directory and pathname-match-p are consistent
+  (let* ((wild-path #P"**/*.*")
+	 (dir (directory wild-path :truenamep nil)))
+    (loop for p in dir
+	  do
+	     (assert-true (pathname-match-p p wild-path)))))
+
+(define-test directory-pathname-match-p.lpn
+  ;; Like directory-pathname-match-p but for a logical pathname
+  (let* ((wild-path #P"ASDFTEST:**;*.*.*")
+	 (dir (directory wild-path :truenamep nil)))
+    (loop for p in dir
+	  do
+	     (assert-true (pathname-match-p p wild-path)))))
+
+(define-test directory-consistent-pn-vs-lpn
+  ;; Test the directory with a physical pathname and a logical
+  ;; pathname return the same files.
+  (let ((dir-pn (directory #P"tests/**/*.*" :truenamep nil))
+	(dir-lpn (directory #P"test:**;*.*.*" :truenamep nil)))
+    ;; The number of entries should be the same.
+    (assert-equal (length dir-pn) (length dir-lpn)
+		  dir-pn dir-lpn)
+    (loop for pn in dir-pn
+	  for lpn in dir-lpn
+	  do
+	     (assert-equal pn lpn))))
+
+(define-test directory-only
+  ;; Test that we only get directories when requested
+  (let ((dirs (directory #P"tests/**/" :truenamep nil)))
+    (loop for p in dirs
+	  do
+	     (assert-false (pathname-name p) p)
+	     (assert-false (pathname-type p) p)
+	     (assert-true (let ((version (pathname-version p)))
+			    (or (null version)
+				(eq version :newest)))
+			  p))))
+	
