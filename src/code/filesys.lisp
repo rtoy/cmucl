@@ -812,8 +812,9 @@
 			     (progn
 			       (format t "file = ~A~%" file)
 			       (describe pathname))
-			     (when (%pathname-match-p (merge-pathnames file dir-path nil)
-						     pathname)
+			     (when (%%pathname-match-p (merge-pathnames (parse-namestring file)
+									dir-path)
+						       pathname)
 			       (funcall function
 					(concatenate 'string
 						     directory
