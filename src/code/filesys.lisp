@@ -812,8 +812,10 @@
 			     (progn
 			       (format t "file = ~A~%" file)
 			       (describe pathname))
-			     (when (%%pathname-match-p (merge-pathnames (parse-namestring file)
-									dir-path)
+			     ;; Use pathname-match-p so that we are
+			     ;; guaranteed to have directory and
+			     ;; pathname-match-p behave consistently.
+			     (when (%%pathname-match-p (merge-pathnames file dir-path)
 						       pathname)
 			       (funcall function
 					(concatenate 'string

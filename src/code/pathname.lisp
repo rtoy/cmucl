@@ -1231,16 +1231,20 @@ a host-structure or string."
 	 (flet ((device-components-match (thing wild)
 		  (or (eq thing wild)
 		      (eq wild :wild)
-		      ;; Device :unspecific matches nil
+		      ;; A device component of :unspecific matches
+		      ;; nil.
 		      (or (and (null thing) (eq wild :unspecific))
 			  (and (eq thing :unspecific) (eq wild nil))))))
 	   (frob %pathname-device device-components-match))
+	 #+nil
+	 (frob %pathname-device)
 	 (frob %pathname-directory directory-components-match)
 	 (frob %pathname-name)
 	 (frob %pathname-type)
 	 (flet ((version-components-match (thing wild)
 		  (or (eq thing wild)
 		      (eq wild :wild)
+		      ;; A version component matches of :newest matches nil.
 		      (compare-version-component thing wild))))
 	   (frob %pathname-version version-components-match)))))
 
