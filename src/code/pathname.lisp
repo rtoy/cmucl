@@ -1228,7 +1228,11 @@ a host-structure or string."
 	     (frob %pathname-directory directory-components-match)
 	     (frob %pathname-name)
 	     (frob %pathname-type)
-	     (frob %pathname-version compare-version-component))))
+	     (flet ((version-components-match (thing wild)
+		      (or (eq thing wild)
+			  (eq wild :wild)
+			  (compare-version-component thing wild))))
+	       (frob %pathname-version version-components-match)))))
 
 ;; Like PATHNAME-MATCH-P but the pathnames should not be search-lists.
 ;; Primarily intended for TRANSLATE-LOGICAL-PATHNAME and friends,
