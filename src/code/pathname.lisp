@@ -1222,29 +1222,29 @@ a host-structure or string."
 (defun %%pathname-match-p (pathname wildname)
   (macrolet ((frob (field &optional (op 'components-match ))
 	       `(,op (,field pathname) (,field wildname))))
+    (flet ((device-components-match (thing wild)
+	     (or (eq thing wild)
+		 (eq wild :wild)
+		 ;; A device component of :unspecific matches
+		 ;; nil.
+		 (or (and (null thing) (eq wild :unspecific))
+		     (and (eq thing :unspecific) (eq wild nil)))))
+	   (version-components-match (thing wild)
+	     (or (eq thing wild)
+		 (eq wild :wild)
+		 ;; A version component of :newest or :unspecific
+		 ;; is equivalent to nil.
+		 (and (null this) (or (eq that :newest)
+				      (eq that :unspecific)))
+		 (and (null that) (or (eq this :newest)
+				      (eq this :unspecific))))))
     (and (or (null (%pathname-host wildname))
 	     (eq (%pathname-host wildname) (%pathname-host pathname)))
-	 (flet ((device-components-match (thing wild)
-		  (or (eq thing wild)
-		      (eq wild :wild)
-		      ;; A device component of :unspecific matches
-		      ;; nil.
-		      (or (and (null thing) (eq wild :unspecific))
-			  (and (eq thing :unspecific) (eq wild nil))))))
-	   (frob %pathname-device device-components-match))
+	 (frob %pathname-device device-components-match)
 	 (frob %pathname-directory directory-components-match)
 	 (frob %pathname-name)
 	 (frob %pathname-type)
-	 (flet ((version-components-match (thing wild)
-		  (or (eq thing wild)
-		      (eq wild :wild)
-		      ;; A version component of :newest or :unspecific
-		      ;; is equivalent to nil.
-		      (and (null this) (or (eq that :newest)
-					   (eq that :unspecific)))
-		      (and (null that) (or (eq this :newest)
-					   (eq this :unspecific))))))
-	   (frob %pathname-version version-components-match)))))
+	 (frob %pathname-version version-components-match)))))
 
 ;; Like PATHNAME-MATCH-P but the pathnames should not be search-lists.
 ;; Primarily intended for TRANSLATE-LOGICAL-PATHNAME and friends,
