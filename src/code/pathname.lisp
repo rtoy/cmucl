@@ -1234,10 +1234,10 @@ a host-structure or string."
 		 (eq wild :wild)
 		 ;; A version component of :newest or :unspecific
 		 ;; is equivalent to nil.
-		 (and (null this) (or (eq that :newest)
-				      (eq that :unspecific)))
-		 (and (null that) (or (eq this :newest)
-				      (eq this :unspecific))))))
+		 (and (null thing) (or (eq wild :newest)
+				       (eq wild :unspecific)))
+		 (and (null wild) (or (eq thing :newest)
+				      (eq thing :unspecific))))))
     (and (or (null (%pathname-host wildname))
 	     (eq (%pathname-host wildname) (%pathname-host pathname)))
 	 (frob %pathname-device device-components-match)
