@@ -1221,15 +1221,14 @@ a host-structure or string."
 
 (defun %%pathname-match-p (pathname wildname)
   (macrolet ((frob (field &optional (op 'components-match ))
-		   `(or (eq (,field wildname) :wild)
-			(,op (,field pathname) (,field wildname)))))
+		   `(,op (,field pathname) (,field wildname))))
 	(and (or (null (%pathname-host wildname))
 		 (eq (%pathname-host wildname) (%pathname-host pathname)))
 	     (frob %pathname-device)
 	     (frob %pathname-directory directory-components-match)
 	     (frob %pathname-name)
 	     (frob %pathname-type)
-	     (frob %pathname-version))))
+	     (frob %pathname-version compare-version-component))))
 
 ;; Like PATHNAME-MATCH-P but the pathnames should not be search-lists.
 ;; Primarily intended for TRANSLATE-LOGICAL-PATHNAME and friends,
