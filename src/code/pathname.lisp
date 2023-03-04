@@ -1222,10 +1222,6 @@ a host-structure or string."
 (defun %%pathname-match-p (pathname wildname)
   (macrolet ((frob (field &optional (op 'components-match ))
 	       `(,op (,field pathname) (,field wildname))))
-    #+nil
-    (progn
-      (describe pathname)
-      (describe wildname))
     (and (or (null (%pathname-host wildname))
 	     (eq (%pathname-host wildname) (%pathname-host pathname)))
 	 (flet ((device-components-match (thing wild)
@@ -1236,15 +1232,13 @@ a host-structure or string."
 		      (or (and (null thing) (eq wild :unspecific))
 			  (and (eq thing :unspecific) (eq wild nil))))))
 	   (frob %pathname-device device-components-match))
-	 #+nil
-	 (frob %pathname-device)
 	 (frob %pathname-directory directory-components-match)
 	 (frob %pathname-name)
 	 (frob %pathname-type)
 	 (flet ((version-components-match (thing wild)
 		  (or (eq thing wild)
 		      (eq wild :wild)
-		      ;; A version component matches of :newest matches nil.
+		      ;; A version component of :newest matches nil.
 		      (compare-version-component thing wild))))
 	   (frob %pathname-version version-components-match)))))
 

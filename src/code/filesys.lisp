@@ -786,10 +786,6 @@
   (let ((name (%pathname-name pathname))
 	(type (%pathname-type pathname))
 	(version (%pathname-version pathname)))
-    #+nil
-    (progn
-      (format t "name, type = ~A ~A~%" name type)
-      (describe pathname))
     (cond ((member name '(nil :unspecific))
 	   (when (or (not verify-existence)
 		     (unix:unix-file-kind directory))
@@ -803,15 +799,11 @@
 		 (dir-path (pathname directory)))
 	     (when dir
 	       (unwind-protect
-		    (loop
+		   (loop
 		     (let ((file (unix:read-dir dir)))
 		       (if file
 			   (unless (or (string= file ".")
 				       (string= file ".."))
-			     #+nil
-			     (progn
-			       (format t "file = ~A~%" file)
-			       (describe pathname))
 			     ;; Use pathname-match-p so that we are
 			     ;; guaranteed to have directory and
 			     ;; pathname-match-p behave consistently.
@@ -820,27 +812,7 @@
 			       (funcall function
 					(concatenate 'string
 						     directory
-						     file)))
-			     #+nil
-			     (multiple-value-bind
-				   (file-name file-type file-version)
-				 (let ((*ignore-wildcards* t))
-				   (extract-name-type-and-version
-				    file 0 (length file)))
-			       ;; Match also happens if the file has
-			       ;; no explicit version and we're asking
-			       ;; for version :NEWEST, since that's
-			       ;; what no version means.
-			       (when (and (components-match file-name name)
-					  (components-match file-type type)
-					  (or (components-match file-version
-								version)
-					      (and (eq file-version nil)
-						   (eq version :newest))))
-				 (funcall function
-					  (concatenate 'string
-						       directory
-						       file)))))
+						     file))))
 			   (return))))
 		 (unix:close-dir dir)))))
 	  (t
