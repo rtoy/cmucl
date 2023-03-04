@@ -1222,8 +1222,10 @@ a host-structure or string."
 (defun %%pathname-match-p (pathname wildname)
   (macrolet ((frob (field &optional (op 'components-match ))
 	       `(,op (,field pathname) (,field wildname))))
-    (describe pathname)
-    (describe wildname)
+    #+nil
+    (progn
+      (describe pathname)
+      (describe wildname))
     (and (or (null (%pathname-host wildname))
 	     (eq (%pathname-host wildname) (%pathname-host pathname)))
 	 (flet ((device-components-match (thing wild)
