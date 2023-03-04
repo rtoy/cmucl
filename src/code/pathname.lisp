@@ -1238,8 +1238,12 @@ a host-structure or string."
 	 (flet ((version-components-match (thing wild)
 		  (or (eq thing wild)
 		      (eq wild :wild)
-		      ;; A version component of :newest matches nil.
-		      (compare-version-component thing wild))))
+		      ;; A version component of :newest or :unspecific
+		      ;; is equivalent to nil.
+		      (and (null this) (or (eq that :newest)
+					   (eq that :unspecific)))
+		      (and (null that) (or (eq this :newest)
+					   (eq this :unspecific))))))
 	   (frob %pathname-version version-components-match)))))
 
 ;; Like PATHNAME-MATCH-P but the pathnames should not be search-lists.
