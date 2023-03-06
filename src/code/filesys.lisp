@@ -1120,13 +1120,7 @@ optionally keeping some of the most recent old versions."
 	       (setf prev elem))
 	     (nreverse results))))
     (let ((results nil))
-      (enumerate-search-list
-	  (pathname (merge-pathnames pathname
-				     (make-pathname :name :wild
-						    :type :wild
-						    :version :wild
-						    :defaults *default-pathname-defaults*)
-				     :wild))
+      (enumerate-search-list (pathname pathname)
 	(enumerate-matches (name pathname nil :follow-links follow-links)
 	  (when (or all
 		    (let ((slash (position #\/ name :from-end t)))
