@@ -3574,12 +3574,35 @@
 ;;;
 (defun multi-compare (predicate args not-p)
   (declare (symbol predicate) (list args) (type boolean not-p))
+  ;; There are two ways to handle the NOT-P case.  For example, let's
+  ;; look at >=.  What we start with is
+  ;;
+  ;;   (if (>= x y) t nil)
+  ;;
+  ;; We want to transform this to use <.  There are two ways:
+  ;;
+  ;;   1. (if (< x y) nil t)
+  ;;   2> (if (< y x) t nil)
+  ;;
+  ;; These are equivalent, but when dealing with NaN they are
+  ;; different.  In case 1, the vops don't know that the target branch
+  ;; loads NIL now instead of the usual T.  When a NaN occurs we want
+  ;; to branch to the path to the target.  However, in case 1, we end
+  ;; up branching to the part that loads T, producing the wrong
+  ;; result.
+  ;;
+  ;; With case 2, we don't order the then and else cases.  Then when
+  ;; (< y x) is true, the vop branches to the target loading T.  And
+  ;; for NaN, we don't, which ends up loading NIL.
+
   (let ((nargs (length args)))
     (cond ((< nargs 1) (values nil t))
 	  ((= nargs 1) `(progn ,@args t))
 	  ((= nargs 2)
 	   (if not-p
-	       `(if (,predicate ,(first args) ,(second args)) nil t)
+	       `(if (or (,predicate ,(second args) ,(first args))
+			(= ,(first args) ,(second args)))
+		    t nil)
 	       (values nil t)))
 	  (t
 	   (do* ((i (1- nargs) (1- i))
@@ -3587,8 +3610,9 @@
 		 (current (gensym) (gensym))
 		 (vars (list current) (cons current vars))
 		 (result 't (if not-p
-				`(if (,predicate ,current ,last)
-				     nil ,result)
+				`(if (or (,predicate ,last ,current)
+					 (= ,last ,current))
+				     ,result nil)
 				`(if (,predicate ,current ,last)
 				     ,result nil))))
 	       ((zerop i)
