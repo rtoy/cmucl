@@ -1920,6 +1920,42 @@ When annotations are present, invoke them at the right positions."
 	  (pprint-newline :mandatory stream)))
       (pprint-exit-if-list-exhausted)
       (pprint-newline :mandatory stream))))
+
+(defun pprint-define-assembly (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; Output "define-assembly-routine"
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    ;; Output routine name and options.
+    (pprint-logical-block (stream (pprint-pop) :prefix "(" :suffix ")")
+      ;; Output the routine name
+      (output-object (pprint-pop) stream)
+      (pprint-exit-if-list-exhausted)
+      (pprint-newline :mandatory stream)
+      (pprint-indent :block 0 stream)
+      ;; Output options, one per line, neatly lined up and indented
+      ;; below the routine name.
+      (loop
+       (output-object (pprint-pop) stream)
+       (pprint-exit-if-list-exhausted)
+       (pprint-newline :mandatory stream)))
+    ;; Now output the args, results, and temps used by the assembly
+    ;; routine.  Instead of lining up with the routine name, let's
+    ;; just indent it 4 spaces from the "define-assembly-routine" so
+    ;; it doesn't look so top-heavy.
+    (pprint-indent :block 4 stream)
+    (pprint-newline :mandatory stream)
+    (pprint-logical-block (stream (pprint-pop) :prefix "(" :suffix ")")
+      (loop
+       (output-object (pprint-pop) stream)
+       (pprint-exit-if-list-exhausted)
+       (pprint-newline :mandatory stream)))
+    ;; Now print out the assembly code as if it were a tagbody.  Then
+    ;; labels are outdented by one to make them easy to see.
+    (pprint-newline :mandatory stream)
+    (pprint-tagbody-guts stream)))
 
 ;;;; Interface seen by regular (ugly) printer and initialization routines.
 
@@ -2037,7 +2073,8 @@ When annotations are present, invoke them at the right positions."
     (stream::with-stream-class pprint-with-like)
     (lisp::with-array-data pprint-with-like)
     (c:define-vop pprint-define-vop)
-    (c:sc-case pprint-sc-case)))
+    (c:sc-case pprint-sc-case)
+    (c:define-assembly-routine pprint-define-assembly)))
 
 (defun pprint-init ()
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))
