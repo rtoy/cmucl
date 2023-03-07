@@ -687,4 +687,17 @@
 	(kernel:double-double-lo a)
 	(kernel:double-double-hi b)
 	(kernel:double-double-lo b)))
+
+(deftransform <= ((a b) (vm::double-double-float vm::double-double-float) *)
+  `(not (dd> (kernel:double-double-hi b)
+	     (kernel:double-double-lo b)
+	     (kernel:double-double-hi a)
+	     (kernel:double-double-lo a))))
+
+
+(deftransform >= ((a b) (vm::double-double-float vm::double-double-float) *)
+  `(not (dd< (kernel:double-double-hi b)
+	     (kernel:double-double-lo b)
+	     (kernel:double-double-hi a)
+	     (kernel:double-double-lo a))))
 ) ; end progn
