@@ -3598,8 +3598,14 @@
 (def-source-transform = (&rest args) (multi-compare '= args nil))
 (def-source-transform < (&rest args) (multi-compare '< args nil))
 (def-source-transform > (&rest args) (multi-compare '> args nil))
-(def-source-transform <= (&rest args) (multi-compare '> args t))
-(def-source-transform >= (&rest args) (multi-compare '< args t))
+#-x86
+(progn
+  (def-source-transform <= (&rest args) (multi-compare '> args t))
+  (def-source-transform >= (&rest args) (multi-compare '< args t)))
+#+x86
+(progn
+  (def-source-transform <= (&rest args) (multi-compare '<= args nil))
+  (def-source-transform >= (&rest args) (multi-compare '>= args nil)))
 
 (def-source-transform char= (&rest args) (multi-compare 'char= args nil))
 (def-source-transform char< (&rest args) (multi-compare 'char< args nil))
