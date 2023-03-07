@@ -1033,6 +1033,24 @@
 	     ((bignum bignum)
 	      (plusp (bignum-compare x y))))
 
+#+x86
+(two-arg-</> two-arg-<= <= floor ceiling
+	     ((fixnum bignum)
+	      (bignum-plus-p y))
+	     ((bignum fixnum)
+	      (not (bignum-plus-p x)))
+	     ((bignum bignum)
+	      (not (plusp (bignum-compare x y)))))
+
+#+x86
+(two-arg-</> two-arg->= >= ceiling floor
+	     ((fixnum bignum)
+	      (not (bignum-plus-p y)))
+	     ((bignum fixnum)
+	      (bignum-plus-p x))
+	     ((bignum bignum)
+	      (not (minusp (bignum-compare x y)))))
+
 
 (defun two-arg-= (x y)
   (number-dispatch ((x number) (y number))
