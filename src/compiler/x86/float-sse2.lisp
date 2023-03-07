@@ -972,9 +972,13 @@
 		       (inst jmp ,yep target)
 		       (emit-label not-lab)))))))))
   (frob < single comiss :b :nb)
+  (frob <= single comiss :be :nbe)
   (frob > single comiss :a :na)
+  (frob >= single comiss :ae :nae)
   (frob < double comisd :b :nb)
-  (frob > double comisd :a :na))
+  (frob <= double comisd :be :nbe)
+  (frob > double comisd :a :na)
+  (frob >= double comisd :ae :nae))
 
 
 ;;;; Conversion:
