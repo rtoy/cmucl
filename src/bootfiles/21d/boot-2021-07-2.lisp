@@ -3,8 +3,10 @@
 ;;
 ;; Use bin/build.sh -B boot-2021-07-2 to build this.
 
+#+x86
 (in-package :x86)
 
+#+x86
 (ext:without-package-locks
   (handler-bind
       ((error
