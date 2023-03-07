@@ -3598,6 +3598,10 @@
 (def-source-transform = (&rest args) (multi-compare '= args nil))
 (def-source-transform < (&rest args) (multi-compare '< args nil))
 (def-source-transform > (&rest args) (multi-compare '> args nil))
+;; We want to handle <= directly as <= instead of transforming to >.
+;; This is needed to handle NaN values.  See issue #156.  This should
+;; probably apply to all architectures, but we've only implemented the
+;; necessary changes for x86 right now.
 #-x86
 (progn
   (def-source-transform <= (&rest args) (multi-compare '> args t))

@@ -1033,23 +1033,26 @@
 	     ((bignum bignum)
 	      (plusp (bignum-compare x y))))
 
+;; This should probably be used for all architectures, but we've only
+;; written all the necessary support only on x86, currently.  See
+;; issue #156.
 #+x86
-(two-arg-</> two-arg-<= <= floor ceiling
-	     ((fixnum bignum)
-	      (bignum-plus-p y))
-	     ((bignum fixnum)
-	      (not (bignum-plus-p x)))
-	     ((bignum bignum)
-	      (not (plusp (bignum-compare x y)))))
+(progn
+  (two-arg-</> two-arg-<= <= floor ceiling
+	       ((fixnum bignum)
+		(bignum-plus-p y))
+	       ((bignum fixnum)
+		(not (bignum-plus-p x)))
+	       ((bignum bignum)
+		(not (plusp (bignum-compare x y)))))
 
-#+x86
-(two-arg-</> two-arg->= >= ceiling floor
-	     ((fixnum bignum)
-	      (not (bignum-plus-p y)))
-	     ((bignum fixnum)
-	      (bignum-plus-p x))
-	     ((bignum bignum)
-	      (not (minusp (bignum-compare x y)))))
+  (two-arg-</> two-arg->= >= ceiling floor
+	       ((fixnum bignum)
+		(not (bignum-plus-p y)))
+	       ((bignum fixnum)
+		(bignum-plus-p x))
+	       ((bignum bignum)
+		(not (minusp (bignum-compare x y))))))
 
 
 (defun two-arg-= (x y)
