@@ -670,13 +670,13 @@
 
 (declaim (inline dd<=))
 (defun dd<= (a0 a1 b0 b1)
-  (and (<= a0 b0)
-       (<= a1 b1)))
+  (or (dd> a0 a1 b0 b1)
+      (dd= a0 a1 b0 b1)))
 
 (declaim (inline dd>=))
 (defun dd>= (a0 a1 b0 b1)
-  (and (>= a0 b0)
-       (>= a1 b1)))
+  (or (dd> a0 a1 b0 b1)
+      (dd= a0 a1 b0 b1)))
 
 (deftransform = ((a b) (vm::double-double-float vm::double-double-float) *)
   `(dd= (kernel:double-double-hi a)
