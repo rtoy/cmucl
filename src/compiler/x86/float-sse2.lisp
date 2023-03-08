@@ -971,10 +971,42 @@
 		       (inst jmp :p not-lab)
 		       (inst jmp ,yep target)
 		       (emit-label not-lab)))))))))
-  (frob < single comiss :b :nb)
   (frob > single comiss :a :na)
-  (frob < double comisd :b :nb)
   (frob > double comisd :a :na))
+
+(macrolet
+    ((frob (op size inst loader yep nope)
+       (let ((ea (ecase size
+		   (single
+		    'ea-for-sf-desc)
+		   (double
+		    'ea-for-df-desc)))
+	     (name (symbolicate op "/" size "-FLOAT"))
+	     (sc-type (symbolicate size "-REG"))
+	     (inherit (symbolicate size "-FLOAT-COMPARE")))
+	 `(define-vop (,name ,inherit)
+	    (:translate ,op)
+	    (:info target not-p)
+	    (:temporary (:sc ,sc-type) load-y)
+	    (:generator 3
+	      (cond (not-p
+		     (sc-case y
+		       (,sc-type
+			(inst ,inst y x))
+		       (descriptor-reg
+			(inst ,loader load-y (,ea y))
+			(inst ,inst load-y x)))
+		     (inst jmp ,nope target))
+		    (t
+		     (sc-case y
+		       (,sc-type
+			(inst ,inst y x))
+		       (descriptor-reg
+			(inst ,loader load-y (,ea y))
+			(inst ,inst load-y x)))
+		     (inst jmp ,yep target))))))))
+  (frob < single comiss movss :a :na)
+  (frob < double comisd movsd :a :na))
 
 
 ;;;; Conversion:
