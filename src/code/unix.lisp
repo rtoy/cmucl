@@ -25,17 +25,22 @@
 ;; it must be set to :iso8859-1 (or left as NIL), making files with
 ;; non-Latin-1 characters "mojibake", but otherwise they'll be inaccessible.
 ;; Must be set to NIL initially to enable building Lisp!
-(defvar *filename-encoding* nil)
+(defvar *filename-encoding* :null
+  "The encoding to use for converting a namestring to a string that can
+  be used by the operations system.  It must be a valid
+  external-format name or :NULL.  :NULL means the string
+  is passed as is to the operating system.  The operating system will
+  get the low 8 bits of each UTF-16 code unit of the string.")
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmacro %name->file (string)
-    `(if *filename-encoding*
-	 (string-encode ,string *filename-encoding*)
-	 ,string))
+    `(if (eql *filename-encoding* :null)
+	 ,string
+	 (string-encode ,string *filename-encoding*)))
   (defmacro %file->name (string)
-    `(if *filename-encoding*
-	 (string-decode ,string *filename-encoding*)
-	 ,string)))
+    `(if (eql *filename-encoding* :null)
+	 ,string
+	 (string-decode ,string *filename-encoding*))))
 
 
 ;;;; Common machine independent structures.
@@ -2893,3 +2898,32 @@
    of the child in the parent if it works, or NIL and an error number if it
    doesn't work."
   (int-syscall ("fork")))
+
+(defun unix-setlocale ()
+  _N"Call setlocale(3c) with fixed args.  Returns 0 on success."
+  (alien:alien-funcall
+   (alien:extern-alien "os_setlocale"
+		       (function c-call:int))))
+
+(defun unix-get-lc-messages ()
+  _N"Get LC_MESSAGES from the current locale.  If we can't, return
+  NIL.  A call to UNIX-SETLOCALE must have been done previously before
+  calling this so that the correct locale is returned."
+  (with-alien ((buf (array c-call:char 256)))
+    (let ((result
+	    (alien-funcall
+	     (extern-alien "os_get_lc_messages"
+			   (function c-call:int
+				     (* c-call:char)
+				     c-call:int))
+	     (cast buf (* c-call:char))
+	     256)))
+      (when (zerop result)
+	(cast buf c-call:c-string)))))
+
+(defun unix-get-locale-codeset ()
+  _N"Get the codeset from the locale"
+  (cast (alien-funcall
+	    (extern-alien "os_get_locale_codeset"
+			  (function (* char))))
+	c-string))

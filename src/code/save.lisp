@@ -142,6 +142,57 @@
   (file c-call:c-string)
   (initial-function (alien:unsigned #.vm:word-bits)))
 
+(defun set-up-locale-external-format ()
+  "Add external format alias for :locale to the format specified by
+  the locale as set by setlocale(3C)."
+  (let ((codeset (unix::unix-get-locale-codeset))
+	(external-format nil))
+    (cond ((zerop (length codeset))
+	   (setq external-format *default-external-format*))
+	  (t
+	   (let ((name (intern codeset "KEYWORD")))
+             (setq external-format
+		   (stream::ef-name (stream::find-external-format name nil))))))
+    (cond (external-format
+	   (setf (gethash :locale stream::*external-format-aliases*)
+		 external-format))
+	  (t
+	   (warn "No external format found for codeset \"~S\"; using ~S instead"
+		 codeset
+		 *default-external-format*)
+	   (setf (gethash :locale stream::*external-format-aliases*)
+		 *default-external-format*))))
+  (values))
+
+(defun decode-runtime-strings (locale file-locale)
+  ;; The C runtime can initialize the following strings from the
+  ;; command line or the environment.  We need to decode these into
+  ;; the utf-16 strings that Lisp uses.
+  (setf lisp-command-line-list
+	(mapcar #'(lambda (s)
+		    (stream:string-decode s locale))
+		lisp-command-line-list))
+  (setf lisp-environment-list
+	(mapcar #'(lambda (s)
+		    (stream:string-decode s locale))
+		lisp-environment-list))
+  ;; This needs more work..  *cmucl-lib* could be set from the the envvar
+  ;; "CMUCLLIB" or from the "-lib" command-line option, and thus
+  ;; should use the LOCALE to decode the string.
+  (when *cmucl-lib*
+    (setf *cmucl-lib*
+	  (stream:string-decode *cmucl-lib* file-locale)))
+  ;; This also needs more work since the core path could come from the
+  ;; "-core" command-line option and should thus use LOCALE to decode
+  ;; the string.  It could also come from the "CMUCLCORE" envvar.
+  (setf *cmucl-core-path*
+	(stream:string-decode *cmucl-core-path* file-locale))
+  ;; *unidata-path* defaults to a pathname object, but the user can
+  ;; specify a path, so we need to decode the string path if given.
+  (when (and *unidata-path* (stringp *unidata-path*))
+    (setf *unidata-path*
+	  (stream:string-decode *unidata-path* file-locale))))
+
 (defun save-lisp (core-file-name &key
 				 (purify t)
 				 (root-structures ())
@@ -249,6 +300,23 @@
 	     (reinit)
 	     (environment-init)
 	     (dolist (f *after-save-initializations*) (funcall f))
+	     ;; Set the runtime locale
+	     (unless (zerop (unix::unix-setlocale))
+	       (warn "os_setlocale failed"))
+	     ;; Load external format aliases now so we can aliases to
+	     ;; specify the external format.
+	     (stream::load-external-format-aliases)
+	     ;; Set up :locale format
+	     (set-up-locale-external-format)
+	     ;; Set terminal encodings to :locale and filename encoding to :utf-8.
+	     ;; (This needs more work on Darwin.)
+	     (set-system-external-format :locale :utf-8)
+	     (decode-runtime-strings :locale :utf-8)
+	     ;; Need to reinitialize the environment again because
+	     ;; we've possibly changed the environment variables and
+	     ;; pathnames.
+	     (environment-init)
+	     ;; Set the locale for lisp
 	     (intl::setlocale)
 	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)
@@ -268,8 +336,12 @@
                        *gc-verbose* nil))
 	       (when (and process-command-line
 			  (or (find-switch "help")
-			      (find-switch "-help")))
-		 ;; Don't load any init files if -help or --help is given
+			      (find-switch "-help")
+			      (find-switch "version")
+			      (find-switch "-version")))
+		 ;; Don't load any init files if -help, --help,
+		 ;; -version, or --version is given.  These exit right
+		 ;; away, so loading the init file is wasteful.
 		 (setf site-init nil)
 		 (setf load-init-file nil))
 	       (when (and site-init

@@ -1837,6 +1837,125 @@ When annotations are present, invoke them at the right positions."
   (funcall (formatter "~:<~W~^~3I ~:_~W~I~@:_~@{ ~W~^~_~}~:>")
 	   stream list))
 
+(defun pprint-define-vop (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; Output "define-vop"
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    ;; Output vop name
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (pprint-newline :mandatory stream)
+    (pprint-indent :block 0 stream)
+    ;; Print out each option starting on a new line
+    (loop
+      (write-char #\space stream)
+      (let ((vop-option (pprint-pop)))
+	;; Figure out what option we have and print it neatly
+	(case (car vop-option)
+	  ((:args :results)
+	   ;; :args and :results print out each arg/result indented neatly
+	   (pprint-logical-block (stream vop-option :prefix "(" :suffix ")")
+	     ;; Output :args/:results
+	     (output-object (pprint-pop) stream)
+	     (pprint-exit-if-list-exhausted)
+	     (write-char #\space stream)
+	     (pprint-indent :current 0 stream)
+	     ;; Print each value indented the same amount so the line
+	     ;; up neatly.
+	     (loop
+	       (output-object (pprint-pop) stream)
+	       (pprint-exit-if-list-exhausted)
+	       (pprint-newline :mandatory stream))))
+	  ((:generator)
+	   (pprint-logical-block (stream vop-option :prefix "(" :suffix ")")
+	     ;; Output :generator
+	     (output-object (pprint-pop) stream)
+	     (pprint-exit-if-list-exhausted)
+	     (write-char #\space stream)
+	     ;; Output cost
+	     (output-object (pprint-pop) stream)
+	     (pprint-exit-if-list-exhausted)
+	     ;; Newline and then the body of the generator
+	     (pprint-newline :mandatory stream)
+	     (write-char #\space stream)
+	     (pprint-indent :current 0 stream)
+	     (loop
+	       (output-object (pprint-pop) stream)
+	       (pprint-exit-if-list-exhausted)
+	       (pprint-newline :mandatory stream))))
+	  (t
+	   ;; Everything else just get printed as usual.
+	   (output-object vop-option stream))))
+      (pprint-exit-if-list-exhausted)
+      (pprint-newline :linear stream))))
+
+(defun pprint-sc-case (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; Output "sc-case"
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    ;; Output variable name
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    ;; Start the cases on a new line, indented.
+    (pprint-newline :mandatory stream)
+    (pprint-indent :block 0 stream)
+    ;; Print out each case.
+    (loop
+      (write-char #\space stream)
+      (pprint-logical-block (stream (pprint-pop) :prefix "(" :suffix ")")
+	;; Output the case item
+	(output-object (pprint-pop) stream)
+	(pprint-exit-if-list-exhausted)
+	(pprint-newline :mandatory stream)
+	;; Output everything else, starting on a new line.
+	(loop
+	  (output-object (pprint-pop) stream)
+	  (pprint-exit-if-list-exhausted)
+	  (pprint-newline :mandatory stream)))
+      (pprint-exit-if-list-exhausted)
+      (pprint-newline :mandatory stream))))
+
+(defun pprint-define-assembly (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; Output "define-assembly-routine"
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    ;; Output routine name and options.
+    (pprint-logical-block (stream (pprint-pop) :prefix "(" :suffix ")")
+      ;; Output the routine name
+      (output-object (pprint-pop) stream)
+      (pprint-exit-if-list-exhausted)
+      (pprint-newline :mandatory stream)
+      (pprint-indent :block 0 stream)
+      ;; Output options, one per line, neatly lined up and indented
+      ;; below the routine name.
+      (loop
+       (output-object (pprint-pop) stream)
+       (pprint-exit-if-list-exhausted)
+       (pprint-newline :mandatory stream)))
+    ;; Now output the args, results, and temps used by the assembly
+    ;; routine.  Instead of lining up with the routine name, let's
+    ;; just indent it 4 spaces from the "define-assembly-routine" so
+    ;; it doesn't look so top-heavy.
+    (pprint-indent :block 4 stream)
+    (pprint-newline :mandatory stream)
+    (pprint-logical-block (stream (pprint-pop) :prefix "(" :suffix ")")
+      (loop
+       (output-object (pprint-pop) stream)
+       (pprint-exit-if-list-exhausted)
+       (pprint-newline :mandatory stream)))
+    ;; Now print out the assembly code as if it were a tagbody.  Then
+    ;; labels are outdented by one to make them easy to see.
+    (pprint-newline :mandatory stream)
+    (pprint-tagbody-guts stream)))
 
 ;;;; Interface seen by regular (ugly) printer and initialization routines.
 
@@ -1952,7 +2071,10 @@ When annotations are present, invoke them at the right positions."
     (vm::with-fixed-allocation pprint-with-like)
     (kernel::number-dispatch pprint-with-like)
     (stream::with-stream-class pprint-with-like)
-    (lisp::with-array-data pprint-with-like)))
+    (lisp::with-array-data pprint-with-like)
+    (c:define-vop pprint-define-vop)
+    (c:sc-case pprint-sc-case)
+    (c:define-assembly-routine pprint-define-assembly)))
 
 (defun pprint-init ()
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))

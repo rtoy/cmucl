@@ -16,6 +16,15 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: src/code/unix.lisp
+msgid ""
+"The encoding to use for converting a namestring to a string that can\n"
+"  be used by the operations system.  It must be a valid\n"
+"  external-format name or :NULL.  :NULL means the string\n"
+"  is passed as is to the operating system.  The operating system will\n"
+"  get the low 8 bits of each UTF-16 code unit of the string."
+msgstr ""
+
+#: src/code/unix.lisp
 msgid "Syscall ~A failed: ~A"
 msgstr ""
 
@@ -1422,5 +1431,20 @@ msgid ""
 "Executes the unix fork system call.  Returns 0 in the child and the pid\n"
 "   of the child in the parent if it works, or NIL and an error number if it\n"
 "   doesn't work."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Call setlocale(3c) with fixed args.  Returns 0 on success."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Get LC_MESSAGES from the current locale.  If we can't, return\n"
+"  NIL.  A call to UNIX-SETLOCALE must have been done previously before\n"
+"  calling this so that the correct locale is returned."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Get the codeset from the locale"
 msgstr ""
 

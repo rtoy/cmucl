@@ -6149,6 +6149,14 @@ msgstr ""
 msgid "Same as -help."
 msgstr ""
 
+#: src/code/commandline.lisp
+msgid "Prints the cmucl version and exits"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "Prints the cmucl version and exits; same as -version"
+msgstr ""
+
 #: src/code/env-access.lisp
 msgid ""
 "Returns information about the symbol VAR in the lexical environment ENV.\n"
@@ -6712,6 +6720,12 @@ msgstr ""
 #: src/code/save.lisp
 msgid ""
 "This is true if and only if the lisp was started with the -edit switch."
+msgstr ""
+
+#: src/code/save.lisp
+msgid ""
+"Add external format alias for :locale to the format specified by\n"
+"  the locale as set by setlocale(3C)."
 msgstr ""
 
 #: src/code/save.lisp

@@ -352,51 +352,51 @@
         (old-run-utime old-run-stime old-page-faults old-bytes-consed)
       (time-get-sys-info))
     (let ((start-gc-run-time *gc-run-time*))
-    (setq cycle-count (- (cycle-count/float)))
-    (multiple-value-prog1
-        ;; Execute the form and return its values.
-        (funcall fun)
-      (incf cycle-count (cycle-count/float))
-      (multiple-value-setq
-	  (new-run-utime new-run-stime new-page-faults new-bytes-consed)
-	(time-get-sys-info))
-      (setq new-real-time (- (get-internal-real-time) real-time-overhead))
-      (let ((gc-run-time (max (- *gc-run-time* start-gc-run-time) 0))
-	    (bytes-consed (- new-bytes-consed old-bytes-consed cons-overhead)))
-	(unless *in-get-time-consing*
-	  (terpri *trace-output*)
-	  (pprint-logical-block (*trace-output* nil :per-line-prefix "; ")
-	    (format *trace-output*
-		    (intl:gettext "Evaluation took:~%  ~
+      (setq cycle-count (- (cycle-count/float)))
+      (multiple-value-prog1
+          ;; Execute the form and return its values.
+          (funcall fun)
+	(incf cycle-count (cycle-count/float))
+	(multiple-value-setq
+	    (new-run-utime new-run-stime new-page-faults new-bytes-consed)
+	  (time-get-sys-info))
+	(setq new-real-time (- (get-internal-real-time) real-time-overhead))
+	(let ((gc-run-time (max (- *gc-run-time* start-gc-run-time) 0))
+	      (bytes-consed (- new-bytes-consed old-bytes-consed cons-overhead)))
+	  (unless *in-get-time-consing*
+	    (terpri *trace-output*)
+	    (pprint-logical-block (*trace-output* nil :per-line-prefix "; ")
+	      (format *trace-output*
+		      (intl:gettext "Evaluation took:~%  ~
 		     ~S seconds of real time~%  ~
 		     ~S seconds of user run time~%  ~
 		     ~S seconds of system run time~%  ")
-		    (max (/ (- new-real-time old-real-time)
-			    (float internal-time-units-per-second))
-			 0.0)
-		    (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
-		    (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0))
-	    (format *trace-output*
-		    (intl:ngettext
-		     "~:D ~A cycle~%  ~
+		      (max (/ (- new-real-time old-real-time)
+			      (float internal-time-units-per-second))
+			   0.0)
+		      (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
+		      (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0))
+	      (format *trace-output*
+		      (intl:ngettext
+		       "~:D ~A cycle~%  ~
 		     ~@[[Run times include ~S seconds GC run time]~%  ~]"
-		     "~:D ~A cycles~%  ~
+		       "~:D ~A cycles~%  ~
 		     ~@[[Run times include ~S seconds GC run time]~%  ~]"
-		     (truncate cycle-count))
-		    (truncate cycle-count)
-		    "CPU"
-		    (unless (zerop gc-run-time)
-		      (/ (float gc-run-time)
-			 (float internal-time-units-per-second))))
-	    (format *trace-output*
-		    (intl:ngettext "~S page fault and~%  "
-				   "~S page faults and~%  "
-				   (max (- new-page-faults old-page-faults) 0))
-		    (max (- new-page-faults old-page-faults) 0))
-	    (format *trace-output*
-		    (intl:ngettext "~:D byte consed.~%"
-				   "~:D bytes consed.~%"
-				   (max (- bytes-consed (or *time-consing* 0)) 0))
-		    (max (- bytes-consed (or *time-consing* 0)) 0)))
-	  (terpri *trace-output*))
-	(setq *last-time-consing* bytes-consed))))))
+		       (truncate cycle-count))
+		      (truncate cycle-count)
+		      "CPU"
+		      (unless (zerop gc-run-time)
+			(/ (float gc-run-time)
+			   (float internal-time-units-per-second))))
+	      (format *trace-output*
+		      (intl:ngettext "~S page fault and~%  "
+				     "~S page faults and~%  "
+				     (max (- new-page-faults old-page-faults) 0))
+		      (max (- new-page-faults old-page-faults) 0))
+	      (format *trace-output*
+		      (intl:ngettext "~:D byte consed.~%"
+				     "~:D bytes consed.~%"
+				     (max (- bytes-consed (or *time-consing* 0)) 0))
+		      (max (- bytes-consed (or *time-consing* 0)) 0)))
+	    (terpri *trace-output*))
+	  (setq *last-time-consing* bytes-consed))))))
