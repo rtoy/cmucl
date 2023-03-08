@@ -964,18 +964,23 @@
 		(descriptor-reg
 		 (inst ,inst x (,ea y))))
 	      (cond (not-p
-		     (inst jmp :p target)
-		     (inst jmp :na target))
+		     ;; Instead of x > y, we're doing x <= y and want
+		     ;; to jmp when x <= y.  If NaN occurrs we also
+		     ;; want to jump.  x <= y means CF = 1 or ZF = 1.
+		     ;; When NaN occurs, ZF, PF, and CF are all set.
+		     ;; Hence, we can just test for x <= y.
+		     (inst jmp :be target))
 		    (t
-		     (let ((not-lab (gen-label)))
-		       (inst jmp :p not-lab)
-		       (inst jmp :a target)
-		       (emit-label not-lab)))))))))
+		     ;; If there's NaN, the ZF, PF, and CF bits are
+		     ;; set.  We only want to jmp to the target when
+		     ;; x > y.  This happens if CF = 0.  Hence, we
+		     ;; will not jmp to the target if NaN occurred.
+		     (inst jmp :a target))))))))
   (frob > single comiss)
   (frob > double comisd))
 
 (macrolet
-    ((frob (op size inst)
+    ((frob (op size inst mover)
        (let ((ea (ecase size
 		   (single
 		    'ea-for-sf-desc)
@@ -987,22 +992,29 @@
 	 `(define-vop (,name ,inherit)
 	    (:translate ,op)
 	    (:info target not-p)
+	    (:temporary (:sc ,sc-type) load-y)
 	    (:generator 3
 	      (sc-case y
 		(,sc-type
-		 (inst ,inst x y))
+		 (inst ,inst y x))
 		(descriptor-reg
-		 (inst ,inst x (,ea y))))
+		 (inst ,mover load-y (,ea y))
+		 (inst ,inst load-y x)))
 	      (cond (not-p
-		     (inst jmp :p target)
-		     (inst jmp :nb target))
+		     ;; Instead of x < y, we're doing x >= y and want
+		     ;; to jmp when x >= y.  But x >=y is the same as
+		     ;; y <= x, so if we swap the args, we can apply
+		     ;; the same logic we use for > not-p case above.
+		     (inst jmp :be target))
 		    (t
-		     (let ((not-lab (gen-label)))
-		       (inst jmp :p not-lab)
-		       (inst jmp :b target)
-		       (emit-label not-lab)))))))))
-  (frob < single comiss)
-  (frob < double comisd))
+		     ;; We want to jump when x < y.  This is the same
+		     ;; as jumping when y > x.  So if we reverse the
+		     ;; args, we can apply the same logic as we did
+		     ;; above for the > vop.
+		     
+		     (inst jmp :a target))))))))
+  (frob < single comiss movss)
+  (frob < double comisd movsd))
 
 
 ;;;; Conversion:
