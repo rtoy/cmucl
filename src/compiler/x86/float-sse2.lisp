@@ -945,7 +945,7 @@
   (frob double ucomisd))
 
 (macrolet
-    ((frob (op size inst yep nope)
+    ((frob (op size inst)
        (let ((ea (ecase size
 		   (single
 		    'ea-for-sf-desc)
@@ -965,16 +965,44 @@
 		 (inst ,inst x (,ea y))))
 	      (cond (not-p
 		     (inst jmp :p target)
-		     (inst jmp ,nope target))
+		     (inst jmp :na target))
 		    (t
 		     (let ((not-lab (gen-label)))
 		       (inst jmp :p not-lab)
-		       (inst jmp ,yep target)
+		       (inst jmp :a target)
 		       (emit-label not-lab)))))))))
-  (frob < single comiss :b :nb)
-  (frob > single comiss :a :na)
-  (frob < double comisd :b :nb)
-  (frob > double comisd :a :na))
+  (frob > single comiss)
+  (frob > double comisd))
+
+(macrolet
+    ((frob (op size inst)
+       (let ((ea (ecase size
+		   (single
+		    'ea-for-sf-desc)
+		   (double
+		    'ea-for-df-desc)))
+	     (name (symbolicate op "/" size "-FLOAT"))
+	     (sc-type (symbolicate size "-REG"))
+	     (inherit (symbolicate size "-FLOAT-COMPARE")))
+	 `(define-vop (,name ,inherit)
+	    (:translate ,op)
+	    (:info target not-p)
+	    (:generator 3
+	      (sc-case y
+		(,sc-type
+		 (inst ,inst x y))
+		(descriptor-reg
+		 (inst ,inst x (,ea y))))
+	      (cond (not-p
+		     (inst jmp :p target)
+		     (inst jmp :nb target))
+		    (t
+		     (let ((not-lab (gen-label)))
+		       (inst jmp :p not-lab)
+		       (inst jmp :b target)
+		       (emit-label not-lab)))))))))
+  (frob < single comiss)
+  (frob < double comisd))
 
 
 ;;;; Conversion:
