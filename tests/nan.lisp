@@ -32,7 +32,9 @@
     (frob single-float <)
     (frob single-float >)
     (frob double-float <)
-    (frob double-float >)))
+    (frob double-float >)
+    (frob single-float =)
+    (frob double-float =)))
 
 (define-test nan-single.<
     (:tag :nan)
@@ -158,3 +160,50 @@
     (assert-false (dtst->3 1d0 *double-float-nan* 3d0))
     (assert-false (dtst->3 *double-float-nan* *double-float-nan* 3d0))))
   
+(define-test nan-single.=
+    (:tag :nan)
+  ;; Basic tests with regular numbers.
+  (assert-true (stst-= 1f0 1f0))
+  (assert-false (stst-= 2f0 1f0))
+  (assert-false (stst-= 0f0 1f0))
+  ;; Tests with NaN, where = should fail.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (stst-= *single-float-nan* 1f0))
+    (assert-false (stst-= 1f0 *single-float-nan*))
+    (assert-false (stst-= *single-float-nan* *single-float-nan*))))
+
+(define-test nan-double.=
+    (:tag :nan)
+  ;; Basic tests with regular numbers.
+  (assert-true (stst-= 1d0 1d0))
+  (assert-false (stst-= 2d0 1d0))
+  (assert-false (stst-= 0d0 1d0))
+  ;; Tests with NaN, where = should fail.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (stst-= *double-float-nan* 1d0))
+    (assert-false (stst-= 1d0 *double-float-nan*))
+    (assert-false (stst-= *double-float-nan* *double-float-nan*))))
+  
+(define-test nan-single.=3
+    (:tag :nan)
+  ;; Basic tests with regular numbers.
+  (assert-true (stst-=3 1f0 1f0 1f0))
+  (assert-false (stst-=3 1f0 1f0 0f0))
+  (assert-false (stst-=3 0f0 1f0 1f0))
+  ;; Tests with NaN, where = should fail.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (stst-=3 *single-float-nan* 1f0 1f0))
+    (assert-false (stst-=3 1f0 *single-float-nan* 1f0))
+    (assert-false (stst-=3 1f0 1f0 *single-float-nan*))))
+
+(define-test nan-double.=3
+    (:tag :nan)
+  ;; Basic tests with regular numbers.
+  (assert-true (dtst-=3 1d0 1d0 1d0))
+  (assert-false (dtst-=3 1d0 1d0 0d0))
+  (assert-false (dtst-=3 0d0 1d0 1d0))
+  ;; Tests with NaN, where = should fail.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (dtst-=3 *double-float-nan* 1d0 1d0))
+    (assert-false (dtst-=3 1d0 *double-float-nan* 1d0))
+    (assert-false (dtst-=3 1d0 1d0 *double-float-nan*))))
