@@ -990,16 +990,17 @@
 	     (sc-type (symbolicate size "-REG"))
 	     (inherit (symbolicate size "-FLOAT-COMPARE")))
 	 `(define-vop (,name ,inherit)
+	    (:args (x :scs (,sc-type descriptor-reg))
+		   (y :scs (,sc-type)))
 	    (:translate ,op)
 	    (:info target not-p)
-	    (:temporary (:sc ,sc-type) load-y)
+	    (:temporary (:sc ,sc-type) load-x)
 	    (:generator 3
-	      (sc-case y
+	      (sc-case x
 		(,sc-type
 		 (inst ,inst y x))
 		(descriptor-reg
-		 (inst ,mover load-y (,ea y))
-		 (inst ,inst load-y x)))
+		 (inst ,inst y (,ea x))))
 	      (cond (not-p
 		     ;; Instead of x < y, we're doing x >= y and want
 		     ;; to jmp when x >= y.  But x >=y is the same as
