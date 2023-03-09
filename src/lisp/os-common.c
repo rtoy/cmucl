@@ -814,7 +814,7 @@ os_get_locale_codeset()
 #define UNAME_RELEASE_AND_VERSION
 #else
 #undef UNAME_RELEASE_AND_VERSION
-#endif        
+#endif 
 
 char*
 os_software_version()
@@ -822,7 +822,7 @@ os_software_version()
     int status;
     struct utsname uts;
     char *version = NULL;
-    
+
     status = uname(&uts);
     if (status == 0) {
         int version_length;
@@ -836,7 +836,7 @@ os_software_version()
         }
 #else
         version = strdup(uts.version);
-#endif            
+#endif
     }
 
     return version;
