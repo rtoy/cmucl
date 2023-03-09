@@ -65,7 +65,17 @@ public domain.
     * ~~#142~~ `(random 0)` signals incorrect error
     * ~~#147~~ `stream-line-column` method missing for `fundamental-character-output-stream`
     * ~~#149~~ Call setlocale(3C) on startup
+    * ~~#150~~ Add aliases for external format cp949 and euckr
+    * ~~#151~~ Change `*default-external-format*` to `:utf-8`.
     * ~~#155~~ Wrap help strings neatly
+    * ~~#157~~ `(directory "foo/**/")` only returns directories now
+    * ~~#163~~ Add commandline option `-version` and `--version` to get lisp version
+    * ~~#165~~ Avoid inserting NIL into simple `LOOP` from `FORMAT`
+    * ~~#166~~ Fix incorect type declaration for exponent from `integer-decode-float`
+    * ~~#167~~ Lowe bound for `decode-float-exponent` type was off by one.
+    * ~~#168~~ Don't use negated forms for jmp instructions when possible
+    * ~~#169~~ Add pprinter for `define-vop` and `sc-case`
+    * ~~#173~~ Add pprinter for `define-assembly-routine`
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
