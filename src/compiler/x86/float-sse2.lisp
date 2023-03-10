@@ -1026,8 +1026,12 @@
   (frob < double comisd t))
 
 (macrolet
-    ((gen-code (swap-args-p sc-type inst ea)
-       (if swap-args-p
+    ((gen-code (op sc-type inst ea)
+       ;; When the operation is >, the second arg (y) can be a
+       ;; register or a descriptor.  When the operation is <, the args
+       ;; are swapped and we want to allow x to be a register or
+       ;; descriptor.
+       (if (eq op '<)
 	   `(sc-case x
 	      (,sc-type
 	       (inst ,inst y x))
@@ -1048,7 +1052,10 @@
 	     (sc-type (symbolicate size "-REG"))
 	     (inherit (symbolicate size "-FLOAT-COMPARE")))
 	 `(define-vop (,name ,inherit)
-	    ,@(when swap-args-p
+	    ;; When the operation is <, we want to rewrite x < y to y
+	    ;; > x.  In that case, we want to allow x to be in a
+	    ;; descriptor.  For >, y is allowed to be a descriptor.
+	    ,@(when (eq op '<)
 		`((:args (x :scs (,sc-type descriptor-reg))
 			 (y :scs (,sc-type)))))
 	    (:translate ,op)
@@ -1056,9 +1063,23 @@
 	    (:generator 3
 	      ;; Note: x < y is the same as y > x.  We reverse the
 	      ;; args to reduce the number of jump instructions
-	      ;; needed.  Then the logic for the branches is the same
-	      ;; as for the case y > x above.
-	      (gen-code ,swap-args-p ,sc-type ,inst ,ea)
+	      ;; needed.
+	      (gen-code ,op ,sc-type ,inst ,ea)
+	      ;; Consider the case of x > y.
+	      ;;
+	      ;; When a NaN occurs, comis sets ZF, PF, and CF = 1.  In
+	      ;; the normal case (not-p false), we want to jump to the
+	      ;; target when x > y.  This happens when CF = 0.  Hence,
+	      ;; we won't jump to the target when there's a NaN, as
+	      ;; desired.
+	      ;;
+	      ;; For the not-p case, we want to jump to target when x
+	      ;; <= y.  This means CF = 1 or ZF = 1.  But NaN sets
+	      ;; these bits too, so we jump to the target for NaN or x
+	      ;; <= y, as desired.
+	      ;;
+	      ;; For the case of x < y, we can use the equivalent y >
+	      ;; x.  Thus if we swap the args, the same logic applies.
 	      (inst jmp (if (not not-p) :a :be) target))))))
   (frob > single comiss nil)
   (frob > double comisd nil)
