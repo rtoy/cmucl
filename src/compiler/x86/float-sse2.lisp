@@ -944,8 +944,21 @@
   (frob single ucomiss)
   (frob double ucomisd))
 
+#+nil
 (macrolet
-    ((frob (op size inst)
+    ((gen-code (swap-args-p sc-type inst ea)
+       (if swap-args-p
+	   `(sc-case x
+	      (,sc-type
+	       (inst ,inst y x))
+	      (descriptor-reg
+	       (inst ,inst y (,ea x))))
+	   `(sc-case y
+	      (,sc-type
+	       (inst ,inst x y))
+	      (descriptor-reg
+	       (inst ,inst x (,ea y))))))
+     (frob (op size inst swap-args-p)
        (let ((ea (ecase size
 		   (single
 		    'ea-for-sf-desc)
@@ -958,11 +971,7 @@
 	    (:translate ,op)
 	    (:info target not-p)
 	    (:generator 3
-	      (sc-case y
-		(,sc-type
-		 (inst ,inst x y))
-		(descriptor-reg
-		 (inst ,inst x (,ea y))))
+	      (gen-code ,swap-args-p ,sc-type ,inst ,ea)
 	      ;; When a NaN occurs, comis sets ZF, PF, and CF = 1.  In
 	      ;; the normal case (not-p false), we want to jump to the
 	      ;; target when x > y.  This happens when CF = 0.  Hence,
@@ -974,11 +983,24 @@
 	      ;; these bits too, so we jump to the target for NaN or x
 	      ;; <= y, as desired.
 	      (inst jmp (if (not not-p) :a :be) target))))))
-  (frob > single comiss)
-  (frob > double comisd))
+  (frob > single comiss nil)
+  (frob > double comisd nil))
 
+#+nil
 (macrolet
-    ((frob (op size inst)
+    ((gen-code (swap-args-p sc-type inst ea)
+       (if swap-args-p
+	   `(sc-case x
+	      (,sc-type
+	       (inst ,inst y x))
+	      (descriptor-reg
+	       (inst ,inst y (,ea x))))
+	   `(sc-case y
+	      (,sc-type
+	       (inst ,inst x y))
+	      (descriptor-reg
+	       (inst ,inst x (,ea y))))))
+     (frob (op size inst swap-args-p)
        (let ((ea (ecase size
 		   (single
 		    'ea-for-sf-desc)
@@ -998,14 +1020,50 @@
 	      ;; args to reduce the number of jump instructions
 	      ;; needed.  Then the logic for the branches is the same
 	      ;; as for the case y > x above.
-	      (sc-case x
-		(,sc-type
-		 (inst ,inst y x))
-		(descriptor-reg
-		 (inst ,inst y (,ea x))))
+	      (gen-code ,swap-args-p ,sc-type ,inst ,ea)
 	      (inst jmp (if (not not-p) :a :be) target))))))
-  (frob < single comiss)
-  (frob < double comisd))
+  (frob < single comiss t)
+  (frob < double comisd t))
+
+(macrolet
+    ((gen-code (swap-args-p sc-type inst ea)
+       (if swap-args-p
+	   `(sc-case x
+	      (,sc-type
+	       (inst ,inst y x))
+	      (descriptor-reg
+	       (inst ,inst y (,ea x))))
+	   `(sc-case y
+	      (,sc-type
+	       (inst ,inst x y))
+	      (descriptor-reg
+	       (inst ,inst x (,ea y))))))
+     (frob (op size inst swap-args-p)
+       (let ((ea (ecase size
+		   (single
+		    'ea-for-sf-desc)
+		   (double
+		    'ea-for-df-desc)))
+	     (name (symbolicate op "/" size "-FLOAT"))
+	     (sc-type (symbolicate size "-REG"))
+	     (inherit (symbolicate size "-FLOAT-COMPARE")))
+	 `(define-vop (,name ,inherit)
+	    ,@(when swap-args-p
+		`((:args (x :scs (,sc-type descriptor-reg))
+			 (y :scs (,sc-type)))))
+	    (:translate ,op)
+	    (:info target not-p)
+	    (:generator 3
+	      ;; Note: x < y is the same as y > x.  We reverse the
+	      ;; args to reduce the number of jump instructions
+	      ;; needed.  Then the logic for the branches is the same
+	      ;; as for the case y > x above.
+	      (gen-code ,swap-args-p ,sc-type ,inst ,ea)
+	      (inst jmp (if (not not-p) :a :be) target))))))
+  (frob > single comiss nil)
+  (frob > double comisd nil)
+  (frob < single comiss t)
+  (frob < double comisd t))
 
 
 ;;;; Conversion:
