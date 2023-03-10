@@ -978,7 +978,7 @@
   (frob > double comisd))
 
 (macrolet
-    ((frob (op size inst mover)
+    ((frob (op size inst)
        (let ((ea (ecase size
 		   (single
 		    'ea-for-sf-desc)
@@ -1004,8 +1004,8 @@
 		(descriptor-reg
 		 (inst ,inst y (,ea x))))
 	      (inst jmp (if (not not-p) :a :be) target))))))
-  (frob < single comiss movss)
-  (frob < double comisd movsd))
+  (frob < single comiss)
+  (frob < double comisd))
 
 
 ;;;; Conversion:
