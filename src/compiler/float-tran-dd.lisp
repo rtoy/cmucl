@@ -670,7 +670,7 @@
 
 (declaim (inline dd<=))
 (defun dd<= (a0 a1 b0 b1)
-  (or (dd> a0 a1 b0 b1)
+  (or (dd< a0 a1 b0 b1)
       (dd= a0 a1 b0 b1)))
 
 (declaim (inline dd>=))
@@ -699,15 +699,15 @@
 	(kernel:double-double-lo b)))
 
 (deftransform <= ((a b) (vm::double-double-float vm::double-double-float) *)
-  `(dd<= (kernel:double-double-hi b)
-	 (kernel:double-double-lo b)
-	 (kernel:double-double-hi a)
-	 (kernel:double-double-lo a)))
+  `(dd<= (kernel:double-double-hi a)
+	 (kernel:double-double-lo a)
+	 (kernel:double-double-hi b)
+	 (kernel:double-double-lo b)))
 
 
 (deftransform >= ((a b) (vm::double-double-float vm::double-double-float) *)
-  `(dd>= (kernel:double-double-hi b)
-	 (kernel:double-double-lo b)
-	 (kernel:double-double-hi a)
-	 (kernel:double-double-lo a)))
+  `(dd>= (kernel:double-double-hi a)
+	 (kernel:double-double-lo a)
+	 (kernel:double-double-hi b)
+	 (kernel:double-double-lo b)))
 ) ; end progn
