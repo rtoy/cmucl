@@ -1042,7 +1042,7 @@
 	       (inst ,inst x y))
 	      (descriptor-reg
 	       (inst ,inst x (,ea y))))))
-     (frob (op size inst swap-args-p)
+     (frob (op size inst)
        (let ((ea (ecase size
 		   (single
 		    'ea-for-sf-desc)
@@ -1081,10 +1081,10 @@
 	      ;; For the case of x < y, we can use the equivalent y >
 	      ;; x.  Thus if we swap the args, the same logic applies.
 	      (inst jmp (if (not not-p) :a :be) target))))))
-  (frob > single comiss nil)
-  (frob > double comisd nil)
-  (frob < single comiss t)
-  (frob < double comisd t))
+  (frob > single comiss)
+  (frob > double comisd)
+  (frob < single comiss)
+  (frob < double comisd))
 
 
 ;;;; Conversion:
