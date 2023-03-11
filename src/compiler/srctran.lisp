@@ -3540,24 +3540,46 @@
 
 #+x86
 (progn
-  ;; When x and y are integers, we want to transform <= to > and >= to
-  ;; <.  But we don't want to do this for floats because it messes up
-  ;; comparisons with NaN.
-  ;;
-  ;; I'm not sure about this.  The transformation is right, but
-  ;; perhaps what we really need is an ir-transform-<= to determine x
-  ;; <= y is definitely true or false, like for ir1-transform-<.
-  ;;
-  ;; For now this allows the testsuite to pass.  Perhaps there's a bug
-  ;; in generic->=?
-  (deftransform <= ((x y) (integer integer) * :when :both)
-    ;; (<= x y) is the same as (not (> x y))
-    `(not (> x y)))
+  (defun ir1-transform->=-helper (x y)
+    (flet ((maybe-convert (type)
+	     (numeric-type->interval
+	      (cond ((numeric-type-p type) type)
+		    ((member-type-p type) (convert-member-type type))
+		    (t (give-up))))))
+      (let ((xi (mapcar #'maybe-convert
+			(prepare-arg-for-derive-type (continuation-type x))))
+	    (yi (mapcar #'maybe-convert
+			(prepare-arg-for-derive-type (continuation-type y))))
+	    (definitely-true t)
+	    (definitely-false t))
+	(dolist (x-arg xi)
+	  (dolist (y-arg yi)
+	    (setf definitely-true (and definitely-true
+				       (interval->= x-arg y-arg)))
+	    (setf definitely-false (and definitely-false
+					(interval-< x-arg y-arg)))))
+	(values definitely-true definitely-false))))
 
+  (defun ir1-transform->= (x y first second inverse)
+    (if (same-leaf-ref-p x y)
+	't
+	(multiple-value-bind (definitely-true definitely-false)
+	    (ir1-transform->=-helper x y)
+	  (cond (definitely-true
+		    t)
+		(definitely-false
+		    nil)
+		((and (constant-continuation-p first)
+                      (not (constant-continuation-p second)))
+		 `(,inverse y x))
+		(t
+		 (give-up))))))
+  
+  (deftransform <= ((x y) (integer integer) * :when :both)
+    (ir1-transform->= y x x y '>=))
   
   (deftransform >= ((x y) (integer integer) * :when :both)
-    ;; (>= x y) is the same as (not (< x y))
-    `(not (< x y))))
+    (ir1-transform->= x y x y '<=)))
 
 
 ;; Like IR1-TRANSFORM-< but for CHAR<.  This is needed so that the
