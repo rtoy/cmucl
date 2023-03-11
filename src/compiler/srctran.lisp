@@ -3537,6 +3537,29 @@
 (deftransform > ((x y) (real real) * :when :both)
   (ir1-transform-< y x x y '<))
 
+
+#+x86
+(progn
+  ;; When x and y are integers, we want to transform <= to > and >= to
+  ;; <.  But we don't want to do this for floats because it messes up
+  ;; comparisons with NaN.
+  ;;
+  ;; I'm not sure about this.  The transformation is right, but
+  ;; perhaps what we really need is an ir-transform-<= to determine x
+  ;; <= y is definitely true or false, like for ir1-transform-<.
+  ;;
+  ;; For now this allows the testsuite to pass.  Perhaps there's a bug
+  ;; in generic->=?
+  (deftransform <= ((x y) (integer integer) * :when :both)
+    ;; (<= x y) is the same as (not (> x y))
+    `(not (> x y)))
+
+  
+  (deftransform >= ((x y) (integer integer) * :when :both)
+    ;; (>= x y) is the same as (not (< x y))
+    `(not (< x y))))
+
+
 ;; Like IR1-TRANSFORM-< but for CHAR<.  This is needed so that the
 ;; vops for base-char comparison with a constant gets used when the
 ;; first arg is the constant.
