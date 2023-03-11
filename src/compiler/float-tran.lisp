@@ -568,7 +568,7 @@
   (%deftransform x '(function (rational float) *) #'float-contagion-arg1)
   (%deftransform x '(function (float rational) *) #'float-contagion-arg2))
 
-(dolist (x '(= < > + * / -))
+(dolist (x '(= < > + * / - #+x86 <= #+x86 >=))
   (%deftransform x '(function (single-float double-float) *)
 		 #'float-contagion-arg1)
   (%deftransform x '(function (double-float single-float) *)
@@ -591,7 +591,11 @@
 		`(,',op x (float y x)))))
   (frob <)
   (frob >)
-  (frob =))
+  (frob =)
+  #+x86
+  (frob <=)
+  #+x86
+  (frob >=))
 
 ;; Convert (/ x n) to (* x (/ n)) when x is a float and n is a power
 ;; of two, because (/ n) can be reprsented exactly.
