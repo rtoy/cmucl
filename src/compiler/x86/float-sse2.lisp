@@ -945,23 +945,7 @@
   (frob double ucomisd))
 
 (macrolet
-    ((gen-code (op sc-type inst ea)
-       ;; When the operation is >, the second arg (y) can be a
-       ;; register or a descriptor.  When the operation is <, the args
-       ;; are swapped and we want to allow x to be a register or
-       ;; descriptor.
-       (if (eq op '<)
-	   `(sc-case x
-	      (,sc-type
-	       (inst ,inst y x))
-	      (descriptor-reg
-	       (inst ,inst y (,ea x))))
-	   `(sc-case y
-	      (,sc-type
-	       (inst ,inst x y))
-	      (descriptor-reg
-	       (inst ,inst x (,ea y))))))
-     (frob (op size inst)
+    ((frob (op size inst)
        (let ((ea (ecase size
 		   (single
 		    'ea-for-sf-desc)
@@ -969,21 +953,32 @@
 		    'ea-for-df-desc)))
 	     (name (symbolicate op "/" size "-FLOAT"))
 	     (sc-type (symbolicate size "-REG"))
-	     (inherit (symbolicate size "-FLOAT-COMPARE")))
+	     (inherit (symbolicate size "-FLOAT-COMPARE"))
+	     (reverse-args-p (eq op '<)))
 	 `(define-vop (,name ,inherit)
-	    ;; When the operation is <, we want to rewrite x < y to y
-	    ;; > x.  In that case, we want to allow x to be in a
-	    ;; descriptor.  For >, y is allowed to be a descriptor.
-	    ,@(when (eq op '<)
-		`((:args (x :scs (,sc-type descriptor-reg))
-			 (y :scs (,sc-type)))))
+	    ;; The compare instructions take a reg argument for the
+	    ;; first arg and reg or mem argument for the second.  When
+	    ;; inverting the arguments we must also invert which of
+	    ;; the argument can be a mem argument.
+	    (:args (x :scs (,sc-type ,@(when reverse-args-p 'descriptor-reg)))
+		   (y :scs (,sc-type ,@(unless reverse-args-p 'descriptor-reg))))
 	    (:translate ,op)
 	    (:info target not-p)
 	    (:generator 3
 	      ;; Note: x < y is the same as y > x.  We reverse the
 	      ;; args to reduce the number of jump instructions
 	      ;; needed.
-	      (gen-code ,op ,sc-type ,inst ,ea)
+	      ,(if reverse-args-p
+		   `(sc-case x
+		      (,sc-type
+		       (inst ,inst y x))
+		      (descriptor-reg
+		       (inst ,inst y (,ea x))))
+		   `(sc-case y
+		      (,sc-type
+		       (inst ,inst x y))
+		      (descriptor-reg
+		       (inst ,inst x (,ea y)))))
 	      ;; Consider the case of x > y.
 	      ;;
 	      ;; When a NaN occurs, comis sets ZF, PF, and CF = 1.  In
