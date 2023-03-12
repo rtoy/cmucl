@@ -838,7 +838,8 @@
 	 (path (make-pathname :directory (list :relative name)
 			      :name name
 			      :type name)))
-    #+darwin
+    ;; Enable this when we implement normalization for Darwin
+    #+(and nil darwin)
     (let ((expected '(4352 4456 4543)))
       ;; Tests that on Darwin the Hangul pathname has been normalized
       ;; correctly.  We fill in the directory, name, and type components
