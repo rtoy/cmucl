@@ -72,4 +72,14 @@
 			       :directory '(:absolute "system2" "module4")
 			       :name nil :type nil)
 		(parse-namestring "ASDFTEST:system2;module4;"))))
-  
+
+
+
+(define-test directory.dirs
+  (let ((files (directory "src/assembly/**/")))
+    ;; Verify that we only returned directories
+    (loop for f in files
+	  for name = (pathname-name f)
+	  and type = (pathname-type f)
+	  do
+	     (assert-true (and (null name) (null type)) f))))

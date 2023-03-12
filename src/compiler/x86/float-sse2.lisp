@@ -945,7 +945,7 @@
   (frob double ucomisd))
 
 (macrolet
-    ((frob (op size inst yep nope)
+    ((frob (op size inst)
        (let ((ea (ecase size
 		   (single
 		    'ea-for-sf-desc)
@@ -953,28 +953,52 @@
 		    'ea-for-df-desc)))
 	     (name (symbolicate op "/" size "-FLOAT"))
 	     (sc-type (symbolicate size "-REG"))
-	     (inherit (symbolicate size "-FLOAT-COMPARE")))
+	     (inherit (symbolicate size "-FLOAT-COMPARE"))
+	     (reverse-args-p (eq op '<)))
 	 `(define-vop (,name ,inherit)
+	    ;; The compare instructions take a reg argument for the
+	    ;; first arg and reg or mem argument for the second.  When
+	    ;; inverting the arguments we must also invert which of
+	    ;; the argument can be a mem argument.
+	    (:args (x :scs (,sc-type ,@(when reverse-args-p 'descriptor-reg)))
+		   (y :scs (,sc-type ,@(unless reverse-args-p 'descriptor-reg))))
 	    (:translate ,op)
 	    (:info target not-p)
 	    (:generator 3
-	      (sc-case y
-		(,sc-type
-		 (inst ,inst x y))
-		(descriptor-reg
-		 (inst ,inst x (,ea y))))
-	      (cond (not-p
-		     (inst jmp :p target)
-		     (inst jmp ,nope target))
-		    (t
-		     (let ((not-lab (gen-label)))
-		       (inst jmp :p not-lab)
-		       (inst jmp ,yep target)
-		       (emit-label not-lab)))))))))
-  (frob < single comiss :b :nb)
-  (frob > single comiss :a :na)
-  (frob < double comisd :b :nb)
-  (frob > double comisd :a :na))
+	      ;; Note: x < y is the same as y > x.  We reverse the
+	      ;; args to reduce the number of jump instructions
+	      ;; needed.
+	      ,(if reverse-args-p
+		   `(sc-case x
+		      (,sc-type
+		       (inst ,inst y x))
+		      (descriptor-reg
+		       (inst ,inst y (,ea x))))
+		   `(sc-case y
+		      (,sc-type
+		       (inst ,inst x y))
+		      (descriptor-reg
+		       (inst ,inst x (,ea y)))))
+	      ;; Consider the case of x > y.
+	      ;;
+	      ;; When a NaN occurs, comis sets ZF, PF, and CF = 1.  In
+	      ;; the normal case (not-p false), we want to jump to the
+	      ;; target when x > y.  This happens when CF = 0.  Hence,
+	      ;; we won't jump to the target when there's a NaN, as
+	      ;; desired.
+	      ;;
+	      ;; For the not-p case, we want to jump to target when x
+	      ;; <= y.  This means CF = 1 or ZF = 1.  But NaN sets
+	      ;; these bits too, so we jump to the target for NaN or x
+	      ;; <= y, as desired.
+	      ;;
+	      ;; For the case of x < y, we can use the equivalent y >
+	      ;; x.  Thus if we swap the args, the same logic applies.
+	      (inst jmp (if (not not-p) :a :be) target))))))
+  (frob > single comiss)
+  (frob > double comisd)
+  (frob < single comiss)
+  (frob < double comisd))
 
 
 
