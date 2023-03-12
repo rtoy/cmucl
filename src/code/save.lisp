@@ -316,17 +316,6 @@
 	     ;; we've possibly changed the environment variables and
 	     ;; pathnames.
 	     (environment-init)
-	     #+darwin
-	     (progn
-	       ;; Get some unicode stuff needed for decomposing strings.
-	       ;; This is needed on Darwin to normalize pathname
-	       ;; objects, which needs this information.  If we don't,
-	       ;; we'll load the information at runtime when creating
-	       ;; the path to "unidata.dat", which then calls decompose
-	       ;; again, and so on.
-	       (lisp::load-decomp)
-	       (lisp::load-combining)
-	       (setf *enable-darwin-path-normalization* t))
 	     ;; Set the locale for lisp
 	     (intl::setlocale)
 	     (ext::process-command-strings process-command-line)
