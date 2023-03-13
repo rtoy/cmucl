@@ -199,9 +199,7 @@
 			  (alien:extern-alien "os_software_type"
 					      (function (alien:* c-call:c-string)))))
 		   (unless (zerop (sap-int (alien:alien-sap software-type)))
-		     (alien:cast software-type c-call:c-string)))
-	      (when software-type
-		(alien:free-alien software-type))))))
+		     (alien:cast software-type c-call:c-string)))))))
   *software-type*)
 
 (defvar *software-version* nil
@@ -219,9 +217,7 @@
 			  (alien:extern-alien "os_software_version"
 					      (function (alien:* c-call:c-string)))))
 		   (unless (zerop (sap-int (alien:alien-sap version)))
-		     (alien:cast version c-call:c-string)))
-	      (when version
-		(alien:free-alien version)))))
+		     (alien:cast version c-call:c-string))))))
     *software-version*))
 
 (defvar *short-site-name* (intl:gettext "Unknown")

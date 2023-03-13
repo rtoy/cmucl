@@ -817,43 +817,47 @@ os_get_locale_codeset()
 #endif 
 
 char*
-os_software_version()
+os_software_version(void)
 {
-    int status;
     struct utsname uts;
-    char *version = NULL;
+    /*
+     * Buffer large enough to hold the release and version that's used
+     * for Linux and Solaris.
+     */
+    static char result[sizeof(uts.release) + sizeof(uts.version)]; 
+
+    int status;
 
     status = uname(&uts);
-    if (status == 0) {
-        int version_length;
-#if defined(UNAME_RELEASE_AND_VERSION)
-        version_length = strlen(uts.release) + strlen(uts.version) + 2;
-        version = malloc(version_length);
-        if (version) {
-            strcpy(version, uts.release);
-            strcat(version, " ");
-            strcat(version, uts.version);
-        }
-#else
-        version = strdup(uts.version);
-#endif
+    if (status != 0) {
+        return NULL;
     }
+    
+#if defined(UNAME_RELEASE_AND_VERSION)
+    strcpy(result, uts.release);
+    strcat(result, " ");
+    strcat(result, uts.version);
+#else
+    strcpy(result, uts.version);
+#endif
 
-    return version;
+    return result;
 }
 #undef UNAME_RELEASE_AND_VERSION
 
 char*
-os_software_type()
+os_software_type(void)
 {
     int status;
     struct utsname uts;
-    char *os_name = NULL;
+    static char os_name[sizeof(uts.sysname)];
     
     status = uname(&uts);
-    if (status == 0) {
-        os_name = strdup(uts.sysname);
+    if (status != 0) {
+        return NULL;
     }
+    
+    strcpy(os_name, uts.sysname);
 
     return os_name;
 }
