@@ -1027,7 +1027,10 @@
 							  :type :version))
   boolean
   (flushable))
-(defknown pathname-match-p (pathnamelike pathnamelike) boolean
+(defknown pathname-match-p (pathnamelike pathnamelike)
+  ;; CLHS says the return type is a generalized boolean.  We currently
+  ;; return a pathname on a match.
+  (or null pathname)
   (flushable))
 (defknown translate-pathname (pathnamelike pathnamelike pathnamelike &key)
   pathname
