@@ -76,6 +76,7 @@ public domain.
     * ~~#168~~ Don't use negated forms for jmp instructions when possible
     * ~~#169~~ Add pprinter for `define-vop` and `sc-case`
     * ~~#173~~ Add pprinter for `define-assembly-routine`
+    * ~~#176~~ `SHORT-SITE-NAME` and `LONG-SITE-NAME` return `NIL`.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
