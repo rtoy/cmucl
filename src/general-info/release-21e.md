@@ -49,6 +49,7 @@ public domain.
     * ~~#108~~ Update ASDF
     * ~~#112~~ CLX can't connect to X server via inet sockets
     * ~~#113~~ REQUIRE on contribs can pull in the wrong things via ASDF.
+    * ~~#120~~ `SOFTWARE-TYPE` and `SOFTWARE-VERSION` are implemented in C.
     * ~~#121~~ Wrong column index in FILL-POINTER-OUTPUT-STREAM
     * ~~#122~~ gcc 11 can't build cmucl
     * ~~#124~~ directory with `:wild-inferiors` doesn't descend subdirectories 
