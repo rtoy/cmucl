@@ -1038,7 +1038,7 @@
 ;; issue #156.
 #+x86
 (progn
-  (two-arg-</> two-arg-<= <= floor ceiling
+  (two-arg-</> two-arg-<= <= ceiling floor
 	       ((fixnum bignum)
 		(bignum-plus-p y))
 	       ((bignum fixnum)
@@ -1046,7 +1046,7 @@
 	       ((bignum bignum)
 		(not (plusp (bignum-compare x y)))))
 
-  (two-arg-</> two-arg->= >= ceiling floor
+  (two-arg-</> two-arg->= >= floor ceiling
 	       ((fixnum bignum)
 		(not (bignum-plus-p y)))
 	       ((bignum fixnum)
