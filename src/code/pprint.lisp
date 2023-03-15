@@ -2074,7 +2074,9 @@ When annotations are present, invoke them at the right positions."
     (lisp::with-array-data pprint-with-like)
     (c:define-vop pprint-define-vop)
     (c:sc-case pprint-sc-case)
-    (c:define-assembly-routine pprint-define-assembly)))
+    (c:define-assembly-routine pprint-define-assembly)
+    (c:deftransform pprint-defun)
+    (c:defoptimizer pprint-defun)))
 
 (defun pprint-init ()
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))
