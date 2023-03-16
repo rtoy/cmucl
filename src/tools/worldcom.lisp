@@ -211,6 +211,7 @@
 (comf "target:code/unidata")
 (comf "target:code/char")
 (comf "target:code/misc")
+(comf "target:code/misc-doc")
 (comf "target:code/extensions" :byte-compile t)
 (comf "target:code/commandline")
 (comf "target:code/env-access")
