@@ -3537,6 +3537,11 @@
 (deftransform > ((x y) (real real) * :when :both)
   (ir1-transform-< y x x y '<))
 
+;;; Ir1-transform->=-helper -- Internal
+;;;
+;;; Derives the result type of the comparison X >= Y returning two
+;;; values: the first true if X >= Y, and the second true if X < Y.
+;;; This is the equivalent of ir1-transform-<-helper, but for >=.
 #+(and x86)
 (defun ir1-transform->=-helper (x y)
   (flet ((maybe-convert (type)
@@ -3558,34 +3563,33 @@
 				      (interval-< x-arg y-arg)))))
       (values definitely-true definitely-false))))
 
+;;; IR1-TRANSFORM->= -- Internal
+;;;
+;;;   Like IR1-TRANSFORM-< but for >=.  This is needed so that the
+;;; compiler can statically determine (>= X Y) using type information.
 #+(and x86)
 (defun ir1-transform->= (x y first second inverse)
-    (if (same-leaf-ref-p x y)
-	't
-	(multiple-value-bind (definitely-true definitely-false)
-	    (ir1-transform->=-helper x y)
-	  (cond (definitely-true
-		    t)
-		(definitely-false
-		    nil)
-		((and (constant-continuation-p first)
-                      (not (constant-continuation-p second)))
-		 #+nil
-		 (format t "swapping ~A~%" inverse)
-		 `(,inverse y x))
-		(t
-		 (give-up))))))
+  ;; If the leaves are the same, the (>= X Y) is true.
+  (if (same-leaf-ref-p x y)
+      't
+      (multiple-value-bind (definitely-true definitely-false)
+	  (ir1-transform->=-helper x y)
+	(cond (definitely-true
+		  t)
+	      (definitely-false
+		  nil)
+	      ((and (constant-continuation-p first)
+                    (not (constant-continuation-p second)))
+	       `(,inverse y x))
+	      (t
+	       (give-up))))))
 
 #+(and x86)
 (deftransform <= ((x y) (real real) * :when :both)
-  #+nli
-  (format t "transform <=~%")
   (ir1-transform->= y x x y '>=))
 
 #+(and  x86)
 (deftransform >= ((x y) (real real) * :when :both)
-  #+nil
-  (format t "transform >=~%")
   (ir1-transform->= x y x y '<=))
 
 
@@ -3605,7 +3609,6 @@
     ;; (<= x y) is the same as (not (> x y))
     `(not (> x y)))
 
-  
   (deftransform >= ((x y) (integer integer) * :when :both)
     ;; (>= x y) is the same as (not (< x y))
     `(not (< x y))))
