@@ -75,6 +75,7 @@ public domain.
     * ~~#167~~ Lowe bound for `decode-float-exponent` type was off by one.
     * ~~#168~~ Don't use negated forms for jmp instructions when possible
     * ~~#169~~ Add pprinter for `define-vop` and `sc-case`
+    * ~~#172~~ Declare `pathname-match-p` as returning a null or pathname
     * ~~#173~~ Add pprinter for `define-assembly-routine`
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
