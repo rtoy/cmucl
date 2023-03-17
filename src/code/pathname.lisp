@@ -121,66 +121,81 @@
 (defun %print-pathname (pathname stream depth)
   (declare (ignore depth))
   (let* ((host (%pathname-host pathname))
+	 (device (%pathname-device pathname))
+	 (directory (%pathname-directory pathname))
+	 (name (%pathname-name pathname))
+	 (type (%pathname-type pathname))
+	 (version (%pathname-version pathname))
+	 (unspecific-p (or (eq device :unspecific)
+			   (eq name :unspecific)
+			   (eq type :unspecific)
+			   (eq version :unspecific)))
 	 (namestring (if host
 			 (handler-case (namestring pathname)
 			   (error nil))
 			 nil)))
-    (cond (namestring
+    ;; A pathname with :UNSPECIFIC components has a namestring that
+    ;; ignores :UNSPECIFIC (and NIL).  Thus the namestring exists, but
+    ;; we want to use our special syntax to print the pathname
+    ;; readably when :UNSPECIFIC occurs.
+    (cond ((and namestring (not unspecific-p))
 	   (if (or *print-escape* *print-readably*)
 	       (format stream "#P~S" namestring)
 	       (format stream "~A" namestring)))
 	  (t
-	   (let ((device (%pathname-device pathname))
-		 (directory (%pathname-directory pathname))
-		 (name (%pathname-name pathname))
-		 (type (%pathname-type pathname))
-		 (version (%pathname-version pathname)))
-	     (cond ((every #'(lambda (d)
-			       (or (stringp d)
-				   (symbolp d)))
-			   (cdr directory))
-		    ;; A CMUCL extension.  If we have an unprintable
-		    ;; pathname, convert it to a form that would be
-		    ;; suitable as args to MAKE-PATHNAME to recreate
-		    ;; the pathname.
-		    ;;
-		    ;; We don't handle search-lists because we don't
-		    ;; currently have a readable syntax for
-		    ;; search-lists.
-		    (collect ((result))
-		      (unless (eq host *unix-host*)
-			(result :host)
-			(result (if host
-				    (pathname-host pathname)
-				    nil)))
-		      (when device
-			(result :device)
-			(result device))
-		      (when directory
-			(result :directory)
-			(result directory))
-		      (when name
-			(result :name)
-			(result name))
-		      (when type
-			(result :type)
-			(result type))
-		      (when version
-			(result :version)
-			(result version))
-		      (format stream "#P~S" (result))))
-		   (*print-readably*
-		    (error 'print-not-readable :object pathname))
-		   (t
-		    (funcall (formatter "#<Unprintable pathname,~:_ Host=~S,~:_ Device=~S,~:_ ~
+	   (cond ((and
+		   ;; We only use the extension if the pathname does
+		   ;; not contain a pattern object which doesn't print
+		   ;; readably.  Search-lists, which are part of the
+		   ;; directory component, are excluded too.
+		   (not (typep name 'pattern))
+		   (not (typep type 'pattern))
+		   (every #'(lambda (d)
+			      (or (stringp d)
+				  (symbolp d)))
+			  (cdr directory)))
+		  ;; A CMUCL extension.  If we have an unprintable
+		  ;; pathname, convert it to a form that would be
+		  ;; suitable as args to MAKE-PATHNAME to recreate
+		  ;; the pathname.
+		  ;;
+		  ;; We don't handle search-lists because we don't
+		  ;; currently have a readable syntax for
+		  ;; search-lists.
+		  (collect ((result))
+		    (unless (eq host *unix-host*)
+		      (result :host)
+		      (result (if host
+				  (pathname-host pathname)
+				  nil)))
+		    (when device
+		      (result :device)
+		      (result device))
+		    (when directory
+		      (result :directory)
+		      (result directory))
+		    (when name
+		      (result :name)
+		      (result name))
+		    (when type
+		      (result :type)
+		      (result type))
+		    (when version
+		      (result :version)
+		      (result version))
+		    (format stream "#P~S" (result))))
+		 (*print-readably*
+		  (error 'print-not-readable :object pathname))
+		 (t
+		  (funcall (formatter "#<Unprintable pathname,~:_ Host=~S,~:_ Device=~S,~:_ ~
 				Directory=~S,~:_ Name=~S,~:_ Type=~S,~:_ Version=~S>")
-			     stream
-			     (%pathname-host pathname)
-			     (%pathname-device pathname)
-			     (%pathname-directory pathname)
-			     (%pathname-name pathname)
-			     (%pathname-type pathname)
-			     (%pathname-version pathname)))))))))
+			   stream
+			   (%pathname-host pathname)
+			   (%pathname-device pathname)
+			   (%pathname-directory pathname)
+			   (%pathname-name pathname)
+			   (%pathname-type pathname)
+			   (%pathname-version pathname)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
