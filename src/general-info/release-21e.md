@@ -57,7 +57,7 @@ public domain.
     * ~~#127~~ Linux unix-getpwuid segfaults when given non-existent uid.
     * ~~#128~~ `QUIT` accepts an exit code
     * ~~#130~~ Move file-author to C 
-    * ~~#132~~ Ansi test `RENAME-FILE.1` no fails
+    * ~~#132~~ Ansi test `RENAME-FILE.1` no longer fails
     * ~~#134~~ Handle the case of `(expt complex complex-rational)`
     * ~~#136~~ `ensure-directories-exist` should return the given pathspec
     * #139 `*default-external-format*` defaults to `:utf-8`; add alias for `:locale` external format
@@ -66,7 +66,18 @@ public domain.
     * ~~#142~~ `(random 0)` signals incorrect error
     * ~~#147~~ `stream-line-column` method missing for `fundamental-character-output-stream`
     * ~~#149~~ Call setlocale(3C) on startup
+    * ~~#150~~ Add aliases for external format cp949 and euckr
+    * ~~#151~~ Change `*default-external-format*` to `:utf-8`.
     * ~~#155~~ Wrap help strings neatly
+    * ~~#157~~ `(directory "foo/**/")` only returns directories now
+    * ~~#163~~ Add command-line option `-version` and `--version` to get lisp version
+    * ~~#165~~ Avoid inserting NIL into simple `LOOP` from `FORMAT`
+    * ~~#166~~ Fix incorrect type declaration for exponent from `integer-decode-float`
+    * ~~#167~~ Low bound for `decode-float-exponent` type was off by one.
+    * ~~#168~~ Don't use negated forms for jmp instructions when possible
+    * ~~#169~~ Add pprinter for `define-vop` and `sc-case`
+    * ~~#172~~ Declare `pathname-match-p` as returning `nil` or `pathname`.
+    * ~~#173~~ Add pprinter for `define-assembly-routine`
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
