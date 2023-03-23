@@ -5632,7 +5632,7 @@ msgid "Returns a string giving the name of the local machine."
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp."
+msgid "The value of SOFTWARE-TYPE."
 msgstr ""
 
 #: src/code/misc.lisp
@@ -5640,11 +5640,15 @@ msgid "Returns a string describing the supporting software."
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
+msgid "Version string for supporting software"
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "Unknown"
+msgid "Returns a string describing version of the supporting software."
+msgstr ""
+
+#: src/code/misc.lisp
+msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
 msgstr ""
 
 #: src/code/misc.lisp
@@ -5653,10 +5657,6 @@ msgstr ""
 
 #: src/code/misc.lisp
 msgid "The value of LONG-SITE-NAME.  Set in library:site-init.lisp."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid "Site name not initialized"
 msgstr ""
 
 #: src/code/misc.lisp
