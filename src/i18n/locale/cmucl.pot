@@ -5605,17 +5605,6 @@ msgid ""
 "  NIL if no such character exists."
 msgstr ""
 
-#: src/code/misc-doc.lisp src/code/misc.lisp
-msgid ""
-"Returns the documentation string of Doc-Type for X, or NIL if\n"
-"  none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,\n"
-"  SETF, and T."
-msgstr ""
-
-#: src/code/misc-doc.lisp src/code/misc.lisp
-msgid "~S is not the name of a structure type."
-msgstr ""
-
 #: src/code/misc.lisp
 msgid ""
 "If X is an atom, see if it is present in *FEATURES*.  Also\n"
@@ -5643,19 +5632,11 @@ msgid "Returns a string giving the name of the local machine."
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "The value of SOFTWARE-TYPE."
+msgid "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp."
 msgstr ""
 
 #: src/code/misc.lisp
 msgid "Returns a string describing the supporting software."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid "Version string for supporting software"
-msgstr ""
-
-#: src/code/misc.lisp
-msgid "Returns a string describing version of the supporting software."
 msgstr ""
 
 #: src/code/misc.lisp
@@ -5707,6 +5688,17 @@ msgid ""
 "  it is not already compiled, the compiler is called to produce something "
 "to\n"
 "  disassemble."
+msgstr ""
+
+#: src/code/misc-doc.lisp
+msgid ""
+"Returns the documentation string of Doc-Type for X, or NIL if\n"
+"  none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,\n"
+"  SETF, and T."
+msgstr ""
+
+#: src/code/misc-doc.lisp
+msgid "~S is not the name of a structure type."
 msgstr ""
 
 #: src/code/extensions.lisp

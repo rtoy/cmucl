@@ -117,14 +117,14 @@
 		     (alien:cast version c-call:c-string))))))
     *software-version*))
 
-(defvar *short-site-name* (intl:gettext "Unknown")
+(defvar *short-site-name* nil
   "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp.")
 
 (defun short-site-name ()
   "Returns a string with the abbreviated site name."
   *short-site-name*)
 
-(defvar *long-site-name* (intl:gettext "Site name not initialized")
+(defvar *long-site-name* nil
   "The value of LONG-SITE-NAME.  Set in library:site-init.lisp.")
 
 (defun long-site-name ()
