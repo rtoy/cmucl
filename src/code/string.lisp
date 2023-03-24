@@ -1117,9 +1117,9 @@
 		 (multiple-value-bind (code wide) (codepoint string i)
 		   (when wide (incf i))
 		   (if (and darwinp
-			    (or (or (<= #x2000 code #x2fff)
-				    (<= #xf900 code #xfa6a)
-				    (<= #x2f800 code #x2fa1d))))
+			    (or (<= #x2000 code #x2fff)
+				(<= #xf900 code #xfa6a)
+				(<= #x2f800 code #x2fa1d)))
 		       (out code)
 		       (let ((decomp (unicode-decomp code compatibility)))
 			 (if decomp (rec decomp 0 (length decomp)) (out code)))))))
