@@ -202,7 +202,7 @@
 				 (site-init "library:site-init")
 				 (print-herald t)
 				 (process-command-line t)
-		                  #+:executable
+		                 #+:executable
 		                 (executable nil)
 				 (batch-mode nil)
 				 (quiet nil))
