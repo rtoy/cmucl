@@ -517,3 +517,55 @@
       (if (eq casing :simple)
 	  (cl:string-capitalize string :start start :end end)
 	  (string-capitalize-full string :start start :end end :casing casing))))
+
+
+(defun decompose-hangul-syllable (cp stream)
+  "Decompose the Hangul syllable codepoint CP to an equivalent sequence
+  of conjoining jamo and print the decomposed result to the stream
+  STREAM."
+  (let* ((s-base #xac00)
+	 (l-base #x1100)
+	 (v-base #x1161)
+	 (t-base #x11a7)
+	 (v-count 21)
+	 (t-count 28)
+	 (n-count (* v-count t-count)))
+    ;; Step 1: Compute index of the syllable S
+    (let ((s-index (- cp s-base)))
+      ;; Step 2: If s is in the range 0 <= s <= s-count, the compute
+      ;; the components.
+      (let ((l (+ l-base (truncate s-index n-count)))
+	    (v (+ v-base (truncate (mod s-index n-count) t-count)))
+	    (tt (+ t-base (mod s-index t-count))))
+	;; Step 3: If tt = t-base, then there is no trailing character
+	;; so replace s by the sequence <l,v>.  Otherwise there is a
+	;; trailing character, so replace s by the sequence <l,v,tt>.
+	(princ (code-char l) stream)
+	(princ (code-char v) stream)
+	(unless (= tt t-base)
+	  (princ (code-char tt) stream)))))
+  (values))
+
+(defun is-hangul-syllable (codepoint)
+  "Test if CODEPOINT is a Hangul syllable"
+  (let* ((s-base #xac00)
+	 (l-count 19)
+	 (v-count 21)
+	 (t-count 28)
+	 (n-count (* v-count t-count))
+	 (number-of-syllables (* l-count n-count)))
+    (<= 0 (- codepoint s-base) number-of-syllables)))
+
+(defun decompose-hangul (string)
+  "Decompose any Hangul syllables in STRING to an equivalent sequence of
+  conjoining jamo characters."
+  (with-output-to-string (s)
+    (loop for cp being the codepoints of string
+	  do
+	     (if (is-hangul-syllable cp)
+		 (decompose-hangul-syllable cp s)
+		 (multiple-value-bind (high low)
+		     (surrogates cp)
+		   (princ high s)
+		   (when low
+		     (princ low s)))))))

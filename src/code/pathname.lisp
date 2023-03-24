@@ -252,6 +252,14 @@
 ;;; This constructor is used to make an instance of the correct type
 ;;; from parsed arguments.
 
+#+darwin
+(defvar *enable-darwin-path-normalization* nil
+  "When non-NIL, pathnames are on Darwin are normalized when created.
+  Otherwise, the pathnames are unchanged.
+
+  This must be NIL during bootstrapping because Unicode is not yet
+  available.")
+
 (defun %make-pathname-object (host device directory name type version)
   (if (typep host 'logical-host)
       (flet ((upcasify (thing)
@@ -271,7 +279,30 @@
 				(upcasify name)
 				(upcasify type)
 				(upcasify version)))
-      (%make-pathname host device directory name type version)))
+      #-darwin
+      (%make-pathname host device directory name type version)
+      #+darwin
+      (flet ((normalize-name (piece)
+	       ;; Normalize Darwin pathnames by converting Hangul
+	       ;; syllables to conjoining jamo, and converting the
+	       ;; string to NFD form, but skipping over a range of
+	       ;; characters.
+	       (typecase piece
+		 (string
+		  (if *enable-darwin-path-normalization*
+		      (decompose (unicode::decompose-hangul piece)
+				 :compatibility nil
+				 :darwinp t)
+		      piece))
+		 (t
+		  ;; What should we do about lisp::pattern objects
+		  ;; that occur in the name component?
+		  piece))))
+	(%make-pathname host device
+			(mapcar #'normalize-name directory)
+			(normalize-name name)
+			(normalize-name type)
+			version))))
 
 ;;; *LOGICAL-HOSTS* --internal.
 ;;;
