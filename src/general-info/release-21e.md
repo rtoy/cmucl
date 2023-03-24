@@ -67,8 +67,12 @@ public domain.
     * ~~#149~~ Call setlocale(3C) on startup
     * ~~#150~~ Add aliases for external format cp949 and euckr
     * ~~#151~~ Change `*default-external-format*` to `:utf-8`.
+    * ~~#152~~ Add new external format, `:locale` as an alias to the codeset from LANG and friends
+    * ~~#!53~~ Terminals default to an encoding of `:locale`
     * ~~#155~~ Wrap help strings neatly
     * ~~#157~~ `(directory "foo/**/")` only returns directories now
+    * #158 Darwin uses utf-8, but we don't support all the rules for pathnames.
+    * ~~#162~~ `*filename-encoding*` defaults to `:null` to mean no encoding.
     * ~~#163~~ Add command-line option `-version` and `--version` to get lisp version
     * ~~#165~~ Avoid inserting NIL into simple `LOOP` from `FORMAT`
     * ~~#166~~ Fix incorrect type declaration for exponent from `integer-decode-float`
@@ -78,6 +82,7 @@ public domain.
     * ~~#172~~ Declare `pathname-match-p` as returning `nil` or `pathname`.
     * ~~#173~~ Add pprinter for `define-assembly-routine`
     * ~~#176~~ `SHORT-SITE-NAME` and `LONG-SITE-NAME` return `NIL`.
+    * ~~#177~~ Add pprinter for `deftransform` and `defoptimizer`.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
