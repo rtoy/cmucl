@@ -101,8 +101,7 @@
 			 (alien:alien-funcall
 			  (alien:extern-alien "os_software_version"
 					      (function (alien:* c-call:c-string)))))
-		   (unless (zerop (sap-int (alien:alien-sap version)))
-		     (alien:cast version c-call:c-string))))))
+		   (alien:cast version c-call:c-string)))))
     *software-version*))
 
 (defvar *short-site-name* nil

@@ -828,19 +828,20 @@ os_software_version(void)
 
     int status;
 
+    strcpy(result, "Unknown");
+
     status = uname(&uts);
-    if (status != 0) {
-        return NULL;
-    }
+    if (status == 0) {
     
 #if defined(UNAME_RELEASE_AND_VERSION)
-    strcpy(result, uts.release);
-    strcat(result, " ");
-    strcat(result, uts.version);
+      strcpy(result, uts.release);
+      strcat(result, " ");
+      strcat(result, uts.version);
 #else
-    strcpy(result, uts.version);
+      strcpy(result, uts.version);
 #endif
-
+    }
+    
     return result;
 }
 #undef UNAME_RELEASE_AND_VERSION
