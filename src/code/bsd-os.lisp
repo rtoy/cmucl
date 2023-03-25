@@ -42,6 +42,12 @@
 #+executable
 (register-lisp-runtime-feature :executable)
 
+(setq *software-type* #+OpenBSD "OpenBSD"
+                      #+NetBSD "NetBSD"
+                      #+freebsd "FreeBSD"
+		      #+Darwin "Darwin"
+		      #-(or freebsd NetBSD OpenBSD Darwin) "BSD")
+
 
 ;;; OS-Init initializes our operating-system interface.  It sets the values
 ;;; of the global port variables to what they should be and calls the functions

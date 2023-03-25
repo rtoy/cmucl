@@ -26,6 +26,8 @@
 (register-lisp-feature :elf)
 (register-lisp-runtime-feature :executable)
 
+(setq *software-type* "Linux")
+
 ;;; OS-Init initializes our operating-system interface.
 ;;;
 (defun os-init ()

@@ -844,20 +844,3 @@ os_software_version(void)
     return result;
 }
 #undef UNAME_RELEASE_AND_VERSION
-
-char*
-os_software_type(void)
-{
-    int status;
-    struct utsname uts;
-    static char os_name[sizeof(uts.sysname)];
-    
-    status = uname(&uts);
-    if (status != 0) {
-        return NULL;
-    }
-    
-    strcpy(os_name, uts.sysname);
-
-    return os_name;
-}

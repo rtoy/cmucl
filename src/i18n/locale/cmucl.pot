@@ -5632,11 +5632,7 @@ msgid "Returns a string giving the name of the local machine."
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "The value of SOFTWARE-TYPE."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid "Returns a string describing the supporting software."
+msgid "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp."
 msgstr ""
 
 #: src/code/misc.lisp

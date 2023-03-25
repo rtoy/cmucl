@@ -31,6 +31,8 @@
 #+executable
 (register-lisp-runtime-feature :executable)
 
+(setq *software-type* "SunOS")
+
 ;;; OS-INIT -- interface.
 ;;;
 ;;; Other OS dependent initializations.
