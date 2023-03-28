@@ -2129,14 +2129,14 @@
     (let* ((seg (dstate-segment dstate))
 	   (code (seg-code seg))
 	   (woffs
-	     (bytes-to-words
-	      (segment-offs-to-code-offs (dstate-cur-offs dstate) seg)))
+	    (bytes-to-words
+	     (segment-offs-to-code-offs (dstate-cur-offs dstate) seg)))
 	   (name
-	     (kernel:code-header-ref code (+ woffs vm:function-name-slot)))
+	    (kernel:code-header-ref code (+ woffs vm:function-name-slot)))
 	   (args
-	     (kernel:code-header-ref code (+ woffs vm:function-arglist-slot)))
+	    (kernel:code-header-ref code (+ woffs vm:function-arglist-slot)))
 	   (type
-	     (kernel:code-header-ref code (+ woffs vm:function-type-slot))))
+	    (kernel:code-header-ref code (+ woffs vm:function-type-slot))))
       #+x86
       (format stream ".~a ~a~%"
 	      'intel_syntax 'noprefix)
@@ -2377,8 +2377,6 @@
 			      (ignore dstate))
 		     (when stream
 		       (pprint-logical-block (stream nil :prefix "/* " :suffix " */")
-			 #+nil
-			 (write-string ";;; " stream)
 			 (etypecase comment
 			   (string
 			    (write-string comment stream))
@@ -2462,11 +2460,7 @@
   (declare (type stream stream)
 	   (type disassem-state dstate))
   (with-print-restrictions
-      (let (#+nil
-	    (*print-lines* 4)
-	  #+nil(*print-length* 16)
-	  #+nil(*print-level* 5)
-	  (*print-right-margin* 100))
+    (let ((*print-right-margin* 100))
       (dolist (note (dstate-notes dstate))
 	(format stream "~vt" *note-column*)
 	(pprint-logical-block (stream nil :prefix "/* " :suffix " */")
