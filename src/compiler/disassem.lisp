@@ -2129,15 +2129,22 @@
     (let* ((seg (dstate-segment dstate))
 	   (code (seg-code seg))
 	   (woffs
-	    (bytes-to-words
-	     (segment-offs-to-code-offs (dstate-cur-offs dstate) seg)))
+	     (bytes-to-words
+	      (segment-offs-to-code-offs (dstate-cur-offs dstate) seg)))
 	   (name
-	    (kernel:code-header-ref code (+ woffs vm:function-name-slot)))
+	     (kernel:code-header-ref code (+ woffs vm:function-name-slot)))
 	   (args
-	    (kernel:code-header-ref code (+ woffs vm:function-arglist-slot)))
+	     (kernel:code-header-ref code (+ woffs vm:function-arglist-slot)))
 	   (type
-	    (kernel:code-header-ref code (+ woffs vm:function-type-slot))))
-      (format stream ".~a ~s~:a" 'entry name args)
+	     (kernel:code-header-ref code (+ woffs vm:function-type-slot))))
+      #+x86
+      (format stream ".~a ~a~%"
+	      'intel_syntax 'noprefix)
+      (format stream "~vt.~a ~s~:a"
+	      (+ (params-location-column-width (dstate-params dstate))
+		 label-column-width
+		 1)
+	      'entry name args)
       (note #'(lambda (stream)
 		(format stream "~:s" type)) ; use format to print NIL as ()
 	    dstate)))
@@ -2369,13 +2376,15 @@
 		     (declare (type (or null stream) stream)
 			      (ignore dstate))
 		     (when stream
-		       (write-string ";;; " stream)
-		       (etypecase comment
-			 (string
-			  (write-string comment stream))
-			 (function
-			  (funcall comment stream)))
-		       (terpri stream)))))
+		       (pprint-logical-block (stream nil :prefix "/* " :suffix " */")
+			 #+nil
+			 (write-string ";;; " stream)
+			 (etypecase comment
+			   (string
+			    (write-string comment stream))
+			   (function
+			    (funcall comment stream)))
+			 (terpri stream))))))
 
 (defun add-fun-hook (dstate function)
   (push function (dstate-fun-hooks dstate)))
@@ -2453,17 +2462,22 @@
   (declare (type stream stream)
 	   (type disassem-state dstate))
   (with-print-restrictions
-    (dolist (note (dstate-notes dstate))
-      (format stream "~vt" *note-column*)
-      (pprint-logical-block (stream nil :per-line-prefix "; ")
-	(etypecase note
-	  (string
-	   (write-string note stream))
-	  (function
-	   (funcall note stream))))
-      (terpri stream))
-    (fresh-line stream)
-    (setf (dstate-notes dstate) nil)))
+      (let (#+nil
+	    (*print-lines* 4)
+	  #+nil(*print-length* 16)
+	  #+nil(*print-level* 5)
+	  (*print-right-margin* 100))
+      (dolist (note (dstate-notes dstate))
+	(format stream "~vt" *note-column*)
+	(pprint-logical-block (stream nil :prefix "/* " :suffix " */")
+	  (etypecase note
+	    (string
+	     (write-string note stream))
+	    (function
+	     (funcall note stream))))
+	(terpri stream))
+      (fresh-line stream)
+      (setf (dstate-notes dstate) nil))))
 
 (defun print-bytes (num stream dstate)
   "Disassemble NUM bytes to STREAM as simple `BYTE' instructions"
@@ -2966,7 +2980,7 @@
 				  (unless at-block-begin
 				    (terpri stream))
 				  (with-standard-io-syntax
-				    (pprint-logical-block (stream nil :per-line-prefix ";;; ")
+				    (pprint-logical-block (stream nil :prefix "/* " :suffix " */")
 				      (format stream "[~D] "
 					      (di:code-location-form-number loc))
 				      (prin1-short form stream)))
@@ -3321,7 +3335,7 @@
 			     (backend c:*native-backend*)
 			     (base 16)
 			     (case :downcase)
-			     (radix *print-radix*))
+			     (radix t))
   "Disassemble the machine code associated with OBJECT, which can be a
   function, a lambda expression, or a symbol with a function definition.  If
   it is not already compiled, the compiler is called to produce something to
