@@ -799,7 +799,7 @@ os_get_lc_messages(char *buf, int len)
 }
 
 char *
-os_get_locale_codeset()
+os_get_locale_codeset(void)
 {
     return nl_langinfo(CODESET);
 }
