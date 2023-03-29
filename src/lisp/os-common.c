@@ -805,43 +805,25 @@ os_get_locale_codeset()
     return nl_langinfo(CODESET);
 }
 
-/*
- * For Linux and solaris, software-version returns the concatenation
- * of the uname release and version fields.  For BSD (including
- * Darwin), it's just the uname release (not version).
- */
-#if defined(__linux__) || defined(SOLARIS)
-#define UNAME_RELEASE_AND_VERSION
-#else
-#undef UNAME_RELEASE_AND_VERSION
-#endif 
-
 char*
 os_software_version(void)
 {
     struct utsname uts;
-    /*
-     * Buffer large enough to hold the release and version that's used
-     * for Linux and Solaris.
-     */
-    static char result[sizeof(uts.release) + sizeof(uts.version)]; 
-
     int status;
 
+    /*
+     * Buffer large enough to hold the release.  Initialize to
+     * "Unknown" in case uname fails.  The length is the sum of the
+     * sizes of uts.release and "Unknown" in case the length of
+     * uts.release is too short to hold "Unknown".
+     */
+    static char result[sizeof(uts.release) + sizeof("Unknown")]; 
     strcpy(result, "Unknown");
 
     status = uname(&uts);
     if (status == 0) {
-    
-#if defined(UNAME_RELEASE_AND_VERSION)
       strcpy(result, uts.release);
-      strcat(result, " ");
-      strcat(result, uts.version);
-#else
-      strcpy(result, uts.version);
-#endif
     }
     
     return result;
 }
-#undef UNAME_RELEASE_AND_VERSION
