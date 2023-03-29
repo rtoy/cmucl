@@ -102,7 +102,11 @@
   "The width of the column in which instruction-names are printed.
   NIL means use the default.  A value of zero gives the effect of not
   aligning the arguments at all.")
-(defvar *note-column* 45
+(defvar *note-column*
+  ;; Instructions for x86 can be long so move the note-column out a bit.  For example,
+  ;; add       edx, dword ptr [#x28000384]
+  #+x86 55
+  #-x86 45
   "The column in which end-of-line comments for notes are started.")
 
 (defconstant default-opcode-column-width 6)
