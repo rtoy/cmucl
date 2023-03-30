@@ -814,7 +814,7 @@ os_software_version(void)
     /*
      * Buffer large enough to hold the release.
      */
-    static char result[sizeof(uts.release) + sizeof("Unknown")];
+    static char result[sizeof(uts.release)];
     result[0] = '\0';
 
     status = uname(&uts);
