@@ -812,13 +812,10 @@ os_software_version(void)
     int status;
 
     /*
-     * Buffer large enough to hold the release.  Initialize to
-     * "Unknown" in case uname fails.  The length is the sum of the
-     * sizes of uts.release and "Unknown" in case the length of
-     * uts.release is too short to hold "Unknown".
+     * Buffer large enough to hold the release.
      */
-    static char result[sizeof(uts.release) + sizeof("Unknown")]; 
-    strcpy(result, "Unknown");
+    static char result[sizeof(uts.release) + sizeof("Unknown")];
+    result[0] = '\0';
 
     status = uname(&uts);
     if (status == 0) {

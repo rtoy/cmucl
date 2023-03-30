@@ -94,14 +94,17 @@
   _N"Returns a string describing version of the supporting software."
   (unless *software-version*
     (setf *software-version*
-	  (let (version)
+	  (let (version result)
 	    (unwind-protect
 		 (progn
 		   (setf version
 			 (alien:alien-funcall
 			  (alien:extern-alien "os_software_version"
 					      (function (alien:* c-call:c-string)))))
-		   (alien:cast version c-call:c-string)))))
+		   (setf result (alien:cast version c-call:c-string))))
+	    (if (zerop (length result))
+		"Unknown"
+		result)))
     *software-version*))
 
 (defvar *short-site-name* nil
