@@ -803,3 +803,11 @@ os_get_locale_codeset(void)
 {
     return nl_langinfo(CODESET);
 }
+
+long
+os_get_page_size(void)
+{
+    errno = 0;
+  
+    return sysconf(_SC_PAGESIZE);
+}

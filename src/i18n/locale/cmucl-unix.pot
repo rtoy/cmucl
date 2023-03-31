@@ -1448,3 +1448,7 @@ msgstr ""
 msgid "Get the codeset from the locale"
 msgstr ""
 
+#: src/code/unix.lisp
+msgid "Execution of a form compiled with errors:~% ~S"
+msgstr ""
+

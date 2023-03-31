@@ -64,6 +64,7 @@
 ;;;
 ;;;    Return the system page size.
 ;;;
+#+nil
 (defun get-page-size ()
   (multiple-value-bind (val err)
       (unix:unix-getpagesize)

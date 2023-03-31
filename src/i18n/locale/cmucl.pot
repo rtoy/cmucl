@@ -4014,10 +4014,9 @@ msgstr ""
 
 #: src/code/string.lisp
 msgid ""
-"Convert String to NFD (or NFKD).  If :darwinp is non-NIL, then\n"
-"    characters in the ranges U2000-U2FFF, UF900-UFA6A, and\n"
-"    U2F800-U2FA1D are not decomposed, as specified for Darwin\n"
-"    pathnames."
+"Convert STRING to NFD (or NFKD).  If :darwinp is non-NIL, then\n"
+"  characters in the ranges U2000-U2FFF, UF900-UFA6A, and U2F800-U2FA1D\n"
+"  are not decomposed, as specified for Darwin pathnames."
 msgstr ""
 
 #: src/code/string.lisp
@@ -5652,19 +5651,11 @@ msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "Unknown"
-msgstr ""
-
-#: src/code/misc.lisp
 msgid "Returns a string with the abbreviated site name."
 msgstr ""
 
 #: src/code/misc.lisp
 msgid "The value of LONG-SITE-NAME.  Set in library:site-init.lisp."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid "Site name not initialized"
 msgstr ""
 
 #: src/code/misc.lisp

@@ -2051,6 +2051,7 @@
 (defpackage "SYSTEM"
   (:nicknames "SYS")
   (:import-from "EXTENSIONS" "LOAD-FOREIGN")
+  (:import-from "UNIX" "GET-PAGE-SIZE")
   (:export "%ASSEMBLER-CODE-TYPE" "%BIND-ALIGNED-SAP" "%PRIMITIVE"
 	   "%SP-BYTE-BLT" "%SP-FIND-CHARACTER"
 	   "%SP-FIND-CHARACTER-WITH-ATTRIBUTE"

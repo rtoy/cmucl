@@ -2927,3 +2927,11 @@
 	    (extern-alien "os_get_locale_codeset"
 			  (function (* char))))
 	c-string))
+
+(defun get-page-size ()
+  (let ((maybe-page-size (alien-funcall
+			  (extern-alien "os_get_page_size"
+					(function c-call:long)))))
+    (when (minusp maybe-page-size)
+      (error (intl:gettext "get-page-size failed: ~A") (get-unix-error-msg err)))
+    maybe-page-size))

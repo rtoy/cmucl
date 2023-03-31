@@ -23,10 +23,6 @@ msgstr ""
 msgid "Unix system call getrusage failed: ~A."
 msgstr ""
 
-#: src/code/linux-os.lisp
-msgid "Getpagesize failed: ~A"
-msgstr ""
-
 #: src/code/signal.lisp
 msgid "Stack fault on coprocessor"
 msgstr ""
