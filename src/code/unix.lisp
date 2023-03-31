@@ -1156,12 +1156,6 @@
   _N"Unix-getuid returns the real user-id associated with the
    current process.")
 
-;;; Unix-getpagesize returns the number of bytes in the system page.
-
-(defun unix-getpagesize ()
-  _N"Unix-getpagesize returns the number of bytes in a system page."
-  (int-syscall ("getpagesize")))
-
 (defun unix-gethostname ()
   _N"Unix-gethostname returns the name of the host machine as a string."
   (with-alien ((buf (array char 256)))

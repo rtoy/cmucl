@@ -922,4 +922,11 @@
 		     (slot rlimit 'rlim-cur)
 		     (slot rlimit 'rlim-max))
 	     resource (addr rlimit))))
+
+;;; Unix-getpagesize returns the number of bytes in the system page.
+
+(defun unix-getpagesize ()
+  _N"Unix-getpagesize returns the number of bytes in a system page."
+  (int-syscall ("getpagesize")))
+
 ;; EOF
