@@ -2928,6 +2928,10 @@
 			  (function (* char))))
 	c-string))
 
+;;; GET-PAGE-SIZE  --  Interface
+;;;
+;;;    Return the system page size.
+;;;
 (defun get-page-size ()
   (let ((maybe-page-size (alien-funcall
 			  (extern-alien "os_get_page_size"
