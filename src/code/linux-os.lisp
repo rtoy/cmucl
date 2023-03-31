@@ -48,6 +48,7 @@
 ;;;
 ;;;    Return system time, user time and number of page faults.
 ;;;
+#+nil
 (defun get-system-info ()
   (multiple-value-bind (err? utime stime maxrss ixrss idrss
 			     isrss minflt majflt)
