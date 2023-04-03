@@ -47,23 +47,6 @@
 (defun os-init ()
   (setf *software-version* nil))
 
-;;; GET-SYSTEM-INFO  --  Interface
-;;;
-;;;    Return system time, user time and number of page faults.  For
-;;; page-faults, we add pagein and pageout, since that is a somewhat more
-;;; interesting number than the total faults.
-;;;
-(defun get-system-info ()
-  (multiple-value-bind (err? utime stime maxrss ixrss idrss
-			     isrss minflt majflt)
-		       (unix:unix-getrusage unix:rusage_self)
-    (declare (ignore maxrss ixrss idrss isrss minflt))
-    (unless err?
-      (error "Unix system call getrusage failed: ~A."
-	     (unix:get-unix-error-msg utime)))
-    (values utime stime majflt)))
-
-
 ;;; GET-PAGE-SIZE  --  Interface
 ;;;
 ;;;    Return the system page size.

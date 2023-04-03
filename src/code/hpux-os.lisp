@@ -46,22 +46,6 @@
   ;; Decache version on save, because it might not be the same when we restart.
   (setf *software-version* nil))
 
-;;; GET-SYSTEM-INFO  --  Interface
-;;;
-;;;    Return system time, user time and number of page faults.
-;;;
-(defun get-system-info ()
-  (multiple-value-bind
-      (err? utime stime maxrss ixrss idrss isrss minflt majflt)
-      (unix:unix-getrusage unix:rusage_self)
-    (declare (ignore maxrss ixrss idrss isrss minflt))
-    (cond ((null err?)
-	   (error "Unix system call getrusage failed: ~A."
-		  (unix:get-unix-error-msg utime)))
-	  (T
-	   (values utime stime majflt)))))
-
-
 ;;; GET-PAGE-SIZE  --  Interface
 ;;;
 ;;;    Return the system page size.
