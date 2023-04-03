@@ -471,10 +471,6 @@ msgid ""
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Unix-getpagesize returns the number of bytes in a system page."
-msgstr ""
-
-#: src/code/unix.lisp
 msgid "Unix-gethostname returns the name of the host machine as a string."
 msgstr ""
 
@@ -1449,6 +1445,6 @@ msgid "Get the codeset from the locale"
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Execution of a form compiled with errors:~% ~S"
+msgid "get-page-size failed: ~A"
 msgstr ""
 
