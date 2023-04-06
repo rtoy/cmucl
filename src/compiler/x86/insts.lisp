@@ -1882,6 +1882,9 @@
 
 (define-instruction call (segment where)
   (:printer near-jump ((op #b11101000))
+	    ;; This printer currently only works with gcc.  I (rtoy)
+	    ;; am unable to find some form that will work with gcc and
+	    ;; clang.
 	    '(:name :tab 'offset " " label))
   (:printer reg/mem ((op '(#b1111111 #b010)) (width 1)))
   (:emitter
