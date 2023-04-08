@@ -1260,11 +1260,7 @@
     (maybe-emit-operand-size-prefix segment size)
     (cond
      ((integerp src)
-      (cond ((and (not (eq size :byte)) (<= -128 src 127))
-	     (emit-byte segment #b10000011)
-	     (emit-ea segment dst opcode allow-constants)
-	     (emit-byte segment src))
-	    ((accumulator-p dst)
+      (cond ((accumulator-p dst)
 	     (emit-byte segment
 			(dpb opcode
 			     (byte 3 3)
@@ -1272,6 +1268,12 @@
 				 #b00000100
 				 #b00000101)))
 	     (emit-sized-immediate segment size src))
+	    ((and (not (eq size :byte))
+		  (or (<= -128 src 127)
+		      (= (ldb (byte 25 7) src) #x1ffffff))
+	     (emit-byte segment #b10000011)
+	     (emit-ea segment dst opcode allow-constants)
+	     (emit-byte segment (ldb (byte 8 0) src))))
 	    (t
 	     (emit-byte segment (if (eq size :byte) #b10000000 #b10000001))
 	     (emit-ea segment dst opcode allow-constants)
