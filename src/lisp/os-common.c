@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
@@ -803,3 +804,30 @@ os_get_locale_codeset(void)
 {
     return nl_langinfo(CODESET);
 }
+
+/*
+ * Get system info consisting of the utime (in usec), the stime (in
+ * usec) and the number of major page faults.  The return value is the
+ * return code from getrusage.
+ */
+int
+os_get_system_info(int64_t* utime, int64_t* stime, long* major_fault)
+{
+    struct rusage usage;
+    int rc;
+
+    *utime = 0;
+    *stime = 0;
+    *major_fault = 0;
+    
+    rc = getrusage(RUSAGE_SELF, &usage);
+    if (rc == 0) {
+        *utime = usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec;
+        *stime = usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec;
+        *major_fault = usage.ru_majflt;
+    }
+
+    return rc;
+}
+
+    
