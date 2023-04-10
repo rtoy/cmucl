@@ -1270,6 +1270,9 @@
 	     (emit-sized-immediate segment size src))
 	    ((and (not (eq size :byte))
 		  (or (<= -128 src 127)
+		      ;; Check that the top 25 bits are all ones so
+		      ;; that sign-extending an 8-bit value produces
+		      ;; the desired 32-bit value.
 		      (= (ldb (byte 25 7) src) #x1ffffff))
 	     (emit-byte segment #b10000011)
 	     (emit-ea segment dst opcode allow-constants)
