@@ -1254,6 +1254,12 @@
 
 ;;;; Arithmetic
 
+(defun sign-extend (x n)
+  "Sign extend the N-bit number X"
+  (if (logbitp (1- n) x)
+      (logior (ash -1 (1- n)) x)
+      x))
+
 (defun emit-random-arith-inst (name segment dst src opcode
 				    &optional allow-constants)
   (let ((size (matching-operand-size dst src)))
@@ -1273,10 +1279,10 @@
 		      ;; Check that the top 25 bits are all ones so
 		      ;; that sign-extending an 8-bit value produces
 		      ;; the desired 32-bit value.
-		      (= (ldb (byte 25 7) src) #x1ffffff))
+		      (= (ldb (byte 25 7) src) #x1ffffff)))
 	     (emit-byte segment #b10000011)
 	     (emit-ea segment dst opcode allow-constants)
-	     (emit-byte segment (ldb (byte 8 0) src))))
+	     (emit-byte segment (ldb (byte 8 0) src)))
 	    (t
 	     (emit-byte segment (if (eq size :byte) #b10000000 #b10000001))
 	     (emit-ea segment dst opcode allow-constants)
@@ -1296,22 +1302,21 @@
      (t
       (error "Bogus operands to ~A" name)))))
 
-(eval-when (compile load eval)
-  (defun arith-logical-constant-control-impl (chunk inst stream dstate)
+(defun arith-logical-constant-control (chunk inst stream dstate)
     (declare (ignore inst stream))
     (let ((opcode (ldb (byte 8 0) chunk))
 	  (signed-imm-data (ldb (byte 8 16) chunk)))
-      (when (and (= opcode #x83)
+      ;; See emit-random-arith-inst for the case where we use an 8-bit
+      ;; signed immediate value in the instruction.  We print a note
+      ;; only if we have a 8-bit immediate and the 8-bit value is
+      ;; negative (MSB is 1).
+      (when (and (= opcode #b10000011)
 		 (logbitp 7 signed-imm-data))
-	;; Sign extend number.
-	(setf signed-imm-data (dpb signed-imm-data (byte 8 0) #xffffffff))
 	(disassem:note #'(lambda (stream)
-			   (princ signed-imm-data stream))
+			   (princ (ldb (byte 32 0)
+				       (sign-extend signed-imm-data 8))
+				  stream))
 		       dstate))))
-  
-  (defun arith-logical-constant-control (chunk inst stream dstate)
-    (arith-logical-constant-control-impl chunk inst stream dstate)
-    ))
 
 (eval-when (compile eval)
   (defun arith-inst-printer-list (subop &key control)
