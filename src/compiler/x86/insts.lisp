@@ -1296,12 +1296,32 @@
      (t
       (error "Bogus operands to ~A" name)))))
 
+(eval-when (compile load eval)
+  (defun arith-logical-constant-control-impl (chunk inst stream dstate)
+    (declare (ignore inst stream))
+    (let ((opcode (ldb (byte 8 0) chunk))
+	  (signed-imm-data (ldb (byte 8 16) chunk)))
+      (when (and (= opcode #x83)
+		 (logbitp 7 signed-imm-data))
+	;; Sign extend number.
+	(setf signed-imm-data (dpb signed-imm-data (byte 8 0) #xffffffff))
+	(disassem:note #'(lambda (stream)
+			   (princ signed-imm-data stream))
+		       dstate))))
+  
+  (defun arith-logical-constant-control (chunk inst stream dstate)
+    (arith-logical-constant-control-impl chunk inst stream dstate)
+    ))
+
 (eval-when (compile eval)
-  (defun arith-inst-printer-list (subop)
-    `((accum-imm ((op ,(dpb subop (byte 3 2) #b0000010))))
-      (reg/mem-imm ((op (#b1000000 ,subop))))
+  (defun arith-inst-printer-list (subop &key control)
+    `((accum-imm ((op ,(dpb subop (byte 3 2) #b0000010)))
+		 ,@(when control `(:default :control #',control)))
+      (reg/mem-imm ((op (#b1000000 ,subop)))
+		   ,@(when control `(:default :control #',control)))
       (reg/mem-imm ((op (#b1000001 ,subop))
-		    (imm nil :type signed-imm-byte)))
+		    (imm nil :type signed-imm-byte))
+		   ,@(when control `(:default :control #',control)))
       (reg-reg/mem-dir ((op ,(dpb subop (byte 3 1) #b000000))))))
   )
 
@@ -1607,7 +1627,7 @@
 
 (define-instruction and (segment dst src)
   (:printer-list
-   (arith-inst-printer-list #b100))
+   (arith-inst-printer-list #b100 :control 'arith-logical-constant-control))
   (:emitter
    (emit-random-arith-inst "AND" segment dst src #b100)))
 
@@ -1644,13 +1664,13 @@
 
 (define-instruction or (segment dst src)
   (:printer-list
-   (arith-inst-printer-list #b001))
+   (arith-inst-printer-list #b001 :control 'arith-logical-constant-control))
   (:emitter
    (emit-random-arith-inst "OR" segment dst src #b001)))
 
 (define-instruction xor (segment dst src)
   (:printer-list
-   (arith-inst-printer-list #b110))
+   (arith-inst-printer-list #b110 :control 'arith-logical-constant-control))
   (:emitter
    (emit-random-arith-inst "XOR" segment dst src #b110)))
 
