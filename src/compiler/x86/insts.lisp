@@ -1398,7 +1398,7 @@
 (define-instruction imul (segment dst &optional src1 src2)
   (:printer accum-reg/mem ((op '(#b1111011 #b101))))
   (:printer ext-reg-reg/mem ((op #b1010111) (width 1)))
-  (:printer reg-reg/mem ((op #b0110100) (width 1) (imm nil :type 'imm-word))
+  (:printer reg-reg/mem ((op #b0110100) (width 1) (imm nil :type 'signed-imm-dword))
 	    '(:name :tab reg ", " reg/mem ", " imm))
   (:printer reg-reg/mem ((op #b0110101) (width 1)
 			 (imm nil :type 'signed-imm-byte))
