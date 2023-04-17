@@ -2927,3 +2927,28 @@
 	    (extern-alien "os_get_locale_codeset"
 			  (function (* char))))
 	c-string))
+
+;;; GET-SYSTEM-INFO  --  Interface
+;;;
+;;;    Return system time, user time (in usec) and number of page
+;;;    faults.
+;;;
+(defun get-system-info ()
+  "Get system information consisting of the user time (in usec), the
+  system time (in usec) and the number of major page faults."
+  (with-alien ((utime int64-t 0)
+	       (stime int64-t 0)
+	       (major-fault c-call:long 0))
+    (let ((rc (alien-funcall
+	       (extern-alien "os_get_system_info"
+			     (function c-call:int
+				       (* int64-t)
+				       (* int64-t)
+				       (* c-call:long)))
+	       (addr utime)
+	       (addr stime)
+	       (addr major-fault))))
+      (when (minusp rc)
+	(error (intl:gettext "Unix system call getrusage failed: ~A.")
+	       (unix:get-unix-error-msg utime)))
+      (values utime stime major-fault))))
