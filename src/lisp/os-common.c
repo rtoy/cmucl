@@ -831,6 +831,11 @@ os_get_system_info(int64_t* utime, int64_t* stime, long* major_fault)
     return rc;
 }
 
+/*
+ * Get the software version.  This is the same as "uname -r", the release.
+ * A pointer to a static string is returned. If uname fails, an empty
+ * string is returned.
+ */
 char*
 os_software_version(void)
 {
