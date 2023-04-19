@@ -173,6 +173,7 @@
   (comf "target:code/bsd-os"))
 (when (c:backend-featurep :Linux)
   (comf "target:code/linux-os"))
+(comf "target:code/os")  
 
 (when (c:backend-featurep :pmax)
   (comf "target:code/pmax-vm"))
