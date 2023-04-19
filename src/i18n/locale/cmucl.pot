@@ -5647,6 +5647,14 @@ msgid "Returns a string describing the supporting software."
 msgstr ""
 
 #: src/code/misc.lisp
+msgid "Version string for supporting software"
+msgstr ""
+
+#: src/code/misc.lisp
+msgid "Returns a string describing version of the supporting software."
+msgstr ""
+
+#: src/code/misc.lisp
 msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
 msgstr ""
 

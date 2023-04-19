@@ -17,6 +17,7 @@
 #include <string.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -830,4 +831,27 @@ os_get_system_info(int64_t* utime, int64_t* stime, long* major_fault)
     return rc;
 }
 
+/*
+ * Get the software version.  This is the same as "uname -r", the release.
+ * A pointer to a static string is returned. If uname fails, an empty
+ * string is returned.
+ */
+char*
+os_software_version(void)
+{
+    struct utsname uts;
+    int status;
+
+    /*
+     * Buffer large enough to hold the release.
+     */
+    static char result[sizeof(uts.release)];
+    result[0] = '\0';
+
+    status = uname(&uts);
+    if (status == 0) {
+      strcpy(result, uts.release);
+    }
     
+    return result;
+}

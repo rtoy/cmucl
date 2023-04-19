@@ -28,20 +28,10 @@
 
 (setq *software-type* "Linux")
 
-;;; Instead of reading /proc/version (which has some bugs with
-;;; select() in Linux kernel 2.6.x) and instead of running uname -r,
-;;; let's just get the info from uname().
-(defun software-version ()
-  "Returns a string describing version of the supporting software."
-  (multiple-value-bind (sysname nodename release version)
-      (unix:unix-uname)
-    (declare (ignore sysname nodename))
-    (concatenate 'string release " " version)))
-
-
 ;;; OS-Init initializes our operating-system interface.
 ;;;
-(defun os-init () nil)
+(defun os-init ()
+  (setf *software-version* nil))
 
 
 ;;; GET-PAGE-SIZE  --  Interface
