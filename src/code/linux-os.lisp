@@ -31,7 +31,6 @@
 ;;; OS-Init initializes our operating-system interface.
 ;;;
 (defun os-init ()
-  ;; Decache version on save, because it might not be the same when we restart.
   (setf *software-version* nil))
 
 

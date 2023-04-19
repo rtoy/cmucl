@@ -54,7 +54,6 @@
 ;;; that set up the argument blocks for the server interfaces.
 
 (defun os-init ()
-  ;; Decache version on save, because it might not be the same when we restart.
   (setf *software-version* nil))
 
 ;;; GET-PAGE-SIZE  --  Interface
