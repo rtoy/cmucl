@@ -48,19 +48,6 @@
 		      #+Darwin "Darwin"
 		      #-(or freebsd NetBSD OpenBSD Darwin) "BSD")
 
-(defvar *software-version* nil "Version string for supporting software")
-
-(defun software-version ()
-  "Returns a string describing version of the supporting software."
-  (unless *software-version*
-    (setf *software-version*
-	  (string-trim '(#\newline)
-		       (with-output-to-string (stream)
-			 (run-program "/usr/bin/uname"
-				      '("-r")
-				      :output stream)))))
-  *software-version*)
-
 
 ;;; OS-Init initializes our operating-system interface.  It sets the values
 ;;; of the global port variables to what they should be and calls the functions
@@ -83,5 +70,3 @@
 	     (unix:get-unix-error-msg utime)))
     
     (values utime stime majflt)))
-
-

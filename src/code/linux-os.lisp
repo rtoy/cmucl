@@ -28,33 +28,20 @@
 
 (setq *software-type* "Linux")
 
-;;; Instead of reading /proc/version (which has some bugs with
-;;; select() in Linux kernel 2.6.x) and instead of running uname -r,
-;;; let's just get the info from uname().
-(defun software-version ()
-  "Returns a string describing version of the supporting software."
-  (multiple-value-bind (sysname nodename release version)
-      (unix:unix-uname)
-    (declare (ignore sysname nodename))
-    (concatenate 'string release " " version)))
-
-
 ;;; OS-Init initializes our operating-system interface.
 ;;;
-(defun os-init () nil)
+(defun os-init ()
+  (setf *software-version* nil))
 
 
-;;; GET-SYSTEM-INFO  --  Interface
+;;; GET-PAGE-SIZE  --  Interface
 ;;;
-;;;    Return system time, user time and number of page faults.
+;;;    Return the system page size.
 ;;;
-(defun get-system-info ()
-  (multiple-value-bind (err? utime stime maxrss ixrss idrss
-			     isrss minflt majflt)
-		       (unix:unix-getrusage unix:rusage_self)
-    (declare (ignore maxrss ixrss idrss isrss minflt))
-    (unless err?
-      (error (intl:gettext "Unix system call getrusage failed: ~A.")
-	     (unix:get-unix-error-msg utime)))
-    
-    (values utime stime majflt)))
+(defun get-page-size ()
+  (multiple-value-bind (val err)
+      (unix:unix-getpagesize)
+    (unless val
+      (error (intl:gettext "Getpagesize failed: ~A") (unix:get-unix-error-msg err)))
+    val))
+

@@ -33,19 +33,6 @@
 
 (setq *software-type* "SunOS")
 
-(defvar *software-version* nil "Version string for supporting software")
-
-(defun software-version ()
-  "Returns a string describing version of the supporting software."
-  (unless *software-version*
-    (setf *software-version*
-	  (multiple-value-bind (sysname nodename release version)
-	      (unix:unix-uname)
-	    (declare (ignore sysname nodename))
-	    (concatenate 'string release " " version))))
-  *software-version*)
-
-
 ;;; OS-INIT -- interface.
 ;;;
 ;;; Other OS dependent initializations.

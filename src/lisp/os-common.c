@@ -15,7 +15,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -810,4 +812,54 @@ os_get_page_size(void)
     errno = 0;
   
     return sysconf(_SC_PAGESIZE);
+}
+
+/*
+ * Get system info consisting of the utime (in usec), the stime (in
+ * usec) and the number of major page faults.  The return value is the
+ * return code from getrusage.
+ */
+int
+os_get_system_info(int64_t* utime, int64_t* stime, long* major_fault)
+{
+    struct rusage usage;
+    int rc;
+
+    *utime = 0;
+    *stime = 0;
+    *major_fault = 0;
+    
+    rc = getrusage(RUSAGE_SELF, &usage);
+    if (rc == 0) {
+        *utime = usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec;
+        *stime = usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec;
+        *major_fault = usage.ru_majflt;
+    }
+
+    return rc;
+}
+
+/*
+ * Get the software version.  This is the same as "uname -r", the release.
+ * A pointer to a static string is returned. If uname fails, an empty
+ * string is returned.
+ */
+char*
+os_software_version(void)
+{
+    struct utsname uts;
+    int status;
+
+    /*
+     * Buffer large enough to hold the release.
+     */
+    static char result[sizeof(uts.release)];
+    result[0] = '\0';
+
+    status = uname(&uts);
+    if (status == 0) {
+      strcpy(result, uts.release);
+    }
+    
+    return result;
 }

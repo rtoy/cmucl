@@ -49,10 +49,11 @@ public domain.
     * ~~#108~~ Update ASDF.
     * ~~#112~~ CLX can't connect to X server via inet sockets.
     * ~~#113~~ REQUIRE on contribs can pull in the wrong things via ASDF.
-    * ~~#121~~ Wrong column index in FILL-POINTER-OUTPUT-STREAM.
-    * ~~#122~~ gcc 11 can't build cmucl.
-    * ~~#124~~ directory with `:wild-inferiors` doesn't descend subdirectories.
-    * ~~#125~~ Linux `unix-stat` returning incorrect values.
+    * ~~#120~~ `SOFTWARE-VERSION` is implemented in C.
+    * ~~#121~~ Wrong column index in FILL-POINTER-OUTPUT-STREAM
+    * ~~#122~~ gcc 11 can't build cmucl
+    * ~~#124~~ directory with `:wild-inferiors` doesn't descend subdirectories 
+    * ~~#125~~ Linux `unix-stat` returning incorrect values
     * ~~#127~~ Linux unix-getpwuid segfaults when given non-existent uid.
     * ~~#128~~ `QUIT` accepts an exit code.
     * ~~#130~~ Move file-author to C.
