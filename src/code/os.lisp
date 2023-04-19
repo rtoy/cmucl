@@ -1,8 +1,8 @@
 ;;; -*- Package: SYSTEM -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the CMU Common Lisp project at
-;;; and has been placed in the public domain.
+;;; This code was written as part of the CMU Common Lisp project and
+;;; has been placed in the public domain.
 ;;;
 (ext:file-comment
   "$Header: src/code/os.lisp $")
