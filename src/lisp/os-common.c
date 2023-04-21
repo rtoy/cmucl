@@ -806,6 +806,14 @@ os_get_locale_codeset(void)
     return nl_langinfo(CODESET);
 }
 
+long
+os_get_page_size(void)
+{
+    errno = 0;
+  
+    return sysconf(_SC_PAGESIZE);
+}
+
 /*
  * Get system info consisting of the utime (in usec), the stime (in
  * usec) and the number of major page faults.  The return value is the

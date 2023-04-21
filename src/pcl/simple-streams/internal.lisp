@@ -99,7 +99,7 @@
 		    (tagbody
 		     again
 		       ;; Avoid CMUCL gengc write barrier
-		       (do ((i start (+ i #.(unix:unix-getpagesize))))
+		       (do ((i start (+ i #.(sys:get-page-size))))
 			   ((>= i end))
 			 (declare (type fixnum i))
 			 (setf (bref buffer i) 0))

@@ -147,6 +147,7 @@
 	'("target:code/bsd-os"))
     ,@(when (c:backend-featurep :Linux)
 	'("target:code/linux-os"))
+    "target:code/os"
     "target:code/serve-event"
     "target:code/stream"
     "target:code/fd-stream"

@@ -19,6 +19,14 @@ msgstr ""
 msgid "Getpagesize failed: ~A"
 msgstr ""
 
+#: src/code/os.lisp
+msgid "Return the system page size"
+msgstr ""
+
+#: src/code/os.lisp
+msgid "get-page-size failed: ~A"
+msgstr ""
+
 #: src/code/signal.lisp
 msgid "Stack fault on coprocessor"
 msgstr ""
