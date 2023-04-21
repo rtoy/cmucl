@@ -1444,13 +1444,3 @@ msgstr ""
 msgid "Get the codeset from the locale"
 msgstr ""
 
-#: src/code/unix.lisp
-msgid ""
-"Get system information consisting of the user time (in usec), the\n"
-"  system time (in usec) and the number of major page faults."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Unix system call getrusage failed: ~A."
-msgstr ""
-
