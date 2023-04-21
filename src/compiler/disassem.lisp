@@ -1005,9 +1005,18 @@
 		(local-call-arg-printer (arg printer)
 		  (funcall printer arg stream dstate))
 		(local-call-global-printer (fun)
+		  (format t "~A: call-global-printer ~A: chunk #x~X~%"
+			  (inst-print-name inst)
+			  fun
+			  chunk)
 		  (funcall fun chunk inst stream dstate))
 		(local-filtered-value (offset)
 		  (declare (type filtered-value-index offset))
+		  (format t "~A: offset: ~A filtered-values: ~A value: ~A~%"
+			  (inst-print-name inst)
+			  offset
+			  (dstate-filtered-values dstate)
+			  (aref (dstate-filtered-values dstate) offset))
 		  (aref (dstate-filtered-values dstate) offset))
 		(local-extract (bytespec)
 		  (dchunk-extract chunk bytespec))
@@ -1165,7 +1174,7 @@
 	    (,cache-var (find-cached-function (,cache-slot ,cache)
 					      ,args ,constraint-var)))
        (cond (,cache-var
-	      #+nil
+	      ;;#+nil
 	      (Format t (intl:gettext "~&; Using cached function ~s~%")
 		      (cached-fun-name ,cache-var))
 	      (values (cached-fun-name ,cache-var) nil))
@@ -1176,7 +1185,7 @@
 		      (make-cached-function :name ,name-var
 					    :funstate ,funstate-var
 					    :constraint ,constraint-var)))
-		#+nil
+		;;#+nil
 		(format t (intl:gettext "~&; Making new function ~s~%")
 			(cached-fun-name ,cache-var))
 		(values ,name-var
@@ -1267,11 +1276,15 @@
 			(optimize (speed 0) (safety 0) (debug 0)))
 		 (flet (((setf local-filtered-value) (value offset)
 			  (declare (type filtered-value-index offset))
+			  (format t "setting filtered-values: name ~A: offset ~A, value ~A~%"
+				  ',name offset value)
 			  (setf (aref (dstate-filtered-values dstate) offset)
 				value))
 			(local-filter (value filter)
 			  (funcall filter value dstate))
 			(local-extract (bytespec)
+			  (format t "dchunk-extract: name ~A: chunk #x~X, bytespec ~A: value ~A~%"
+				  ',name chunk bytespec (dchunk-extract chunk bytespec))
 			  (dchunk-extract chunk bytespec)))
 		   (declare (ignorable #'local-filter #'local-extract)
 			    (inline (setf local-filtered-value)
@@ -2853,14 +2866,14 @@
 		   (make-storage-info :groups groups
 				      :debug-variables debug-variables))
 	   (let ((debug-var (aref debug-variables debug-var-offset)))
-	     #+nil
+	     ;;#+nil
 	     (format t (intl:gettext ";;; At offset ~d: ~s~%") debug-var-offset debug-var)
 	     (let* ((sc-offset
 		     (di::compiled-debug-variable-sc-offset debug-var))
 		    (sb-name
 		     (c:sb-name
 		      (c:sc-sb (aref sc-vec (c:sc-offset-scn sc-offset))))))
-	       #+nil
+	       ;;#+nil
 	       (format t (intl:gettext ";;; SET: ~s[~d]~%")
 		       sb-name (c:sc-offset-offset sc-offset))
 	       (unless (null sb-name)
@@ -2983,7 +2996,7 @@
 			 (declare (ignore stream))
 			 (setf (dstate-current-valid-locations dstate)
 			       live-set)
-			 #+nil
+			 ;;#+nil
 			 (note #'(lambda (stream)
 				   (let ((*print-length* nil))
 				     (format stream "Live set: ~s"
@@ -3059,7 +3072,7 @@
 	       (let ((start-pc 
 		      (c::compiled-debug-function-start-pc fmap-entry))
 		     (kind (c::compiled-debug-function-kind fmap-entry)))
-		 #+nil
+		 ;;#+nil
 		 (format t ";;; SAW ~s ~s ~s,~s ~d,~d [~d]~%"
 			 (c::compiled-debug-function-name fmap-entry)
 			 kind first-block-seen-p nil-block-seen-p
@@ -3226,6 +3239,10 @@
      #'(lambda (chunk inst)
 	 (declare (type dchunk chunk) (type instruction inst))
 	 (let ((printer (inst-printer inst)))
+	   (format t  "inst: ~A; printer: ~A; chunk: ~X~%" inst printer chunk)
+	   (with-standard-io-syntax
+	     (let ((*print-readably* nil))
+	       (describe dstate)))
 	   (when printer
 	     (funcall printer chunk inst stream dstate))))
      segment

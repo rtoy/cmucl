@@ -819,6 +819,12 @@
   ;; optional fields
   (imm))
 
+(disassem:define-instruction-format (reg-reg/mem-imm 16
+				     :include 'reg-reg/mem
+				     :default-printer
+					`(:name :tab reg ", " reg/mem ", " imm))
+    (imm :type 'signed-imm-byte))
+
 ;;; same as reg-reg/mem, but with direction bit
 (disassem:define-instruction-format (reg-reg/mem-dir 16
 				     :include 'reg-reg/mem
@@ -1398,11 +1404,10 @@
 (define-instruction imul (segment dst &optional src1 src2)
   (:printer accum-reg/mem ((op '(#b1111011 #b101))))
   (:printer ext-reg-reg/mem ((op #b1010111) (width 1)))
-  (:printer reg-reg/mem ((op #b0110100) (width 1) (imm nil :type 'signed-imm-dword))
-	    '(:name :tab reg ", " reg/mem ", " imm))
-  (:printer reg-reg/mem ((op #b0110101) (width 1)
-			 (imm nil :type 'signed-imm-byte))
-	    '(:name :tab reg ", " reg/mem ", " imm))
+  (:printer reg-reg/mem-imm ((op #b0110100) (width 1)
+					    (imm nil :type 'signed-imm-dword)))
+  (:printer reg-reg/mem-imm ((op #b0110101) (width 1)
+			 (imm nil :type 'signed-imm-byte)))
   (:emitter
    (flet ((r/m-with-immed-to-reg (reg r/m immed)
 	    (let* ((size (matching-operand-size reg r/m))
