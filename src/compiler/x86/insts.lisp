@@ -1304,19 +1304,12 @@
 
 (defun arith-logical-constant-control (chunk inst stream dstate)
     (declare (ignore inst stream))
-    (let ((opcode (ldb (byte 8 0) chunk))
-	  (signed-imm-data (ldb (byte 8 16) chunk)))
-      ;; See emit-random-arith-inst for the case where we use an 8-bit
-      ;; signed immediate value in the instruction.  We print a note
-      ;; only if we have a 8-bit immediate and the 8-bit value is
-      ;; negative (MSB is 1).
-      (when (and (= opcode #b10000011)
-		 (logbitp 7 signed-imm-data))
-	(disassem:note #'(lambda (stream)
-			   (princ (ldb (byte 32 0)
-				       (sign-extend signed-imm-data 8))
-				  stream))
-		       dstate))))
+    (when (= (ldb (byte 8 0) chunk) #b10000011)
+      (let ((imm (sign-extend (ldb (byte 8 16) chunk) 8)))
+	(when (minusp imm)
+	  (disassem:note #'(lambda (stream)
+			     (princ (ldb (byte 32 0) imm) stream))
+			 dstate)))))
 
 (eval-when (compile eval)
   (defun arith-inst-printer-list (subop &key control)
