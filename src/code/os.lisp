@@ -15,7 +15,7 @@
 
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
-(intl:textdomain "cmucl-linux-os")
+(intl:textdomain "cmucl-os")
 
 (export '(get-page-size))
 
@@ -33,3 +33,27 @@
     maybe-page-size))
 
 
+;;; GET-SYSTEM-INFO  --  Interface
+;;;
+;;;    Return system time, user time (in usec) and number of page
+;;;    faults.
+;;;
+(defun get-system-info ()
+  _N"Get system information consisting of the user time (in usec), the
+  system time (in usec) and the number of major page faults."
+  (alien:with-alien ((utime unix:int64-t 0)
+		     (stime unix:int64-t 0)
+		     (major-fault c-call:long 0))
+    (let ((rc (alien:alien-funcall
+	       (alien:extern-alien "os_get_system_info"
+				   (function c-call:int
+					     (* unix:int64-t)
+					     (* unix:int64-t)
+					     (* c-call:long)))
+	       (alien:addr utime)
+	       (alien:addr stime)
+	       (alien:addr major-fault))))
+      (when (minusp rc)
+	(error (intl:gettext "Unix system call getrusage failed: ~A.")
+	       (unix:get-unix-error-msg utime)))
+      (values utime stime major-fault))))
