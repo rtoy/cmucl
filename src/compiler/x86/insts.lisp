@@ -527,6 +527,7 @@
 	(r/m (cadr value)))
     (declare (type (unsigned-byte 2) mod)
 	     (type (unsigned-byte 3) r/m))
+    (format t "prefilter-reg/mem: mod ~2b r/m ~3b~%" mod r/m)
     (cond ((= mod #b11)
 	   ;; registers
 	   r/m)
@@ -572,18 +573,20 @@
 ;;; stores the info globally for other people to use; it
 ;;; probably never gets printed.
 (defun prefilter-width (value dstate)
-  (setf (disassem:dstate-get-prop dstate 'width)
-	(if (zerop value)
-	    :byte
-	    (let ((word-width
-		   ;; set by a prefix instruction
-		   (or (disassem:dstate-get-prop dstate 'word-width)
-		       *default-operand-size*)))
-	      (when (not (eql word-width *default-operand-size*))
-		;; reset it
-		(setf (disassem:dstate-get-prop dstate 'word-width)
-		      *default-operand-size*))
-	      word-width))))
+  (let ((new-width (if (zerop value)
+		       :byte
+		       (let ((word-width
+			       ;; set by a prefix instruction
+			       (or (disassem:dstate-get-prop dstate 'word-width)
+				   *default-operand-size*)))
+			 (when (not (eql word-width *default-operand-size*))
+			   ;; reset it
+			   (setf (disassem:dstate-get-prop dstate 'word-width)
+				 *default-operand-size*))
+			 word-width))))
+    (format t "prefilter-width: value = ~A, new width ~A~%"
+	    value new-width)
+    (setf (disassem:dstate-get-prop dstate 'width) new-width)))
 
 (defun offset-next (value dstate)
   (declare (type integer value)
