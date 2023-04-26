@@ -249,9 +249,6 @@
 	   "OPEN-DIR"
 	   "READ-DIR"
 
-	   ;; linux-os, sunos-os.
-	   "UNIX-UNAME"
-
 	   ;; filesys.lisp
 	   "UNIX-GETPWUID"
 
@@ -411,7 +408,7 @@
 	   "TIOCSETP"
 	   "TTY-IUCLC"
 	   "TTY-OCRNL" "TTY-OFDEL" "TTY-OFILL" "TTY-OLCUC" "TTY-ONLRET" "TTY-ONOCR"
-	   "TTY-XCASE" "UNIX-DUP2" "UNIX-GETITIMER" "UNIX-PID" "UNIX-UNAME"
+	   "TTY-XCASE" "UNIX-DUP2" "UNIX-GETITIMER" "UNIX-PID"
 	   "UTSNAME"
 	   )
   #+solaris
