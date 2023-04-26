@@ -1372,18 +1372,6 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Unix-uname returns information from the uname(2) system call.\n"
-"  The return values are\n"
-"\n"
-"    Name of the operating system\n"
-"    Name of this node within some implementation-defined network, if any\n"
-"    Release level of this operating system\n"
-"    Version level of this operating system release\n"
-"    Name of the hardware type on which the system is running"
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
 "Get the value of the environment variable named Name.  If no such\n"
 "  variable exists, Nil is returned."
 msgstr ""
