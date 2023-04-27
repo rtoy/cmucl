@@ -17405,7 +17405,7 @@ msgid ""
 "  :Radix\n"
 "      The disassembler uses the specified base, case, and radix when\n"
 "      printing the disassembled code.  The default values are 16,\n"
-"      :downcase, and *print-radix*, respectively."
+"      :downcase, and T, respectively."
 msgstr ""
 
 #: src/compiler/disassem.lisp
