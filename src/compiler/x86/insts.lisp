@@ -686,6 +686,14 @@
 		 (declare (ignore value)) ; always nil anyway
 		 (disassem:read-signed-suffix 8 dstate)))
 
+(disassem:define-argument-type sign-extended-imm-byte
+  :prefilter #'(lambda (value dstate)
+		 (declare (ignore value)) ; always nil anyway
+		 (disassem:read-signed-suffix 8 dstate))
+  :printer #'(lambda (value stream dstate)
+	       (declare (ignore dstate))
+	       (princ (sign-extend value 8) stream)))
+
 (disassem:define-argument-type signed-imm-dword
   :prefilter #'(lambda (value dstate)
 		 (declare (ignore value))		; always nil anyway
@@ -1307,14 +1315,15 @@
 			 dstate)))))
 
 (eval-when (compile eval)
-  (defun arith-inst-printer-list (subop &key control)
-    `((accum-imm ((op ,(dpb subop (byte 3 2) #b0000010)))
-		 ,@(when control `(:default :control #',control)))
-      (reg/mem-imm ((op (#b1000000 ,subop)))
-		   ,@(when control `(:default :control #',control)))
+  (defun arith-inst-printer-list (subop &key logical-op-p)
+    `((accum-imm ((op ,(dpb subop (byte 3 2) #b0000010))))
+      (reg/mem-imm ((op (#b1000000 ,subop))))
       (reg/mem-imm ((op (#b1000001 ,subop))
-		    (imm nil :type signed-imm-byte))
-		   ,@(when control `(:default :control #',control)))
+		    (width 0)))
+      (reg/mem-imm ((op (#b1000001 ,subop))
+		    (width 1)
+		    ,@(when logical-op-p
+			`((imm nil :type sign-extended-imm-byte)))))
       (reg-reg/mem-dir ((op ,(dpb subop (byte 3 1) #b000000))))))
   )
 
@@ -1620,7 +1629,7 @@
 
 (define-instruction and (segment dst src)
   (:printer-list
-   (arith-inst-printer-list #b100 :control 'arith-logical-constant-control))
+   (arith-inst-printer-list #b100 :logical-op-p t))
   (:emitter
    (emit-random-arith-inst "AND" segment dst src #b100)))
 
@@ -1657,13 +1666,13 @@
 
 (define-instruction or (segment dst src)
   (:printer-list
-   (arith-inst-printer-list #b001 :control 'arith-logical-constant-control))
+   (arith-inst-printer-list #b001 :logical-op-p t))
   (:emitter
    (emit-random-arith-inst "OR" segment dst src #b001)))
 
 (define-instruction xor (segment dst src)
   (:printer-list
-   (arith-inst-printer-list #b110 :control 'arith-logical-constant-control))
+   (arith-inst-printer-list #b110 :logical-op-p t))
   (:emitter
    (emit-random-arith-inst "XOR" segment dst src #b110)))
 
