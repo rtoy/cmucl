@@ -5694,7 +5694,9 @@ msgid ""
 "If\n"
 "  it is not already compiled, the compiler is called to produce something "
 "to\n"
-"  disassemble."
+"  disassemble.\n"
+"\n"
+"  Also see disassem:disassemble for finer control of disassembly."
 msgstr ""
 
 #: src/code/misc-doc.lisp
@@ -17388,6 +17390,10 @@ msgid "Can't make a compiled function from ~S"
 msgstr ""
 
 #: src/compiler/disassem.lisp
+msgid "Default value for :radix argument for disassem:disassemble"
+msgstr ""
+
+#: src/compiler/disassem.lisp
 msgid ""
 "Disassemble the machine code associated with OBJECT, which can be a\n"
 "  function, a lambda expression, or a symbol with a function definition.  "
@@ -17405,7 +17411,7 @@ msgid ""
 "  :Radix\n"
 "      The disassembler uses the specified base, case, and radix when\n"
 "      printing the disassembled code.  The default values are 16,\n"
-"      :downcase, and T, respectively."
+"      :downcase, and *disassemble-print-radix*, respectively."
 msgstr ""
 
 #: src/compiler/disassem.lisp
