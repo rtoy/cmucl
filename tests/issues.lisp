@@ -944,3 +944,21 @@
     (assert-true (typep idf-max-expo 'kernel:double-float-int-exponent))
     (assert-true (typep (1- idf-max-expo) 'kernel:double-float-int-exponent))
     (assert-false (typep (1+ idf-max-expo) 'kernel:double-float-int-exponent))))
+
+(define-test issue.192.device
+  (assert-true (equal (make-pathname :device :unspecific)
+		      (make-pathname :device nil)))
+  (assert-true (equal (make-pathname :device nil)
+		      (make-pathname :device :unspecific))))
+
+(define-test issue.192.name
+  (assert-true (equal (make-pathname :name :unspecific)
+		      (make-pathname :name nil)))
+  (assert-true (equal (make-pathname :name nil)
+		      (make-pathname :name :unspecific))))
+
+(define-test issue.192.type
+  (assert-true (equal (make-pathname :type :unspecific)
+		      (make-pathname :type nil)))
+  (assert-true (equal (make-pathname :type nil)
+		      (make-pathname :type :unspecific))))
