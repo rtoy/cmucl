@@ -496,7 +496,13 @@
 	(cons
 	 (and (consp that)
 	      (compare-component (car this) (car that))
-	      (compare-component (cdr this) (cdr that)))))))
+	      (compare-component (cdr this) (cdr that))))
+	(symbol
+	 ;; Handle NIL and :UNSPECIFIC as being equivalent
+	 (or (and (eq this :unspecific)
+		  (null that))
+	     (and (null this)
+		  (eq that :unspecific)))))))
 
 ;; Compare the version component.  We treat NIL to be EQUAL to
 ;; :NEWEST.
