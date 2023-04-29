@@ -84,6 +84,7 @@ public domain.
     * ~~#173~~ Add pprinter for `define-assembly-routine`.
     * ~~#176~~ `SHORT-SITE-NAME` and `LONG-SITE-NAME` return `NIL`.
     * ~~#177~~ Add pprinter for `deftransform` and `defoptimizer`.
+    * ~~#192~~ Print radix marker in disassemblies and adjust note column to be larger for x86.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
