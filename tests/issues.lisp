@@ -962,3 +962,18 @@
 		      (make-pathname :type nil)))
   (assert-true (equal (make-pathname :type nil)
 		      (make-pathname :type :unspecific))))
+
+(define-test issue.192.version
+  (assert-true (equal (make-pathname :version :newest)
+		      (make-pathname :version nil)))
+  (assert-true (equal (make-pathname :version nil)
+		      (make-pathname :version :newest)))
+  (assert-true (equal (make-pathname :version :unspecific)
+		      (make-pathname :version nil)))
+  (assert-true (equal (make-pathname :version nil)
+		      (make-pathname :version :unspecific)))
+  (assert-true (equal (make-pathname :version :unspecific)
+		      (make-pathname :version :newest)))
+  (assert-true (equal (make-pathname :version :newest)
+		      (make-pathname :version :unspecific)))
+)
