@@ -944,3 +944,36 @@
     (assert-true (typep idf-max-expo 'kernel:double-float-int-exponent))
     (assert-true (typep (1- idf-max-expo) 'kernel:double-float-int-exponent))
     (assert-false (typep (1+ idf-max-expo) 'kernel:double-float-int-exponent))))
+
+(define-test issue.192.device
+  (assert-true (equal (make-pathname :device :unspecific)
+		      (make-pathname :device nil)))
+  (assert-true (equal (make-pathname :device nil)
+		      (make-pathname :device :unspecific))))
+
+(define-test issue.192.name
+  (assert-true (equal (make-pathname :name :unspecific)
+		      (make-pathname :name nil)))
+  (assert-true (equal (make-pathname :name nil)
+		      (make-pathname :name :unspecific))))
+
+(define-test issue.192.type
+  (assert-true (equal (make-pathname :type :unspecific)
+		      (make-pathname :type nil)))
+  (assert-true (equal (make-pathname :type nil)
+		      (make-pathname :type :unspecific))))
+
+(define-test issue.192.version
+  (assert-true (equal (make-pathname :version :newest)
+		      (make-pathname :version nil)))
+  (assert-true (equal (make-pathname :version nil)
+		      (make-pathname :version :newest)))
+  (assert-true (equal (make-pathname :version :unspecific)
+		      (make-pathname :version nil)))
+  (assert-true (equal (make-pathname :version nil)
+		      (make-pathname :version :unspecific)))
+  (assert-true (equal (make-pathname :version :unspecific)
+		      (make-pathname :version :newest)))
+  (assert-true (equal (make-pathname :version :newest)
+		      (make-pathname :version :unspecific)))
+)

@@ -496,14 +496,22 @@
 	(cons
 	 (and (consp that)
 	      (compare-component (car this) (car that))
-	      (compare-component (cdr this) (cdr that)))))))
+	      (compare-component (cdr this) (cdr that))))
+	(symbol
+	 ;; Handle NIL and :UNSPECIFIC as being equivalent
+	 (or (and (eq this :unspecific)
+		  (null that))
+	     (and (null this)
+		  (eq that :unspecific)))))))
 
 ;; Compare the version component.  We treat NIL to be EQUAL to
-;; :NEWEST.
+;; :NEWEST or :UNSPECIFIC.
 (defun compare-version-component (this that)
   (or (eql this that)
-      (and (null this) (eq that :newest))
-      (and (null that) (eq this :newest))))
+      (if (and (member this '(nil :newest :unspecific) :test #'eq)
+	       (member that '(nil :newest :unspecific) :test #'eq))
+	  t
+	  nil)))
 
 ;;;; Pathname functions.
 
