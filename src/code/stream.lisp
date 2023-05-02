@@ -604,7 +604,7 @@
 	   :skipped-char-form ()
 	   :eof-detected-form (eof-or-lose stream eof-errorp eof-value))))))
 
-(defun listen (&optional (stream *standard-input*) (width 1))
+(defun listen (&optional (stream *standard-input* stream-p) (width 1 width-p))
   "Returns T if a character is available on the given Stream."
   (declare (type streamlike stream))
   (let ((stream (in-synonym-of stream)))
@@ -612,9 +612,26 @@
       ;; simple-stream
       (stream::%listen stream width)
       ;; lisp-stream
-      (or (/= (the fixnum (lisp-stream-in-index stream)) in-buffer-length)
-	  ;; Test for t explicitly since misc methods return :eof sometimes.
-	  (eq (funcall (lisp-stream-misc stream) stream :listen) t))
+      (let ((error-type 'simple-program-error)
+            (function-name 'listen)
+            (format-control ())
+            (format-arguments ()))
+        (if width-p
+          ;; since width provided, two possible cases:
+          (progn
+            (if stream-p
+              ;; stream also provided, so too many arguments
+              (setf format-control (intl:gettext "Invalid number of arguments: ~S")
+                    format-arguments (list 3))
+              ;; stream init-form used, so invalid argument
+              (setf format-control (intl:gettext "Invalid argument: ~D")
+                    format-arguments (list 'width)))
+            (error error-type :function-name function-name
+                   :format-control format-control :format-arguments format-arguments))
+          ;; width not provided, so return expected value
+          (or (/= (the fixnum (lisp-stream-in-index stream)) in-buffer-length)
+            ;; Test for t explicitly since misc methods return :eof sometimes.
+            (eq (funcall (lisp-stream-misc stream) stream :listen) t))))
       ;; fundamental-stream
       (stream-listen stream))))
 
