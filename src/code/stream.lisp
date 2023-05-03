@@ -605,7 +605,10 @@
 	   :eof-detected-form (eof-or-lose stream eof-errorp eof-value))))))
 
 (defun listen (&optional (stream *standard-input*) (width 1 width-p))
-  "Returns T if a character is available on the given Stream."
+  _N"Returns T if a character is available on the given Stream.
+  Argument width is only used by streams of type simple-stream.
+  If stream is of type lisp-stream or fundamental-stream,
+  passing more than one argument is invalid. "
   (declare (type streamlike stream))
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
@@ -622,7 +625,13 @@
             ;; Test for t explicitly since misc methods return :eof sometimes.
             (eq (funcall (lisp-stream-misc stream) stream :listen) t)))
       ;; fundamental-stream
-      (stream-listen stream))))
+      (progn
+	(when width-p
+	  (error 'kernel:simple-program-error
+		 :function-name 'listen
+		 :format-control (intl:gettext "Invalid number of arguments: ~S")
+		 :format-arguments (list 2)))
+	(stream-listen stream)))))
 
 (defun read-char-no-hang (&optional (stream *standard-input*)
 				    (eof-errorp t) eof-value recursive-p)
