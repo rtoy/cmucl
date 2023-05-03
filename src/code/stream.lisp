@@ -612,14 +612,15 @@
       ;; simple-stream
       (stream::%listen stream width)
       ;; lisp-stream
-      ((when width-p
-	 (error 'kernel:simple-program-error
-		:function-name 'listen
-		:format-control (intl:gettext "Invalid number of arguments: ~S")
-		:format-arguments (list 3)))
-       (or (/= (the fixnum (lisp-stream-in-index stream)) in-buffer-length)
-           ;; Test for t explicitly since misc methods return :eof sometimes.
-           (eq (funcall (lisp-stream-misc stream) stream :listen) t)))
+      (progn
+	(when width-p
+	  (error 'kernel:simple-program-error
+		 :function-name 'listen
+		 :format-control (intl:gettext "Invalid number of arguments: ~S")
+		 :format-arguments (list 3)))
+	(or (/= (the fixnum (lisp-stream-in-index stream)) in-buffer-length)
+            ;; Test for t explicitly since misc methods return :eof sometimes.
+            (eq (funcall (lisp-stream-misc stream) stream :listen) t)))
       ;; fundamental-stream
       (stream-listen stream))))
 
