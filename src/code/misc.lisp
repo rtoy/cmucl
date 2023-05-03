@@ -17,7 +17,7 @@
 (in-package "LISP")
 (intl:textdomain "cmucl")
 
-(export '(documentation *features* variable room
+(export '(*features* variable room
 	  lisp-implementation-type lisp-implementation-version machine-type
 	  machine-version machine-instance software-type software-version
 	  short-site-name long-site-name dribble compiler-macro))
@@ -81,11 +81,31 @@
   (unix:unix-gethostname))
 
 (defvar *software-type* "Unix"
-  "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp.")
+  _N"The value of SOFTWARE-TYPE.  Set in FOO-os.lisp.")
 
 (defun software-type ()
   "Returns a string describing the supporting software."
   *software-type*)
+
+(defvar *software-version* nil
+  _N"Version string for supporting software")
+
+(defun software-version ()
+  _N"Returns a string describing version of the supporting software."
+  (unless *software-version*
+    (setf *software-version*
+	  (let (version result)
+	    (unwind-protect
+		 (progn
+		   (setf version
+			 (alien:alien-funcall
+			  (alien:extern-alien "os_software_version"
+					      (function (alien:* c-call:c-string)))))
+		   (setf result (alien:cast version c-call:c-string))))
+	    (if (zerop (length result))
+		"Unknown"
+		result)))
+    *software-version*))
 
 (defvar *short-site-name* nil
   "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp.")
@@ -161,5 +181,7 @@
   "Disassemble the machine code associated with OBJECT, which can be a
   function, a lambda expression, or a symbol with a function definition.  If
   it is not already compiled, the compiler is called to produce something to
-  disassemble."
+  disassemble.
+
+  Also see disassem:disassemble for finer control of disassembly."
   (disassem:disassemble object))

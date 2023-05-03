@@ -1097,7 +1097,10 @@
 
 #+unicode
 (progn
-(defun decompose (string &optional (compatibility t))
+(defun decompose (string &key (compatibility t) (start 0) end darwinp)
+  "Convert STRING to NFD (or NFKD).  If :darwinp is non-NIL, then
+  characters in the ranges U2000-U2FFF, UF900-UFA6A, and U2F800-U2FA1D
+  are not decomposed, as specified for Darwin pathnames."
   (declare (type string string))
   (let ((result (make-string (cond ((< (length string) 40)
 				    (* 5 (length string)))
@@ -1113,8 +1116,13 @@
 		 (declare (type kernel:index i))
 		 (multiple-value-bind (code wide) (codepoint string i)
 		   (when wide (incf i))
-		   (let ((decomp (unicode-decomp code compatibility)))
-		     (if decomp (rec decomp 0 (length decomp)) (out code))))))
+		   (if (and darwinp
+			    (or (<= #x2000 code #x2fff)
+				(<= #xf900 code #xfa6a)
+				(<= #x2f800 code #x2fa1d)))
+		       (out code)
+		       (let ((decomp (unicode-decomp code compatibility)))
+			 (if decomp (rec decomp 0 (length decomp)) (out code)))))))
 	     (out (code)
 	       (multiple-value-bind (hi lo) (surrogates code)
 		 (outch hi)
@@ -1151,7 +1159,7 @@
 					  (schar result (1+ last)))))
 			    (decf last (if wide2 2 1)))
 			   (t (return))))))))
-      (with-string string
+      (with-one-string string start end offset-var
 	(rec string start end))
       (shrink-vector result fillptr))))
 
@@ -1251,12 +1259,12 @@
 (defun string-to-nfd (string)
   _N"Convert String to Unicode Normalization Form D (NFD) using the
   canonical decomposition.  The NFD string is returned"
-  (decompose string nil))
+  (decompose string :compatibility nil))
 
 (defun string-to-nfkd (string)
   _N"Convert String to Unicode Normalization Form KD (NFKD) uisng the
   compatible decomposition form.  The NFKD string is returned."
-  (decompose string t))
+  (decompose string :compatibility t))
 
 (defun string-to-nfc (string)
   _N"Convert String to Unicode Normalization Form C (NFC).  If the

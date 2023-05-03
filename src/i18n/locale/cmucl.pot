@@ -4014,6 +4014,13 @@ msgstr ""
 
 #: src/code/string.lisp
 msgid ""
+"Convert STRING to NFD (or NFKD).  If :darwinp is non-NIL, then\n"
+"  characters in the ranges U2000-U2FFF, UF900-UFA6A, and U2F800-U2FA1D\n"
+"  are not decomposed, as specified for Darwin pathnames."
+msgstr ""
+
+#: src/code/string.lisp
+msgid ""
 "Convert a sequence of codepoints to a string.  Codepoints outside\n"
 "  the basic multilingual plane (BMP) are converted into the\n"
 "  corresponding surrogate pairs."
@@ -5640,11 +5647,15 @@ msgid "Returns a string describing the supporting software."
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
+msgid "Version string for supporting software"
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "Unknown"
+msgid "Returns a string describing version of the supporting software."
+msgstr ""
+
+#: src/code/misc.lisp
+msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
 msgstr ""
 
 #: src/code/misc.lisp
@@ -5653,10 +5664,6 @@ msgstr ""
 
 #: src/code/misc.lisp
 msgid "The value of LONG-SITE-NAME.  Set in library:site-init.lisp."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid "Site name not initialized"
 msgstr ""
 
 #: src/code/misc.lisp
@@ -5687,7 +5694,9 @@ msgid ""
 "If\n"
 "  it is not already compiled, the compiler is called to produce something "
 "to\n"
-"  disassemble."
+"  disassemble.\n"
+"\n"
+"  Also see disassem:disassemble for finer control of disassembly."
 msgstr ""
 
 #: src/code/misc-doc.lisp
@@ -15271,6 +15280,23 @@ msgid ""
 "  delimited by non-case-modifiable chars.  "
 msgstr ""
 
+#: src/code/unicode.lisp
+msgid ""
+"Decompose the Hangul syllable codepoint CP to an equivalent sequence\n"
+"  of conjoining jamo and print the decomposed result to the stream\n"
+"  STREAM."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid "Test if CODEPOINT is a Hangul syllable"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Decompose any Hangul syllables in STRING to an equivalent sequence of\n"
+"  conjoining jamo characters."
+msgstr ""
+
 #: src/compiler/macros.lisp
 msgid ""
 "Policy Node Condition*\n"
@@ -17364,6 +17390,10 @@ msgid "Can't make a compiled function from ~S"
 msgstr ""
 
 #: src/compiler/disassem.lisp
+msgid "Default value for :radix argument for disassem:disassemble"
+msgstr ""
+
+#: src/compiler/disassem.lisp
 msgid ""
 "Disassemble the machine code associated with OBJECT, which can be a\n"
 "  function, a lambda expression, or a symbol with a function definition.  "
@@ -17381,7 +17411,7 @@ msgid ""
 "  :Radix\n"
 "      The disassembler uses the specified base, case, and radix when\n"
 "      printing the disassembled code.  The default values are 16,\n"
-"      :downcase, and *print-radix*, respectively."
+"      :downcase, and *disassemble-print-radix*, respectively."
 msgstr ""
 
 #: src/compiler/disassem.lisp

@@ -471,10 +471,6 @@ msgid ""
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Unix-getpagesize returns the number of bytes in a system page."
-msgstr ""
-
-#: src/code/unix.lisp
 msgid "Unix-gethostname returns the name of the host machine as a string."
 msgstr ""
 
@@ -1372,18 +1368,6 @@ msgstr ""
 msgid ""
 "Unix-times returns information about the cpu time usage of the process\n"
 "   and its children."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-uname returns information from the uname(2) system call.\n"
-"  The return values are\n"
-"\n"
-"    Name of the operating system\n"
-"    Name of this node within some implementation-defined network, if any\n"
-"    Release level of this operating system\n"
-"    Version level of this operating system release\n"
-"    Name of the hardware type on which the system is running"
 msgstr ""
 
 #: src/code/unix.lisp
