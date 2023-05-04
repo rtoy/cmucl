@@ -606,9 +606,9 @@
 
 (defun listen (&optional (stream *standard-input*) (width 1 width-p))
   _N"Returns T if a character is available on the given Stream.
-  Argument width is only used by streams of type simple-stream.
-  If stream is of type lisp-stream or fundamental-stream,
-  passing more than one argument is invalid. "
+  Argument Width is only used by instances of SIMPLE-STREAM. If
+  Stream is a LISP-STREAM or FUNDAMENTAL-STREAM, passing more
+  than one argument is invalid."
   (declare (type streamlike stream))
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
