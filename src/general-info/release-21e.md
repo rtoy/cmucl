@@ -64,6 +64,7 @@ public domain.
     * ~~#140~~ External format for streams that are not `file-stream`'s.
     * ~~#141~~ Disallow locales that are pathnames to a localedef file.
     * ~~#142~~ `(random 0)` signals incorrect error.
+    * ~~#143~~ `LISTEN` doesn't signal error when given more than one arg
     * ~~#147~~ `stream-line-column` method missing for `fundamental-character-output-stream`.
     * ~~#149~~ Call setlocale(3C) on startup.
     * ~~#150~~ Add aliases for external format cp949 and euckr.
