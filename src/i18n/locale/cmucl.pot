@@ -9600,6 +9600,15 @@ msgid ""
 msgstr ""
 
 #: src/code/pathname.lisp
+msgid ""
+"When non-NIL, pathnames are on Darwin are normalized when created.\n"
+"  Otherwise, the pathnames are unchanged.\n"
+"\n"
+"  This must be NIL during bootstrapping because Unicode is not yet\n"
+"  available."
+msgstr ""
+
+#: src/code/pathname.lisp
 msgid "A path specification, either a string, file-stream or pathname."
 msgstr ""
 

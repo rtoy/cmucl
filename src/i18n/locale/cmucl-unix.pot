@@ -1358,14 +1358,6 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Return a USER-INFO structure for the user identified by UID.  If\n"
-"  not found, NIL is returned with a second value indicating the cause\n"
-"  of the failure.  In particular, if the second value is 0 (or\n"
-"  ENONENT, ESRCH, EBADF, etc.), then the uid was not found."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
 "Unix-times returns information about the cpu time usage of the process\n"
 "   and its children."
 msgstr ""
