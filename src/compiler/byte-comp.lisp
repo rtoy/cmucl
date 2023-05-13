@@ -38,7 +38,7 @@
 ;; 0-9 followed by a single hex digit in the range a-f.  Then the
 ;; version looks like a decimal number followed by a minor release
 ;; letter of a to f.
-(defconstant byte-fasl-file-version #x21d)
+(defconstant byte-fasl-file-version #x21e)
 
 (let* ((version-string (format nil "~X" byte-fasl-file-version)))
   ;; Add :cmu<n> to *features*
