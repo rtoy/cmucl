@@ -26,9 +26,6 @@
 #+complex-fp-vops
 (sys:register-lisp-feature :complex-fp-vops)
 
-#+(and sparc solaris)
-(sys:register-lisp-runtime-feature :relocatable-stacks)
-
 
 ;;;; The sigcontext structure.
 
