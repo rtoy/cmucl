@@ -98,9 +98,6 @@
 #define STATIC_SPACE_SIZE   	((2*MB_128) - SPARSE_BLOCK_SIZE)	/* 256 MB - 32 KB, 256 MB max */
 
 #define CONTROL_STACK_SIZE  	(MB_128 - SPARSE_BLOCK_SIZE)	/* 128 MB - 32 KB, 128 MB max */
-#if 0
-#define CONTROL_STACK_END       (CONTROL_STACK_START + control_stack_size)
-#endif
 
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
