@@ -568,7 +568,7 @@ restore_fpu(ucontext_t *context)
 
 #ifdef i386
 boolean
-os_support_sse2()
+os_support_sse2(void)
 {
     return TRUE;
 }
