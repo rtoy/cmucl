@@ -31,10 +31,7 @@
 #define STATIC_SPACE_START	(SpaceStart_TargetStatic)
 #define STATIC_SPACE_SIZE	(0x0ffff000)	/* 256MB - 1 page */
 
-#define BINDING_STACK_START	(0x38000000)
 #define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
-
-#define CONTROL_STACK_START	(0x40000000)
 
 #define CONTROL_STACK_SIZE	(0x07fd8000)	/* 128MB - SIGSTKSZ */
 

@@ -28,8 +28,6 @@
 #include "x86-validate-freebsd.h"
 #endif
 
-#define CONTROL_STACK_END	(CONTROL_STACK_START + control_stack_size)
-
 /* Note that GENCGC only uses dynamic_space 0. */
 #define DYNAMIC_1_SPACE_START	(DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE)
 
