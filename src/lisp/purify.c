@@ -27,6 +27,8 @@
 #include "interr.h"
 #ifdef GENCGC
 #include "gencgc.h"
+#else
+#include "cgc.h"
 #endif
 
 #undef PRINTNOISE

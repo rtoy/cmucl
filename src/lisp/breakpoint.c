@@ -17,9 +17,12 @@
 #include "globals.h"
 #include "alloc.h"
 #include "breakpoint.h"
-#if defined GENCGC
+#if defined(GENCGC)
 #include "gencgc.h"
+#else
+#include "cgc.h"
 #endif
+
 
 /*
  * See MAKE-BOGUS-LRA in code/debug-int.lisp for these values.

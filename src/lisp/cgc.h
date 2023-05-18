@@ -10,4 +10,5 @@
 void *cgc_alloc(int);
 void cgc_free_heap(void);
 
+lispobj *component_ptr_from_pc(lispobj * pc);
 #endif /* _CGC_H_ */
