@@ -76,7 +76,7 @@ linux:ansi-test:
       artifacts: true
   before_script:
     - git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
-    #- (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
+    - (cd ansi-test; git checkout cmucl-expected-failures)
   script:
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
@@ -163,7 +163,7 @@ osx:ansi-test:
       artifacts: true
   before_script:
     - /opt/local/bin/git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
-    #- (cd ansi-test; /opt/local/bin/git checkout rtoy-cmucl-expected-failures)
+    - (cd ansi-test; /opt/local/bin/git checkout cmucl-expected-failures)
   script:
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
