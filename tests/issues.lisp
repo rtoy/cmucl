@@ -977,3 +977,12 @@
   (assert-true (equal (make-pathname :version :newest)
 		      (make-pathname :version :unspecific)))
 )
+
+(define-test issue.216.enough-namestring-relative-dir
+    (:tag :issues)
+  (let ((pathname #p"foo/bar.lisp"))
+  (dolist (defaults '(#p"/tmp/zot/" #p"/tmp/zot/foo/"))
+    (let ((enough (enough-namestring pathname defaults)))
+      ;; This is the condition from the CLHS entry for enough-namestring
+      (assert-equal (merge-pathnames enough defaults)
+		    (merge-pathnames (parse-namestring pathname nil defaults) defaults))))))
