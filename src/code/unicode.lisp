@@ -177,7 +177,7 @@
 ;;   incorrect; instead, what we need is a new rule:
 ;; 
 ;;   *Break after paragraph separators.*
-;;    WB3a. Sep �
+;;    WB3a. Sep
 ;;   I'll make a propose to the UTC for this.
 ;;
 ;; Here is Will's translation of those rules (including WB3a)
