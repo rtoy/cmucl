@@ -830,7 +830,12 @@
     (assert-true (stream::find-external-format :euckr))
     (assert-true (stream::find-external-format :cp949))))
 
-
+(define-test issue.154
+    (:tag :issues)
+  (let ((locale "en_US.UTF-8@piglatin")
+	(piglatin_text "Ethay izesay ofway away eamstray inway-ufferbay."))
+    (assert-equal locale (intl:setlocale "en_US.UTF-8@piglatin"))
+    (assert-equal piglatin_text (intl:dgettext "cmucl" "The size of a stream in-buffer."))))
 
 (define-test issue.158
     (:tag :issues)
