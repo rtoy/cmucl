@@ -837,8 +837,8 @@
 	(piglatin-text "Ethay izesay ofway away eamstray inway-ufferbay."))
     (unwind-protect
 	 (progn
-	   (assert-equal locale (intl:setlocale "en_US.UTF-8@piglatin"))
-	   ;; (assert-equal piglatin-text (intl:dgettext "cmucl" "The size of a stream in-buffer."))
+	   ;; (assert-equal locale (intl:setlocale "en_US.UTF-8@piglatin"))
+	   (assert-equal piglatin-text (intl:dgettext "cmucl" "The size of a stream in-buffer."))
 	   )
       (intl:setlocale old-locale))))
 
