@@ -61,6 +61,7 @@ linux:test:
     - job: linux:build
       artifacts: true
   script:
+    - ls -laR dist/lib/cmucl/lib/locale/
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 linux:ansi-test:
