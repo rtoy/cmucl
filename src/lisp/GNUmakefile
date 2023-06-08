@@ -106,6 +106,7 @@ LOCALE_DIRS = $(patsubst %, i18n/locale/%/LC_MESSAGES, $(LOCALES))
 # FreeBSD, it moves the line to after the Language-Team line.  This
 # makes things messy.  Hence, sort and diff.
 translations: 
+	echo "making translations"
 	for pot in ../../src/i18n/locale/*.pot; do \
 	  for po in $(LOCALE_DIRS); do \
             d=`dirname $$pot`; \
