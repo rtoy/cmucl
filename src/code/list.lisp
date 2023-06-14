@@ -745,6 +745,41 @@
       (cons item list)))
 
 
+;; Convert a list to a hashtable.  Given 2 lists, find the shorter of
+;; the two lists and add the shorter list to a hashtable.  
+(defun list-to-hashtable (list1 list2 &key test test-not key)
+  ;; Don't currently support test-not when converting a list to a hashtable
+  (unless test-not
+    (let ((hash-test (let ((test-fn (if (and (symbolp test)
+					     (fboundp test))
+					(fdefinition test)
+					test)))
+		       (cond ((eql test-fn #'eq) 'eq)
+			     ((eql test-fn #'eql) 'eql)
+			     ((eql test-fn #'equal) 'equal)
+			     ((eql test-fn #'equalp) 'equalp)))))
+      (unless hash-test
+	(return-from list-to-hashtable (values nil nil)))
+      (multiple-value-bind (len shorter-list)
+          (do ((length 0 (1+ length))
+               (l1 list1 (cdr l1))
+               (l2 list2 (cdr l2)))
+              ((cond ((null l1)
+                      (return (values length list1)))
+                     ((null l2)
+                      (return (values length list2))))))
+        (when (< len 15)
+          (return-from list-to-hashtable (values nil nil)))
+        (flet ((build-hash (len list)
+                 (let ((hashtable (make-hash-table :test test :size len)))
+                   (dolist (item list)
+                     (setf (gethash (apply-key key item) hashtable) item))
+                   hashtable)))
+          (cond ((eq shorter-list list2)
+		 (values (build-hash len list2) list2))
+                ((eq shorter-list list1)
+		 (values (build-hash len list1) list1))))))))
+
 ;;; UNION -- Public.
 ;;;
 ;;; This function assumes list2 is the result, adding to it from list1 as
@@ -812,53 +847,37 @@
 	  (setq list1 (Cdr list1))))
     res))
 
-(defun set-difference (list1 list2 &key key
-				     (test #'eql testp) (test-not nil notp))
+(defun set-difference (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the elements of list1 which are not in list2."
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (flet ((default-impl (list1 list2)
-           (if (null list2)
+  (multiple-value-bind (hashtable shorter-list)
+      (list-to-hashtable list1 list2 :key key :test test :test-not test-not)
+    (cond ((null hashtable)
+	   ;; Default implementation because we didn't create the hash
+	   ;; table.
+	   (if (null list2)
                list1
                (let ((res nil))
 		 (dolist (elt list1)
                    (if (not (with-set-keys (member (apply-key key elt) list2)))
                        (push elt res)))
-		 res))))
-    (cond ((and testp (null key)
-                (member test (list #'eq #'eql #'equal #'equalp)))
-           (multiple-value-bind (len shorter-list)
-               (do ((length 0 (1+ length))
-                    (l1 list1 (cdr l1))
-                    (l2 list2 (cdr l2)))
-                   ((cond ((null l1)
-                           (return (values length list1)))
-                          ((null l2)
-                           (return (values length list2))))))
-             (when (< len 20)
-               (return-from set-difference (default-impl list1 list2)))
-             (flet ((build-hash (len list)
-                      (let ((hashtable (make-hash-table :test test :size len)))
-                        (dolist (item list)
-                          (setf (gethash item hashtable) t))
-                        hashtable)))
-               (cond ((eq shorter-list list2)
-                      (let ((hashtable (build-hash len list2))
-                            diff)
-                        (dolist (item list1)
-                          (unless (gethash item hashtable)
-                            (push item diff)))
-                        diff))
-                     ((eq shorter-list list1)
-                      (let ((hashtable (build-hash len list1)))
-                        (dolist (item list2)
-                          (when (gethash item hashtable)
-                            (remhash item hashtable)))
-                        (loop for item being the hash-keys of hashtable
-                              collect item)))))))
-          (t
-           (default-impl list1 list2)))))
+		 res)))
+	  ((eq shorter-list list2)
+	   ;; list2 was placed in hash table.
+	   (let (diff)
+             (dolist (item list1)
+	       (unless (gethash (apply-key key item) hashtable)
+                 (push item diff)))
+             diff))
+          ((eq shorter-list list1)
+	   ;; list1 was placed in the hash table.
+           (dolist (item list2)
+	     (when (gethash (apply-key key item) hashtable)
+               (remhash item hashtable)))
+           (loop for item being the hash-values of hashtable
+                 collect item)))))
 
 
 (defun nset-difference (list1 list2 &key key
