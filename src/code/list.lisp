@@ -770,15 +770,16 @@
                       (return (values length list2))))))
         (when (< len 15)
           (return-from list-to-hashtable (values nil nil)))
-        (flet ((build-hash (len list)
-                 (let ((hashtable (make-hash-table :test test :size len)))
-                   (dolist (item list)
-                     (setf (gethash (apply-key key item) hashtable) item))
-                   hashtable)))
-          (cond ((eq shorter-list list2)
-		 (values (build-hash len list2) list2))
-                ((eq shorter-list list1)
-		 (values (build-hash len list1) list1))))))))
+        (cond ((eq shorter-list list2)
+	       (let ((hashtable (make-hash-table :test test :size len)))
+                 (dolist (item list2)
+                   (setf (gethash (apply-key key item) hashtable) item))
+                 (values hashtable list2)))
+              ((eq shorter-list list1)
+	       (let ((hashtable (make-hash-table :test test :size len)))
+		 (dolist (item list1)
+     		   (push item (gethash (apply-key key item) hashtable)))
+		 (values hashtable list1))))))))
 
 ;;; UNION -- Public.
 ;;;
@@ -874,10 +875,13 @@
           ((eq shorter-list list1)
 	   ;; list1 was placed in the hash table.
            (dolist (item list2)
-	     (when (gethash (apply-key key item) hashtable)
+	     (unless (eq hashtable (gethash (apply-key key item) hashtable hashtable))
                (remhash item hashtable)))
-           (loop for item being the hash-values of hashtable
-                 collect item)))))
+	   (let ((result '()))
+	     (maphash #'(lambda (key value)
+			  (declare (ignore key))
+			  (setq result (nconc result value)))
+		      hashtable))))))
 
 
 (defun nset-difference (list1 list2 &key key
