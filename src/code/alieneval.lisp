@@ -648,10 +648,21 @@
 (def-alien-type-method (integer :naturalize-gen) (type alien)
   ;; Mask out any unwanted bits.  Important if the C code returns
   ;; values in %al, or %ax
-  (case (alien-integer-type-bits type)
-    (8 `(ldb (byte 8 0) ,alien))
-    (16 `(ldb (byte 16 0) ,alien))
-    (t alien)))
+  (if (alien-integer-type-signed type)
+      (case (alien-integer-type-bits type)
+	;; First, get just the low part of the alien and then
+	;; sign-extend it appropriately.
+	(8 `(let ((val (ldb (byte 8 0) ,alien)))
+	      (if (> val #x7f)
+		  (- val #x100))))
+	(16 `(let ((val (ldb (byte 16 0) ,alien)))
+	      (if (> val #x7fff)
+		  (- val #x10000))))
+	(t alien))
+      (case (alien-integer-type-bits type)
+	(8 `(ldb (byte 8 0) ,alien))
+	(16 `(ldb (byte 16 0) ,alien))
+	(t alien))))
 
 ;; signed numbers <= 32 bits need to be sign extended.
 ;; I really should use the movsxd instruction, but I don't
