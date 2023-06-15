@@ -646,8 +646,12 @@
 
 #-amd64
 (def-alien-type-method (integer :naturalize-gen) (type alien)
-  (declare (ignore type))
-  alien)
+  ;; Mask out any unwanted bits.  Important if the C code returns
+  ;; values in %al, or %ax
+  (case (alien-integer-type-bits type)
+    (8 `(ldb (byte 8 0) ,alien))
+    (16 `(ldb (byte 16 0) ,alien))
+    (t alien)))
 
 ;; signed numbers <= 32 bits need to be sign extended.
 ;; I really should use the movsxd instruction, but I don't
