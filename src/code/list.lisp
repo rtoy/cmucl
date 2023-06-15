@@ -871,7 +871,7 @@
              (dolist (item list1)
 	       (unless (gethash (apply-key key item) hashtable)
                  (push item diff)))
-             diff))
+             (nreverse diff)))
           ((eq shorter-list list1)
 	   ;; list1 was placed in the hash table.
            (dolist (item list2)
