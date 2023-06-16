@@ -649,16 +649,19 @@
   ;; Mask out any unwanted bits.  Important if the C code returns
   ;; values in %al, or %ax
   (if (alien-integer-type-signed type)
-      (case (alien-integer-type-bits type)
-	;; First, get just the low part of the alien and then
-	;; sign-extend it appropriately.
-	(8 `(let ((val (ldb (byte 8 0) ,alien)))
-	      (if (> val #x7f)
-		  (- val #x100))))
-	(16 `(let ((val (ldb (byte 16 0) ,alien)))
-	      (if (> val #x7fff)
-		  (- val #x10000))))
-	(t alien))
+      (let ((val (gensym "VAL-")))
+	(case (alien-integer-type-bits type)
+	  ;; First, get just the low part of the alien and then
+	  ;; sign-extend it appropriately.
+	  (8 `(let ((,val (ldb (byte 8 0) ,alien)))
+		(if (> ,val #x7f)
+		    (- ,val #x100)
+		    ,val)))
+	  (16 `(let ((,val (ldb (byte 16 0) ,alien)))
+		 (if (> ,val #x7fff)
+		     (- ,val #x10000)
+		     ,val)))
+	  (t alien)))
       (case (alien-integer-type-bits type)
 	(8 `(ldb (byte 8 0) ,alien))
 	(16 `(ldb (byte 16 0) ,alien))
