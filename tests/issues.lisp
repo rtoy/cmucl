@@ -986,3 +986,53 @@
       ;; This is the condition from the CLHS entry for enough-namestring
       (assert-equal (merge-pathnames enough defaults)
 		    (merge-pathnames (parse-namestring pathname nil defaults) defaults))))))
+
+(define-test issue.242-load-foreign
+  ;; load-foreign apparently returns NIL if it succeeds.
+  (assert-true (eql nil (ext:load-foreign (merge-pathnames "test-return.o" *test-path*)))))
+
+(defun return-unsigned-int (x)
+  ((alien:alien-funcall
+    (alien:extern-alien "int_to_unsigned_int"
+			(function c-call:unsigned-int c-call:unsigned-int))
+    n)))
+
+(define-test issue.242.test-alien-return-signed-char
+  (:tag :issues)
+  (flet ((fun (n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_signed_char"
+				(function c-call:char c-call:int))
+	    n))
+	 (sign-extend (n)
+	   (let ((n (ldb (byte 8 0) n)))
+	     (if (> n #x7f)
+		 (- n #x100)
+		 n))))
+    (dolist (x '(99 -99 1023 -1023))
+      (assert-equal (sign-extend x) (fun x)))))
+
+(define-test issue.242.test-alien-return-signed-short
+  (:tag :issues)
+  (flet ((fun (n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_short"
+				(function c-call:short c-call:int))
+	    n))
+	 (sign-extend (n)
+	   (let ((n (ldb (byte 16 0) n)))
+	     (if (> n #x7fff)
+		 (- n #x10000)
+		 n))))
+    (dolist (x '(1023 -1023 100000 -100000))
+      (assert-equal (sign-extend x) (fun x)))))
+
+(define-test issue.242.test-alien-return-signed-int
+  (:tag :issues)
+  (flet ((fun (n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_int"
+				(function c-call:int c-call:int))
+	    n)))
+    (dolist (x '(1023 -1023 #x7fffffff #x-80000000))
+      (assert-equal x (fun x)))))

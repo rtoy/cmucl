@@ -47,6 +47,10 @@ function cleanup {
 
 trap cleanup EXIT
 
+echo $PWD
+ls tests/*.c
+(cd tests; gcc -m32 -O3 -c test-return.c)
+
 if [ $# -eq 0 ]; then
     # No args so run all the tests
     $LISP -noinit -load tests/run-tests.lisp -eval '(cmucl-test-runner:run-all-tests)'
