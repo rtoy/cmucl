@@ -47,8 +47,9 @@ function cleanup {
 
 trap cleanup EXIT
 
-echo $PWD
-ls tests/*.c
+# Compile up the C file that is used for testing alien funcalls to
+# functions that return integer types of different lengths.  We use
+# gcc since clang isn't always available.
 (cd tests; gcc -m32 -O3 -c test-return.c)
 
 if [ $# -eq 0 ]; then
