@@ -170,7 +170,10 @@
   (alien-rep nil :type (or null function))
   (extract-gen nil :type (or null function))
   (deposit-gen nil :type (or null function))
-  (naturalize-gen nil :type (or null function))
+  ;;
+  ;; Method that accepts the alien type and the alien value.  The
+  ;; method converts the alien value into an appropriate lisp value.
+  (naturalize-gen nil :type (or null function)
   (deport-gen nil :type (or null function))
   ;; Cast?
   (arg-tn nil :type (or null function))
