@@ -1036,3 +1036,39 @@
 	    n)))
     (dolist (x '(1023 -1023 #x7fffffff #x-80000000))
       (assert-equal x (fun x)))))
+
+(define-test issue.242.test-alien-return-unsigned-char
+  (:tag :issues)
+  (flet ((fun (n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_char"
+				(function c-call:unsigned-char c-call:int))
+	    n))
+	 (expected (n)
+	   (ldb (byte 8 0) n)))
+    (dolist (x '(99 -99 1023 -1023))
+      (assert-equal (expected x) (fun x)))))
+
+(define-test issue.242.test-alien-return-unsigned-short
+  (:tag :issues)
+  (flet ((fun (n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_short"
+				(function c-call:unsigned-short c-call:int))
+	    n))
+	 (expected (n)
+	   (ldb (byte 16 0) n)))
+    (dolist (x '(1023 -1023 100000 -100000))
+      (assert-equal (expected x) (fun x)))))
+
+(define-test issue.242.test-alien-return-unsigned-int
+  (:tag :issues)
+  (flet ((fun (n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_int"
+				(function c-call:unsigned-int c-call:int))
+	    n))
+	 (expected (n)
+	   (ldb (byte 32 0) n)))
+    (dolist (x '(1023 -1023 #x7fffffff #x-80000000))
+      (assert-equal (expected x) (fun x)))))
