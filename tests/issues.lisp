@@ -991,12 +991,6 @@
   ;; load-foreign apparently returns NIL if it succeeds.
   (assert-true (eql nil (ext:load-foreign (merge-pathnames "test-return.o" *test-path*)))))
 
-(defun return-unsigned-int (x)
-  ((alien:alien-funcall
-    (alien:extern-alien "int_to_unsigned_int"
-			(function c-call:unsigned-int c-call:unsigned-int))
-    n)))
-
 (define-test issue.242.test-alien-return-signed-char
   (:tag :issues)
   (flet ((fun (n)
