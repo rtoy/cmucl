@@ -1004,7 +1004,7 @@
 		 (- n #x100)
 		 n))))
     (dolist (x '(99 -99 1023 -1023))
-      (assert-equal (sign-extend x) (fun x)))))
+      (assert-equal (sign-extend x) (fun x) x))))
 
 (define-test issue.242.test-alien-return-signed-short
   (:tag :issues)
@@ -1019,7 +1019,7 @@
 		 (- n #x10000)
 		 n))))
     (dolist (x '(1023 -1023 100000 -100000))
-      (assert-equal (sign-extend x) (fun x)))))
+      (assert-equal (sign-extend x) (fun x) x))))
 
 (define-test issue.242.test-alien-return-signed-int
   (:tag :issues)
@@ -1029,7 +1029,7 @@
 				(function c-call:int c-call:int))
 	    n)))
     (dolist (x '(1023 -1023 #x7fffffff #x-80000000))
-      (assert-equal x (fun x)))))
+      (assert-equal x (fun x) x))))
 
 (define-test issue.242.test-alien-return-unsigned-char
   (:tag :issues)
@@ -1041,7 +1041,7 @@
 	 (expected (n)
 	   (ldb (byte 8 0) n)))
     (dolist (x '(99 -99 1023 -1023))
-      (assert-equal (expected x) (fun x)))))
+      (assert-equal (expected x) (fun x) x))))
 
 (define-test issue.242.test-alien-return-unsigned-short
   (:tag :issues)
@@ -1053,7 +1053,7 @@
 	 (expected (n)
 	   (ldb (byte 16 0) n)))
     (dolist (x '(1023 -1023 100000 -100000))
-      (assert-equal (expected x) (fun x)))))
+      (assert-equal (expected x) (fun x) x))))
 
 (define-test issue.242.test-alien-return-unsigned-int
   (:tag :issues)
@@ -1065,4 +1065,30 @@
 	 (expected (n)
 	   (ldb (byte 32 0) n)))
     (dolist (x '(1023 -1023 #x7fffffff #x-80000000))
-      (assert-equal (expected x) (fun x)))))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-bool
+  (:tag :issues)
+  (flet ((fun (n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "unsigned_to_bool"
+				(function c-call:char c-call:unsigned-int))
+	    n))
+	 (expected (n)
+	   (if (zerop n)
+	       0
+	       1)))
+    (dolist (x '(0 1 1000))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-bool.2
+  (:tag :issues)
+  (flet ((fun (n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "unsigned_to_bool"
+				(function alien:boolean c-call:unsigned-int))
+	    n))
+	 (expected (n)
+	   (not (zerop n))))
+    (dolist (x '(0 1 1000))
+      (assert-equal (expected x) (fun x) x))))
