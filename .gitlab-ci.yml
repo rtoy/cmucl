@@ -45,12 +45,9 @@ linux:build:
     #- bin/create-target.sh xcross x86_linux_clang
     #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
     # Regular build using the cross-compiled result or snapshot
-    - ls -laR snapshot/lib/cmucl/lib/locale
     - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o snapshot/bin/lisp
     # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
-    - ls -laR linux-4/i18n/locale
     - bin/make-dist.sh -I dist linux-4
-    - ls -laR dist/lib/cmucl/lib/locale
 
 linux:test:
   stage: test
@@ -65,7 +62,6 @@ linux:test:
     - job: linux:build
       artifacts: true
   script:
-    - ls -laR dist/lib/cmucl/lib/locale/
     - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 linux:ansi-test:
