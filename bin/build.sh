@@ -246,7 +246,6 @@ if [ "${BUILD_POT}" = "yes" ]; then
 fi
 
 BUILD=3
-echo "MAKE_TARGET = ${MAKE_TARGET}"
 buildit
 
 # Asdf and friends are part of the base install, so we need to build
