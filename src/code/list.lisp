@@ -863,7 +863,7 @@
   (if (and testp notp)
       (error "Test and test-not both supplied."))
   ;; Quick exit
-  (when (null list)
+  (when (null list2)
     (return-from set-difference list1))
 
   (multiple-value-bind (hashtable shorter-list)
