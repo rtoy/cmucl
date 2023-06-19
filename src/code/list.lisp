@@ -744,11 +744,13 @@
       list
       (cons item list)))
 
+;; The minimum length of a list before we can use a hashtable
 (defparameter *min-list-length-for-hashtable*
   15)
 
 ;; Convert a list to a hashtable.  Given 2 lists, find the shorter of
-;; the two lists and add the shorter list to a hashtable.  
+;; the two lists and add the shorter list to a hashtable.  Returns the
+;; hashtable and the shorter list.
 (defun list-to-hashtable (list1 list2 &key test test-not key)
   ;; Don't currently support test-not when converting a list to a hashtable
   (unless test-not
@@ -763,13 +765,18 @@
       (unless hash-test
 	(return-from list-to-hashtable (values nil nil)))
       (multiple-value-bind (len shorter-list)
+	  ;; Find the list with the shorter length.  If they're they
+	  ;; same, we prefer the second list to the first list since
+	  ;; the hashtable implementation is slightly simplier.
           (do ((length 0 (1+ length))
                (l1 list1 (cdr l1))
                (l2 list2 (cdr l2)))
-              ((cond ((null l1)
-                      (return (values length list1)))
-                     ((null l2)
-                      (return (values length list2))))))
+              ((cond ((null l2)
+                      (return (values length list2)))
+		     ((null l1)
+                      (return (values length list1))))))
+	;; If the list is too short, the hashtable makes things
+	;; slower.  We also need to balance memory usage.
         (when (< len *min-list-length-for-hashtable*)
           (return-from list-to-hashtable (values nil nil)))
         (cond ((eq shorter-list list2)
