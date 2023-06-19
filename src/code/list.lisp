@@ -883,7 +883,8 @@
 	     (maphash #'(lambda (key value)
 			  (declare (ignore key))
 			  (setq result (nconc result value)))
-		      hashtable))))))
+		      hashtable)
+	     result)))))
 
 
 (defun nset-difference (list1 list2 &key key
