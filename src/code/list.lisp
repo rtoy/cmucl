@@ -45,7 +45,7 @@
 	  tree-equal list-length nth %setnth nthcdr last make-list append
 	  copy-list copy-alist copy-tree revappend nconc nreconc butlast
 	  nbutlast ldiff member member-if member-if-not tailp adjoin union
-	  nunion intersection nintersection set-difference nset-difference
+	  nunion intersection nintersection nset-difference
 	  set-exclusive-or nset-exclusive-or subsetp acons pairlis assoc
 	  assoc-if assoc-if-not rassoc rassoc-if rassoc-if-not subst subst-if
 	  subst-if-not nsubst nsubst-if nsubst-if-not sublis nsublis))
@@ -862,18 +862,20 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
+  ;; Quick exit
+  (when (null list)
+    (return-from set-difference list1))
+
   (multiple-value-bind (hashtable shorter-list)
       (list-to-hashtable list1 list2 :key key :test test :test-not test-not)
     (cond ((null hashtable)
 	   ;; Default implementation because we didn't create the hash
 	   ;; table.
-	   (if (null list2)
-               list1
-               (let ((res nil))
-		 (dolist (elt list1)
-                   (if (not (with-set-keys (member (apply-key key elt) list2)))
-                       (push elt res)))
-		 res)))
+           (let ((res nil))
+	     (dolist (elt list1)
+               (if (not (with-set-keys (member (apply-key key elt) list2)))
+                   (push elt res)))
+	     res))
 	  ((eq shorter-list list2)
 	   ;; list2 was placed in hash table.
 	   (let (diff)
