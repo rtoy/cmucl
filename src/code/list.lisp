@@ -744,6 +744,8 @@
       list
       (cons item list)))
 
+(defparameter *min-list-length-for-hashtable*
+  15)
 
 ;; Convert a list to a hashtable.  Given 2 lists, find the shorter of
 ;; the two lists and add the shorter list to a hashtable.  
@@ -768,7 +770,7 @@
                       (return (values length list1)))
                      ((null l2)
                       (return (values length list2))))))
-        (when (< len 15)
+        (when (< len *min-list-length-for-hashtable*)
           (return-from list-to-hashtable (values nil nil)))
         (cond ((eq shorter-list list2)
 	       (let ((hashtable (make-hash-table :test test :size len)))
@@ -869,9 +871,9 @@
 	   ;; list2 was placed in hash table.
 	   (let (diff)
              (dolist (item list1)
-	       (unless (gethash (apply-key key item) hashtable)
+	       (unless (nth-value 1 (gethash (apply-key key item) hashtable))
                  (push item diff)))
-             (nreverse diff)))
+             diff))
           ((eq shorter-list list1)
 	   ;; list1 was placed in the hash table.
            (dolist (item list2)
