@@ -46,6 +46,7 @@ linux:build:
     #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
     # Regular build using the cross-compiled result or snapshot
     - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o snapshot/bin/lisp
+    # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist linux-4
 
 linux:test:
