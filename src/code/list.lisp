@@ -748,6 +748,18 @@
 (defparameter *min-list-length-for-hashtable*
   15)
 
+(defun init-hashtable-list1 (list1 len &key key test)
+  (let ((hashtable (make-hash-table :test test :size len)))
+    (dolist (item list1)
+      (push item (gethash (apply-key key item) hashtable)))
+    (values hashtable list1)))
+
+(defun init-hashtable-list2 (list2 len &key key test)
+  (let ((hashtable (make-hash-table :test test :size len)))
+    (dolist (item list2)
+      (setf (gethash (apply-key key item) hashtable) item))
+    (values hashtable list2)))
+
 ;; Convert a list to a hashtable.  Given 2 lists, find the shorter of
 ;; the two lists and add the shorter list to a hashtable.  Returns the
 ;; hashtable and the shorter list.
@@ -771,24 +783,28 @@
           (do ((length 0 (1+ length))
                (l1 list1 (cdr l1))
                (l2 list2 (cdr l2)))
-              ((cond ((null l2)
+              ((cond ((endp l2)
                       (return (values length list2)))
-		     ((null l1)
+		     ((endp l1)
                       (return (values length list1))))))
 	;; If the list is too short, the hashtable makes things
 	;; slower.  We also need to balance memory usage.
         (when (< len *min-list-length-for-hashtable*)
           (return-from list-to-hashtable (values nil nil)))
         (cond ((eq shorter-list list2)
+	       #+nil
 	       (let ((hashtable (make-hash-table :test test :size len)))
                  (dolist (item list2)
                    (setf (gethash (apply-key key item) hashtable) item))
-                 (values hashtable list2)))
+                 (values hashtable list2))
+	       (init-hashtable-list2 list2 len :key key :test test))
               ((eq shorter-list list1)
+	       #+nil
 	       (let ((hashtable (make-hash-table :test test :size len)))
 		 (dolist (item list1)
      		   (push item (gethash (apply-key key item) hashtable)))
-		 (values hashtable list1))))))))
+		 (values hashtable list1))
+	       (init-hashtable-list1 list1 len :key key :test test)))))))
 
 ;;; UNION -- Public.
 ;;;
@@ -857,6 +873,24 @@
 	  (setq list1 (Cdr list1))))
     res))
 
+(defun set-diff-hash2 (list1 hashtable &key key)
+  (let (diff)
+    (dolist (item list1)
+      (unless (nth-value 1 (gethash (apply-key key item) hashtable))
+        (push item diff)))
+    diff))
+
+(defun set-diff-hash1 (list2 hashtable &key key)
+  (dolist (item list2)
+    (unless (eq hashtable (gethash (apply-key key item) hashtable hashtable))
+      (remhash item hashtable)))
+  (let ((result '()))
+    (maphash #'(lambda (key value)
+		 (declare (ignore key))
+		 (setq result (nconc result value)))
+	     hashtable)
+    result))  
+
 (defun set-difference (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the elements of list1 which are not in list2."
   (declare (inline member))
@@ -878,22 +912,27 @@
 	     res))
 	  ((eq shorter-list list2)
 	   ;; list2 was placed in hash table.
+	   #+nil
 	   (let (diff)
              (dolist (item list1)
 	       (unless (nth-value 1 (gethash (apply-key key item) hashtable))
                  (push item diff)))
-             diff))
+             diff)
+	   (set-diff-hash2 list1 hashtable :key key))
           ((eq shorter-list list1)
 	   ;; list1 was placed in the hash table.
+	   #+nil
            (dolist (item list2)
 	     (unless (eq hashtable (gethash (apply-key key item) hashtable hashtable))
                (remhash item hashtable)))
+	   #+nil
 	   (let ((result '()))
 	     (maphash #'(lambda (key value)
 			  (declare (ignore key))
 			  (setq result (nconc result value)))
 		      hashtable)
-	     result)))))
+	     result)
+	   (set-diff-hash1 list2 hashtable :key key)))))
 
 
 (defun nset-difference (list1 list2 &key key
