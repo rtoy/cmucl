@@ -785,6 +785,7 @@
                (l2 list2 (cdr l2)))
               ((cond ((endp l2)
                       (return (values length list2)))
+		     #+nil
 		     ((endp l1)
                       (return (values length list1))))))
 	;; If the list is too short, the hashtable makes things
