@@ -830,7 +830,18 @@
     (assert-true (stream::find-external-format :euckr))
     (assert-true (stream::find-external-format :cp949))))
 
-
+(define-test issue.154
+    (:tag :issues)
+  (let ((old-locale intl::*locale*)
+	(locale "en_US.UTF-8@piglatin")
+	(piglatin-text "Ethay izesay ofway away eamstray inway-ufferbay."))
+    (unwind-protect
+	 (progn
+	   (assert-equal locale (intl:setlocale "en_US.UTF-8@piglatin"))
+	   (print (intl::find-domain "cmucl" intl::*locale*))
+	   (assert-equal piglatin-text (intl:dgettext "cmucl" "The size of a stream in-buffer."))
+	   )
+      (intl:setlocale old-locale))))
 
 (define-test issue.158
     (:tag :issues)
@@ -944,3 +955,45 @@
     (assert-true (typep idf-max-expo 'kernel:double-float-int-exponent))
     (assert-true (typep (1- idf-max-expo) 'kernel:double-float-int-exponent))
     (assert-false (typep (1+ idf-max-expo) 'kernel:double-float-int-exponent))))
+
+(define-test issue.192.device
+  (assert-true (equal (make-pathname :device :unspecific)
+		      (make-pathname :device nil)))
+  (assert-true (equal (make-pathname :device nil)
+		      (make-pathname :device :unspecific))))
+
+(define-test issue.192.name
+  (assert-true (equal (make-pathname :name :unspecific)
+		      (make-pathname :name nil)))
+  (assert-true (equal (make-pathname :name nil)
+		      (make-pathname :name :unspecific))))
+
+(define-test issue.192.type
+  (assert-true (equal (make-pathname :type :unspecific)
+		      (make-pathname :type nil)))
+  (assert-true (equal (make-pathname :type nil)
+		      (make-pathname :type :unspecific))))
+
+(define-test issue.192.version
+  (assert-true (equal (make-pathname :version :newest)
+		      (make-pathname :version nil)))
+  (assert-true (equal (make-pathname :version nil)
+		      (make-pathname :version :newest)))
+  (assert-true (equal (make-pathname :version :unspecific)
+		      (make-pathname :version nil)))
+  (assert-true (equal (make-pathname :version nil)
+		      (make-pathname :version :unspecific)))
+  (assert-true (equal (make-pathname :version :unspecific)
+		      (make-pathname :version :newest)))
+  (assert-true (equal (make-pathname :version :newest)
+		      (make-pathname :version :unspecific)))
+)
+
+(define-test issue.216.enough-namestring-relative-dir
+    (:tag :issues)
+  (let ((pathname #p"foo/bar.lisp"))
+  (dolist (defaults '(#p"/tmp/zot/" #p"/tmp/zot/foo/"))
+    (let ((enough (enough-namestring pathname defaults)))
+      ;; This is the condition from the CLHS entry for enough-namestring
+      (assert-equal (merge-pathnames enough defaults)
+		    (merge-pathnames (parse-namestring pathname nil defaults) defaults))))))

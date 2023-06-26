@@ -16,19 +16,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: src/code/bsd-os.lisp
-msgid "Version string for supporting software"
-msgstr ""
-
-#: src/code/bsd-os.lisp
-msgid "Returns a string describing version of the supporting software."
-msgstr ""
-
-#: src/code/bsd-os.lisp
 msgid "Unix system call getrusage failed: ~A."
-msgstr ""
-
-#: src/code/bsd-os.lisp
-msgid "Getpagesize failed: ~A"
 msgstr ""
 
 #: src/code/signal.lisp

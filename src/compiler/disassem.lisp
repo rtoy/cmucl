@@ -102,7 +102,9 @@
   "The width of the column in which instruction-names are printed.
   NIL means use the default.  A value of zero gives the effect of not
   aligning the arguments at all.")
-(defvar *note-column* 45
+(defvar *note-column*
+  #-x86 45
+  #+x86 55
   "The column in which end-of-line comments for notes are started.")
 
 (defconstant default-opcode-column-width 6)
@@ -3333,12 +3335,16 @@
 		:format-control (intl:gettext "Can't make a compiled function from ~S")
 		:format-arguments (list name)))))
 
+(defvar *disassemble-print-radix*
+  t
+  "Default value for :radix argument for disassem:disassemble")
+
 (defun disassemble (object &key (stream *standard-output*)
 			     (use-labels t)
 			     (backend c:*native-backend*)
 			     (base 16)
 			     (case :downcase)
-			     (radix *print-radix*))
+			     (radix *disassemble-print-radix*))
   "Disassemble the machine code associated with OBJECT, which can be a
   function, a lambda expression, or a symbol with a function definition.  If
   it is not already compiled, the compiler is called to produce something to
@@ -3353,7 +3359,7 @@
   :Radix
       The disassembler uses the specified base, case, and radix when
       printing the disassembled code.  The default values are 16,
-      :downcase, and *print-radix*, respectively."
+      :downcase, and *disassemble-print-radix*, respectively."
   (declare (type (or function symbol cons) object)
 	   (type (or (member t) stream) stream)
 	   (type (member t nil) use-labels)

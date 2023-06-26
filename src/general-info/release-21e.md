@@ -1,7 +1,5 @@
 # CMUCL 21e
 
-## Work in progress
-
 The CMUCL project is pleased to announce the release of CMUCL 21e.
 This is a major release which contains numerous enhancements and bug
 fixes from the 21d release.
@@ -64,6 +62,7 @@ public domain.
     * ~~#140~~ External format for streams that are not `file-stream`'s.
     * ~~#141~~ Disallow locales that are pathnames to a localedef file.
     * ~~#142~~ `(random 0)` signals incorrect error.
+    * ~~#143~~ `LISTEN` doesn't signal error when given more than one arg
     * ~~#147~~ `stream-line-column` method missing for `fundamental-character-output-stream`.
     * ~~#149~~ Call setlocale(3C) on startup.
     * ~~#150~~ Add aliases for external format cp949 and euckr.
@@ -84,6 +83,8 @@ public domain.
     * ~~#173~~ Add pprinter for `define-assembly-routine`.
     * ~~#176~~ `SHORT-SITE-NAME` and `LONG-SITE-NAME` return `NIL`.
     * ~~#177~~ Add pprinter for `deftransform` and `defoptimizer`.
+    * ~~#192~~ Print radix marker in disassemblies and adjust note column to be larger for x86.
+    * ~~#193~~ Treat `NIL` and `:UNSPECIFIC` as equivalent when comparing pathnames with `equal`.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

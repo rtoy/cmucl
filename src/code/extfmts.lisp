@@ -24,7 +24,8 @@
 (defvar *default-external-format*
   :utf-8
   "The default external format to use if no other external format is
-  specified")
+  specified.  This is unaffected by any locale settings or by
+  SET-SYSTEM-EXTERNAL-FORMAT.")
 
 (defvar *external-formats*
   (make-hash-table :test 'equal)
