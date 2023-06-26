@@ -610,8 +610,8 @@
 			 ;; We are an absolute pathname, so we can just use it.
 			 pathname-directory)
 			(t
-			 ;; We are a relative directory.  So we lose.
-			 (lose)))))
+			 ;; We are a relative directory, so just return it as is.
+			 pathname-directory))))
 	    (strings (unparse-unix-directory-list result-dir)))
 	  (let* ((pathname-version (%pathname-version pathname))
 		 (version-needed (and pathname-version

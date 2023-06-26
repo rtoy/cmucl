@@ -830,7 +830,18 @@
     (assert-true (stream::find-external-format :euckr))
     (assert-true (stream::find-external-format :cp949))))
 
-
+(define-test issue.154
+    (:tag :issues)
+  (let ((old-locale intl::*locale*)
+	(locale "en_US.UTF-8@piglatin")
+	(piglatin-text "Ethay izesay ofway away eamstray inway-ufferbay."))
+    (unwind-protect
+	 (progn
+	   (assert-equal locale (intl:setlocale "en_US.UTF-8@piglatin"))
+	   (print (intl::find-domain "cmucl" intl::*locale*))
+	   (assert-equal piglatin-text (intl:dgettext "cmucl" "The size of a stream in-buffer."))
+	   )
+      (intl:setlocale old-locale))))
 
 (define-test issue.158
     (:tag :issues)
@@ -977,3 +988,12 @@
   (assert-true (equal (make-pathname :version :newest)
 		      (make-pathname :version :unspecific)))
 )
+
+(define-test issue.216.enough-namestring-relative-dir
+    (:tag :issues)
+  (let ((pathname #p"foo/bar.lisp"))
+  (dolist (defaults '(#p"/tmp/zot/" #p"/tmp/zot/foo/"))
+    (let ((enough (enough-namestring pathname defaults)))
+      ;; This is the condition from the CLHS entry for enough-namestring
+      (assert-equal (merge-pathnames enough defaults)
+		    (merge-pathnames (parse-namestring pathname nil defaults) defaults))))))

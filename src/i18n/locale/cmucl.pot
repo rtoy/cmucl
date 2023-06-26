@@ -7024,7 +7024,15 @@ msgid "Impossible case reached in PEEK-CHAR"
 msgstr ""
 
 #: src/code/stream.lisp
-msgid "Returns T if a character is available on the given Stream."
+msgid ""
+"Returns T if a character is available on the given Stream.\n"
+"  Argument Width is only used by instances of SIMPLE-STREAM. If\n"
+"  Stream is a LISP-STREAM or FUNDAMENTAL-STREAM, passing more\n"
+"  than one argument is invalid."
+msgstr ""
+
+#: src/code/interr.lisp src/code/stream.lisp
+msgid "Invalid number of arguments: ~S"
 msgstr ""
 
 #: src/code/stream.lisp
@@ -9075,7 +9083,8 @@ msgstr ""
 #: src/code/extfmts.lisp
 msgid ""
 "The default external format to use if no other external format is\n"
-"  specified"
+"  specified.  This is unaffected by any locale settings or by\n"
+"  SET-SYSTEM-EXTERNAL-FORMAT."
 msgstr ""
 
 #: src/code/extfmts.lisp
@@ -10910,10 +10919,6 @@ msgstr ""
 
 #: src/code/interr.lisp
 msgid "Unknown error:~{ ~S~})"
-msgstr ""
-
-#: src/code/interr.lisp
-msgid "Invalid number of arguments: ~S"
 msgstr ""
 
 #: src/code/interr.lisp

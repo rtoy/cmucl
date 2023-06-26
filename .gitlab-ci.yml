@@ -1,7 +1,7 @@
 variables:
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2023/04"
-  version: "2023-04-x86"
-  bootstrap: "-B boot-2021-07-1 -B boot-2021-07-2 -B boot-2021-07-3"
+  download_url: "https://common-lisp.net/project/cmucl/downloads/release/21e"
+  version: "21e-x86"
+  bootstrap: ""
 
 stages:
   - install
@@ -46,6 +46,7 @@ linux:build:
     #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
     # Regular build using the cross-compiled result or snapshot
     - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o snapshot/bin/lisp
+    # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist linux-4
 
 linux:test:
@@ -76,7 +77,7 @@ linux:ansi-test:
       artifacts: true
   before_script:
     - git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
-    - (cd ansi-test; git checkout rtoy-cmucl-expected-failures)
+    - (cd ansi-test; git checkout cmucl-expected-failures)
   script:
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
@@ -163,7 +164,7 @@ osx:ansi-test:
       artifacts: true
   before_script:
     - /opt/local/bin/git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
-    - (cd ansi-test; /opt/local/bin/git checkout rtoy-cmucl-expected-failures)
+    - (cd ansi-test; /opt/local/bin/git checkout cmucl-expected-failures)
   script:
     - cd ansi-test
     - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
