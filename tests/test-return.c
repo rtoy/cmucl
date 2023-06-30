@@ -6,10 +6,10 @@ int_to_signed_char(int x)
   return (signed char) x;
 }
 
-signed short
+short
 int_to_short(int x)
 {
-  return (signed short) x;
+  return (short) x;
 }
 
 int
