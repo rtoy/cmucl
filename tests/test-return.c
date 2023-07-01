@@ -38,7 +38,7 @@ int_to_unsigned_int()
   return (unsigned int) test_arg;
 }
 
-_Bool unsigned_to_bool()
+_Bool int_to_bool()
 {
   return (_Bool) test_arg;
 }

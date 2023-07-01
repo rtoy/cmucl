@@ -1088,7 +1088,7 @@
   (flet ((fun (n)
 	   (setf test-arg n)
 	   (alien:alien-funcall
-	    (alien:extern-alien "unsigned_to_bool"
+	    (alien:extern-alien "int_to_bool"
 				(function alien:boolean))))
 	 (expected (n)
 	   (not (zerop n))))
