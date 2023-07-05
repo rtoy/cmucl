@@ -9083,7 +9083,8 @@ msgstr ""
 #: src/code/extfmts.lisp
 msgid ""
 "The default external format to use if no other external format is\n"
-"  specified"
+"  specified.  This is unaffected by any locale settings or by\n"
+"  SET-SYSTEM-EXTERNAL-FORMAT."
 msgstr ""
 
 #: src/code/extfmts.lisp
