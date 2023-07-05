@@ -830,7 +830,18 @@
     (assert-true (stream::find-external-format :euckr))
     (assert-true (stream::find-external-format :cp949))))
 
-
+(define-test issue.154
+    (:tag :issues)
+  (let ((old-locale intl::*locale*)
+	(locale "en_US.UTF-8@piglatin")
+	(piglatin-text "Ethay izesay ofway away eamstray inway-ufferbay."))
+    (unwind-protect
+	 (progn
+	   (assert-equal locale (intl:setlocale "en_US.UTF-8@piglatin"))
+	   (print (intl::find-domain "cmucl" intl::*locale*))
+	   (assert-equal piglatin-text (intl:dgettext "cmucl" "The size of a stream in-buffer."))
+	   )
+      (intl:setlocale old-locale))))
 
 (define-test issue.158
     (:tag :issues)
