@@ -110,6 +110,8 @@ case `uname -s` in
       esac ;;
 esac
 
+export LANG=en_US.UTF-8
+
 buildit ()
 {
     if echo $INTERACTIVE_BUILD | grep $BUILD > /dev/null; then
