@@ -472,7 +472,7 @@
       (gethash :utf-8 *external-formats*)))
   (when (eq name :ascii)
     (return-from %find-external-format
-      (gethash :utf-8 *external-formats*)))
+      (gethash :ascii *external-formats*)))
 
   (when (zerop (hash-table-count *external-format-aliases*))
     (setf (gethash :latin1 *external-format-aliases*) :iso8859-1)
