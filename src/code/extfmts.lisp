@@ -461,18 +461,18 @@
 	       (format t "~&~A~%"
 		       (intl:gettext (or (ef-documentation ef) "")))))))))
 
+(defconstant +builtin-external-formats+ '(:utf-8 :iso8859-1 :ascii)
+  "List of external formats that are builtin so that they don't need to
+  be loaded on first use.")
+
 (defun %find-external-format (name)
   ;; avoid loading files, etc., early in the boot sequence
-  (when (or (eq name :iso8859-1)
-	    (and (eq name :default) (eq *default-external-format* :iso8859-1)))
+  (when (and (eq name :default)
+	     (eq *default-external-format* :iso8859-1))
+    (setf name :iso8859-1))
+  (when (member name +builtin-external-formats+ :test 'eq)
     (return-from %find-external-format
-      (gethash :iso8859-1 *external-formats*)))
-  (when (eq name :utf-8)
-    (return-from %find-external-format
-      (gethash :utf-8 *external-formats*)))
-  (when (eq name :ascii)
-    (return-from %find-external-format
-      (gethash :ascii *external-formats*)))
+      (gethash name *external-formats*)))
 
   (when (zerop (hash-table-count *external-format-aliases*))
     (setf (gethash :latin1 *external-format-aliases*) :iso8859-1)
