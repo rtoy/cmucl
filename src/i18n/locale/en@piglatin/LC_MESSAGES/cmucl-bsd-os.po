@@ -17,22 +17,8 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: src/code/bsd-os.lisp
-msgid "Version string for supporting software"
-msgstr "Ersionvay ingstray orfay upportingsay oftwaresay"
-
-#: src/code/bsd-os.lisp
-msgid "Returns a string describing version of the supporting software."
-msgstr ""
-"Eturnsray away ingstray escribingday ersionvay ofway ethay upportingsay "
-"oftwaresay."
-
-#: src/code/bsd-os.lisp
 msgid "Unix system call getrusage failed: ~A."
 msgstr "Unixway ystemsay allcay etrusagegay ailedfay: ~Away."
-
-#: src/code/bsd-os.lisp
-msgid "Getpagesize failed: ~A"
-msgstr "Etpagesizegay ailedfay: ~Away"
 
 #: src/code/signal.lisp
 msgid "Emt instruction"
@@ -41,3 +27,14 @@ msgstr "Emtway instructionway"
 #: src/code/signal.lisp
 msgid "Bad argument to system call"
 msgstr "Adbay argumentway otay ystemsay allcay"
+
+#~ msgid "Version string for supporting software"
+#~ msgstr "Ersionvay ingstray orfay upportingsay oftwaresay"
+
+#~ msgid "Returns a string describing version of the supporting software."
+#~ msgstr ""
+#~ "Eturnsray away ingstray escribingday ersionvay ofway ethay upportingsay "
+#~ "oftwaresay."
+
+#~ msgid "Getpagesize failed: ~A"
+#~ msgstr "Etpagesizegay ailedfay: ~Away"

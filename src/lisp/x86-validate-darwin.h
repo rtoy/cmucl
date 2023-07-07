@@ -18,14 +18,7 @@
 #define STATIC_SPACE_START	(SpaceStart_TargetStatic)
 #define STATIC_SPACE_SIZE	(0x0ffff000)	/* 256MB - 1 page */
 
-#ifndef FEATURE_RELOCATABLE_STACKS
-#define BINDING_STACK_START	(0x38000000)
-#endif
 #define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
-
-#ifndef FEATURE_RELOCATABLE_STACKS
-#define CONTROL_STACK_START	(0x40000000)
-#endif
 
 /*
  * According to /usr/include/sys/signal.h, MINSIGSTKSZ is 32K and
@@ -33,9 +26,6 @@
  */
 #define CONTROL_STACK_SIZE	(0x07fdf000)	/* 128MB - SIGSTKSZ - 1 page */
 
-#ifndef FEATURE_RELOCATABLE_STACKS
-#define SIGNAL_STACK_START	(0x47fe0000)    /* One page past the end of the control stack */
-#endif
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)

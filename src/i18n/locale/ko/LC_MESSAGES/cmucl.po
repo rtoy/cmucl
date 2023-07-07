@@ -312,8 +312,9 @@ msgstr ""
 
 #: src/code/lispinit.lisp
 msgid ""
-"Terminates the current Lisp.  Things are cleaned up unless Recklessly-P is\n"
-"  non-Nil."
+"Terminates the current Lisp.  Things are cleaned up unless\n"
+"  Recklessly-P is non-Nil.  On quitting, Lisp sets the return code to\n"
+"  Code, defaulting to 0."
 msgstr ""
 
 #: src/code/lispinit.lisp
@@ -4015,6 +4016,13 @@ msgstr ""
 
 #: src/code/string.lisp
 msgid ""
+"Convert STRING to NFD (or NFKD).  If :darwinp is non-NIL, then\n"
+"  characters in the ranges U2000-U2FFF, UF900-UFA6A, and U2F800-U2FA1D\n"
+"  are not decomposed, as specified for Darwin pathnames."
+msgstr ""
+
+#: src/code/string.lisp
+msgid ""
 "Convert a sequence of codepoints to a string.  Codepoints outside\n"
 "  the basic multilingual plane (BMP) are converted into the\n"
 "  corresponding surrogate pairs."
@@ -5603,17 +5611,6 @@ msgstr ""
 
 #: src/code/misc.lisp
 msgid ""
-"Returns the documentation string of Doc-Type for X, or NIL if\n"
-"  none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,\n"
-"  SETF, and T."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid "~S is not the name of a structure type."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid ""
 "If X is an atom, see if it is present in *FEATURES*.  Also\n"
 "  handle arbitrary combinations of atoms using NOT, AND, OR."
 msgstr ""
@@ -5647,11 +5644,15 @@ msgid "Returns a string describing the supporting software."
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
+msgid "Version string for supporting software"
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "Unknown"
+msgid "Returns a string describing version of the supporting software."
+msgstr ""
+
+#: src/code/misc.lisp
+msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
 msgstr ""
 
 #: src/code/misc.lisp
@@ -5660,10 +5661,6 @@ msgstr ""
 
 #: src/code/misc.lisp
 msgid "The value of LONG-SITE-NAME.  Set in library:site-init.lisp."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid "Site name not initialized"
 msgstr ""
 
 #: src/code/misc.lisp
@@ -5694,7 +5691,20 @@ msgid ""
 "If\n"
 "  it is not already compiled, the compiler is called to produce something "
 "to\n"
-"  disassemble."
+"  disassemble.\n"
+"\n"
+"  Also see disassem:disassemble for finer control of disassembly."
+msgstr ""
+
+#: src/code/misc-doc.lisp
+msgid ""
+"Returns the documentation string of Doc-Type for X, or NIL if\n"
+"  none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,\n"
+"  SETF, and T."
+msgstr ""
+
+#: src/code/misc-doc.lisp
+msgid "~S is not the name of a structure type."
 msgstr ""
 
 #: src/code/extensions.lisp
@@ -6145,6 +6155,14 @@ msgstr ""
 msgid "Same as -help."
 msgstr ""
 
+#: src/code/commandline.lisp
+msgid "Prints the cmucl version and exits"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "Prints the cmucl version and exits; same as -version"
+msgstr ""
+
 #: src/code/env-access.lisp
 msgid ""
 "Returns information about the symbol VAR in the lexical environment ENV.\n"
@@ -6334,10 +6352,18 @@ msgstr ""
 
 #: src/code/room.lisp
 msgid ""
-"Print a breakdown by instance type of all the instances allocated in\n"
-"  Space.  If TOP-N is true, print only information for the the TOP-N types "
-"with\n"
-"  largest usage."
+"Print a breakdown by instance type of all the allocation in Space.  \n"
+"\n"
+"  :TOP-N \n"
+"      If true, print only the TOP-N types by largest usage.\n"
+"\n"
+"  :ENTRIES-VAR\n"
+"      If bound, contains the name of the symbol used to store the hash-"
+"table\n"
+"      of allocated entries for later processing.\n"
+"\n"
+"  :CALL-SOURCE\n"
+"      A string identifying the location from which instance-usage was called."
 msgstr ""
 
 #: src/code/room.lisp
@@ -6724,6 +6750,12 @@ msgstr ""
 
 #: src/code/save.lisp
 msgid ""
+"Add external format alias for :locale to the format specified by\n"
+"  the locale as set by setlocale(3C)."
+msgstr ""
+
+#: src/code/save.lisp
+msgid ""
 "Saves a CMU Common Lisp core image in the file of the specified name.  The\n"
 "  following keywords are defined:\n"
 "  \n"
@@ -7008,7 +7040,15 @@ msgid "Impossible case reached in PEEK-CHAR"
 msgstr ""
 
 #: src/code/stream.lisp
-msgid "Returns T if a character is available on the given Stream."
+msgid ""
+"Returns T if a character is available on the given Stream.\n"
+"  Argument Width is only used by instances of SIMPLE-STREAM. If\n"
+"  Stream is a LISP-STREAM or FUNDAMENTAL-STREAM, passing more\n"
+"  than one argument is invalid."
+msgstr ""
+
+#: src/code/interr.lisp src/code/stream.lisp
+msgid "Invalid number of arguments: ~S"
 msgstr ""
 
 #: src/code/stream.lisp
@@ -10413,6 +10453,12 @@ msgid "*load-verbose* is bound to this before loading files."
 msgstr ""
 
 #: src/code/module.lisp
+msgid ""
+"Provider functions for cmucl modules and libraries.  These are\n"
+"  searched first before trying *module-provider-functions*"
+msgstr ""
+
+#: src/code/module.lisp
 msgid "See function documentation for REQUIRE"
 msgstr ""
 
@@ -10898,10 +10944,6 @@ msgid "Unknown error:~{ ~S~})"
 msgstr ""
 
 #: src/code/interr.lisp
-msgid "Invalid number of arguments: ~S"
-msgstr ""
-
-#: src/code/interr.lisp
 msgid "Attempt to use VALUES-LIST on a dotted-list:~%  ~S"
 msgstr ""
 
@@ -10956,8 +10998,8 @@ msgstr ""
 msgid ""
 "~2&~@<A control stack overflow has occurred:~%~\n"
 "            the program has entered the yellow control stack guard zone.~%~\n"
-"            Please note that you will be returned to the Top-Level if you~"
-"%~\n"
+"            Please note that you will be returned to the Top-Level if "
+"you~%~\n"
 "            enter the red control stack guard zone while debugging.~@:>~2%"
 msgstr ""
 
@@ -10972,8 +11014,8 @@ msgstr ""
 msgid ""
 "~2&~@<Imminent dynamic space overflow has occurred:~%~\n"
 "            Only a small amount of dynamic space is available now.~%~\n"
-"            Please note that you will be returned to the Top-Level without~"
-"%~\n"
+"            Please note that you will be returned to the Top-Level "
+"without~%~\n"
 "            warning if you run out of space while debugging.~@:>~%"
 msgstr ""
 
@@ -15268,6 +15310,23 @@ msgid ""
 "  delimited by non-case-modifiable chars.  "
 msgstr ""
 
+#: src/code/unicode.lisp
+msgid ""
+"Decompose the Hangul syllable codepoint CP to an equivalent sequence\n"
+"  of conjoining jamo and print the decomposed result to the stream\n"
+"  STREAM."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid "Test if CODEPOINT is a Hangul syllable"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Decompose any Hangul syllables in STRING to an equivalent sequence of\n"
+"  conjoining jamo characters."
+msgstr ""
+
 #: src/compiler/macros.lisp
 msgid ""
 "Policy Node Condition*\n"
@@ -17367,6 +17426,10 @@ msgid "Can't make a compiled function from ~S"
 msgstr ""
 
 #: src/compiler/disassem.lisp
+msgid "Default value for :radix argument for disassem:disassemble"
+msgstr ""
+
+#: src/compiler/disassem.lisp
 msgid ""
 "Disassemble the machine code associated with OBJECT, which can be a\n"
 "  function, a lambda expression, or a symbol with a function definition.  "
@@ -17384,7 +17447,7 @@ msgid ""
 "  :Radix\n"
 "      The disassembler uses the specified base, case, and radix when\n"
 "      printing the disassembled code.  The default values are 16,\n"
-"      :downcase, and *print-radix*, respectively."
+"      :downcase, and *disassemble-print-radix*, respectively."
 msgstr ""
 
 #: src/compiler/disassem.lisp
