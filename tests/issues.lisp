@@ -997,3 +997,111 @@
       ;; This is the condition from the CLHS entry for enough-namestring
       (assert-equal (merge-pathnames enough defaults)
 		    (merge-pathnames (parse-namestring pathname nil defaults) defaults))))))
+
+(define-test issue.242-load-foreign
+  ;; load-foreign apparently returns NIL if it succeeds.
+  (assert-true (eql nil (ext:load-foreign (merge-pathnames "test-return.o" *test-path*)))))
+
+(alien:def-alien-variable "test_arg" c-call:int)
+
+(define-test issue.242.test-alien-return-signed-char
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_signed_char"
+				(function c-call:char))))
+	 (sign-extend (n)
+	   (let ((n (ldb (byte 8 0) n)))
+	     (if (> n #x7f)
+		 (- n #x100)
+		 n))))
+    (dolist (x '(99 -99 1023 -1023))
+      (assert-equal (sign-extend x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-signed-short
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_short"
+				(function c-call:short))))
+	 (sign-extend (n)
+	   (let ((n (ldb (byte 16 0) n)))
+	     (if (> n #x7fff)
+		 (- n #x10000)
+		 n))))
+    (dolist (x '(1023 -1023 100000 -100000))
+      (assert-equal (sign-extend x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-signed-int
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_int"
+				(function c-call:int)))))
+    (dolist (x '(1023 -1023 #x7fffffff #x-80000000))
+      (assert-equal x (fun x) x))))
+
+(define-test issue.242.test-alien-return-unsigned-char
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_char"
+				(function c-call:unsigned-char))))
+	 (expected (n)
+	   (ldb (byte 8 0) n)))
+    (dolist (x '(99 -99 1023 -1023))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-unsigned-short
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_short"
+				(function c-call:unsigned-short))))
+	 (expected (n)
+	   (ldb (byte 16 0) n)))
+    (dolist (x '(1023 -1023 100000 -100000))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-unsigned-int
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_int"
+				(function c-call:unsigned-int))))
+	 (expected (n)
+	   (ldb (byte 32 0) n)))
+    (dolist (x '(1023 -1023 #x7fffffff #x-80000000))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-bool
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_bool"
+				(function c-call:char))))
+	 (expected (n)
+	   (if (zerop n)
+	       0
+	       1)))
+    (dolist (x '(0 1 1000))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-bool.2
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_bool"
+				(function alien:boolean))))
+	 (expected (n)
+	   (not (zerop n))))
+    (dolist (x '(0 1 1000))
+      (assert-equal (expected x) (fun x) x))))
