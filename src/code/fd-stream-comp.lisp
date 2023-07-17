@@ -28,6 +28,7 @@
 (stream::precompile-ef-slot :iso8859-1 #.stream::+ef-de+)
 (stream::precompile-ef-slot :iso8859-1 #.stream::+ef-osc+)
 
+;; :utf-8 is builtin.  Important since it's the default now.
 (stream::precompile-ef-slot :utf-8 #.stream::+ef-cin+)
 (stream::precompile-ef-slot :utf-8 #.stream::+ef-cout+)
 (stream::precompile-ef-slot :utf-8 #.stream::+ef-sout+)
@@ -36,3 +37,13 @@
 (stream::precompile-ef-slot :utf-8 #.stream::+ef-en+)
 (stream::precompile-ef-slot :utf-8 #.stream::+ef-de+)
 (stream::precompile-ef-slot :utf-8 #.stream::+ef-osc+)
+
+;; :ascii is builtin.
+(stream::precompile-ef-slot :ascii #.stream::+ef-cin+)
+(stream::precompile-ef-slot :ascii #.stream::+ef-cout+)
+(stream::precompile-ef-slot :ascii #.stream::+ef-sout+)
+(stream::precompile-ef-slot :ascii #.stream::+ef-os+)
+(stream::precompile-ef-slot :ascii #.stream::+ef-so+)
+(stream::precompile-ef-slot :ascii #.stream::+ef-en+)
+(stream::precompile-ef-slot :ascii #.stream::+ef-de+)
+(stream::precompile-ef-slot :ascii #.stream::+ef-osc+)
