@@ -189,13 +189,13 @@
 		 (t
 		  (funcall (formatter "#<Unprintable pathname,~:_ Host=~S,~:_ Device=~S,~:_ ~
 				Directory=~S,~:_ Name=~S,~:_ Type=~S,~:_ Version=~S>")
-			   stream
-			   (%pathname-host pathname)
-			   (%pathname-device pathname)
-			   (%pathname-directory pathname)
-			   (%pathname-name pathname)
-			   (%pathname-type pathname)
-			   (%pathname-version pathname)))))))))
+			     stream
+			     (%pathname-host pathname)
+			     (%pathname-device pathname)
+			     (%pathname-directory pathname)
+			     (%pathname-name pathname)
+			     (%pathname-type pathname)
+			     (%pathname-version pathname)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
