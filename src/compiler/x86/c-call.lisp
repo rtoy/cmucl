@@ -153,7 +153,6 @@
 		      arg-types)
 		(and (alien-integer-type-p result-type)
 		     (/= (alien::alien-integer-type-bits result-type) 32)))
-      (format t "give up~%")
       (c::give-up))
     (collect ((new-args) (lambda-vars) (new-arg-types))
       (dolist (type arg-types)
