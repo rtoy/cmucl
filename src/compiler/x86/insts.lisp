@@ -744,7 +744,12 @@
 			  ;; set by a prefix instruction
 			  (or (disassem:dstate-get-prop dstate 'word-width)
 			      *default-operand-size*)))
-		     (princ (schar (symbol-name word-width) 0) stream)))))
+		     ;; Make sure the print case is honored when
+		     ;; printing out the width.
+		     (princ (ecase word-width
+			      (:word 'w)
+			      (:dword 'd))
+			    stream)))))
 
 
 ;;;; Disassembler instruction formats.

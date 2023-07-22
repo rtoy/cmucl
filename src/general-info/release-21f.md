@@ -23,6 +23,7 @@ public domain.
   * Bug fixes:
   * Gitlab tickets:
     * ~~#154~~ piglatin translation does not work anymore
+    * ~~#248~~ Print MOVS instruction with correct case
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
