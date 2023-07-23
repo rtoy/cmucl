@@ -19,7 +19,7 @@
 
 (intl:textdomain "cmucl")
 
-(export '(char short int long long-long unsigned-char unsigned-short unsigned-int
+(export '(char short int long long-long signed-char unsigned-char unsigned-short unsigned-int
 	  unsigned-long unsigned-long-long float double c-string void))
 	       
 
@@ -30,6 +30,8 @@
 (def-alien-type int (integer 32))
 (def-alien-type long (integer #-alpha 32 #+alpha 64))
 (def-alien-type long-long (integer 64))
+;; The same as c-call:char, for convenience with C signed-char.
+(def-alien-type signed-char (integer 8))
 
 (def-alien-type unsigned-char (unsigned 8))
 (def-alien-type unsigned-short (unsigned 16))
