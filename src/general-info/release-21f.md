@@ -23,8 +23,10 @@ public domain.
   * Bug fixes:
   * Gitlab tickets:
     * ~~#154~~ piglatin translation does not work anymore
-    * ~~#248~~ Print `MOVS` instruction with correct case
+	* ~~#171~~ Readably print `(make-pathname :name :unspecfic)`
+	* ~~#242~~ Fix bug in `alien-funcall` with `c-call:char` as result type
     * ~~#244~~ Add `c-call:signed-char`
+    * ~~#248~~ Print MOVS instruction with correct case
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
