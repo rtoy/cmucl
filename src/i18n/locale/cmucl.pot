@@ -1593,8 +1593,8 @@ msgstr ""
 msgid ""
 "Returns T if X and Y are EQL or if they are structured components\n"
 "  whose elements are EQUAL.  Strings and bit-vectors are EQUAL if they\n"
-"  are the same length and have indentical components.  Other arrays must be\n"
-"  EQ to be EQUAL."
+"  are the same length and have identical components.  Other arrays\n"
+"  must be EQ to be EQUAL."
 msgstr ""
 
 #: src/code/pred.lisp
@@ -9149,6 +9149,12 @@ msgid "~&Could not find external format ~S~%"
 msgstr ""
 
 #: src/code/extfmts.lisp
+msgid ""
+"List of external formats that are builtin so that they don't need to\n"
+"  be loaded on first use."
+msgstr ""
+
+#: src/code/extfmts.lisp
 msgid "External-format aliasing depth exceeded."
 msgstr ""
 
@@ -9286,6 +9292,13 @@ msgid ""
 "UTF-8 is a variable-length character encoding for Unicode.  By\n"
 "default, illegal input sequences are replaced by the Unicode\n"
 "replacement character."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
+"US ASCII 7-bit encoding.  Illegal input sequences are replaced with\n"
+"the Unicode replacment character.  Illegal output characters are\n"
+"replaced with a question mark."
 msgstr ""
 
 #: src/code/fd-stream.lisp
@@ -21323,12 +21336,6 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid "    Gray Streams Protocol Support"
-msgstr ""
-
-msgid ""
-"US ASCII 7-bit encoding.  Illegal input sequences are replaced with\n"
-"the Unicode replacment character.  Illegal output characters are\n"
-"replaced with a question mark."
 msgstr ""
 
 msgid ""
