@@ -48,10 +48,10 @@ CORE='-o -name "*.core"'
 
 if [ -n "$KEEP" ]; then
     case $KEEP in
-      lib) GREP='egrep -v'
+      lib) GREP='grep -Ev'
 	   PATTERN='(gray-streams|gray-compat|simple-streams|iodefs|external-formats|clx|hemlock|clm)-library' ;;
       core) CORE='' ;;
-      all) GREP='egrep -v'
+      all) GREP='grep -Ev'
 	   PATTERN='(gray-streams|gray-compat|simple-streams|iodefs|external-formats|clx|hemlock|clm)-library|(asdf|defsystem)'
 	   CORE='' ;;
     esac
