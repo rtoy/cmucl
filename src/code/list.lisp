@@ -750,28 +750,25 @@
 
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
-(defun list-to-hashtable (list &key test test-not key)
+(defun list-to-hashtable (list test test-not key)
   ;; Don't currently support test-not when converting a list to a hashtable
   (unless test-not
-    (let ((hash-test (let ((test-fn (if (and (symbolp test)
-					     (fboundp test))
-					(fdefinition test)
-					test)))
-		       (case test-fn
-			 (#'eq 'eq)
-			 (#'eql 'eql)
-			 (#'equal 'equal)
-			 (#'equalp 'equalp)))))
+    (let ((hash-test (case test
+			 ((#'eq 'eq) 'eq)
+			 ((#'eql 'eq) 'eql)
+			 ((#'equal 'equal) 'equal)
+			 ((#'equalp 'equalp) 'equalp))))
       (unless hash-test
 	(return-from list-to-hashtable nil))
       ;; If the list is too short, the hashtable makes things
       ;; slower.  We also need to balance memory usage.
-      (when (< (length list) *min-list-length-for-hashtable*)
-        (return-from list-to-hashtable nil))
-      (let ((hashtable (make-hash-table :test test :size len)))
-	(dolist (item list)
-	  (setf (gethash (apply-key key item) hashtable) item))
-	hashtable))))
+      (let ((len (length list)))
+	(when (< len *min-list-length-for-hashtable*)
+          (return-from list-to-hashtable nil))
+	(let ((hashtable (make-hash-table :test hash-test :size len)))
+	  (dolist (item list)
+	    (setf (gethash (apply-key key item) hashtable) item))
+	  hashtable)))))
 
 ;;; UNION -- Public.
 ;;;
@@ -850,21 +847,21 @@
     (return-from set-difference list1))
 
   (let ((hashtable 
-	  (list-to-hashtable list2 :key key :test test :test-not test-not)))
+	  (list-to-hashtable list2 key test test-not)))
     (cond (hashtable
 	   ;; list2 was placed in hash table.
-	   (let (diff)
+	   (let ((res nil))
 	     (dolist (item list1)
 	       (unless (nth-value 1 (gethash (apply-key key item) hashtable))
-		 (push item diff)))
-	     diff))
+		 (push item res)))
+	     res))
 	  ((null hashtable)
 	   ;; Default implementation because we didn't create the hash
 	   ;; table.
            (let ((res nil))
-	     (dolist (elt list1)
-               (if (not (with-set-keys (member (apply-key key elt) list2)))
-                   (push elt res)))
+	     (dolist (item list1)
+	       (if (not (with-set-keys (member (apply-key key item) list2)))
+                   (push item res)))
 	     res)))))
 
 (defun nset-difference (list1 list2 &key key
