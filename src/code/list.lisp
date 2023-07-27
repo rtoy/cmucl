@@ -751,7 +751,7 @@
 
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
-(defun list-to-hashtable (list test test-not key)
+(defun list-to-hashtable (list key test test-not)
   ;; Don't currently support test-not when converting a list to a hashtable
   (unless test-not
     (let ((hash-test (let ((test-fn (if (and (symbolp test)
