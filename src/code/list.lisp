@@ -855,7 +855,7 @@
     (cond (hashtable
 	   ;; list2 was placed in hash table.
 	   (let ((res nil))
-	     (doli st (item list1)
+	     (dolist (item list1)
 	       (unless (nth-value 1 (gethash (apply-key key item) hashtable))
 		 (push item res)))
 	     res))
