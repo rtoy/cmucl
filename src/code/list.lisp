@@ -746,19 +746,23 @@
 
 ;; The minimum length of a list before we can use a hashtable.  This
 ;; was determined experimentally.
-(defconstant +min-list-length-for-hashtable+
+(defparameter +min-list-length-for-hashtable+
   15)
 
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
-(defun list-to-hashtable (list test test-not key)
+(defun list-to-hashtable (list key test test-not)
   ;; Don't currently support test-not when converting a list to a hashtable
   (unless test-not
-    (let ((hash-test (case test
-			 ((#'eq 'eq) 'eq)
-			 ((#'eql 'eq) 'eql)
-			 ((#'equal 'equal) 'equal)
-			 ((#'equalp 'equalp) 'equalp))))
+    (let ((hash-test (let ((test-fn (if (and (symbolp test)
+                                             (fboundp test))
+                                        (fdefinition test)
+                                        test)))
+                       (cond ((eql test-fn #'eq) 'eq)
+                             ((eql test-fn #'eql) 'eql)
+                             ((eql test-fn #'equal) 'equal)
+                             ((eql test-fn #'equalp) 'equalp)))))
+
       (unless hash-test
 	(return-from list-to-hashtable nil))
       ;; If the list is too short, the hashtable makes things
@@ -778,6 +782,7 @@
 ;;; will apply the test to the elements from list1 and list2 in the correct
 ;;; order.
 ;;;
+#+nil
 (defun union (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the union of list1 and list2."
   (declare (inline member))
@@ -786,6 +791,23 @@
     (dolist (elt list1)
       (unless (with-set-keys (member (apply-key key elt) list2))
 	(push elt res)))
+    res))
+
+(defun union (list1 list2 &key key (test #'eql testp) (test-not nil notp))
+  "Returns the union of list1 and list2."
+  (declare (inline member))
+  (when (and testp notp)
+    (error (intl:gettext "Test and test-not both supplied.")))
+  (let ((res list2)
+	(hashtable (list-to-hashtable list2 key test test-not)))
+    (cond (hashtable
+	   (dolist (item list1)
+	     (unless (nth-value 1 (gethash (apply-key key item) hashtable))
+	       (push item res))))
+	  ((null hashtable)
+	   (dolist (item list1)
+	     (unless (with-set-keys (member (apply-key key item) list2))
+	       (push item res)))))
     res))
 
 ;;; Destination and source are setf-able and many-evaluable.  Sets the source
