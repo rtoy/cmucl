@@ -746,7 +746,7 @@
 
 ;; The minimum length of a list before we can use a hashtable.  This
 ;; was determined experimentally.
-(defconstant +min-list-length-for-hashtable+
+(defparameter *min-list-length-for-hashtable*
   15)
 
 ;; Convert a list to a hashtable.  The hashtable does not handle
@@ -767,7 +767,7 @@
       ;; If the list is too short, the hashtable makes things
       ;; slower.  We also need to balance memory usage.
       (let ((len (length list)))
-	(when (< len +min-list-length-for-hashtable+)
+	(when (< len *min-list-length-for-hashtable*)
           (return-from list-to-hashtable nil))
 	(let ((hashtable (make-hash-table :test hash-test :size len)))
 	  (dolist (item list)
@@ -855,7 +855,7 @@
     (cond (hashtable
 	   ;; list2 was placed in hash table.
 	   (let ((res nil))
-	     (dolist (item list1)
+	     (doli st (item list1)
 	       (unless (nth-value 1 (gethash (apply-key key item) hashtable))
 		 (push item res)))
 	     res))
