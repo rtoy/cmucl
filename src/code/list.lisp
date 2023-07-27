@@ -754,11 +754,14 @@
 (defun list-to-hashtable (list test test-not key)
   ;; Don't currently support test-not when converting a list to a hashtable
   (unless test-not
-    (let ((hash-test (case test
-			 ((#'eq 'eq) 'eq)
-			 ((#'eql 'eq) 'eql)
-			 ((#'equal 'equal) 'equal)
-			 ((#'equalp 'equalp) 'equalp))))
+    (let ((hash-test (let ((test-fn (if (and (symbolp test)
+                                             (fboundp test))
+                                        (fdefinition test)
+                                        test)))
+                       (cond ((eql test-fn #'eq) 'eq)
+                             ((eql test-fn #'eql) 'eql)
+                             ((eql test-fn #'equal) 'equal)
+                             ((eql test-fn #'equalp) 'equalp)))))
       (unless hash-test
 	(return-from list-to-hashtable nil))
       ;; If the list is too short, the hashtable makes things
