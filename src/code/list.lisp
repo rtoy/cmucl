@@ -746,7 +746,7 @@
 
 ;; The minimum length of a list before we can use a hashtable.  This
 ;; was determined experimentally.
-(defconstant +min-list-length-for-hashtable+
+(defconstant *min-list-length-for-hashtable*
   15)
 
 ;; Convert a list to a hashtable.  The hashtable does not handle
