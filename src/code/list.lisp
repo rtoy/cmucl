@@ -749,9 +749,15 @@
 (defparameter *min-list-length-for-hashtable*
   15)
 
+(defparameter *allow-hashtable-for-set-functions*
+  nil)
+
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
 (defun list-to-hashtable (list key test test-not)
+  (unless *allow-hashtable-for-set-functions*
+    (return-from list-to-hashtable nil))
+
   ;; Don't currently support test-not when converting a list to a hashtable
   (unless test-not
     (let ((hash-test (let ((test-fn (if (and (symbolp test)
@@ -976,10 +982,19 @@
 (defun subsetp (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns T if every element in list1 is also in list2."
   (declare (inline member))
-  (dolist (elt list1)
-    (unless (with-set-keys (member (apply-key key elt) list2))
-      (return-from subsetp nil)))
-  T)
+  (when (and testp notp)
+    (error "Test and test-not both supplied."))
+
+  (let ((hashtable (list-to-hashtable list2 key test test-not)))
+    (cond (hashtable
+	   (dolist (item list1)
+	     (unless (nth-value 1 (gethash (apply-key key item) hashtable))
+	       (return-from subsetp nil))))
+	  ((null hashtable)
+	   (dolist (item list1)
+	     (unless (with-set-keys (member (apply-key key item) list2))
+	       (return-from subsetp nil)))
+	   T))))
 
 
 

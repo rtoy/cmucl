@@ -320,6 +320,8 @@
 	     (intl::setlocale)
 	     (ext::process-command-strings process-command-line)
 	     (setf *editor-lisp-p* nil)
+	     ;; Allow using hashtables to speed up the set functions
+	     (setf lisp::*allow-hashtable-for-set-functions* t)
 	     (macrolet ((find-switch (name)
 			  `(find ,name *command-line-switches*
 				 :key #'cmd-switch-name
