@@ -72,3 +72,20 @@
 		  (set-difference '("a" "b" "b" "C")
 				  '("c" "D" "e" "f" "g" "h")
 				  :test #'equalp))))
+
+;; Simple test that we handle a key correctly
+(define-test set-diff.hash-eql-with-key
+  (let ((lisp::*min-list-length-for-hashtable* 2))
+    (assert-equal '((3 "b") (2 "b"))
+		  (set-difference '((1 "a") (2 "b") (3 "b"))
+				  '((1 "a") (4 "c") (5 "d"))
+				  :key #'first))))
+
+(define-test set-diff.test-and-test-not
+  (assert-error 'simple-error
+		(set-difference '(1 2)
+				'(3 4)
+				:test 'eql
+				:test-not 'eql)))
+
+   
