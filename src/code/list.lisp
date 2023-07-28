@@ -766,7 +766,11 @@
 	(return-from list-to-hashtable nil))
       ;; If the list is too short, the hashtable makes things
       ;; slower.  We also need to balance memory usage.
-      (let ((len (length list)))
+      (let ((len 0))
+	;; Compute list length ourselves.
+	(dolist (item list)
+	  (declare (ignore item))
+	  (incf len))
 	(when (< len *min-list-length-for-hashtable*)
           (return-from list-to-hashtable nil))
 	(let ((hashtable (make-hash-table :test hash-test :size len)))
