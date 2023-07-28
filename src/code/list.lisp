@@ -762,10 +762,6 @@
                              ((eql test-fn #'eql) 'eql)
                              ((eql test-fn #'equal) 'equal)
                              ((eql test-fn #'equalp) 'equalp)))))
-<<<<<<< HEAD
-
-=======
->>>>>>> issue-240-set-diff-with-hash-table
       (unless hash-test
 	(return-from list-to-hashtable nil))
       ;; If the list is too short, the hashtable makes things
