@@ -25,6 +25,7 @@ public domain.
     * ~~#154~~ piglatin translation does not work anymore
 	* ~~#171~~ Readably print `(make-pathname :name :unspecfic)`
 	* ~~#242~~ Fix bug in `alien-funcall` with `c-call:char` as result type
+    * ~~#244~~ Add `c-call:signed-char`
     * ~~#248~~ Print MOVS instruction with correct case
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
