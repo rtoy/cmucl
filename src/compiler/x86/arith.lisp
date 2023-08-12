@@ -222,7 +222,8 @@
   (:result-types tagged-num)
   (:note _N"inline fixnum arithmetic")
   (:generator 2
-    (cond ((and (sc-is x any-reg) (sc-is y any-reg) (sc-is r any-reg)
+    (cond #+nil
+          ((and (sc-is x any-reg) (sc-is y any-reg) (sc-is r any-reg)
 		(not (location= x r)))
 	   (inst lea r (make-ea :dword :base x :index y :scale 1)))
 	  (t
@@ -239,7 +240,8 @@
   (:result-types tagged-num)
   (:note _N"inline fixnum arithmetic")
   (:generator 1
-    (cond ((and (sc-is x any-reg) (sc-is r any-reg) (not (location= x r)))
+    (cond #+nil
+          ((and (sc-is x any-reg) (sc-is r any-reg) (not (location= x r)))
 	   (inst lea r (make-ea :dword :base x :disp (fixnumize y))))
 	  (t
 	   (move r x)
@@ -261,7 +263,8 @@
   (:result-types signed-num)
   (:note _N"inline (signed-byte 32) arithmetic")
   (:generator 5
-    (cond ((and (sc-is x signed-reg) (sc-is y signed-reg) (sc-is r signed-reg)
+    (cond #+nil
+          ((and (sc-is x signed-reg) (sc-is y signed-reg) (sc-is r signed-reg)
 		(not (location= x r)))
 	   (inst lea r (make-ea :dword :base x :index y :scale 1)))
 	  (t
@@ -278,7 +281,8 @@
   (:result-types signed-num)
   (:note _N"inline (signed-byte 32) arithmetic")
   (:generator 4
-    (cond ((and (sc-is x signed-reg) (sc-is r signed-reg)
+    (cond #+nil
+          ((and (sc-is x signed-reg) (sc-is r signed-reg)
 		(not (location= x r)))
 	   (inst lea r (make-ea :dword :base x :disp y)))
 	  (t
@@ -304,7 +308,8 @@
   (:result-types unsigned-num)
   (:note _N"inline (unsigned-byte 32) arithmetic")
   (:generator 5
-    (cond ((and (sc-is x unsigned-reg) (sc-is y unsigned-reg)
+    (cond #+nil
+          ((and (sc-is x unsigned-reg) (sc-is y unsigned-reg)
 		(sc-is r unsigned-reg) (not (location= x r)))
 	   (inst lea r (make-ea :dword :base x :index y :scale 1)))
 	  (t
@@ -321,7 +326,8 @@
   (:result-types unsigned-num)
   (:note _N"inline (unsigned-byte 32) arithmetic")
   (:generator 4
-    (cond ((and (sc-is x unsigned-reg)
+    (cond #+nil
+          ((and (sc-is x unsigned-reg)
 		(sc-is r unsigned-reg)
 		(not (location= x r))
 		(valid-displacement-p y))
@@ -641,11 +647,14 @@
   (:result-types tagged-num)
   (:note _N"inline ASH")
   (:generator 2
-    (cond ((and (= amount 1) (not (location= number result)))
+    (cond #+nil
+          ((and (= amount 1) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 2)))
-	  ((and (= amount 2) (not (location= number result)))
+	  #+nil
+          ((and (= amount 2) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 4)))
-	  ((and (= amount 3) (not (location= number result)))
+	  #+nil
+          ((and (= amount 3) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 8)))
 	  (t
 	   (move result number)
@@ -699,11 +708,14 @@
   (:result-types unsigned-num)
   (:note _N"inline ASH")
   (:generator 3
-    (cond ((and (= amount 1) (not (location= number result)))
+    (cond #+nil
+          ((and (= amount 1) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 2)))
-	  ((and (= amount 2) (not (location= number result)))
+	  #+nil
+          ((and (= amount 2) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 4)))
-	  ((and (= amount 3) (not (location= number result)))
+	  #+nil
+          ((and (= amount 3) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 8)))
 	  (t
 	   (move result number)
@@ -732,11 +744,14 @@
   (:result-types signed-num)
   (:note _N"inline ASH")
   (:generator 3
-    (cond ((and (= amount 1) (not (location= number result)))
+    (cond #+nil
+          ((and (= amount 1) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 2)))
-	  ((and (= amount 2) (not (location= number result)))
+	  #+nil
+          ((and (= amount 2) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 4)))
-	  ((and (= amount 3) (not (location= number result)))
+	  #+nil
+          ((and (= amount 3) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 8)))
 	  (t
 	   (move result number)
@@ -767,11 +782,14 @@
   (:note "inline ASH")
   (:generator 1
     (let ((shift (- amount vm:fixnum-tag-bits)))
-      (cond ((and (= shift 1) (not (location= number result)))
+      (cond #+nil
+            ((and (= shift 1) (not (location= number result)))
 	     (inst lea result (make-ea :dword :index number :scale 2)))
-	    ((and (= shift 2) (not (location= number result)))
+	    #+nil
+            ((and (= shift 2) (not (location= number result)))
 	     (inst lea result (make-ea :dword :index number :scale 4)))
-	    ((and (= shift 3) (not (location= number result)))
+	    #+nil
+            ((and (= shift 3) (not (location= number result)))
 	     (inst lea result (make-ea :dword :index number :scale 8)))
 	    (t
 	     (move result number)
