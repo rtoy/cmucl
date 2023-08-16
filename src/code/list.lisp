@@ -749,15 +749,9 @@
 (defparameter *min-list-length-for-hashtable*
   15)
 
-(defparameter *allow-hashtable-for-set-functions*
-  nil)
-
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
 (defun list-to-hashtable (list key test test-not)
-  (unless *allow-hashtable-for-set-functions*
-    (return-from list-to-hashtable nil))
-
   ;; Don't currently support test-not when converting a list to a hashtable
   (unless test-not
     (let ((hash-test (let ((test-fn (if (and (symbolp test)
@@ -1110,7 +1104,10 @@
 	(setf (car l) (cdar l)))
       (setq res (apply function (nreverse args)))
       (case accumulate
-	(:nconc (setq temp (last (nconc temp res))))
+	(:nconc (when res
+		  (let ((next-temp (last res)))
+		    (rplacd temp res)
+		    (setq temp next-temp))))
 	(:list (rplacd temp (list res))
 	       (setq temp (cdr temp)))))))
 
