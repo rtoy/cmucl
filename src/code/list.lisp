@@ -973,17 +973,25 @@
 	      (rplacd splicex (cdr x)))
 	  (setq splicex x)))))
 
+(defvar *allow-hashtable-for-set-functions* t)
+
 (defun subsetp (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns T if every element in list1 is also in list2."
   (declare (inline member))
   (when (and testp notp)
     (error "Test and test-not both supplied."))
 
-  (let ((hashtable (list-to-hashtable list2 key test test-not)))
+  ;; SUBSETP is used early in TYPE-INIT where hash tables aren't
+  ;; available yet, so we can't use hashtables then.  LISPINIT will
+  ;; take care to disable this for the kernel.core.  SAVE will set
+  ;; this to true it's safe to use hash tables for SUBSETP.
+  (let ((hashtable (when *allow-hashtable-for-set-functions*
+                     (list-to-hashtable list2 key test test-not))))
     (cond (hashtable
 	   (dolist (item list1)
 	     (unless (nth-value 1 (gethash (apply-key key item) hashtable))
-	       (return-from subsetp nil))))
+	       (return-from subsetp nil)))
+           t)
 	  ((null hashtable)
 	   (dolist (item list1)
 	     (unless (with-set-keys (member (apply-key key item) list2))
