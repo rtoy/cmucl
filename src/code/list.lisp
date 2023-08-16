@@ -45,7 +45,7 @@
 	  tree-equal list-length nth %setnth nthcdr last make-list append
 	  copy-list copy-alist copy-tree revappend nconc nreconc butlast
 	  nbutlast ldiff member member-if member-if-not tailp adjoin union
-	  nunion intersection nintersection set-difference nset-difference
+	  nunion intersection nintersection nset-difference
 	  set-exclusive-or nset-exclusive-or subsetp acons pairlis assoc
 	  assoc-if assoc-if-not rassoc rassoc-if rassoc-if-not subst subst-if
 	  subst-if-not nsubst nsubst-if nsubst-if-not sublis nsublis))
@@ -744,6 +744,39 @@
       list
       (cons item list)))
 
+;; The minimum length of a list before we can use a hashtable.  This
+;; was determined experimentally.
+(defparameter *min-list-length-for-hashtable*
+  15)
+
+;; Convert a list to a hashtable.  The hashtable does not handle
+;; duplicated values in the list.  Returns the hashtable.
+(defun list-to-hashtable (list key test test-not)
+  ;; Don't currently support test-not when converting a list to a hashtable
+  (unless test-not
+    (let ((hash-test (let ((test-fn (if (and (symbolp test)
+                                             (fboundp test))
+                                        (fdefinition test)
+                                        test)))
+                       (cond ((eql test-fn #'eq) 'eq)
+                             ((eql test-fn #'eql) 'eql)
+                             ((eql test-fn #'equal) 'equal)
+                             ((eql test-fn #'equalp) 'equalp)))))
+      (unless hash-test
+	(return-from list-to-hashtable nil))
+      ;; If the list is too short, the hashtable makes things
+      ;; slower.  We also need to balance memory usage.
+      (let ((len 0))
+	;; Compute list length ourselves.
+	(dolist (item list)
+	  (declare (ignore item))
+	  (incf len))
+	(when (< len *min-list-length-for-hashtable*)
+          (return-from list-to-hashtable nil))
+	(let ((hashtable (make-hash-table :test hash-test :size len)))
+	  (dolist (item list)
+	    (setf (gethash (apply-key key item) hashtable) item))
+	  hashtable)))))
 
 ;;; UNION -- Public.
 ;;;
@@ -812,20 +845,32 @@
 	  (setq list1 (Cdr list1))))
     res))
 
-(defun set-difference (list1 list2 &key key
-			     (test #'eql testp) (test-not nil notp))
+(defun set-difference (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the elements of list1 which are not in list2."
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (if (null list2)
-      list1
-      (let ((res nil))
-	(dolist (elt list1)
-	  (if (not (with-set-keys (member (apply-key key elt) list2)))
-	      (push elt res)))
-	res)))
+  ;; Quick exit
+  (when (null list2)
+    (return-from set-difference list1))
 
+  (let ((hashtable 
+	  (list-to-hashtable list2 key test test-not)))
+    (cond (hashtable
+	   ;; list2 was placed in hash table.
+	   (let ((res nil))
+	     (dolist (item list1)
+	       (unless (nth-value 1 (gethash (apply-key key item) hashtable))
+		 (push item res)))
+	     res))
+	  ((null hashtable)
+	   ;; Default implementation because we didn't create the hash
+	   ;; table.
+           (let ((res nil))
+	     (dolist (item list1)
+	       (if (not (with-set-keys (member (apply-key key item) list2)))
+                   (push item res)))
+	     res)))))
 
 (defun nset-difference (list1 list2 &key key
 			      (test #'eql testp) (test-not nil notp))
