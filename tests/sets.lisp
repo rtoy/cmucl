@@ -89,6 +89,7 @@
 				:test-not 'eql)))
 
    
+
 (define-test union.hash-eql
     (:tag :issues)
   ;; For union to use hashtables by making the threshold
@@ -171,5 +172,3 @@
 		       '(3 4)
 		       :test 'eql
 		       :test-not 'eql)))
-
-   

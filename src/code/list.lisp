@@ -1113,7 +1113,10 @@
 	(setf (car l) (cdar l)))
       (setq res (apply function (nreverse args)))
       (case accumulate
-	(:nconc (setq temp (last (nconc temp res))))
+	(:nconc (when res
+		  (let ((next-temp (last res)))
+		    (rplacd temp res)
+		    (setq temp next-temp))))
 	(:list (rplacd temp (list res))
 	       (setq temp (cdr temp)))))))
 
