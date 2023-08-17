@@ -785,17 +785,6 @@
 ;;; will apply the test to the elements from list1 and list2 in the correct
 ;;; order.
 ;;;
-#+nil
-(defun union (list1 list2 &key key (test #'eql testp) (test-not nil notp))
-  "Returns the union of list1 and list2."
-  (declare (inline member))
-  (when (and testp notp) (error (intl:gettext "Test and test-not both supplied.")))
-  (let ((res list2))
-    (dolist (elt list1)
-      (unless (with-set-keys (member (apply-key key elt) list2))
-	(push elt res)))
-    res))
-
 (defun union (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the union of list1 and list2."
   (declare (inline member))
