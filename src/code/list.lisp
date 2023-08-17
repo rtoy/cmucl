@@ -788,11 +788,18 @@
 (defun union (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the union of list1 and list2."
   (declare (inline member))
-  (when (and testp notp) (error (intl:gettext "Test and test-not both supplied.")))
-  (let ((res list2))
-    (dolist (elt list1)
-      (unless (with-set-keys (member (apply-key key elt) list2))
-	(push elt res)))
+  (when (and testp notp)
+    (error (intl:gettext "Test and test-not both supplied.")))
+  (let ((res list2)
+	(hashtable (list-to-hashtable list2 key test test-not)))
+    (cond (hashtable
+	   (dolist (item list1)
+	     (unless (nth-value 1 (gethash (apply-key key item) hashtable))
+	       (push item res))))
+	  ((null hashtable)
+	   (dolist (item list1)
+	     (unless (with-set-keys (member (apply-key key item) list2))
+	       (push item res)))))
     res))
 
 ;;; Destination and source are setf-able and many-evaluable.  Sets the source
@@ -825,11 +832,20 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (let ((res nil))
-    (dolist (elt list1)
-      (if (with-set-keys (member (apply-key key elt) list2))
-	  (push elt res)))
-    res))
+  (let ((hashtable 
+	  (list-to-hashtable list2 key test test-not)))
+    (cond (hashtable
+	   (let ((res nil))
+	     (dolist (item list1)
+	       (when (nth-value 1 (gethash (apply-key key item) hashtable))
+		 (push item res)))
+	     res))
+	  ((null hashtable)
+	   (let ((res nil))
+	     (dolist (elt list1)
+	       (if (with-set-keys (member (apply-key key elt) list2))
+		   (push elt res)))
+	     res)))))
 
 (defun nintersection (list1 list2 &key key
 			    (test #'eql testp) (test-not nil notp))
