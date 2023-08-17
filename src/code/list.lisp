@@ -825,11 +825,20 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (let ((res nil))
-    (dolist (elt list1)
-      (if (with-set-keys (member (apply-key key elt) list2))
-	  (push elt res)))
-    res))
+  (let ((hashtable 
+	  (list-to-hashtable list2 key test test-not)))
+    (cond (hashtable
+	   (let ((res nil))
+	     (dolist (item list1)
+	       (when (nth-value 1 (gethash (apply-key key item) hashtable))
+		 (push item res)))
+	     res))
+	  ((null hashtable)
+	   (let ((res nil))
+	     (dolist (elt list1)
+	       (if (with-set-keys (member (apply-key key elt) list2))
+		   (push elt res)))
+	     res)))))
 
 (defun nintersection (list1 list2 &key key
 			    (test #'eql testp) (test-not nil notp))
