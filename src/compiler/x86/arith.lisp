@@ -196,116 +196,11 @@
 
 
 
-;(define-binop + 4 add)
+(define-binop + 4 add)
 (define-binop - 4 sub)
 (define-binop logand 2 and)
 (define-binop logior 2 or)
 (define-binop logxor 2 xor)
-
-
-;;; Special handling of add on the x86; can use lea to avoid a
-;;; register load, otherwise it uses add.
-(define-vop (fast-+/fixnum=>fixnum fast-safe-arith-op)
-  (:translate +)
-  (:args (x :scs (any-reg) :target r
-	    :load-if (not (and (sc-is x control-stack)
-			       (sc-is y any-reg)
-			       (sc-is r control-stack)
-			       (location= x r))))
-	 (y :scs (any-reg control-stack)))
-  (:arg-types tagged-num tagged-num)
-  (:results (r :scs (any-reg) :from (:argument 0)
-	       :load-if (not (and (sc-is x control-stack)
-				  (sc-is y any-reg)
-				  (sc-is r control-stack)
-				  (location= x r)))))
-  (:result-types tagged-num)
-  (:note _N"inline fixnum arithmetic")
-  (:generator 2
-    (move r x)
-    (inst add r y)))
-
-(define-vop (fast-+-c/fixnum=>fixnum fast-safe-arith-op)
-  (:translate +)
-  (:args (x :target r :scs (any-reg control-stack)))
-  (:info y)
-  (:arg-types tagged-num (:constant (signed-byte 30)))
-  (:results (r :scs (any-reg)
-	       :load-if (not (location= x r))))
-  (:result-types tagged-num)
-  (:note _N"inline fixnum arithmetic")
-  (:generator 1
-    (move r x)
-    (inst add r (fixnumize y))))
-
-(define-vop (fast-+/signed=>signed fast-safe-arith-op)
-  (:translate +)
-  (:args (x :scs (signed-reg) :target r
-	    :load-if (not (and (sc-is x signed-stack)
-			       (sc-is y signed-reg)
-			       (sc-is r signed-stack)
-			       (location= x r))))
-	 (y :scs (signed-reg signed-stack)))
-  (:arg-types signed-num signed-num)
-  (:results (r :scs (signed-reg) :from (:argument 0)
-	       :load-if (not (and (sc-is x signed-stack)
-				  (sc-is y signed-reg)
-				  (location= x r)))))
-  (:result-types signed-num)
-  (:note _N"inline (signed-byte 32) arithmetic")
-  (:generator 5
-    (move r x)
-    (inst add r y)))
-
-(define-vop (fast-+-c/signed=>signed fast-safe-arith-op)
-  (:translate +)
-  (:args (x :target r :scs (signed-reg signed-stack)))
-  (:info y)
-  (:arg-types signed-num (:constant (signed-byte 32)))
-  (:results (r :scs (signed-reg)
-	       :load-if (not (location= x r))))
-  (:result-types signed-num)
-  (:note _N"inline (signed-byte 32) arithmetic")
-  (:generator 4
-    (move r x)
-    (if (= y 1)
-	(inst inc r)
-	(inst add r y))))
-
-(define-vop (fast-+/unsigned=>unsigned fast-safe-arith-op)
-  (:translate +)
-  (:args (x :scs (unsigned-reg) :target r
-	    :load-if (not (and (sc-is x unsigned-stack)
-			       (sc-is y unsigned-reg)
-			       (sc-is r unsigned-stack)
-			       (location= x r))))
-	 (y :scs (unsigned-reg unsigned-stack)))
-  (:arg-types unsigned-num unsigned-num)
-  (:results (r :scs (unsigned-reg) :from (:argument 0)
-	       :load-if (not (and (sc-is x unsigned-stack)
-				  (sc-is y unsigned-reg)
-				  (sc-is r unsigned-stack)
-				  (location= x r)))))
-  (:result-types unsigned-num)
-  (:note _N"inline (unsigned-byte 32) arithmetic")
-  (:generator 5
-    (move r x)
-    (inst add r y)))
-
-(define-vop (fast-+-c/unsigned=>unsigned fast-safe-arith-op)
-  (:translate +)
-  (:args (x :target r :scs (unsigned-reg unsigned-stack)))
-  (:info y)
-  (:arg-types unsigned-num (:constant (unsigned-byte 32)))
-  (:results (r :scs (unsigned-reg)
-	       :load-if (not (location= x r))))
-  (:result-types unsigned-num)
-  (:note _N"inline (unsigned-byte 32) arithmetic")
-  (:generator 4
-    (move r x)
-    (if (= y 1)
-	(inst inc r)
-	(inst add r y))))
 
 
 ;;;; Special logand cases: (logand signed unsigned) => unsigned
