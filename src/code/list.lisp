@@ -991,7 +991,7 @@
 
 (defvar *allow-hashtable-for-set-functions* t)
 
-;;(declaim (start-block shorter-list-to-hashtable subsetp))
+(declaim (start-block shorter-list-to-hashtable subsetp))
 
 (defun shorter-list-to-hashtable (list1 list2 key test test-not)
   ;; Find the shorter list and return the length and the shorter list
@@ -1049,7 +1049,7 @@
 	       (return-from subsetp nil)))
 	   T))))
 
-;;(declaim (end-block))
+(declaim (end-block))
 
 
 ;;; Functions that operate on association lists
