@@ -792,15 +792,16 @@
     (error (intl:gettext "Test and test-not both supplied.")))
   (let ((res list2)
 	(hashtable (list-to-hashtable list2 key test test-not)))
-    (cond (hashtable
-	   (dolist (item list1)
-	     (unless (nth-value 1 (gethash (apply-key key item) hashtable))
-	       (push item res))))
-	  ((null hashtable)
-	   (dolist (item list1)
-	     (unless (with-set-keys (member (apply-key key item) list2))
-	       (push item res)))))
-    res))
+    (macrolet
+        ((process (test-form)
+         `(dolist (item list1)
+	    (unless ,test-form
+	      (push item res)))))
+      (cond (hashtable
+             (process (nth-value 1 (gethash (apply-key key item) hashtable))))
+            (t
+             (process (with-set-keys (member (apply-key key item) list2)))))
+      res)))
 
 ;;; Destination and source are setf-able and many-evaluable.  Sets the source
 ;;; to the cdr, and "conses" the 1st elt of source to destination.
@@ -827,25 +828,24 @@
   
 
 (defun intersection (list1 list2 &key key
-			   (test #'eql testp) (test-not nil notp))
+			           (test #'eql testp) (test-not nil notp))
   "Returns the intersection of list1 and list2."
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
   (let ((hashtable 
 	  (list-to-hashtable list2 key test test-not)))
-    (cond (hashtable
-	   (let ((res nil))
-	     (dolist (item list1)
-	       (when (nth-value 1 (gethash (apply-key key item) hashtable))
-		 (push item res)))
-	     res))
-	  ((null hashtable)
-	   (let ((res nil))
-	     (dolist (elt list1)
-	       (if (with-set-keys (member (apply-key key elt) list2))
-		   (push elt res)))
-	     res)))))
+    (macrolet
+        ((process (test-form)
+           `(let ((res nil))
+	      (dolist (item list1)
+	        (if ,test-form
+		    (push item res)))
+	      res)))
+      (cond (hashtable
+             (process (nth-value 1 (gethash (apply-key key item) hashtable))))
+            (t
+             (process (with-set-keys (member (apply-key key item) list2))))))))
 
 (defun nintersection (list1 list2 &key key
 			    (test #'eql testp) (test-not nil notp))
@@ -872,21 +872,21 @@
 
   (let ((hashtable 
 	  (list-to-hashtable list2 key test test-not)))
-    (cond (hashtable
-	   ;; list2 was placed in hash table.
-	   (let ((res nil))
-	     (dolist (item list1)
-	       (unless (nth-value 1 (gethash (apply-key key item) hashtable))
-		 (push item res)))
-	     res))
-	  ((null hashtable)
-	   ;; Default implementation because we didn't create the hash
-	   ;; table.
-           (let ((res nil))
-	     (dolist (item list1)
-	       (if (not (with-set-keys (member (apply-key key item) list2)))
-                   (push item res)))
-	     res)))))
+    (macrolet
+        ((process (test-form)
+           `(let ((res nil))
+	      (dolist (item list1)
+	        (if (not ,test-form)
+                    (push item res)))
+	      res)))
+      
+      (cond (hashtable
+             (process (nth-value 1 (gethash (apply-key key item) hashtable))))
+            (t
+	     ;; Default implementation because we didn't create the hash
+	     ;; table.
+             (process (with-set-keys (member (apply-key key item) list2))))))))
+
 
 (defun nset-difference (list1 list2 &key key
 			      (test #'eql testp) (test-not nil notp))
