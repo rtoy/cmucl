@@ -991,6 +991,35 @@
 
 (defvar *allow-hashtable-for-set-functions* t)
 
+(declaim (start-block shorter-list-to-hashtable subsetp))
+
+(defun shorter-list-to-hashtable (list1 list2 key test test-not)
+  ;; Find the shorter list and return the length and the shorter list
+  (when test-not
+    (return-from shorter-list-to-hashtable nil))
+  (let ((hash-test (let ((test-fn (if (and (symbolp test)
+                                           (fboundp test))
+                                      (fdefinition test)
+                                      test)))
+                     (cond ((eql test-fn #'eq) 'eq)
+                           ((eql test-fn #'eql) 'eql)
+                           ((eql test-fn #'equal) 'equal)
+                           ((eql test-fn #'equalp) 'equalp)))))
+    (unless hash-test
+      (return-from shorter-list-to-hashtable nil))
+    (multiple-value-bind (min-length shorter-list)
+        (do ((len 0 (1+ len))
+             (lst1 list1 (cdr lst1))
+             (lst2 list2 (cdr lst2)))
+            ((or (null lst1) (null lst2))
+             (values len (if (null lst1) list1 list2))))
+      (when (< min-length *min-list-length-for-hashtable*)
+        (return-from shorter-list-to-hashtable nil))
+      (let ((hashtable (make-hash-table :test hash-test :size min-length)))
+        (dolist (item shorter-list)
+          (setf (gethash (apply-key key item) hashtable) item))
+        (values hashtable shorter-list)))))
+        
 (defun subsetp (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns T if every element in list1 is also in list2."
   (declare (inline member))
@@ -1001,19 +1030,30 @@
   ;; available yet, so we can't use hashtables then.  LISPINIT will
   ;; take care to disable this for the kernel.core.  SAVE will set
   ;; this to true when it's safe to use hash tables for SUBSETP.
-  (let ((hashtable
-          (when *allow-hashtable-for-set-functions*
-            (list-to-hashtable list2 key test test-not))))
+  (multiple-value-bind (hashtable shorter-list)
+      (when *allow-hashtable-for-set-functions*
+        (shorter-list-to-hashtable list1 list2 key test test-not))
     (cond (hashtable
-	   (dolist (item list1)
-	     (unless (nth-value 1 (gethash (apply-key key item) hashtable))
-	       (return-from subsetp nil)))
-           t)
+           (cond ((eq shorter-list list1)
+                  ;; Remove any item from list2 from the hashtable containing list1.
+                  (dolist (item list2)
+                    (remhash (apply-key key item) hashtable))
+                  ;; If the hash table is now empty, then every
+                  ;; element in list1 appeared in list2, so list1 is a
+                  ;; subset of list2.
+                  (zerop (hash-table-count hashtable)))
+                 ((eq shorter-list list2)
+                  (dolist (item list1)
+                    (unless (nth-value 1 (gethash (apply-key key item) hashtable))
+                      (return-from subsetp nil)))
+                  t)))
 	  (t
 	   (dolist (item list1)
 	     (unless (with-set-keys (member (apply-key key item) list2))
 	       (return-from subsetp nil)))
 	   T))))
+
+(declaim (end-block))
 
 
 ;;; Functions that operate on association lists
