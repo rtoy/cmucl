@@ -1156,6 +1156,13 @@ msgid ""
 msgstr ""
 
 #: src/code/type.lisp
+msgid ""
+"The minimum length of either list argument for subsetp where a\n"
+"  hashtable is used to speed up processing instead of using a basic\n"
+"  list implementation.  This value was determined by experimentation."
+msgstr ""
+
+#: src/code/type.lisp
 msgid "Subtypep is illegal on this type:~%  ~S"
 msgstr ""
 
