@@ -377,6 +377,14 @@
 (cold-load-init (setq *use-implementation-types* t))
 (declaim (type boolean *use-implementation-types*))
 
+(defvar *min-list-length-for-subsetp-hashtable* 150
+  "The minimum length of either list argument for subsetp where a
+  hashtable is used to speed up processing instead of using a basic
+  list implementation.  This value was determined by experimentation.")
+
+(cold-load-init (setq *min-list-length-for-subsetp-hashtable* 150))
+(declaim (type fixnum *min-list-length-for-subsetp-hashtable*))
+
 ;;; DELEGATE-COMPLEX-{SUBTYPEP-ARG2,INTERSECTION}  --  Interface
 ;;;
 ;;;    These functions are used as method for types which need a complex

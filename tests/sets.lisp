@@ -280,4 +280,3 @@
                          '(3 4)
                          :test 'eql
                          :test-not 'equal)))
->>>>>>> Stashed changes
