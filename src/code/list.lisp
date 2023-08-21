@@ -828,7 +828,7 @@
   
 
 (defun intersection (list1 list2 &key key
-			           (test #'eql testp) (test-not nil notp))
+			   (test #'eql testp) (test-not nil notp))
   "Returns the intersection of list1 and list2."
   (declare (inline member))
   (if (and testp notp)
