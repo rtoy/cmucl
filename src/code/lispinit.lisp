@@ -347,9 +347,6 @@
   #+gengc (setf conditions::*handler-clusters* nil)
   (setq intl::*default-domain* "cmucl")
   (setq intl::*locale* "C")
-  ;; During init, we can't use hashtables to speed up the set
-  ;; functions.  In particular, subsetp is used in type-init.
-  (setq lisp::*allow-hashtable-for-set-functions* nil)
 
   ;; Many top-level forms call INFO, (SETF INFO).
   (print-and-call c::globaldb-init)

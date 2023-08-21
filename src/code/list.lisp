@@ -989,8 +989,6 @@
 	      (rplacd splicex (cdr x)))
 	  (setq splicex x)))))
 
-(defvar *allow-hashtable-for-set-functions* t)
-
 (declaim (start-block shorter-list-to-hashtable subsetp))
 
 (defun shorter-list-to-hashtable (list1 list2 key test test-not)
@@ -1013,7 +1011,7 @@
              (lst2 list2 (cdr lst2)))
             ((or (null lst1) (null lst2))
              (values len (if (null lst1) list1 list2))))
-      (when (< min-length *min-list-length-for-hashtable*)
+      (when (< min-length kernel::*min-list-length-for-subsetp-hashtable*)
         (return-from shorter-list-to-hashtable nil))
       (let ((hashtable (make-hash-table :test hash-test :size min-length)))
         (dolist (item shorter-list)
@@ -1031,7 +1029,7 @@
   ;; take care to disable this for the kernel.core.  SAVE will set
   ;; this to true when it's safe to use hash tables for SUBSETP.
   (multiple-value-bind (hashtable shorter-list)
-      (when *allow-hashtable-for-set-functions*
+      (when t
         (shorter-list-to-hashtable list1 list2 key test test-not))
     (cond (hashtable
            (cond ((eq shorter-list list1)
