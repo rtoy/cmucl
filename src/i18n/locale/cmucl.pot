@@ -3209,19 +3209,19 @@ msgid "Test and test-not both supplied."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Destructively returns the union list1 and list2."
-msgstr ""
-
-#: src/code/list.lisp
 msgid "Returns the intersection of list1 and list2."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Destructively returns the intersection of list1 and list2."
+msgid "Returns the elements of list1 which are not in list2."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Returns the elements of list1 which are not in list2."
+msgid "Destructively returns the union list1 and list2."
+msgstr ""
+
+#: src/code/list.lisp
+msgid "Destructively returns the intersection of list1 and list2."
 msgstr ""
 
 #: src/code/list.lisp
