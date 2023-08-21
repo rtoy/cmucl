@@ -816,14 +816,23 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
+  
   (let ((res list2)
+        (hashtable  (list-to-hashtable list2 key test test-not))
 	(list1 list1))
-    (do ()
-	((endp list1))
-      (if (not (with-set-keys (member (apply-key key (car list1)) list2)))
-	  (steve-splice list1 res)
-	  (setf list1 (cdr list1))))
-    res))
+    (macrolet
+        ((process (test-form)
+           `(do ()
+                ((endp list1))
+              (if (not ,test-form)
+                  (steve-splice list1 res)
+                  (setf list1 (cdr list1))))))
+      (cond
+        (hashtable
+         (process (nth-value 1 (gethash (apply-key key (car list1)) hashtable))))
+        (t
+         (process (with-set-keys (member (apply-key key (car list1)) list2)))))
+      res)))
   
 
 (defun intersection (list1 list2 &key key
@@ -854,12 +863,24 @@
   (if (and testp notp)
       (error "Test and test-not both supplied."))
   (let ((res nil)
+        (hashtable (list-to-hashtable list2 key test test-not))
 	(list1 list1))
-    (do () ((endp list1))
-      (if (with-set-keys (member (apply-key key (car list1)) list2))
-	  (steve-splice list1 res)
-	  (setq list1 (Cdr list1))))
-    res))
+    (macrolet
+        ((process (test-form)
+           `(do () ((endp list1))
+              (if ,test-form
+	          (steve-splice list1 res)
+	          (setq list1 (Cdr list1))))))
+      (cond (hashtable
+             (process (nth-value 1 (gethash (apply-key key (car list1)) hashtable))))
+            (t
+             (process (with-set-keys (member (apply-key key (car list1)) list2)))))
+      #+nil
+      (do () ((endp list1))
+        (if (with-set-keys (member (apply-key key (car list1)) list2))
+	    (steve-splice list1 res)
+	    (setq list1 (Cdr list1))))
+      res)))
 
 (defun set-difference (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the elements of list1 which are not in list2."
@@ -895,12 +916,24 @@
   (if (and testp notp)
       (error "Test and test-not both supplied."))
   (let ((res nil)
+        (hashtable (list-to-hashtable list2 key test test-not))
 	(list1 list1))
-    (do () ((endp list1))
-      (if (not (with-set-keys (member (apply-key key (car list1)) list2)))
-	  (steve-splice list1 res)
-	  (setq list1 (cdr list1))))
-    res))
+    (macrolet
+        ((process (test-form)
+           `(do () ((endp list1))
+              (if (not ,test-form)
+	          (steve-splice list1 res)
+	          (setq list1 (cdr list1))))))
+      (cond (hashtable
+             (process (nth-value 1 (gethash (apply-key key (car list1)) hashtable))))
+            (t
+             (process (with-set-keys (member (apply-key key (car list1)) list2)))))
+      #+nil
+      (do () ((endp list1))
+        (if (not (with-set-keys (member (apply-key key (car list1)) list2)))
+	    (steve-splice list1 res)
+	    (setq list1 (cdr list1))))
+      res)))
 
 
 (defun set-exclusive-or (list1 list2 &key key
