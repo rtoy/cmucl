@@ -88,8 +88,38 @@
 				:test 'eql
 				:test-not 'eql)))
 
-   
 
+(define-test nset-diff.1
+    (:tags :issues)
+  ;; From CLHS
+  (flet 
+      ((test1)
+       (let ((lst1 (list "A" "b" "C" "d"))
+             (lst2 (list "a" "B" "C" "d")))
+         (assert-equal '("b" "A")
+                       (nset-difference lst1 lst2 :test 'equal))
+         ;; This isn't specified by the CLHS, but it is what we do.
+         (assert-equal '("A") lst1)))
+    (test1)
+    
+    (let ((lisp::*min-list-length-for-hashtable* 1))
+      (test1))))
+
+(define-test nset-diff.key
+    (:tags :issues)
+  (flet
+      ((test)
+       ;; From CLHS
+       (let ((lst1 (list '("a" . "b") '("c" . "d") '("e" . "f")))
+             (lst2 (list '("c" . "a") '("e" . "b") '("d" . "a"))))
+         (assert-equal '(("e" . "f" ("c" . "d")))
+                       (nset-difference lst1 lst2 :test 'equal :key #'cdr))
+         ;; This isn't specified by the CLHS, but it is what we do.
+         (assert-equal '(("a" . "b") ("c" . "d")) lst1)))
+    (test)
+    (let ((lisp::*min-list-length-for-hashtable* 1))
+      (test))))
+  
 (define-test union.hash-eql
     (:tag :issues)
   ;; For union to use hashtables by making the threshold
@@ -172,3 +202,82 @@
 		       '(3 4)
 		       :test 'eql
 		       :test-not 'eql)))
+
+(define-test nunion.1
+    (:tag :issues)
+  (flet
+      ((test)
+       (let ((lst1 (list 1 2 '(1 2) "a" "b"))
+             (lst2 (list 2 3 '(2 3) "B" "C")))
+         (assert-equal '("b" "a" (1 2) 1 2 3 (2 3) "B" "C")
+                       (nunion lst1 lst2))
+         (assert-equal '(1 2 3 (2 3) "B" "C")
+                       lst1)))
+    (test)
+    (let ((lisp::*min-list-length-for-hashtable* 1))
+      (test))))
+
+(define-test nintersection.1
+    (:tag :issues)
+  (flet
+      ((test)
+       (let ((lst1 (list 1 1 2 3 4 a b c "A" "B" "C" "d"))
+             (lst2 (list 1 4 5 b c d "a" "B" "c" "D")))
+         (assert-equal '(c b 4 1 1)
+                       (nintersection lst1 lst2))
+         (assert-equal '(1) lst1)))
+    (test)
+    (let ((lisp::*min-list-length-for-hashtable* 1))
+      (test))))
+
+
+(define-test subsetp.hash-eq
+    (:tag :issues)
+  (let ((lisp::*min-list-length-for-hashtable* 2))
+    (assert-true
+     (subsetp '(a b c a) '(a a d d c b) :test 'eq))
+    (assert-true
+     (subsetp '(a b c a b c a b c) '(a a d d c b) :test 'eq))
+    (assert-false
+     (subsetp '(a b c a z) '(a a d d c b) :test 'eq))
+    (assert-false
+     (subsetp '(a b c a b cz) '(a a d d c b) :test 'eq))))
+
+(define-test subsetp.hash-eql
+    (:tag :issues)
+  (let ((lisp::*min-list-length-for-hashtable* 2))
+    (assert-true
+     (subsetp '(a b c a) '(a a d d c b) :test 'eql))
+    (assert-false
+     (subsetp '(a b c a z) '(a a d d c b) :test 'eql))))
+
+(define-test subsetp.hash-equal
+    (:tag :issues)
+  (let ((lisp::*min-list-length-for-hashtable* 2))
+    (assert-true
+     (subsetp '("a" "b" "c" "a") '("a" "a" "d" "d" "c" "b") :test 'equal))
+    (assert-false
+     (subsetp '("a" "b" "c" "a" "z") '("a" "a" "d" "d" "c" "b") :test 'equal))))
+
+(define-test subsetp.hash-equalp
+    (:tag :issues)
+  (let ((lisp::*min-list-length-for-hashtable* 2))
+    (assert-true
+     (subsetp '("a" "b" "C" "A") '("a" "a" "d" "d" "c" "b") :test 'equalp))
+    (assert-false
+     (subsetp '("a" "b" "C" "A" "z") '("a" "a" "d" "d" "c" "b") :test 'equalp))))
+
+(define-test subsetp.hash-eql-with-key
+    (:tag :issues)
+  (assert-true (subsetp '((1 "a") (2 "b") (3 "c"))
+                        '((3 "c") (3 "c") (2 "b") (1 "a"))
+                        :test 'eql
+                        :key #'first)))
+
+(define-test subsetp.test-and-test-not
+  (assert-error 'simple-error
+                (subsetp '(1 2)
+                         '(3 4)
+                         :test 'eql
+                         :test-not 'equal)))
+>>>>>>> Stashed changes
