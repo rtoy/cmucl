@@ -90,35 +90,34 @@
 
 
 (define-test nset-diff.1
-    (:tags :issues)
+    (:tag :issues)
   ;; From CLHS
   (flet 
-      ((test1)
-       (let ((lst1 (list "A" "b" "C" "d"))
-             (lst2 (list "a" "B" "C" "d")))
-         (assert-equal '("b" "A")
-                       (nset-difference lst1 lst2 :test 'equal))
-         ;; This isn't specified by the CLHS, but it is what we do.
-         (assert-equal '("A") lst1)))
-    (test1)
-    
-    (let ((lisp::*min-list-length-for-hashtable* 1))
-      (test1))))
+      ((test1 (min-length-limit)
+         (let ((lisp::*min-list-length-for-hashtable* min-length-limit)
+               (lst1 (list "A" "b" "C" "d"))
+               (lst2 (list "a" "B" "C" "d")))
+           (assert-equal '("b" "A")
+                         (nset-difference lst1 lst2 :test 'equal))
+           ;; This isn't specified by the CLHS, but it is what we do.
+           (assert-equal '("A") lst1))))
+    (test1 100)
+    (test1 1)))
 
 (define-test nset-diff.key
-    (:tags :issues)
+    (:tag :issues)
   (flet
-      ((test)
-       ;; From CLHS
-       (let ((lst1 (list '("a" . "b") '("c" . "d") '("e" . "f")))
-             (lst2 (list '("c" . "a") '("e" . "b") '("d" . "a"))))
-         (assert-equal '(("e" . "f" ("c" . "d")))
-                       (nset-difference lst1 lst2 :test 'equal :key #'cdr))
-         ;; This isn't specified by the CLHS, but it is what we do.
-         (assert-equal '(("a" . "b") ("c" . "d")) lst1)))
-    (test)
-    (let ((lisp::*min-list-length-for-hashtable* 1))
-      (test))))
+      ((test (min-length-limit)
+         ;; From CLHS
+         (let ((lisp::*min-list-length-for-hashtable* min-length-limit)
+               (lst1 (list '("a" . "b") '("c" . "d") '("e" . "f")))
+               (lst2 (list '("c" . "a") '("e" . "b") '("d" . "a"))))
+           (assert-equal '(("e" . "f") ("c" . "d"))
+                         (nset-difference lst1 lst2 :test 'equal :key #'cdr))
+           ;; This isn't specified by the CLHS, but it is what we do.
+           (assert-equal '(("a" . "b") ("c" . "d")) lst1))))
+    (test 100)
+    (test 1)))
   
 (define-test union.hash-eql
     (:tag :issues)
@@ -206,29 +205,29 @@
 (define-test nunion.1
     (:tag :issues)
   (flet
-      ((test)
-       (let ((lst1 (list 1 2 '(1 2) "a" "b"))
-             (lst2 (list 2 3 '(2 3) "B" "C")))
-         (assert-equal '("b" "a" (1 2) 1 2 3 (2 3) "B" "C")
-                       (nunion lst1 lst2))
-         (assert-equal '(1 2 3 (2 3) "B" "C")
-                       lst1)))
-    (test)
-    (let ((lisp::*min-list-length-for-hashtable* 1))
-      (test))))
+      ((test (min-list-length)
+         (let ((lisp::*min-list-length-for-hashtable* min-list-length)
+               (lst1 (list 1 2 '(1 2) "a" "b"))
+               (lst2 (list 2 3 '(2 3) "B" "C")))
+           (assert-equal '("b" "a" (1 2) 1 2 3 (2 3) "B" "C")
+                         (nunion lst1 lst2))
+           (assert-equal '(1 2 3 (2 3) "B" "C")
+                         lst1))))
+    (test 100)
+    (test 1)))
 
 (define-test nintersection.1
     (:tag :issues)
   (flet
-      ((test)
-       (let ((lst1 (list 1 1 2 3 4 a b c "A" "B" "C" "d"))
-             (lst2 (list 1 4 5 b c d "a" "B" "c" "D")))
-         (assert-equal '(c b 4 1 1)
-                       (nintersection lst1 lst2))
-         (assert-equal '(1) lst1)))
-    (test)
-    (let ((lisp::*min-list-length-for-hashtable* 1))
-      (test))))
+      ((test (min-list-length)
+         (let ((lisp::*min-list-length-for-hashtable* min-list-length)
+               (lst1 (list 1 1 2 3 4 'a 'b 'c "A" "B" "C" "d"))
+               (lst2 (list 1 4 5 'b 'c 'd "a" "B" "c" "D")))
+           (assert-equal '(c b 4 1 1)
+                         (nintersection lst1 lst2))
+           (assert-equal '(1) lst1))))
+    (test 100)
+    (test 1)))
 
 
 (define-test subsetp.hash-eq
