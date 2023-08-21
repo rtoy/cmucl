@@ -62,7 +62,7 @@ linux:test:
     - job: linux:build
       artifacts: true
   script:
-    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 linux:ansi-test:
   stage: ansi-test
@@ -75,14 +75,8 @@ linux:ansi-test:
     # Needs artifacts from build (dist/)
     - job: linux:build
       artifacts: true
-  before_script:
-    - git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
-    - (cd ansi-test; git checkout cmucl-expected-failures)
   script:
-    - cd ansi-test
-    - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
-    # There should be no unexpected successes or failures; check these separately.
-    - grep -a 'No unexpected successes' test.out && grep -a 'No unexpected failures' test.out
+    - bin/run-ansi-tests.sh -l dist/bin/lisp
     
 linux:benchmark:
   stage: benchmark
@@ -149,7 +143,7 @@ osx:test:
     - job: osx:build
       artifacts: true
   script:
-    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 osx:ansi-test:
   stage: ansi-test
@@ -162,14 +156,8 @@ osx:ansi-test:
     # Needs artifacts from build (dist/)
     - job: osx:build
       artifacts: true
-  before_script:
-    - /opt/local/bin/git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
-    - (cd ansi-test; /opt/local/bin/git checkout cmucl-expected-failures)
   script:
-    - cd ansi-test
-    - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
-    # There should be no unexpected successes or failures; check these separately.
-    - grep -a 'No unexpected successes' test.out && grep -a 'No unexpected failures' test.out
+    - bin/run-ansi-tests.sh -l dist/bin/lisp
   
 osx:benchmark:
   stage: benchmark
