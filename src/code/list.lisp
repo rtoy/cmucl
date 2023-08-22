@@ -755,12 +755,22 @@
 ;; value of RES, which holds the result of the set function.
 ;; TEST-FORM is a form that tests whether to add the item from LIST1
 ;; to RES.
-(defmacro process-set (init-res test-form)
+(defmacro process-set-body (init-res invert-p test-form)
   `(let ((res ,init-res))
      (dolist (item list1)
-       (when ,test-form
+       (when ,(if invert-p
+                  `(not ,test-form)
+                  test-form)
          (push item res)))
      res))
+
+(defmacro process-set (init-res invert-p)
+  `(let ((hashtable (list-to-hashtable list2 key test test-not)))
+     (if hashtable
+         (process-set-body ,init-res ,invert-p
+                      (nth-value 1 (gethash (apply-key key item) hashtable)))
+         (process-set-body ,init-res ,invert-p
+                      (with-set-keys (member (apply-key key item) list2))))))
 
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
@@ -803,6 +813,8 @@
   (declare (inline member))
   (when (and testp notp)
     (error (intl:gettext "Test and test-not both supplied.")))
+  (process-set list2 t)
+  #+nil
   (let ((hashtable (list-to-hashtable list2 key test test-not)))
     (if hashtable
         (process-set list2 (not (nth-value 1 (gethash (apply-key key item) hashtable))))
@@ -815,6 +827,8 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
+  (process-set nil nil)
+  #+nil
   (let ((hashtable 
 	 (list-to-hashtable list2 key test test-not)))
     (if hashtable
@@ -830,6 +844,8 @@
   (when (null list2)
     (return-from set-difference list1))
 
+  (process-set nil t)
+  #+nil
   (let ((hashtable 
 	 (list-to-hashtable list2 key test test-not)))
     (if hashtable
