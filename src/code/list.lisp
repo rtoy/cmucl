@@ -852,8 +852,6 @@
                    (push item res)))
 	     res)))))
 
-(declaim (end-block))
-
 ;;; Destination and source are setf-able and many-evaluable.  Sets the source
 ;;; to the cdr, and "conses" the 1st elt of source to destination.
 ;;;
@@ -905,11 +903,6 @@
              (process (nth-value 1 (gethash (apply-key key (car list1)) hashtable))))
             (t
              (process (with-set-keys (member (apply-key key (car list1)) list2)))))
-      #+nil
-      (do () ((endp list1))
-        (if (with-set-keys (member (apply-key key (car list1)) list2))
-	    (steve-splice list1 res)
-	    (setq list1 (Cdr list1))))
       res)))
 
 (defun nset-difference (list1 list2 &key key
@@ -931,12 +924,9 @@
              (process (nth-value 1 (gethash (apply-key key (car list1)) hashtable))))
             (t
              (process (with-set-keys (member (apply-key key (car list1)) list2)))))
-      #+nil
-      (do () ((endp list1))
-        (if (not (with-set-keys (member (apply-key key (car list1)) list2)))
-	    (steve-splice list1 res)
-	    (setq list1 (cdr list1))))
       res)))
+
+(declaim (end-block))
 
 (defun set-exclusive-or (list1 list2 &key key
                          (test #'eql testp) (test-not nil notp))
