@@ -749,6 +749,7 @@
 (defparameter *min-list-length-for-hashtable*
   15)
 
+(declaim (start-block list-to-hashtable union intersection set-difference))
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
 (defun list-to-hashtable (list key test test-not)
@@ -802,6 +803,57 @@
 	       (push item res)))))
     res))
 
+
+(defun intersection (list1 list2 &key key
+			   (test #'eql testp) (test-not nil notp))
+  "Returns the intersection of list1 and list2."
+  (declare (inline member))
+  (if (and testp notp)
+      (error "Test and test-not both supplied."))
+  (let ((hashtable 
+	  (list-to-hashtable list2 key test test-not)))
+    (cond (hashtable
+	   (let ((res nil))
+	     (dolist (item list1)
+	       (when (nth-value 1 (gethash (apply-key key item) hashtable))
+		 (push item res)))
+	     res))
+	  ((null hashtable)
+	   (let ((res nil))
+	     (dolist (elt list1)
+	       (if (with-set-keys (member (apply-key key elt) list2))
+		   (push elt res)))
+	     res)))))
+
+(defun set-difference (list1 list2 &key key (test #'eql testp) (test-not nil notp))
+  "Returns the elements of list1 which are not in list2."
+  (declare (inline member))
+  (if (and testp notp)
+      (error "Test and test-not both supplied."))
+  ;; Quick exit
+  (when (null list2)
+    (return-from set-difference list1))
+
+  (let ((hashtable 
+	  (list-to-hashtable list2 key test test-not)))
+    (cond (hashtable
+	   ;; list2 was placed in hash table.
+	   (let ((res nil))
+	     (dolist (item list1)
+	       (unless (nth-value 1 (gethash (apply-key key item) hashtable))
+		 (push item res)))
+	     res))
+	  ((null hashtable)
+	   ;; Default implementation because we didn't create the hash
+	   ;; table.
+           (let ((res nil))
+	     (dolist (item list1)
+	       (if (not (with-set-keys (member (apply-key key item) list2)))
+                   (push item res)))
+	     res)))))
+
+(declaim (end-block))
+
 ;;; Destination and source are setf-able and many-evaluable.  Sets the source
 ;;; to the cdr, and "conses" the 1st elt of source to destination.
 ;;;
@@ -834,28 +886,6 @@
          (process (with-set-keys (member (apply-key key (car list1)) list2)))))
       res)))
   
-
-(defun intersection (list1 list2 &key key
-			   (test #'eql testp) (test-not nil notp))
-  "Returns the intersection of list1 and list2."
-  (declare (inline member))
-  (if (and testp notp)
-      (error "Test and test-not both supplied."))
-  (let ((hashtable 
-	  (list-to-hashtable list2 key test test-not)))
-    (cond (hashtable
-	   (let ((res nil))
-	     (dolist (item list1)
-	       (when (nth-value 1 (gethash (apply-key key item) hashtable))
-		 (push item res)))
-	     res))
-	  ((null hashtable)
-	   (let ((res nil))
-	     (dolist (elt list1)
-	       (if (with-set-keys (member (apply-key key elt) list2))
-		   (push elt res)))
-	     res)))))
-
 (defun nintersection (list1 list2 &key key
 			    (test #'eql testp) (test-not nil notp))
   "Destructively returns the intersection of list1 and list2."
@@ -882,33 +912,6 @@
 	    (setq list1 (Cdr list1))))
       res)))
 
-(defun set-difference (list1 list2 &key key (test #'eql testp) (test-not nil notp))
-  "Returns the elements of list1 which are not in list2."
-  (declare (inline member))
-  (if (and testp notp)
-      (error "Test and test-not both supplied."))
-  ;; Quick exit
-  (when (null list2)
-    (return-from set-difference list1))
-
-  (let ((hashtable 
-	  (list-to-hashtable list2 key test test-not)))
-    (cond (hashtable
-	   ;; list2 was placed in hash table.
-	   (let ((res nil))
-	     (dolist (item list1)
-	       (unless (nth-value 1 (gethash (apply-key key item) hashtable))
-		 (push item res)))
-	     res))
-	  ((null hashtable)
-	   ;; Default implementation because we didn't create the hash
-	   ;; table.
-           (let ((res nil))
-	     (dolist (item list1)
-	       (if (not (with-set-keys (member (apply-key key item) list2)))
-                   (push item res)))
-	     res)))))
-
 (defun nset-difference (list1 list2 &key key
 			      (test #'eql testp) (test-not nil notp))
   "Destructively returns the elements of list1 which are not in list2."
@@ -934,7 +937,6 @@
 	    (steve-splice list1 res)
 	    (setq list1 (cdr list1))))
       res)))
-
 
 (defun set-exclusive-or (list1 list2 &key key
                          (test #'eql testp) (test-not nil notp))
