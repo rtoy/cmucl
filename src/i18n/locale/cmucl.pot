@@ -1156,6 +1156,13 @@ msgid ""
 msgstr ""
 
 #: src/code/type.lisp
+msgid ""
+"The minimum length of either list argument for subsetp where a\n"
+"  hashtable is used to speed up processing instead of using a basic\n"
+"  list implementation.  This value was determined by experimentation."
+msgstr ""
+
+#: src/code/type.lisp
 msgid "Subtypep is illegal on this type:~%  ~S"
 msgstr ""
 
@@ -3209,19 +3216,19 @@ msgid "Test and test-not both supplied."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Destructively returns the union list1 and list2."
-msgstr ""
-
-#: src/code/list.lisp
 msgid "Returns the intersection of list1 and list2."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Destructively returns the intersection of list1 and list2."
+msgid "Returns the elements of list1 which are not in list2."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Returns the elements of list1 which are not in list2."
+msgid "Destructively returns the union list1 and list2."
+msgstr ""
+
+#: src/code/list.lisp
+msgid "Destructively returns the intersection of list1 and list2."
 msgstr ""
 
 #: src/code/list.lisp

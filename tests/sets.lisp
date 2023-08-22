@@ -172,3 +172,54 @@
 		       '(3 4)
 		       :test 'eql
 		       :test-not 'eql)))
+
+
+(define-test subsetp.hash-eq
+    (:tag :issues)
+  (let ((lisp::*min-list-length-for-hashtable* 2))
+    (assert-true
+     (subsetp '(a b c a) '(a a d d c b) :test 'eq))
+    (assert-true
+     (subsetp '(a b c a b c a b c) '(a a d d c b) :test 'eq))
+    (assert-false
+     (subsetp '(a b c a z) '(a a d d c b) :test 'eq))
+    (assert-false
+     (subsetp '(a b c a b cz) '(a a d d c b) :test 'eq))))
+
+(define-test subsetp.hash-eql
+    (:tag :issues)
+  (let ((lisp::*min-list-length-for-hashtable* 2))
+    (assert-true
+     (subsetp '(a b c a) '(a a d d c b) :test 'eql))
+    (assert-false
+     (subsetp '(a b c a z) '(a a d d c b) :test 'eql))))
+
+(define-test subsetp.hash-equal
+    (:tag :issues)
+  (let ((lisp::*min-list-length-for-hashtable* 2))
+    (assert-true
+     (subsetp '("a" "b" "c" "a") '("a" "a" "d" "d" "c" "b") :test 'equal))
+    (assert-false
+     (subsetp '("a" "b" "c" "a" "z") '("a" "a" "d" "d" "c" "b") :test 'equal))))
+
+(define-test subsetp.hash-equalp
+    (:tag :issues)
+  (let ((lisp::*min-list-length-for-hashtable* 2))
+    (assert-true
+     (subsetp '("a" "b" "C" "A") '("a" "a" "d" "d" "c" "b") :test 'equalp))
+    (assert-false
+     (subsetp '("a" "b" "C" "A" "z") '("a" "a" "d" "d" "c" "b") :test 'equalp))))
+
+(define-test subsetp.hash-eql-with-key
+    (:tag :issues)
+  (assert-true (subsetp '((1 "a") (2 "b") (3 "c"))
+                        '((3 "c") (3 "c") (2 "b") (1 "a"))
+                        :test 'eql
+                        :key #'first)))
+
+(define-test subsetp.test-and-test-not
+  (assert-error 'simple-error
+                (subsetp '(1 2)
+                         '(3 4)
+                         :test 'eql
+                         :test-not 'equal)))

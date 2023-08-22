@@ -749,6 +749,7 @@
 (defparameter *min-list-length-for-hashtable*
   15)
 
+(declaim (start-block list-to-hashtable union intersection set-difference))
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
 (defun list-to-hashtable (list key test test-not)
@@ -803,29 +804,6 @@
              (process (with-set-keys (member (apply-key key item) list2)))))
       res)))
 
-;;; Destination and source are setf-able and many-evaluable.  Sets the source
-;;; to the cdr, and "conses" the 1st elt of source to destination.
-;;;
-(defmacro steve-splice (source destination)
-  `(let ((temp ,source))
-     (setf ,source (cdr ,source)
-	   (cdr temp) ,destination
-	   ,destination temp)))
-
-(defun nunion (list1 list2 &key key (test #'eql testp) (test-not nil notp))
-  "Destructively returns the union list1 and list2."
-  (declare (inline member))
-  (if (and testp notp)
-      (error "Test and test-not both supplied."))
-  (let ((res list2)
-	(list1 list1))
-    (do ()
-	((endp list1))
-      (if (not (with-set-keys (member (apply-key key (car list1)) list2)))
-	  (steve-splice list1 res)
-	  (setf list1 (cdr list1))))
-    res))
-  
 
 (defun intersection (list1 list2 &key key
 			   (test #'eql testp) (test-not nil notp))
@@ -846,20 +824,6 @@
              (process (nth-value 1 (gethash (apply-key key item) hashtable))))
             (t
              (process (with-set-keys (member (apply-key key item) list2))))))))
-
-(defun nintersection (list1 list2 &key key
-			    (test #'eql testp) (test-not nil notp))
-  "Destructively returns the intersection of list1 and list2."
-  (declare (inline member))
-  (if (and testp notp)
-      (error "Test and test-not both supplied."))
-  (let ((res nil)
-	(list1 list1))
-    (do () ((endp list1))
-      (if (with-set-keys (member (apply-key key (car list1)) list2))
-	  (steve-splice list1 res)
-	  (setq list1 (Cdr list1))))
-    res))
 
 (defun set-difference (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the elements of list1 which are not in list2."
@@ -887,6 +851,45 @@
 	     ;; table.
              (process (with-set-keys (member (apply-key key item) list2))))))))
 
+
+(declaim (end-block))
+
+;;; Destination and source are setf-able and many-evaluable.  Sets the source
+;;; to the cdr, and "conses" the 1st elt of source to destination.
+;;;
+(defmacro steve-splice (source destination)
+  `(let ((temp ,source))
+     (setf ,source (cdr ,source)
+	   (cdr temp) ,destination
+	   ,destination temp)))
+
+(defun nunion (list1 list2 &key key (test #'eql testp) (test-not nil notp))
+  "Destructively returns the union list1 and list2."
+  (declare (inline member))
+  (if (and testp notp)
+      (error "Test and test-not both supplied."))
+  (let ((res list2)
+	(list1 list1))
+    (do ()
+	((endp list1))
+      (if (not (with-set-keys (member (apply-key key (car list1)) list2)))
+	  (steve-splice list1 res)
+	  (setf list1 (cdr list1))))
+    res))
+  
+(defun nintersection (list1 list2 &key key
+			    (test #'eql testp) (test-not nil notp))
+  "Destructively returns the intersection of list1 and list2."
+  (declare (inline member))
+  (if (and testp notp)
+      (error "Test and test-not both supplied."))
+  (let ((res nil)
+	(list1 list1))
+    (do () ((endp list1))
+      (if (with-set-keys (member (apply-key key (car list1)) list2))
+	  (steve-splice list1 res)
+	  (setq list1 (Cdr list1))))
+    res))
 
 (defun nset-difference (list1 list2 &key key
 			      (test #'eql testp) (test-not nil notp))
@@ -989,14 +992,69 @@
 	      (rplacd splicex (cdr x)))
 	  (setq splicex x)))))
 
+(declaim (start-block shorter-list-to-hashtable subsetp))
+
+(defun shorter-list-to-hashtable (list1 list2 key test test-not)
+  ;; Find the shorter list and return the length and the shorter list
+  (when test-not
+    (return-from shorter-list-to-hashtable nil))
+  (let ((hash-test (let ((test-fn (if (and (symbolp test)
+                                           (fboundp test))
+                                      (fdefinition test)
+                                      test)))
+                     (cond ((eql test-fn #'eq) 'eq)
+                           ((eql test-fn #'eql) 'eql)
+                           ((eql test-fn #'equal) 'equal)
+                           ((eql test-fn #'equalp) 'equalp)))))
+    (unless hash-test
+      (return-from shorter-list-to-hashtable nil))
+    (multiple-value-bind (min-length shorter-list)
+        (do ((len 0 (1+ len))
+             (lst1 list1 (cdr lst1))
+             (lst2 list2 (cdr lst2)))
+            ((or (null lst1) (null lst2))
+             (values len (if (null lst1) list1 list2))))
+      (when (< min-length kernel::*min-list-length-for-subsetp-hashtable*)
+        (return-from shorter-list-to-hashtable nil))
+      (let ((hashtable (make-hash-table :test hash-test :size min-length)))
+        (dolist (item shorter-list)
+          (setf (gethash (apply-key key item) hashtable) item))
+        (values hashtable shorter-list)))))
+        
 (defun subsetp (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns T if every element in list1 is also in list2."
   (declare (inline member))
-  (dolist (elt list1)
-    (unless (with-set-keys (member (apply-key key elt) list2))
-      (return-from subsetp nil)))
-  T)
+  (when (and testp notp)
+    (error "Test and test-not both supplied."))
 
+  ;; SUBSETP is used early in TYPE-INIT where hash tables aren't
+  ;; available yet, so we can't use hashtables then.  LISPINIT will
+  ;; take care to disable this for the kernel.core.  SAVE will set
+  ;; this to true when it's safe to use hash tables for SUBSETP.
+  (multiple-value-bind (hashtable shorter-list)
+      (when t
+        (shorter-list-to-hashtable list1 list2 key test test-not))
+    (cond (hashtable
+           (cond ((eq shorter-list list1)
+                  ;; Remove any item from list2 from the hashtable containing list1.
+                  (dolist (item list2)
+                    (remhash (apply-key key item) hashtable))
+                  ;; If the hash table is now empty, then every
+                  ;; element in list1 appeared in list2, so list1 is a
+                  ;; subset of list2.
+                  (zerop (hash-table-count hashtable)))
+                 ((eq shorter-list list2)
+                  (dolist (item list1)
+                    (unless (nth-value 1 (gethash (apply-key key item) hashtable))
+                      (return-from subsetp nil)))
+                  t)))
+	  (t
+	   (dolist (item list1)
+	     (unless (with-set-keys (member (apply-key key item) list2))
+	       (return-from subsetp nil)))
+	   T))))
+
+(declaim (end-block))
 
 
 ;;; Functions that operate on association lists
