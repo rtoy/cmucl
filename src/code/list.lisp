@@ -749,7 +749,9 @@
 (defparameter *min-list-length-for-hashtable*
   15)
 
-(declaim (start-block list-to-hashtable union intersection set-difference))
+(declaim (start-block list-to-hashtable
+                      union intersection set-difference
+                      nunion nintersection nset-difference))
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
 (defun list-to-hashtable (list key test test-not)
