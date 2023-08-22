@@ -863,17 +863,33 @@
 	   (cdr temp) ,destination
 	   ,destination temp)))
 
-;;; Main processing for destructive set operations.  Like PROCESS-SET with same args,
-;;; but for destructive operations.
-(defmacro nprocess-set (init-res test-form)
+;;; Main body for destructive set operations.  INIT-RES initializes
+;;; the result list.  INVERT-P is T if the result of the TEST-FORM
+;;; should be inverted.  TEST-FORM is the form used for determining
+;;; how to update the result.
+(defmacro nprocess-set-body (init-res invert-p test-form)
   `(let ((res ,init-res)
          (list1 list1))
      (do ()
          ((endp list1))
-       (if ,test-form
+       (if ,(if invert-p
+                `(not ,test-form)
+                test-form)
            (steve-splice list1 res)
            (setq list1 (cdr list1))))
      res))
+
+;; Implementation of the destructive set operations.  INIT-RES
+;; initializes the value of the result list.  INVERT-P indicates
+;; whether to invert the test-form used to determine how the result
+;; should be updated.
+(defmacro nprocess-set (init-res invert-p)
+  `(let ((hashtable (list-to-hashtable list2 key test test-not)))
+     (if hashtable
+         (nprocess-set-body ,init-res ,invert-p
+                            (nth-value 1 (gethash (apply-key key (car list1)) hashtable)))
+         (nprocess-set-body ,init-res ,invert-p
+                            (with-set-keys (member (apply-key key (car list1)) list2))))))
 
 
 (defun nunion (list1 list2 &key key (test #'eql testp) (test-not nil notp))
@@ -881,29 +897,8 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  
-  (let (#+nil
-        (res list2)
-        (hashtable  (list-to-hashtable list2 key test test-not))
-        #+nil
-	(list1 list1))
-    (if hashtable
-        (nprocess-set list2 (not (nth-value 1 (gethash (apply-key key (car list1)) hashtable))))
-        (nprocess-set list2 (not (with-set-keys (member (apply-key key (car list1)) list2)))))
-    #+nil
-    (macrolet
-        ((process (test-form)
-           `(do ()
-                ((endp list1))
-              (if (not ,test-form)
-                  (steve-splice list1 res)
-                  (setf list1 (cdr list1))))))
-      (cond
-        (hashtable
-         (process (nth-value 1 (gethash (apply-key key (car list1)) hashtable))))
-        (t
-         (process (with-set-keys (member (apply-key key (car list1)) list2)))))
-      res)))
+
+  (nprocess-set list2 t))
   
 (defun nintersection (list1 list2 &key key
 			    (test #'eql testp) (test-not nil notp))
@@ -911,26 +906,8 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (let (#+nil
-        (res nil)
-        (hashtable (list-to-hashtable list2 key test test-not))
-	#+nil
-        (list1 list1))
-    (if hashtable
-        (nprocess-set nil (nth-value 1 (gethash (apply-key key (car list1)) hashtable)))
-        (nprocess-set nil (with-set-keys (member (apply-key key (car list1)) list2))))
-    #+nil
-    (macrolet
-        ((process (test-form)
-           `(do () ((endp list1))
-              (if ,test-form
-	          (steve-splice list1 res)
-	          (setq list1 (Cdr list1))))))
-      (cond (hashtable
-             (process (nth-value 1 (gethash (apply-key key (car list1)) hashtable))))
-            (t
-             (process (with-set-keys (member (apply-key key (car list1)) list2)))))
-      res)))
+
+  (nprocess-set nil nil))
 
 (defun nset-difference (list1 list2 &key key
 			      (test #'eql testp) (test-not nil notp))
@@ -938,26 +915,8 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (let (#+nil
-        (res nil)
-        (hashtable (list-to-hashtable list2 key test test-not))
-	#+nil
-        (list1 list1))
-    (if hashtable
-        (nprocess-set nil (not (nth-value 1 (gethash (apply-key key (car list1)) hashtable))))
-        (nprocess-set nil (not (with-set-keys (member (apply-key key (car list1)) list2)))))
-    #+nil
-    (macrolet
-        ((process (test-form)
-           `(do () ((endp list1))
-              (if (not ,test-form)
-	          (steve-splice list1 res)
-	          (setq list1 (cdr list1))))))
-      (cond (hashtable
-             (process (nth-value 1 (gethash (apply-key key (car list1)) hashtable))))
-            (t
-             (process (with-set-keys (member (apply-key key (car list1)) list2)))))
-      res)))
+
+  (nprocess-set nil t))
 
 (declaim (end-block))
 
