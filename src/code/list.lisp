@@ -813,12 +813,7 @@
   (declare (inline member))
   (when (and testp notp)
     (error (intl:gettext "Test and test-not both supplied.")))
-  (process-set list2 t)
-  #+nil
-  (let ((hashtable (list-to-hashtable list2 key test test-not)))
-    (if hashtable
-        (process-set list2 (not (nth-value 1 (gethash (apply-key key item) hashtable))))
-        (process-set list2 (not (with-set-keys (member (apply-key key item) list2)))))))
+  (process-set list2 t))
 
 
 (defun intersection (list1 list2 &key key
@@ -827,13 +822,7 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (process-set nil nil)
-  #+nil
-  (let ((hashtable 
-	 (list-to-hashtable list2 key test test-not)))
-    (if hashtable
-        (process-set nil (nth-value 1 (gethash (apply-key key item) hashtable)))
-        (process-set nil (with-set-keys (member (apply-key key item) list2))))))
+  (process-set nil nil))
 
 (defun set-difference (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the elements of list1 which are not in list2."
@@ -844,13 +833,7 @@
   (when (null list2)
     (return-from set-difference list1))
 
-  (process-set nil t)
-  #+nil
-  (let ((hashtable 
-	 (list-to-hashtable list2 key test test-not)))
-    (if hashtable
-        (process-set nil (not (nth-value 1 (gethash (apply-key key item) hashtable))))
-        (process-set nil (not (with-set-keys (member (apply-key key item) list2)))))))
+  (process-set nil t))
 
 
 (declaim (end-block))
