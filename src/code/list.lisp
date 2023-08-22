@@ -750,6 +750,18 @@
   15)
 
 (declaim (start-block list-to-hashtable union intersection set-difference))
+
+;; Main code to process a set function.  INIT-RES initializes the
+;; value of RES, which holds the result of the set function.
+;; TEST-FORM is a form that tests whether to add the item from LIST1
+;; to RES.
+(defmacro process-set (init-res test-form)
+  `(let ((res ,init-res))
+     (dolist (item list1)
+       (when ,test-form
+         (push item res)))
+     res))
+
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
 (defun list-to-hashtable (list key test test-not)
@@ -791,18 +803,10 @@
   (declare (inline member))
   (when (and testp notp)
     (error (intl:gettext "Test and test-not both supplied.")))
-  (let ((res list2)
-	(hashtable (list-to-hashtable list2 key test test-not)))
-    (macrolet
-        ((process (test-form)
-         `(dolist (item list1)
-	    (unless ,test-form
-	      (push item res)))))
-      (cond (hashtable
-             (process (nth-value 1 (gethash (apply-key key item) hashtable))))
-            (t
-             (process (with-set-keys (member (apply-key key item) list2)))))
-      res)))
+  (let ((hashtable (list-to-hashtable list2 key test test-not)))
+    (if hashtable
+        (process-set list2 (not (nth-value 1 (gethash (apply-key key item) hashtable))))
+        (process-set list2 (not (with-set-keys (member (apply-key key item) list2)))))))
 
 
 (defun intersection (list1 list2 &key key
@@ -812,18 +816,10 @@
   (if (and testp notp)
       (error "Test and test-not both supplied."))
   (let ((hashtable 
-	  (list-to-hashtable list2 key test test-not)))
-    (macrolet
-        ((process (test-form)
-           `(let ((res nil))
-	      (dolist (item list1)
-	        (if ,test-form
-		    (push item res)))
-	      res)))
-      (cond (hashtable
-             (process (nth-value 1 (gethash (apply-key key item) hashtable))))
-            (t
-             (process (with-set-keys (member (apply-key key item) list2))))))))
+	 (list-to-hashtable list2 key test test-not)))
+    (if hashtable
+        (process-set nil (nth-value 1 (gethash (apply-key key item) hashtable)))
+        (process-set nil (with-set-keys (member (apply-key key item) list2))))))
 
 (defun set-difference (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the elements of list1 which are not in list2."
@@ -835,21 +831,10 @@
     (return-from set-difference list1))
 
   (let ((hashtable 
-	  (list-to-hashtable list2 key test test-not)))
-    (macrolet
-        ((process (test-form)
-           `(let ((res nil))
-	      (dolist (item list1)
-	        (if (not ,test-form)
-                    (push item res)))
-	      res)))
-      
-      (cond (hashtable
-             (process (nth-value 1 (gethash (apply-key key item) hashtable))))
-            (t
-	     ;; Default implementation because we didn't create the hash
-	     ;; table.
-             (process (with-set-keys (member (apply-key key item) list2))))))))
+	 (list-to-hashtable list2 key test test-not)))
+    (if hashtable
+        (process-set nil (not (nth-value 1 (gethash (apply-key key item) hashtable))))
+        (process-set nil (not (with-set-keys (member (apply-key key item) list2)))))))
 
 
 (declaim (end-block))
