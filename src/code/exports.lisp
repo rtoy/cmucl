@@ -169,6 +169,7 @@
 (defpackage "C-CALL"
   (:import-from "COMMON-LISP" "CHAR" "FLOAT")
   (:export "C-STRING" "CHAR" "DOUBLE" "FLOAT" "INT" "LONG" "SHORT"
+           "SIGNED-CHAR"
 	   "UNSIGNED-CHAR" "UNSIGNED-INT" "UNSIGNED-LONG" "UNSIGNED-SHORT"
 	   "LONG-LONG" "UNSIGNED-LONG-LONG"
 	   "VOID"))
