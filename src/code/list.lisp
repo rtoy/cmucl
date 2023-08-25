@@ -842,7 +842,7 @@
 ;;; to the cdr, and "conses" the 1st elt of source to destination.
 ;;;
 (defmacro steve-splice (source destination)
-  `(let ((temp ,source))
+  `(let ((temp ,source))g
      (setf ,source (cdr ,source)
 	   (cdr temp) ,destination
 	   ,destination temp)))
@@ -900,18 +900,32 @@
         (test-not (if test-not (coerce test-not 'function) #'eql)))
     (declare (type (or function null) key)
              (type function test test-not))
-    (dolist (elt list1)
-      (unless (with-set-keys (member (apply-key key elt) list2))
-	(setq result (cons elt result))))
-    (let ((test (if testp
-                    (lambda (x y) (funcall test y x))
-                    test))
-          (test-not (if notp
-                        (lambda (x y) (funcall test-not y x))
-                        test-not)))
-      (dolist (elt list2)
-        (unless (with-set-keys (member (apply-key key elt) list1))
-          (setq result (cons elt result)))))
+    (let ((hashtable (list-to-hashtable list2 key test test-not)))
+      (cond
+        (hashtable
+         (dolist (elt list1)
+           (unless (nth-value 1 (gethash (apply-key key elt) hashtable))
+             (setq result (cons elt result)))))
+        (t
+         (dolist (elt list1)
+           (unless (with-set-keys (member (apply-key key elt) list2))
+	     (setq result (cons elt result)))))))
+    (let ((hashtable (list-to-hashtable list1 key test test-not)))
+      (cond
+        (hashtable
+         (dolist (elt list2)
+           (unless (nth-value 1 (gethash (apply-key key elt) hashtable))
+             (setq result (cons elt result)))))
+        (t
+         (let ((test (if testp
+                         (lambda (x y) (funcall test y x))
+                         test))
+               (test-not (if notp
+                             (lambda (x y) (funcall test-not y x))
+                             test-not)))
+           (dolist (elt list2)
+             (unless (with-set-keys (member (apply-key key elt) list1))
+               (setq result (cons elt result))))))))
     result))
 
 
