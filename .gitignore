@@ -12,7 +12,7 @@
 *.x86f
 *~
 /test-tmp
-build-*
+/build-*
 darwin-8bit-[234]
 darwin-[234]
 linux-8bit-[234]
