@@ -842,7 +842,7 @@
 ;;; to the cdr, and "conses" the 1st elt of source to destination.
 ;;;
 (defmacro steve-splice (source destination)
-  `(let ((temp ,source))g
+  `(let ((temp ,source))
      (setf ,source (cdr ,source)
 	   (cdr temp) ,destination
 	   ,destination temp)))
