@@ -906,7 +906,7 @@
 
 (defun set-exclusive-or (list1 list2 &key key
                          (test #'eql testp) (test-not nil notp))
-  "Return new list of elements appearing exactly once in LIST1 and LIST2."
+  "Return new list of elements appearing exactly one of LIST1 and LIST2."
   (declare (inline member))
   (let ((result nil)
         (key (when key (coerce key 'function)))
@@ -914,6 +914,8 @@
         (test-not (if test-not (coerce test-not 'function) #'eql)))
     (declare (type (or function null) key)
              (type function test test-not))
+    ;; Find the elements in list1 that do not appear in list2 and add
+    ;; them to the result.
     (let ((hashtable (list-to-hashtable list2 key test test-not)))
       (cond
         (hashtable
@@ -924,6 +926,8 @@
          (dolist (elt list1)
            (unless (with-set-keys (member (apply-key key elt) list2))
 	     (setq result (cons elt result)))))))
+    ;; Now find the elements in list2 that do not appear in list1 and
+    ;; them to the result.
     (let ((hashtable (list-to-hashtable list1 key test test-not)))
       (cond
         (hashtable
