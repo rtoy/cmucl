@@ -753,17 +753,11 @@
                       union intersection set-difference
                       nunion nintersection nset-difference))
 
-;; Main code to process a set function.  INIT-RES initializes the
-;; value of RES, which holds the result of the set function.
-;; TEST-FORM is a form that tests whether to add the item from LIST1
-;; to RES.
-(defmacro process-set-body (list1 init-res membership-test test-form)
-  `(let ((res ,init-res))
-     (dolist (item ,list1)
-       (,membership-test ,test-form
-         (push item res)))
-     res))
-
+;; Handle a non-destructive set operation.  LIST1 and LIST2 are the
+;; two arguments to the set function.  INITIAL-RESULT is the value
+;; used to initialize the result list.  IS specifies whether the test
+;; (or test-not) function implies an element of LIST1 should be
+;; included in the result.
 (defmacro do-set-operation (list1 list2 &key initial-result is)
   (let ((membership-test (ecase is
                            (:element-of-set
@@ -771,11 +765,19 @@
                            (:not-element-of-set
                             'unless))))
     `(let ((hashtable (list-to-hashtable ,list2 key test test-not)))
-       (if hashtable
-           (process-set-body ,list1 ,initial-result ,membership-test
+       (macrolet
+           ((process-set-op (list1 init-res member-form test-form)
+              `(let ((res ,init-res))
+                 (dolist (item ,list1)
+                   (,member-form ,test-form
+                                 (push item res)))
+                 res)))
+
+         (if hashtable
+             (process-set-op ,list1 ,initial-result ,membership-test
                              (nth-value 1 (gethash (apply-key key item) hashtable)))
-           (process-set-body ,list1 ,initial-result ,membership-test
-                             (with-set-keys (member (apply-key key item) ,list2)))))))
+             (process-set-op ,list1 ,initial-result ,membership-test
+                             (with-set-keys (member (apply-key key item) list2))))))))
 
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
