@@ -757,7 +757,8 @@
 ;; two arguments to the set function.  INITIAL-RESULT is the value
 ;; used to initialize the result list.  IS specifies whether the test
 ;; (or test-not) function implies an element of LIST1 should be
-;; included in the result.
+;; included in the result.  IS must be either :ELEMENT-OF-SET or
+;; :NOT-ELEMENT-OF-SET.
 (defmacro do-set-operation (list1 list2 &key initial-result is)
   (let ((membership-test (ecase is
                            (:element-of-set
@@ -852,26 +853,12 @@
 	   (cdr temp) ,destination
 	   ,destination temp)))
 
-;;; Main body for destructive set operations.  INIT-RES initializes
-;;; the result list.  INVERT-P is T if the result of the TEST-FORM
-;;; should be inverted.  TEST-FORM is the form used for determining
-;;; how to update the result.
-(defmacro nprocess-set-body (list1 init-res is-member-p test-form)
-  `(let ((res ,init-res)
-         (list1 ,list1))
-     (do ()
-         ((endp list1))
-       (if ,(if is-member-p
-                test-form
-                `(not ,test-form))
-           (steve-splice list1 res)
-           (setq list1 (cdr list1))))
-     res))
-
-;; Implementation of the destructive set operations.  INIT-RES
-;; initializes the value of the result list.  INVERT-P indicates
-;; whether to invert the test-form used to determine how the result
-;; should be updated.
+;; Handle a destructive set operation.  LIST1 and LIST2 are the two
+;; arguments to the destructive set function.  INITIAL-RESULT is the
+;; value used to initialize the result list.  IS specifies whether the
+;; test (or test-not) function implies an element of LIST1 should be
+;; included in the result.  IS must be either :ELEMENT-OF-SET or
+;; :NOT-ELEMENT-OF-SET.
 (defmacro do-destructive-set-operation (list1 list2 &key initial-result is)
   (let ((is-member-p (ecase is
                        (:element-of-set
