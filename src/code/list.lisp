@@ -879,11 +879,23 @@
                        (:not-element-of-set
                         nil))))
     `(let ((hashtable (list-to-hashtable ,list2 key test test-not)))
-       (if hashtable
-           (nprocess-set-body ,list1 ,initial-result ,is-member-p
-                              (nth-value 1 (gethash (apply-key key (car ,list1)) hashtable)))
-           (nprocess-set-body ,list1 ,initial-result ,is-member-p
-                              (with-set-keys (member (apply-key key (car ,list1)) list2)))))))
+       (macrolet
+           ((process-set-op (list1 init-res is-member-p test-form)
+              `(let ((res ,init-res)
+                     (list1 ,list1))
+                 (do ()
+                     ((endp list1))
+                   (if ,(if is-member-p
+                            test-form
+                            `(not ,test-form))
+                       (steve-splice list1 res)
+                       (setq list1 (cdr list1))))
+                 res)))
+         (if hashtable
+             (process-set-op ,list1 ,initial-result ,is-member-p
+                             (nth-value 1 (gethash (apply-key key (car ,list1)) hashtable)))
+             (process-set-op ,list1 ,initial-result ,is-member-p
+                             (with-set-keys (member (apply-key key (car ,list1)) list2))))))))
 
 
 (defun nunion (list1 list2 &key key (test #'eql testp) (test-not nil notp))
