@@ -757,22 +757,25 @@
 ;; value of RES, which holds the result of the set function.
 ;; TEST-FORM is a form that tests whether to add the item from LIST1
 ;; to RES.
-(defmacro process-set-body (init-res invert-p test-form)
+(defmacro process-set-body (list1 init-res membership-test test-form)
   `(let ((res ,init-res))
-     (dolist (item list1)
-       (when ,(if invert-p
-                  `(not ,test-form)
-                  test-form)
+     (dolist (item ,list1)
+       (,membership-test ,test-form
          (push item res)))
      res))
 
-(defmacro process-set (init-res invert-p)
-  `(let ((hashtable (list-to-hashtable list2 key test test-not)))
-     (if hashtable
-         (process-set-body ,init-res ,invert-p
-                      (nth-value 1 (gethash (apply-key key item) hashtable)))
-         (process-set-body ,init-res ,invert-p
-                      (with-set-keys (member (apply-key key item) list2))))))
+(defmacro do-set-operation (list1 list2 &key initial-result is)
+  (let ((membership-test (ecase is
+                           (:element-of-set
+                            'when)
+                           (:not-element-of-set
+                            'unless))))
+    `(let ((hashtable (list-to-hashtable ,list2 key test test-not)))
+       (if hashtable
+           (process-set-body ,list1 ,initial-result ,membership-test
+                             (nth-value 1 (gethash (apply-key key item) hashtable)))
+           (process-set-body ,list1 ,initial-result ,membership-test
+                             (with-set-keys (member (apply-key key item) ,list2)))))))
 
 ;; Convert a list to a hashtable.  The hashtable does not handle
 ;; duplicated values in the list.  Returns the hashtable.
@@ -815,7 +818,7 @@
   (declare (inline member))
   (when (and testp notp)
     (error (intl:gettext "Test and test-not both supplied.")))
-  (process-set list2 t))
+  (do-set-operation list1 list2 :initial-result list2 :is :not-element-of-set))
 
 
 (defun intersection (list1 list2 &key key
@@ -824,7 +827,7 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (process-set nil nil))
+  (do-set-operation list1 list2 :initial-result nil :is :element-of-set))
 
 (defun set-difference (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns the elements of list1 which are not in list2."
@@ -835,7 +838,7 @@
   (when (null list2)
     (return-from set-difference list1))
 
-  (process-set nil t))
+  (do-set-operation list1 list2 :initial-result nil :is :not-element-of-set))
 
 
 ;;; Destination and source are setf-able and many-evaluable.  Sets the source
