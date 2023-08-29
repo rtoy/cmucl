@@ -916,35 +916,36 @@
              (type function test test-not))
     ;; Find the elements in list1 that do not appear in list2 and add
     ;; them to the result.
-    (let ((hashtable (list-to-hashtable list2 key test test-not)))
-      (cond
-        (hashtable
-         (dolist (elt list1)
-           (unless (nth-value 1 (gethash (apply-key key elt) hashtable))
-             (setq result (cons elt result)))))
-        (t
-         (dolist (elt list1)
-           (unless (with-set-keys (member (apply-key key elt) list2))
-	     (setq result (cons elt result)))))))
-    ;; Now find the elements in list2 that do not appear in list1 and
-    ;; them to the result.
-    (let ((hashtable (list-to-hashtable list1 key test test-not)))
-      (cond
-        (hashtable
-         (dolist (elt list2)
-           (unless (nth-value 1 (gethash (apply-key key elt) hashtable))
-             (setq result (cons elt result)))))
-        (t
-         (let ((test (if testp
-                         (lambda (x y) (funcall test y x))
-                         test))
-               (test-not (if notp
-                             (lambda (x y) (funcall test-not y x))
-                             test-not)))
-           (dolist (elt list2)
-             (unless (with-set-keys (member (apply-key key elt) list1))
-               (setq result (cons elt result))))))))
-    result))
+    (macrolet
+        ((compute-membership (item-list test-form)
+           `(dolist (elt ,item-list)
+              (unless ,test-form
+                (setq result (cons elt result))))))
+      (let ((hashtable (list-to-hashtable list2 key test test-not)))
+        (cond
+          (hashtable
+           (compute-membership list1
+                               (nth-value 1 (gethash (apply-key key elt) hashtable))))
+          (t
+           (compute-membership list1
+                               (with-set-keys (member (apply-key key elt) list2))))))
+      ;; Now find the elements in list2 that do not appear in list1 and
+      ;; them to the result.
+      (let ((hashtable (list-to-hashtable list1 key test test-not)))
+        (cond
+          (hashtable
+           (compute-membership list2
+                               (nth-value 1 (gethash (apply-key key elt) hashtable))))
+          (t
+           (let ((test (if testp
+                           (lambda (x y) (funcall test y x))
+                           test))
+                 (test-not (if notp
+                               (lambda (x y) (funcall test-not y x))
+                               test-not)))
+             (compute-membership list2
+                                 (with-set-keys (member (apply-key key elt) list1)))))))
+      result)))
 
 
 ;;; The outer loop examines list1 while the inner loop examines list2. If an
