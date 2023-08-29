@@ -195,7 +195,7 @@
 			     (%pathname-directory pathname)
 			     (%pathname-name pathname)
 			     (%pathname-type pathname)
-			     (%pathname-version pathname)))))))))
+			     (%pathname-version pathname))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
