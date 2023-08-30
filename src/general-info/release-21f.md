@@ -1,3 +1,5 @@
+# CMUCL 21f
+
 # Work in progress
 
 The CMUCL project is pleased to announce the release of CMUCL 21f.
@@ -24,9 +26,16 @@ public domain.
   * Gitlab tickets:
     * ~~#154~~ piglatin translation does not work anymore
 	* ~~#171~~ Readably print `(make-pathname :name :unspecfic)`
-	* ~~#242~~ Fix bug in `alien-funcall` with `c-call:char` as result type
+    * ~~#196~~ Fix issues with mapping and nconc accumulation (mapcan)
+    * ~~#216~~ `enough-namestring` with relative pathname fails
+    * ~~#234~~ Make :ASCII external format builtin
+    * ~~#240~~ Speed up set operations
+    * ~~#242~~ Fix bug in `alien-funcall` with `c-call:char` as result type
     * ~~#244~~ Add `c-call:signed-char`
     * ~~#248~~ Print MOVS instruction with correct case
+    * ~~#249~~ Replace LEA instruction with simpler shorter instructions in arithmetic vops for x86
+    * ~~#253~~ Block-compile list-to-hashtable and callers
+    * ~~#258~~ Remove `get-page-size` from linux-os.lisp
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
