@@ -32,16 +32,3 @@
 ;;;
 (defun os-init ()
   (setf *software-version* nil))
-
-
-;;; GET-PAGE-SIZE  --  Interface
-;;;
-;;;    Return the system page size.
-;;;
-(defun get-page-size ()
-  (multiple-value-bind (val err)
-      (unix:unix-getpagesize)
-    (unless val
-      (error (intl:gettext "Getpagesize failed: ~A") (unix:get-unix-error-msg err)))
-    val))
-

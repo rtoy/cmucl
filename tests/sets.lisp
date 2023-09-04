@@ -279,3 +279,26 @@
                          '(3 4)
                          :test 'eql
                          :test-not 'equal)))
+
+(define-test set-exclusive-or.1
+  (:tag :issues)
+  (flet
+      ((test (min-length)
+         ;; From CLHS
+         (let ((lisp::*min-list-length-for-hashtable* min-length))
+           (assert-equal '("b" "A" "b" "a")
+                         (set-exclusive-or '(1 "a" "b")
+                                           '(1 "A" "b")))
+           (assert-equal '("A" "a")
+                         (set-exclusive-or '(1 "a" "b")
+                                           '(1 "A" "b")
+                                           :test #'equal))
+           (assert-equal nil
+                         (set-exclusive-or '(1 "a" "b")
+                                           '(1 "A" "b")
+                                           :test #'equalp)))))
+    ;; Test the list impl by making the min length large.  Then test
+    ;; the hashtable impl with a very short min length
+    (test 100)
+    (test 2)))
+  

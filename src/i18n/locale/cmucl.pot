@@ -3236,7 +3236,7 @@ msgid "Destructively returns the elements of list1 which are not in list2."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Return new list of elements appearing exactly once in LIST1 and LIST2."
+msgid "Return new list of elements appearing exactly one of LIST1 and LIST2."
 msgstr ""
 
 #: src/code/list.lisp
