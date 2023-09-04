@@ -5620,6 +5620,14 @@ msgid ""
 msgstr ""
 
 #: src/code/misc.lisp
+msgid "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp."
+msgstr ""
+
+#: src/code/misc.lisp
+msgid "Version string for supporting software"
+msgstr ""
+
+#: src/code/misc.lisp
 msgid ""
 "If X is an atom, see if it is present in *FEATURES*.  Also\n"
 "  handle arbitrary combinations of atoms using NOT, AND, OR."
@@ -5646,15 +5654,7 @@ msgid "Returns a string giving the name of the local machine."
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp."
-msgstr ""
-
-#: src/code/misc.lisp
 msgid "Returns a string describing the supporting software."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid "Version string for supporting software"
 msgstr ""
 
 #: src/code/misc.lisp

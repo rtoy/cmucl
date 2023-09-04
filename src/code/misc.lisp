@@ -23,7 +23,12 @@
 	  short-site-name long-site-name dribble compiler-macro))
 
 (in-package "SYSTEM")
-(export '(*software-type* *short-site-name* *long-site-name*))
+(export '(*short-site-name* *long-site-name*))
+(defvar *software-type* "Unix"
+  _N"The value of SOFTWARE-TYPE.  Set in FOO-os.lisp.")
+
+(defvar *software-version* nil
+  _N"Version string for supporting software")
 
 (in-package "EXT")
 (export 'featurep)
@@ -80,20 +85,14 @@
   "Returns a string giving the name of the local machine."
   (unix:unix-gethostname))
 
-(defvar *software-type* "Unix"
-  _N"The value of SOFTWARE-TYPE.  Set in FOO-os.lisp.")
-
 (defun software-type ()
   "Returns a string describing the supporting software."
-  *software-type*)
-
-(defvar *software-version* nil
-  _N"Version string for supporting software")
+  system::*software-type*)
 
 (defun software-version ()
   _N"Returns a string describing version of the supporting software."
-  (unless *software-version*
-    (setf *software-version*
+  (unless system::*software-version*
+    (setf system::*software-version*
 	  (let (version result)
 	    (unwind-protect
 		 (progn
@@ -105,7 +104,7 @@
 	    (if (zerop (length result))
 		"Unknown"
 		result)))
-    *software-version*))
+    system::*software-version*))
 
 (defvar *short-site-name* nil
   "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp.")
