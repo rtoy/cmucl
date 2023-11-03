@@ -736,6 +736,12 @@
 	    (results (pop directory))))
 	 (:relative
 	  (results :relative)))
+       (let ((next (car directory)))
+	 (when (and next
+		    (or (eq :home next)
+			(typep next
+			       '(cons (eql :home) (cons string null)))))
+             (results (pop directory))))
        (dolist (piece directory)
 	 (cond ((member piece '(:wild :wild-inferiors :up :back))
 		(results piece))

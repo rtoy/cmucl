@@ -2644,6 +2644,37 @@
            :shell (string (cast (slot result 'pw-shell) c-call:c-string)))
 	  (values nil returned)))))
 
+#+linux
+(defun unix-getpwnam-tmp (login)
+  "Return a USER-INFO structure for the user identified by LOGIN, or NIL if not found."
+  (declare (type simple-string login))
+  (with-alien ((buf (array c-call:char 1024))
+	       (user-info (struct passwd))
+               (result (* (struct passwd))))
+    (let ((returned
+	   (alien-funcall
+	    (extern-alien "getpwnam_r"
+			  (function c-call:int
+                                    c-call:c-string
+                                    (* (struct passwd))
+				    (* c-call:char)
+                                    c-call:unsigned-int
+                                    (* (* (struct passwd)))))
+	    login
+	    (addr user-info)
+	    (cast buf (* c-call:char))
+	    1024
+            (addr result))))
+      (when (zerop returned)
+        (make-user-info
+         :name (string (cast (slot result 'pw-name) c-call:c-string))
+         :password (string (cast (slot result 'pw-passwd) c-call:c-string))
+         :uid (slot result 'pw-uid)
+         :gid (slot result 'pw-gid)
+         :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
+         :dir (string (cast (slot result 'pw-dir) c-call:c-string))
+         :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
+
 ;;; Getrusage is not provided in the C library on Solaris 2.4, and is
 ;;; rather slow on later versions so the "times" system call is
 ;;; provided.

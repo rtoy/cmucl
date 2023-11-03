@@ -267,12 +267,25 @@
 
 ;;; Take a string and return a list of cons cells that mark the char
 ;;; separated subseq. The first value t if absolute directories location.
+;;; The last value is the interpretation of ~ as `home'
 ;;;
 (defun split-at-slashes (namestr start end)
   (declare (type simple-base-string namestr)
 	   (type index start end))
   (let ((absolute (and (/= start end)
-		       (char= (schar namestr start) #\/))))
+		       (char= (schar namestr start) #\/)))
+	home)
+    (when (and (/= start end)
+	       (char= (schar namestr start) #\~))
+      (let ((slash (loop for i from start below end
+			 when (char= (char namestr i) #\/)
+			 return i)))
+	(when slash
+	  (setf absolute t)
+	  (if (> slash (1+ start))
+	      (setf home (list :home (subseq namestr (1+ start) slash)))
+	      (setf home :home))
+	  (setf start slash))))
     (when absolute
       (incf start))
     ;; Next, split the remainder into slash separated chunks.
@@ -283,7 +296,7 @@
 	  (unless slash
 	    (return))
 	  (setf start (1+ slash))))
-      (values absolute (pieces)))))
+      (values absolute (pieces) home))))
 
 (defun maybe-extract-search-list (namestr start end)
   (declare (type simple-base-string namestr)
@@ -305,7 +318,7 @@
   (declare (type simple-base-string namestr)
 	   (type index start end))
   (multiple-value-bind
-      (absolute pieces)
+      (absolute pieces home)
       (split-at-slashes namestr start end)
     (let ((search-list
 	   (if absolute
@@ -378,7 +391,9 @@
 							 piece-start
 							 piece-end)))))))
 		  (cond (absolute
-			 (cons :absolute (dirs)))
+			 (if home
+			     (list* :absolute home (dirs))
+			     (cons :absolute (dirs))))
 			((dirs)
 			 ;; "." in a :relative directory is the same
 			 ;; as if it weren't there, so remove them.
@@ -474,7 +489,21 @@
 		(pieces (search-list-name (pop directory)))
 		(pieces ":"))
 	       (t
-		(pieces "/"))))
+		(let ((next (pop directory)))
+		  (cond ((eq :home next)
+			 (pieces "~"))
+			((and (consp next) (eq :home (car next)))
+			 (pieces "~")
+			 (pieces (second next)))
+			((and (stringp next)
+			      (plusp (length next))
+			      (char= #\~ (char next 0)))
+			 ;; The only place we need to escape the tilde.
+			 (pieces "\\")
+			 (pieces next))
+			(next
+			 (push next directory)))
+		  (pieces "/")))))
 	(:relative
 	 ;; Nothing special, except if we were given '(:relative).
 	 (unless directory
@@ -733,6 +762,27 @@
     (if tail
 	(let ((piece (car tail)))
 	  (etypecase piece
+	    ((or (eql :home) (cons (eql :home)))
+	     (let* ((home piece)
+		    (username (and (consp home) (second home)))
+		    (homedir-namestring
+		     (handler-case
+			 (user-homedir-namestring username)
+		       (error (condition)
+			 (error 'namestring-parse-error
+				:complaint "user homedir not known~@[ for ~S~]: ~A"
+				:arguments (list username condition)
+				:namestring pathname :offset 0))))
+		    (length (length homedir-namestring)))
+	       (%enumerate-directories
+		(concatenate 'string
+			     homedir-namestring
+			     (unless (and (plusp length)
+					  (char= (char homedir-namestring (1- length)) #\/))
+			       "/"))
+		(cdr tail) pathname
+		verify-existence follow-links
+		nodes function)))
 	    (simple-string
 	     (let ((head (concatenate 'string head piece)))
 	       (%enumerate-directories (concatenate 'string head "/")
@@ -1033,6 +1083,20 @@ optionally keeping some of the most recent old versions."
 		       (mapcar #'cdr (nthcdr keep
 					     (sort value #'> :key #'car)))))
 	       hash))))
+
+(defun user-homedir-namestring (&optional username)
+  (flet ((unix-user-homedir (username)
+	   (let ((user-info (unix::unix-getpwnam-tmp username)))
+             (if user-info (unix:user-info-dir user-info))))
+	 (unix-uid-homedir (uid)
+	   (let ((user-info (unix::unix-getpwuid uid)))
+             (if user-info (unix:user-info-dir user-info)))))
+    (if username
+	(unix-user-homedir username)
+	(let ((env-home (unix:unix-getenv "HOME")))
+          (if (and env-home (not (string= env-home "")))
+              env-home
+              (unix-uid-homedir (unix:unix-getuid)))))))
 
 
 ;;; User-Homedir-Pathname  --  Public
