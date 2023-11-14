@@ -131,7 +131,6 @@ osx:build:
     # Need /opt/local/bin to get msgmerge and msgfmt programs.
     - PATH=/opt/local/bin:$PATH bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist darwin-4
-    - ls dist/lib/cmucl/lib/locale/en\@piglatin/LC_MESSAGES
 
 osx:test:
   stage: test
@@ -147,7 +146,6 @@ osx:test:
       artifacts: true
   script:
     - echo LANG = $LANG
-    - ls dist/lib/cmucl/lib/locale/en\@piglatin/LC_MESSAGES
     - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 osx:ansi-test:
@@ -162,6 +160,9 @@ osx:ansi-test:
     - job: osx:build
       artifacts: true
   script:
+    # NB: sometimes we can't clone the ansi-test repo (bad cert!?!).
+    # Manually cloning it in the gitlab build dir helps with this
+    # issue until we can figure out what's going on.
     - bin/run-ansi-tests.sh -l dist/bin/lisp
   
 osx:benchmark:
