@@ -144,6 +144,7 @@ osx:test:
       artifacts: true
   script:
     - echo LANG = $LANG
+    - ls dist/lib/cmucl/lib/locale/en\@piglatin/LC_MESSAGES
     - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 osx:ansi-test:
