@@ -130,6 +130,7 @@ osx:build:
     # Regular build using the cross-compiled result or snapshot
     - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist darwin-4
+    - ls dist/lib/cmucl/lib/locale/en\@piglatin/LC_MESSAGES
 
 osx:test:
   stage: test
@@ -137,6 +138,7 @@ osx:test:
     - osx
   artifacts:
     paths:
+      - ansi-test/test.out
       - test.log
   needs:
     # Needs artifacts from build (dist/)
