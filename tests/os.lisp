@@ -7,15 +7,18 @@
   "Test user-homedir"
   (:tag :issues)
   ;; Simple test to see if unix-get-user-homedir returns the expected
-  ;; value.  We assume the envvar USERNAME and HOME exist and are
-  ;; correctly set up for the user running this test.
-  (let ((user-name (unix:unix-getenv "USERNAME")))
-    (assert-true user-name)
-    (when user-name
-      (let ((expected-homedir (pathname
-                               (concatenate 'string
-                                            (unix:unix-getenv "HOME")
-                                            "/")))
-            (homedir (unix:unix-get-user-homedir user-name)))
-        (assert-true expected-homedir)
-        (assert-equal homedir expected-homedir)))))
+  ;; value.  Use getuid and getpwuid to figure out what the name and
+  ;; home directory should be.
+  (let* ((uid (unix:unix-getuid))
+         (user-info (unix:unix-getpwuid uid)))
+    (assert-true uid)
+    (assert-true user-info)
+    (let ((info-dir (unix:user-info-dir user-info))
+          (info-name (unix:user-info-name user-info))
+          (expected-home-pathname (pathname
+                             (concatenate 'string info-dir "/")))
+          (home-pathname (unix:unix-get-user-homedir user-name)))
+      (assert-true info-dir)
+      (assert-true info-name)
+
+      (assert-equal home-pathname expected-home-pathname))))
