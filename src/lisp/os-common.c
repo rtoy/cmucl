@@ -863,3 +863,44 @@ os_software_version(void)
     
     return result;
 }
+
+int
+os_get_user_homedir(const char* name, char* homedir, int len)
+{
+    int rc;
+    int buflen;
+    char * buf;
+    struct passwd pwd;
+    struct passwd *result;
+
+    buflen = sysconf(_SC_GETPW_R_SIZE_MAX);
+
+    buf = malloc(buflen);
+
+    if (buf == NULL) {
+        return -1;
+    }
+
+    rc = getpwnam_r(name, &pwd, buf, buflen, &result);
+
+    if ((rc == 0) && result != NULL) {
+        /*
+         * Found a matching entry.  Copy it to the output buffer if we
+         * have room.  If not, set code to -1
+         */
+        if (strlen(pwd.pw_dir) < len) {
+            strcpy(homedir, pwd.pw_dir);
+        } else {
+            rc = -1;
+        }
+    } else {
+        rc = -1;
+    }
+
+    if (buf) {
+        free(buf);
+    }
+    
+    return rc;
+}
+    

@@ -2900,3 +2900,24 @@
 	    (extern-alien "os_get_locale_codeset"
 			  (function (* char))))
 	c-string))
+
+(defun unix-get-user-homedir (name)
+  _N"Get the user home directory for user named NAME.  If there's no such
+  user or if we don't have enough space to store the path, return NIL."
+  (with-alien ((homedir (array c-call:char 1024)))
+    (let ((result
+            (alien-funcall
+             (extern-alien "os_get_user_homedir"
+                           (function c-call:int
+                                     c-call:c-string
+                                     (* char)
+                                     c-call:int))
+             name
+             (cast homedir (* c-call:char))
+             1024)))
+      (when (zerop result)
+        (pathname
+         (concatenate 'string
+                      (cast homedir c-call:c-string)
+                      "/"))))))
+  

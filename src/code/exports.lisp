@@ -227,6 +227,7 @@
 	   "UNIX-MKDIR"
 	   "UNIX-RMDIR"
 	   "UNIX-UNLINK"
+           "UNIX-GET-USER-HOMEDIR"
 	   "TIMEZONE"
 	   "TIMEVAL"
 	   "SIZE-T"

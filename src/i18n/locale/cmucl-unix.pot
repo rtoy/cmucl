@@ -1432,3 +1432,9 @@ msgstr ""
 msgid "Get the codeset from the locale"
 msgstr ""
 
+#: src/code/unix.lisp
+msgid ""
+"Get the user home directory for user named NAME.  If there's no such\n"
+"  user or if we don't have enough space to store the path, return NIL."
+msgstr ""
+
