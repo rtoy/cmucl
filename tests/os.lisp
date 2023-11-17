@@ -13,11 +13,11 @@
          (user-info (unix:unix-getpwuid uid)))
     (assert-true uid)
     (assert-true user-info)
-    (let ((info-dir (unix:user-info-dir user-info))
-          (info-name (unix:user-info-name user-info))
-          (expected-home-pathname (pathname
-                             (concatenate 'string info-dir "/")))
-          (home-pathname (unix:unix-get-user-homedir user-name)))
+    (let* ((info-dir (unix:user-info-dir user-info))
+           (info-name (unix:user-info-name user-info))
+           (expected-home-pathname (pathname
+                                    (concatenate 'string info-dir "/")))
+           (home-pathname (unix:unix-get-user-homedir info-name)))
       (assert-true info-dir)
       (assert-true info-name)
 
