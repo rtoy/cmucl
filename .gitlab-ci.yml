@@ -1,7 +1,8 @@
 variables:
   download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2023/08"
   version: "2023-08-x86"
-  bootstrap: ""
+  bootstrap: "-B boot-2023-08"
+
 
 stages:
   - install
