@@ -864,43 +864,65 @@ os_software_version(void)
     return result;
 }
 
-int
-os_get_user_homedir(const char* name, char* homedir, int len)
+char *
+os_get_user_homedir(const char* name, int *status)
 {
-    int rc;
     int buflen;
     char * buf;
     struct passwd pwd;
     struct passwd *result;
 
     buflen = sysconf(_SC_GETPW_R_SIZE_MAX);
-
-    buf = malloc(buflen);
-
-    if (buf == NULL) {
-        return -1;
+    /*
+     * If sysconf failed, just try some possibly large enough value
+     */
+    if (buflen == -1) {
+        buflen = 1024;
     }
 
-    rc = getpwnam_r(name, &pwd, buf, buflen, &result);
+    /*
+     * sysconf may return a value that is not large enough, so start
+     * with the given value and keep increasing it until we reach some
+     * upper limit and give up.
+     */
+    while (buflen <= (1 << 20)) {
+        errno = 0;
+        buf = malloc(buflen);
 
-    if ((rc == 0) && result != NULL) {
-        /*
-         * Found a matching entry.  Copy it to the output buffer if we
-         * have room.  If not, set code to -1
-         */
-        if (strlen(pwd.pw_dir) < len) {
-            strcpy(homedir, pwd.pw_dir);
-        } else {
-            rc = -1;
+        if (buf == NULL) {
+            *status = -1;
+            return NULL;
         }
-    } else {
-        rc = -1;
+
+        *status = getpwnam_r(name, &pwd, buf, buflen, &result);
+
+        if (*status == 0) {
+            /*
+             * Success, or entry was not found.  If found the result
+             * is not NULL.  Return the result or NULL
+             */
+            fprintf(stderr, "dir = %s\n", pwd.pw_dir);
+            return result ? strdup(pwd.pw_dir) : NULL;
+        }
+
+        /*
+         * Check errno for ERANGE.  If so, the buffer was too small, so grow it.
+         */
+        if (errno == ERANGE) {
+            free(buf);
+            buflen *= 2;
+        } else {
+            /*
+             * Some other error.  Just return NULL
+             */
+            return NULL;
+        }
     }
 
-    if (buf) {
-        free(buf);
-    }
-    
-    return rc;
+    /*
+     * Ran out of space.  Just return NULL and set status to -1.
+     */
+    *status = -1;
+    return NULL;
 }
     

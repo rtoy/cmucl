@@ -2902,22 +2902,25 @@
 	c-string))
 
 (defun unix-get-user-homedir (name)
-  _N"Get the user home directory for user named NAME.  If there's no such
-  user or if we don't have enough space to store the path, return NIL."
-  (with-alien ((homedir (array c-call:char 1024)))
+  _N"Get the user home directory for user named NAME.  Two values are
+  returned: the pathname of the home directory and a status code.  If
+  the home directory does not exist NIL is returned.  The status is 0
+  if no errors occurred.  Otherwise a non-zero value is returned.
+  Examining errno may give information about what failed."
+  (with-alien ((status c-call:int))
     (let ((result
             (alien-funcall
              (extern-alien "os_get_user_homedir"
-                           (function c-call:int
+                           (function c-call:c-string
                                      c-call:c-string
-                                     (* char)
-                                     c-call:int))
+                                     (* c-call:int)))
              name
-             (cast homedir (* c-call:char))
-             1024)))
-      (when (zerop result)
-        (pathname
-         (concatenate 'string
-                      (cast homedir c-call:c-string)
-                      "/"))))))
+             (addr status))))
+      (if (and (zerop status) result)
+          (values (pathname
+                   (concatenate 'string
+                                result
+                                "/"))
+                  status)
+          (values result status)))))
   
