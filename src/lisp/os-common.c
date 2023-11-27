@@ -864,17 +864,24 @@ os_software_version(void)
     return result;
 }
 
+/*
+ * Return the home directory of the user named NAME.  If the user does
+ * not exist, returns NULL.  Also returns NULL if the home directory
+ * cannot be determined for any reason.  The parameter STATUS is 0 if
+ * getpwnam_r was successful.  Otherwise it is the return value from
+ * getpwnam_r or -1 if we ran out of memory for the buffer.
+ */
 char *
 os_get_user_homedir(const char* name, int *status)
 {
     int buflen;
-    char * buf;
+    char *buf = NULL;
     struct passwd pwd;
     struct passwd *result;
 
     buflen = sysconf(_SC_GETPW_R_SIZE_MAX);
     /*
-     * If sysconf failed, just try some possibly large enough value
+     * If sysconf failed, just try some possibly large enough value.
      */
     if (buflen == -1) {
         buflen = 1024;
@@ -886,8 +893,7 @@ os_get_user_homedir(const char* name, int *status)
      * upper limit and give up.
      */
     while (buflen <= (1 << 20)) {
-        errno = 0;
-        buf = malloc(buflen);
+        buf = realloc(buf, buflen);
 
         if (buf == NULL) {
             *status = -1;
@@ -898,23 +904,24 @@ os_get_user_homedir(const char* name, int *status)
 
         if (*status == 0) {
             /*
-             * Success, or entry was not found.  If found the result
+             * Success, or entry was not found.  If found, the result
              * is not NULL.  Return the result or NULL
              */
-            fprintf(stderr, "dir = %s\n", pwd.pw_dir);
-            return result ? strdup(pwd.pw_dir) : NULL;
+            char* path = result ? strdup(pwd.pw_dir) : NULL;
+            free(buf);
+            return path;
         }
 
         /*
          * Check errno for ERANGE.  If so, the buffer was too small, so grow it.
          */
         if (errno == ERANGE) {
-            free(buf);
             buflen *= 2;
         } else {
             /*
              * Some other error.  Just return NULL
              */
+            free(buf);
             return NULL;
         }
     }
@@ -922,6 +929,7 @@ os_get_user_homedir(const char* name, int *status)
     /*
      * Ran out of space.  Just return NULL and set status to -1.
      */
+    free(buf);
     *status = -1;
     return NULL;
 }
