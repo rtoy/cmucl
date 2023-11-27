@@ -36,6 +36,7 @@ public domain.
     * ~~#249~~ Replace LEA instruction with simpler shorter instructions in arithmetic vops for x86
     * ~~#253~~ Block-compile list-to-hashtable and callers
     * ~~#258~~ Remove `get-page-size` from linux-os.lisp
+    * ~~#269~~ Add function to get user's home directory
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
