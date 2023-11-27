@@ -62,7 +62,6 @@ linux:test:
     - job: linux:build
       artifacts: true
   script:
-    - printenv
     - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 linux:ansi-test:
@@ -147,7 +146,6 @@ osx:test:
       artifacts: true
   script:
     - echo LANG = $LANG
-    - printenv
     - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 osx:ansi-test:
