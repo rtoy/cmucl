@@ -2900,27 +2900,3 @@
 	    (extern-alien "os_get_locale_codeset"
 			  (function (* char))))
 	c-string))
-
-(defun unix-get-user-homedir (name)
-  _N"Get the user home directory for user named NAME.  Two values are
-  returned: the pathname of the home directory and a status code.  If
-  the home directory does not exist NIL is returned.  The status is 0
-  if no errors occurred.  Otherwise a non-zero value is returned.
-  Examining errno may give information about what failed."
-  (with-alien ((status c-call:int))
-    (let ((result
-            (alien-funcall
-             (extern-alien "os_get_user_homedir"
-                           (function c-call:c-string
-                                     c-call:c-string
-                                     (* c-call:int)))
-             name
-             (addr status))))
-      (if (and (zerop status) result)
-          (values (pathname
-                   (concatenate 'string
-                                result
-                                "/"))
-                  status)
-          (values result status)))))
-  
