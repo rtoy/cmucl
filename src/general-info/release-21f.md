@@ -20,6 +20,8 @@ public domain.
 ## New in this release:
   * Known issues:
   * Feature enhancements:
+    * Add support for Gray streams implementation of file-length via
+      `ext:stream-file-length` generic function.
   * Changes:
   * ANSI compliance fixes:
   * Bug fixes:

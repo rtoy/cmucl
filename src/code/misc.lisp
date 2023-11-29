@@ -23,7 +23,7 @@
 	  short-site-name long-site-name dribble compiler-macro))
 
 (in-package "SYSTEM")
-(export '(*software-type* *short-site-name* *long-site-name*))
+(export '(*software-type* *software-version* *short-site-name* *long-site-name*))
 
 (in-package "EXT")
 (export 'featurep)
