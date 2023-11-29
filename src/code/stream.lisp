@@ -397,7 +397,9 @@
     ;; simple-stream
     (stream::%file-length stream)
     ;; lisp-stream
-    (funcall (lisp-stream-misc stream) stream :file-length)))
+    (funcall (lisp-stream-misc stream) stream :file-length)
+    ;; fundamental-stream
+    (stream-file-length stream)))
 
 
 ;;; Input functions:
