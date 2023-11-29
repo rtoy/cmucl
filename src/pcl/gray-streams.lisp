@@ -376,6 +376,13 @@
 (defmethod (setf stream-file-position) (position (stream character-output-stream))
   (file-position (character-output-stream-lisp-stream stream) position))
 
+(defgeneric stream-file-length (stream)
+  (:documentation
+   _N"Implements FILE-LENGTH for the stream."))
+
+(defmethod stream-file-length (stream)
+  (error 'type-error :datum stream :expected-type 'file-stream))
+
 
 ;;; Binary streams.
 ;;;
