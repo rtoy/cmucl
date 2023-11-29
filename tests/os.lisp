@@ -35,5 +35,4 @@
       (multiple-value-bind (home-pathname status)
           (system:get-user-homedir-pathname "zotuserunknown")
         (assert-eql home-pathname nil)
-        (assert-eql status 0)))    
-  
+        (assert-eql status 0)))
