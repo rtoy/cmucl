@@ -54,3 +54,7 @@
 	 (assert-equal "/tmp/foo/bar/symlink"
 		       (ext:unix-namestring "/tmp/foo/bar/symlink" nil)))
     (unix:unix-unlink "/tmp/foo/bar/symlink")))
+
+	 
+    
+  
