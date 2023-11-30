@@ -111,3 +111,12 @@
 	  test
 	(assert-equal printed-value (output pathname))
 	(assert-equal namestring (namestring pathname))))))
+
+(define-test issue.266.pathname-tilde
+    (:tag :issues)
+  ;; Simple test for ~ in pathnames.  Get the directory list using
+  ;; #P"~/*.*".  This should be equal to the directory using the
+  ;; search-list #P"home:*.*".
+  (let ((dir-home (directory #P"home:*.*"))
+        (dir-tilde (directory #P"~/*.*")))
+    (assert-equal dir-tilde dir-home)))
