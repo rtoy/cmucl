@@ -10122,6 +10122,12 @@ msgstr ""
 
 #: src/code/filesys.lisp
 msgid ""
+"Returns the namestring for the user's home directory.  If Username is\n"
+"  not specified, then use the current user."
+msgstr ""
+
+#: src/code/filesys.lisp
+msgid ""
 "Returns the home directory of the logged in user as a pathname.\n"
 "  This is obtained from the logical name \"home:\"."
 msgstr ""
@@ -21327,6 +21333,10 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid "Implements FILE-POSITION for the stream for setting the position."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Implements FILE-LENGTH for the stream."
 msgstr ""
 
 #: src/pcl/gray-streams.lisp

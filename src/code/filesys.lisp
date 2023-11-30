@@ -1085,12 +1085,16 @@ optionally keeping some of the most recent old versions."
 	       hash))))
 
 (defun user-homedir-namestring (&optional username)
+  "Returns the namestring for the user's home directory.  If Username is
+  not specified, then use the current user."
   (flet ((unix-user-homedir (username)
-	   (let ((user-info (unix::unix-getpwnam-tmp username)))
-             (if user-info (unix:user-info-dir user-info))))
+	   (let ((user-homedir (system:get-user-homedir-pathname username)))
+             (when user-homedir
+               (namestring user-homedir))))
 	 (unix-uid-homedir (uid)
 	   (let ((user-info (unix::unix-getpwuid uid)))
-             (if user-info (unix:user-info-dir user-info)))))
+             (when user-info
+               (unix:user-info-dir user-info)))))
     (if username
 	(unix-user-homedir username)
 	(let ((env-home (unix:unix-getenv "HOME")))
