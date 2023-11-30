@@ -67,18 +67,23 @@
   if no errors occurred.  Otherwise a non-zero value is returned.
   Examining errno may give information about what failed."
   (alien:with-alien ((status c-call:int))
-    (let ((result
-            (alien:alien-funcall
-             (alien:extern-alien "os_get_user_homedir"
-                                 (function c-call:c-string
-                                           c-call:c-string
-                                           (* c-call:int)))
-             name
-             (alien:addr status))))
-      (if (and (zerop status) result)
-          (values (pathname
-                   (concatenate 'string
-                                result
-                                "/"))
-                  status)
-          (values result status)))))
+    (let (result)
+      (unwind-protect
+           (progn
+             (setf result
+                   (alien:alien-funcall
+                    (alien:extern-alien "os_get_user_homedir"
+                                        (function (alien:* c-call:c-string)
+                                                  c-call:c-string
+                                                  (* c-call:int)))
+                    name
+                    (alien:addr status)))
+             (if (and (zerop status)
+                      (not (alien:null-alien result)))
+                 (values (pathname
+                          (concatenate 'string
+                                       (alien:cast result c-call:c-string)
+                                       "/"))
+                         status)
+                 (values nil status)))
+        (alien:free-alien result)))))
