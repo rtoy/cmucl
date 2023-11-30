@@ -27,8 +27,7 @@
 
 (in-package "EXTENSIONS")
 (export '(print-directory complete-file ambiguous-files default-directory
-	  purge-backup-files file-writable unix-namestring
-          get-user-homedir-pathname))
+	  purge-backup-files file-writable unix-namestring))
 (in-package "LISP")
 
 
