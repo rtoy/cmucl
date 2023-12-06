@@ -305,8 +305,7 @@
   (cond ((zerop (length name))
          (let ((user (unix:unix-getpwuid (unix:unix-getuid))))
            (concatenate 'simple-base-string
-                        (unix:user-info-dir user)
-                        "/")))
+                        (unix:user-info-dir user))))
         (t
          (let ((path (system:get-user-homedir-pathname name)))
            (unless path
@@ -326,22 +325,24 @@
   (let ((end-user (position #\/ str :start start :end end)))
     #+nil
     (format t "user ~D:~D: ~A~%" (1+ start) end-user (subseq str (1+ start) end-user))
-    (cond (end-user
-           (let* ((user-name (subseq str (1+ start) end-user))
-                  (homedir (user-homedir-namestring user-name)))
-             #+nil
-             (format t "user-name: ~S; homedir: ~S~%"
-                     user-name homedir)
-             (values (concatenate 'simple-base-string
-                                  (subseq str 0 start)
-                                  homedir
-                                  (subseq str (1+ end-user)))
-                     start
-                     (+ end (- (length homedir)
-                               (length user-name)
-                               2)))))
-          (t
-           (values str start end)))))
+    ;; Quick exit if we can't find a "/" to terminate the user name.
+    (unless end-user
+      (return-from replace-tilde-user
+        (values str start end)))
+    (let* ((user-name (subseq str (1+ start) end-user))
+           (homedir (user-homedir-namestring user-name)))
+      #+nil
+      (format t "user-name: ~S; homedir: ~S~%"
+              user-name homedir)
+      ;; Replace the ~user part with the home directory, adjusting END because of the replacement.
+      (values (concatenate 'simple-base-string
+                           (subseq str 0 start)
+                           homedir
+                           (subseq str end-user))
+              start
+              (+ end (- (length homedir)
+                        (length user-name)
+                        1))))))
     
 (defun parse-unix-namestring (namestr start end)
   (declare (type simple-base-string namestr)

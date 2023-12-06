@@ -80,9 +80,7 @@
                     (alien:addr status)))
              (if (and (zerop status)
                       (not (alien:null-alien result)))
-                 (values (concatenate 'string
-                                       (alien:cast result c-call:c-string)
-                                       "/")
+                 (values (alien:cast result c-call:c-string)
                          status)
                  (values nil status)))
         (alien:free-alien result)))))
