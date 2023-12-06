@@ -301,105 +301,153 @@
 	     (return (values (remove-backslashes namestr start index)
 			     (1+ index)))))))))
 
+(defun user-homedir-namestring (name)
+  (cond ((zerop (length name))
+         (let ((user (unix:unix-getpwuid (unix:unix-getuid))))
+           (concatenate 'simple-base-string
+                        (unix:user-info-dir user)
+                        "/")))
+        (t
+         (let ((path (system:get-user-homedir-pathname name)))
+           (unless path
+             (error "Unknown user: ~S" name))
+           path))))
+
+(defun replace-tilde-user (str start end)
+  #+nil
+  (return-from replace-tilde-user
+    (values str start end))
+  ;; Quick exit if STR doesn't start with ~ or we have an empty string.
+  (when (or (= start end)
+            (char/= (schar str start) #\~))
+    (return-from replace-tilde-user
+      (values str start end)))
+  
+  (let ((end-user (position #\/ str :start start :end end)))
+    #+nil
+    (format t "user ~D:~D: ~A~%" (1+ start) end-user (subseq str (1+ start) end-user))
+    (cond (end-user
+           (let* ((user-name (subseq str (1+ start) end-user))
+                  (homedir (user-homedir-namestring user-name)))
+             #+nil
+             (format t "user-name: ~S; homedir: ~S~%"
+                     user-name homedir)
+             (values (concatenate 'simple-base-string
+                                  (subseq str 0 start)
+                                  homedir
+                                  (subseq str (1+ end-user)))
+                     start
+                     (+ end (- (length homedir)
+                               (length user-name)
+                               2)))))
+          (t
+           (values str start end)))))
+    
 (defun parse-unix-namestring (namestr start end)
   (declare (type simple-base-string namestr)
 	   (type index start end))
-  (multiple-value-bind
-      (absolute pieces)
-      (split-at-slashes namestr start end)
-    (let ((search-list
-	   (if absolute
-	       nil
-	       (let ((first (car pieces)))
-		 (multiple-value-bind
-		       (search-list new-start)
-		     (maybe-extract-search-list namestr
-						(car first) (cdr first))
-		   (when search-list
-		     ;; Lose if this search-list is already defined as
-		     ;; a logical host.  Since the syntax for
-		     ;; search-lists and logical pathnames are the
-		     ;; same, we can't allow the creation of one when
-		     ;; the other is defined.
-		     (when (find-logical-host search-list nil)
-		       (error (intl:gettext "~A already names a logical host") search-list))
-		     (setf absolute t)
-		     (setf (car first) new-start))
-		   search-list)))))
-      (multiple-value-bind (name type version)
-	  (let* ((tail (car (last pieces)))
-		 (tail-start (car tail))
-		 (tail-end (cdr tail)))
-	    (unless (= tail-start tail-end)
-	      (setf pieces (butlast pieces))
-	      (cond ((string= namestr ".." :start1 tail-start :end1 tail-end)
-		     ;; ".." is a directory.  Add this piece to the
-		     ;; list of pieces, and make the name/type/version
-		     ;; nil.
-		     (setf pieces (append pieces (list (cons tail-start tail-end))))
-		     (values nil nil nil))
-		    ((string= namestr "." :start1 tail-start :end1 tail-end)
-		     ;; "." is a directory as well.
-		     (setf pieces (append pieces (list (cons tail-start tail-end))))
-		     (values nil nil nil))
-		    ((not (find-if-not #'(lambda (c)
-					   (char= c #\.))
-				       namestr :start tail-start :end tail-end))
-		     ;; Got a bunch of dots.  Make it a file of the
-		     ;; same name, and type the empty string.
-		     (values (subseq namestr tail-start (1- tail-end)) "" nil))
-		    (t
-		     (extract-name-type-and-version namestr tail-start tail-end)))))
-	;; PVE: Make sure there are no illegal characters in the name
-	;; such as #\Null and #\/.
-	(when (and (stringp name)
-                   (find-if #'(lambda (x)
-				(or (char= x #\Null) (char= x #\/)))
-			    name))
-	  (error 'parse-error))
-	;; Now we have everything we want.  So return it.
-	(values nil ; no host for unix namestrings.
-		nil ; no devices for unix namestrings.
-		(collect ((dirs))
-		  (when search-list
-		    (dirs (intern-search-list search-list)))
-		  (dolist (piece pieces)
-		    (let ((piece-start (car piece))
-			  (piece-end (cdr piece)))
-		      (unless (= piece-start piece-end)
-			(cond ((string= namestr ".." :start1 piece-start
-					     :end1 piece-end)
-			       (dirs :up))
-			      ((string= namestr "**" :start1 piece-start
-					:end1 piece-end)
-			       (dirs :wild-inferiors))
-			      (t
-			       (dirs (maybe-make-pattern namestr
-							 piece-start
-							 piece-end)))))))
-		  (cond (absolute
-			 (cons :absolute (dirs)))
-			((dirs)
-			 ;; "." in a :relative directory is the same
-			 ;; as if it weren't there, so remove them.
-			 (cons :relative (delete "." (dirs) :test #'equal)))
-			(t
-			 ;; If there is no directory and the name is
-			 ;; "." and the type is NIL, we really got
-			 ;; directory ".", so make it so.
-			 (if (and (equal name ".")
-				  (null type))
-			     (list :relative)
-			 nil))))
-		;; A file with name "." and type NIL can't be the name
-		;; of file on Unix because it's a directory.  This was
-		;; handled above, so we can just set the name to nil.
-		(if (and (equal name ".")
-			 (null type))
-		    nil
-		    name)
-		type
-		version)))))
+  ;; Look for "~user/" (or "~/").  If found replace it with the user's
+  ;; home directory
+  (multiple-value-bind (namestr start end)
+      (replace-tilde-user namestr start end)
+    #+nil
+    (format t "~S: ~D ~D~%" namestr start end)
+    (multiple-value-bind
+          (absolute pieces)
+        (split-at-slashes namestr start end)
+      (let ((search-list
+	      (if absolute
+	          nil
+	          (let ((first (car pieces)))
+		    (multiple-value-bind
+		          (search-list new-start)
+		        (maybe-extract-search-list namestr
+						   (car first) (cdr first))
+		      (when search-list
+		        ;; Lose if this search-list is already defined as
+		        ;; a logical host.  Since the syntax for
+		        ;; search-lists and logical pathnames are the
+		        ;; same, we can't allow the creation of one when
+		        ;; the other is defined.
+		        (when (find-logical-host search-list nil)
+		          (error (intl:gettext "~A already names a logical host") search-list))
+		        (setf absolute t)
+		        (setf (car first) new-start))
+		      search-list)))))
+        (multiple-value-bind (name type version)
+	    (let* ((tail (car (last pieces)))
+		   (tail-start (car tail))
+		   (tail-end (cdr tail)))
+	      (unless (= tail-start tail-end)
+	        (setf pieces (butlast pieces))
+	        (cond ((string= namestr ".." :start1 tail-start :end1 tail-end)
+		       ;; ".." is a directory.  Add this piece to the
+		       ;; list of pieces, and make the name/type/version
+		       ;; nil.
+		       (setf pieces (append pieces (list (cons tail-start tail-end))))
+		       (values nil nil nil))
+		      ((string= namestr "." :start1 tail-start :end1 tail-end)
+		       ;; "." is a directory as well.
+		       (setf pieces (append pieces (list (cons tail-start tail-end))))
+		       (values nil nil nil))
+		      ((not (find-if-not #'(lambda (c)
+					     (char= c #\.))
+				         namestr :start tail-start :end tail-end))
+		       ;; Got a bunch of dots.  Make it a file of the
+		       ;; same name, and type the empty string.
+		       (values (subseq namestr tail-start (1- tail-end)) "" nil))
+		      (t
+		       (extract-name-type-and-version namestr tail-start tail-end)))))
+	  ;; PVE: Make sure there are no illegal characters in the name
+	  ;; such as #\Null and #\/.
+	  (when (and (stringp name)
+                     (find-if #'(lambda (x)
+				  (or (char= x #\Null) (char= x #\/)))
+			      name))
+	    (error 'parse-error))
+	  ;; Now we have everything we want.  So return it.
+	  (values nil               ; no host for unix namestrings.
+		  nil               ; no devices for unix namestrings.
+		  (collect ((dirs))
+		    (when search-list
+		      (dirs (intern-search-list search-list)))
+		    (dolist (piece pieces)
+		      (let ((piece-start (car piece))
+			    (piece-end (cdr piece)))
+		        (unless (= piece-start piece-end)
+			  (cond ((string= namestr ".." :start1 piece-start
+					               :end1 piece-end)
+			         (dirs :up))
+			        ((string= namestr "**" :start1 piece-start
+					               :end1 piece-end)
+			         (dirs :wild-inferiors))
+			        (t
+			         (dirs (maybe-make-pattern namestr
+							   piece-start
+							   piece-end)))))))
+		    (cond (absolute
+			   (cons :absolute (dirs)))
+			  ((dirs)
+			   ;; "." in a :relative directory is the same
+			   ;; as if it weren't there, so remove them.
+			   (cons :relative (delete "." (dirs) :test #'equal)))
+			  (t
+			   ;; If there is no directory and the name is
+			   ;; "." and the type is NIL, we really got
+			   ;; directory ".", so make it so.
+			   (if (and (equal name ".")
+				    (null type))
+			       (list :relative)
+			       nil))))
+		  ;; A file with name "." and type NIL can't be the name
+		  ;; of file on Unix because it's a directory.  This was
+		  ;; handled above, so we can just set the name to nil.
+		  (if (and (equal name ".")
+			   (null type))
+		      nil
+		      name)
+		  type
+		  version))))))
 
 (defun unparse-unix-host (pathname)
   (declare (type pathname pathname)
