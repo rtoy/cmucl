@@ -303,14 +303,9 @@
 
 (defun user-homedir-namestring (name)
   (cond ((zerop (length name))
-         (let ((user (unix:unix-getpwuid (unix:unix-getuid))))
-           (concatenate 'simple-base-string
-                        (unix:user-info-dir user))))
+         (unix:user-info-dir (unix:unix-getpwuid (unix:unix-getuid))))
         (t
-         (let ((path (system:get-user-homedir-namestring name)))
-           (unless path
-             (error "Unknown user: ~S" name))
-           path))))
+         (system:get-user-homedir-namestring name))))
 
 (defun replace-tilde-user (str start end)
   ;; Quick exit if STR doesn't start with ~ or we have an empty string.
@@ -326,6 +321,8 @@
         (values str start end)))
     (let* ((user-name (subseq str (1+ start) end-user))
            (homedir (user-homedir-namestring user-name)))
+      (unless homedir
+        (error "Unknown user ~S in namestring ~S" user-name (subseq str start end)))
       ;; Replace the ~user part with the home directory, adjusting END
       ;; because of the replacement.
       (values (concatenate 'simple-base-string
