@@ -58,9 +58,9 @@
 	       (unix:get-unix-error-msg utime)))
       (values utime stime major-fault))))
 
-;;; GET-USER-HOMEDIR-PATHNAME  -- Public
+;;; GET-USER-HOMEDIR-NAMESTRING  -- Public
 ;;;
-(defun get-user-homedir-pathname (name)
+(defun get-user-homedir-namestring (name)
   _N"Get the user home directory for user named NAME.  Two values are
   returned: the pathname of the home directory and a status code.  If
   the home directory does not exist NIL is returned.  The status is 0

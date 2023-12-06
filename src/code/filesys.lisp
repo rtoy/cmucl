@@ -307,7 +307,7 @@
            (concatenate 'simple-base-string
                         (unix:user-info-dir user))))
         (t
-         (let ((path (system:get-user-homedir-pathname name)))
+         (let ((path (system:get-user-homedir-namestring name)))
            (unless path
              (error "Unknown user: ~S" name))
            path))))
