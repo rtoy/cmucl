@@ -313,9 +313,6 @@
            path))))
 
 (defun replace-tilde-user (str start end)
-  #+nil
-  (return-from replace-tilde-user
-    (values str start end))
   ;; Quick exit if STR doesn't start with ~ or we have an empty string.
   (when (or (= start end)
             (char/= (schar str start) #\~))
@@ -323,18 +320,14 @@
       (values str start end)))
   
   (let ((end-user (position #\/ str :start start :end end)))
-    #+nil
-    (format t "user ~D:~D: ~A~%" (1+ start) end-user (subseq str (1+ start) end-user))
     ;; Quick exit if we can't find a "/" to terminate the user name.
     (unless end-user
       (return-from replace-tilde-user
         (values str start end)))
     (let* ((user-name (subseq str (1+ start) end-user))
            (homedir (user-homedir-namestring user-name)))
-      #+nil
-      (format t "user-name: ~S; homedir: ~S~%"
-              user-name homedir)
-      ;; Replace the ~user part with the home directory, adjusting END because of the replacement.
+      ;; Replace the ~user part with the home directory, adjusting END
+      ;; because of the replacement.
       (values (concatenate 'simple-base-string
                            (subseq str 0 start)
                            homedir
@@ -351,8 +344,6 @@
   ;; home directory
   (multiple-value-bind (namestr start end)
       (replace-tilde-user namestr start end)
-    #+nil
-    (format t "~S: ~D ~D~%" namestr start end)
     (multiple-value-bind
           (absolute pieces)
         (split-at-slashes namestr start end)
