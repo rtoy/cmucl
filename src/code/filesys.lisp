@@ -301,26 +301,20 @@
 	     (return (values (remove-backslashes namestr start index)
 			     (1+ index)))))))))
 
-(defun user-homedir-namestring (name)
-  (cond ((zerop (length name))
-         (unix:user-info-dir (unix:unix-getpwuid (unix:unix-getuid))))
-        (t
-         (system:get-user-homedir-namestring name))))
-
-(defun replace-tilde-user (str start end)
+(defun expand-tilde-user-name (str start end)
   ;; Quick exit if STR doesn't start with ~ or we have an empty string.
   (when (or (= start end)
             (char/= (schar str start) #\~))
-    (return-from replace-tilde-user
+    (return-from expand-tilde-user-name
       (values str start end)))
   
   (let ((end-user (position #\/ str :start start :end end)))
     ;; Quick exit if we can't find a "/" to terminate the user name.
     (unless end-user
-      (return-from replace-tilde-user
+      (return-from expand-tilde-user-name
         (values str start end)))
     (let* ((user-name (subseq str (1+ start) end-user))
-           (homedir (user-homedir-namestring user-name)))
+           (homedir (get-user-homedir-namestring user-name)))
       (unless homedir
         (error "Unknown user ~S in namestring ~S" user-name (subseq str start end)))
       ;; Replace the ~user part with the home directory, adjusting END
@@ -340,7 +334,7 @@
   ;; Look for "~user/" (or "~/").  If found replace it with the user's
   ;; home directory
   (multiple-value-bind (namestr start end)
-      (replace-tilde-user namestr start end)
+      (expand-tilde-user-name namestr start end)
     (multiple-value-bind
           (absolute pieces)
         (split-at-slashes namestr start end)
