@@ -35,10 +35,12 @@ msgstr ""
 
 #: src/code/os.lisp
 msgid ""
-"Get the user home directory for user named NAME.  Two values are\n"
-"  returned: the pathname of the home directory and a status code.  If\n"
-"  the home directory does not exist NIL is returned.  The status is 0\n"
-"  if no errors occurred.  Otherwise a non-zero value is returned.\n"
-"  Examining errno may give information about what failed."
+"Get the user home directory for user named NAME.  If NAME is the empty\n"
+"  string, the home directory of the current user is returned.\n"
+"\n"
+"  Two values are returned: the pathname of the home directory and a\n"
+"  status code.  If the home directory does not exist NIL is returned.\n"
+"  The status is 0 if no errors occurred.  Otherwise a non-zero value\n"
+"  is returned. Examining errno may give information about what failed."
 msgstr ""
 
