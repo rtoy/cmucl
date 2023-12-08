@@ -1156,6 +1156,13 @@ msgid ""
 msgstr ""
 
 #: src/code/type.lisp
+msgid ""
+"The minimum length of either list argument for subsetp where a\n"
+"  hashtable is used to speed up processing instead of using a basic\n"
+"  list implementation.  This value was determined by experimentation."
+msgstr ""
+
+#: src/code/type.lisp
 msgid "Subtypep is illegal on this type:~%  ~S"
 msgstr ""
 
@@ -1593,8 +1600,8 @@ msgstr ""
 msgid ""
 "Returns T if X and Y are EQL or if they are structured components\n"
 "  whose elements are EQUAL.  Strings and bit-vectors are EQUAL if they\n"
-"  are the same length and have indentical components.  Other arrays must be\n"
-"  EQ to be EQUAL."
+"  are the same length and have identical components.  Other arrays\n"
+"  must be EQ to be EQUAL."
 msgstr ""
 
 #: src/code/pred.lisp
@@ -3209,15 +3216,7 @@ msgid "Test and test-not both supplied."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Destructively returns the union list1 and list2."
-msgstr ""
-
-#: src/code/list.lisp
 msgid "Returns the intersection of list1 and list2."
-msgstr ""
-
-#: src/code/list.lisp
-msgid "Destructively returns the intersection of list1 and list2."
 msgstr ""
 
 #: src/code/list.lisp
@@ -3225,11 +3224,19 @@ msgid "Returns the elements of list1 which are not in list2."
 msgstr ""
 
 #: src/code/list.lisp
+msgid "Destructively returns the union list1 and list2."
+msgstr ""
+
+#: src/code/list.lisp
+msgid "Destructively returns the intersection of list1 and list2."
+msgstr ""
+
+#: src/code/list.lisp
 msgid "Destructively returns the elements of list1 which are not in list2."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Return new list of elements appearing exactly once in LIST1 and LIST2."
+msgid "Return new list of elements appearing exactly one of LIST1 and LIST2."
 msgstr ""
 
 #: src/code/list.lisp
@@ -9149,6 +9156,12 @@ msgid "~&Could not find external format ~S~%"
 msgstr ""
 
 #: src/code/extfmts.lisp
+msgid ""
+"List of external formats that are builtin so that they don't need to\n"
+"  be loaded on first use."
+msgstr ""
+
+#: src/code/extfmts.lisp
 msgid "External-format aliasing depth exceeded."
 msgstr ""
 
@@ -9286,6 +9299,13 @@ msgid ""
 "UTF-8 is a variable-length character encoding for Unicode.  By\n"
 "default, illegal input sequences are replaced by the Unicode\n"
 "replacement character."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
+"US ASCII 7-bit encoding.  Illegal input sequences are replaced with\n"
+"the Unicode replacment character.  Illegal output characters are\n"
+"replaced with a question mark."
 msgstr ""
 
 #: src/code/fd-stream.lisp
@@ -21310,6 +21330,10 @@ msgid "Implements FILE-POSITION for the stream for setting the position."
 msgstr ""
 
 #: src/pcl/gray-streams.lisp
+msgid "Implements FILE-LENGTH for the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
 msgid ""
 "Used by READ-BYTE; returns either an integer, or the symbol :EOF\n"
 "  if the stream is at end-of-file."
@@ -21323,12 +21347,6 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid "    Gray Streams Protocol Support"
-msgstr ""
-
-msgid ""
-"US ASCII 7-bit encoding.  Illegal input sequences are replaced with\n"
-"the Unicode replacment character.  Illegal output characters are\n"
-"replaced with a question mark."
 msgstr ""
 
 msgid ""

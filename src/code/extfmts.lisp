@@ -461,15 +461,18 @@
 	       (format t "~&~A~%"
 		       (intl:gettext (or (ef-documentation ef) "")))))))))
 
+(defconstant +builtin-external-formats+ '(:utf-8 :iso8859-1 :ascii)
+  "List of external formats that are builtin so that they don't need to
+  be loaded on first use.")
+
 (defun %find-external-format (name)
   ;; avoid loading files, etc., early in the boot sequence
-  (when (or (eq name :iso8859-1)
-	    (and (eq name :default) (eq *default-external-format* :iso8859-1)))
+  (when (and (eq name :default)
+	     (eq *default-external-format* :iso8859-1))
+    (setf name :iso8859-1))
+  (when (member name +builtin-external-formats+ :test 'eq)
     (return-from %find-external-format
-      (gethash :iso8859-1 *external-formats*)))
-  (when (eq name :utf-8)
-    (return-from %find-external-format
-      (gethash :utf-8 *external-formats*)))
+      (gethash name *external-formats*)))
 
   (when (zerop (hash-table-count *external-format-aliases*))
     (setf (gethash :latin1 *external-format-aliases*) :iso8859-1)
@@ -1188,6 +1191,8 @@ character and illegal outputs are replaced by a question mark.")
 	 ,(subst (ef-name ef) ef
 		 (function-lambda-expression (aref (ef-cache ef) slot))))))
 
+;;; Builtin external formats.
+
 ;; A safe UTF-8 external format.  Any illegal UTF-8 sequences on input
 ;; are replaced with the Unicode REPLACEMENT CHARACTER (U+FFFD), or
 ;; signals an error as appropriate.
@@ -1303,3 +1308,29 @@ replacement character.")
          ((< ,code #x10000) (utf8 ,code 2))
          ((< ,code #x110000) (utf8 ,code 3))
          (t (error "How did this happen?  Codepoint U+~X is illegal" ,code))))))
+
+(define-external-format :ascii (:size 1 :documentation
+"US ASCII 7-bit encoding.  Illegal input sequences are replaced with
+the Unicode replacment character.  Illegal output characters are
+replaced with a question mark.")
+  ()
+  (octets-to-code (state input unput error c)
+    `(let ((,c ,input))
+       (values (if (< ,c #x80)
+		   ,c
+		   (if ,error
+		       (locally
+			   ;; No warnings about fdefinition
+			   (declare (optimize (ext:inhibit-warnings 3)))
+			 (funcall ,error "Invalid octet #x~4,'0X for ASCII" ,c 1))
+		       +replacement-character-code+))
+	       1)))
+  (code-to-octets (code state output error)
+    `(,output (if (> ,code #x7F)
+		  (if ,error
+		      (locally
+			  ;; No warnings about fdefinition
+			  (declare (optimize (ext:inhibit-warnings 3)))
+			(funcall ,error "Cannot output codepoint #x~X to ASCII stream" ,code))
+		      #x3F)
+		  ,code))))

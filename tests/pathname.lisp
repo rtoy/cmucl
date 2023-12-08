@@ -83,3 +83,62 @@
 	  and type = (pathname-type f)
 	  do
 	     (assert-true (and (null name) (null type)) f))))
+
+
+
+;; Test that pathnames with :unspecific components are printed using
+;; our extension to make :unspecific explicit. 
+(define-test issue.171.unspecific
+  (:tag :issues)
+  (flet ((output (path)
+	   (with-output-to-string (s)
+	     (write path :stream s))))
+    (dolist (test
+	     (list
+	      (list (make-pathname :name "foo" :type :unspecific)
+		    "#P(:NAME \"foo\" :TYPE :UNSPECIFIC)"
+		    "foo")
+	      (list (make-pathname :name :unspecific :type "foo")
+		    "#P(:NAME :UNSPECIFIC :TYPE \"foo\")"
+		    ".foo")
+	      (list (make-pathname :name "foo" :type "txt" :version :unspecific)
+		    "#P(:NAME \"foo\" :TYPE \"txt\" :VERSION :UNSPECIFIC)"
+		    "foo.txt")
+	      (list (make-pathname :device :unspecific)
+		    "#P(:DEVICE :UNSPECIFIC)"
+		    "")))
+      (destructuring-bind (pathname printed-value namestring)
+	  test
+	(assert-equal printed-value (output pathname))
+	(assert-equal namestring (namestring pathname))))))
+
+(define-test issue.266.pathname-tilde.unknown-user
+    (:tag :issues)
+  ;; This assumes that there's no user named "zotunknown".
+  (assert-error 'simple-error (parse-namestring "~zotunknown/*.*")))
+
+(define-test issue.266.pathname-tilde.1
+    (:tag :issues)
+  ;; Simple test for ~ in pathnames.  Get a directory list using
+  ;; #P"~/*.*".  This should produce exactly the same list as the
+  ;; #search-list P"home:*.*".
+  (let ((dir-home (directory #p"home:*.*" :truenamep nil :follow-links nil))
+        (dir-tilde (directory #p"~/*.*" :truenamep nil :follow-links nil)))
+    (assert-equal dir-tilde dir-home)))
+
+(define-test issue.266.pathname-tilde.2
+    (:tag :issues)
+  ;; Simple test for ~ in pathnames.  Get a directory list using
+  ;; #P"~user/*.*".  This should produce exactly the same list as the
+  ;; #search-list P"home:*.*".  We determine the user name via getuid
+  ;; #and getpwuid.
+  (let ((user-name (unix:user-info-name (unix:unix-getpwuid (unix:unix-getuid)))))
+    (assert-true user-name)
+    (let* ((dir-home (directory #p"home:*.*" :truenamep nil :follow-links nil))
+         
+           (dir-tilde (directory (concatenate 'string
+                                              "~"
+                                              user-name
+                                              "/*.*")
+                                 :truenamep nil :follow-links nil)))
+      (assert-equal dir-tilde dir-home))))
