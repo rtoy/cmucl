@@ -39,7 +39,7 @@ ENABLE2="yes"
 ENABLE3="yes"
 ENABLE4="yes"
 
-version=21d
+version=21e
 SRCDIR=src
 BINDIR=bin
 TOOLDIR=$BINDIR
@@ -109,6 +109,8 @@ case `uname -s` in
 	ppc) BUILD_WORLD2=yes ;;
       esac ;;
 esac
+
+export LANG=en_US.UTF-8
 
 buildit ()
 {

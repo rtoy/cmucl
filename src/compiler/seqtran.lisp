@@ -36,12 +36,18 @@
 	  (ecase accumulate
 	    (:nconc
 	     (let ((temp (gensym))
-		   (map-result (gensym)))
+		   (map-result (gensym))
+		   (res (gensym))
+		   (next-temp (gensym)))
 	       `(let ((,map-result (list nil)))
 		  (declare (dynamic-extent ,map-result))
 		  (do-anonymous ((,temp ,map-result) . ,(do-clauses))
 				 (,endtest (cdr ,map-result))
-		    (setq ,temp (last (nconc ,temp ,call)))))))
+		    (let ((,res ,call))
+		      (when ,res
+			(let ((,next-temp (last ,res)))
+			  (rplacd ,temp ,res)
+			  (setq ,temp ,next-temp))))))))
 	    (:list
 	     (let ((temp (gensym))
 		   (map-result (gensym)))

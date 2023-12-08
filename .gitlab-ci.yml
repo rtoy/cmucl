@@ -1,7 +1,8 @@
 variables:
-  download_url: "https://common-lisp.net/project/cmucl/downloads/release/21e"
-  version: "21e-x86"
-  bootstrap: ""
+  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2023/08"
+  version: "2023-08-x86"
+  bootstrap: "-B boot-2023-08"
+
 
 stages:
   - install
@@ -62,7 +63,7 @@ linux:test:
     - job: linux:build
       artifacts: true
   script:
-    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 linux:ansi-test:
   stage: ansi-test
@@ -75,14 +76,8 @@ linux:ansi-test:
     # Needs artifacts from build (dist/)
     - job: linux:build
       artifacts: true
-  before_script:
-    - git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
-    - (cd ansi-test; git checkout cmucl-expected-failures)
   script:
-    - cd ansi-test
-    - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
-    # There should be no unexpected successes or failures; check these separately.
-    - grep -a 'No unexpected successes' test.out && grep -a 'No unexpected failures' test.out
+    - bin/run-ansi-tests.sh -l dist/bin/lisp
     
 linux:benchmark:
   stage: benchmark
@@ -133,8 +128,9 @@ osx:build:
     #- bin/create-target.sh xtarget x86_darwin
     #- bin/create-target.sh xcross x86_darwin
     #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
-    # Regular build using the cross-compiled result or snapshot
-    - bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
+    # Regular build using the cross-compiled result or snapshot.
+    # Need /opt/local/bin to get msgmerge and msgfmt programs.
+    - PATH=/opt/local/bin:$PATH bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     - bin/make-dist.sh -I dist darwin-4
 
 osx:test:
@@ -143,13 +139,15 @@ osx:test:
     - osx
   artifacts:
     paths:
+      - ansi-test/test.out
       - test.log
   needs:
     # Needs artifacts from build (dist/)
     - job: osx:build
       artifacts: true
   script:
-    - bin/run-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+    - echo LANG = $LANG
+    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 osx:ansi-test:
   stage: ansi-test
@@ -162,14 +160,11 @@ osx:ansi-test:
     # Needs artifacts from build (dist/)
     - job: osx:build
       artifacts: true
-  before_script:
-    - /opt/local/bin/git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git
-    - (cd ansi-test; /opt/local/bin/git checkout cmucl-expected-failures)
   script:
-    - cd ansi-test
-    - make LISP="../dist/bin/lisp -batch -noinit -nositeinit"
-    # There should be no unexpected successes or failures; check these separately.
-    - grep -a 'No unexpected successes' test.out && grep -a 'No unexpected failures' test.out
+    # NB: sometimes we can't clone the ansi-test repo (bad cert!?!).
+    # Manually cloning it in the gitlab build dir helps with this
+    # issue until we can figure out what's going on.
+    - bin/run-ansi-tests.sh -l dist/bin/lisp
   
 osx:benchmark:
   stage: benchmark

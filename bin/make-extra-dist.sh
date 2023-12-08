@@ -94,12 +94,12 @@ install ${GROUP} ${OWNER} -m 0755 $TARGET/motif/server/motifd \
 
 # Install the contrib stuff.  Create the directories and then copy the files.
 
-for d in `(cd src; find contrib -type d -print | egrep -v "CVS|asdf|defsystem")`
+for d in `(cd src; find contrib -type d -print | grep -E -v "CVS|asdf|defsystem")`
 do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/$d
 done
 
-for f in `(cd src/contrib; find . -type f -print | egrep -v "CVS|asdf|defsystem|unix")`
+for f in `(cd src/contrib; find . -type f -print | grep -E -v "CVS|asdf|defsystem|unix")`
 do
     FILE=`basename $f`
     DIR=`dirname $f`
@@ -108,13 +108,13 @@ done
 
 # Install all the locale data.
 
-for d in `(cd src/i18n/; find locale -type d -print | egrep -v CVS)`
+for d in `(cd src/i18n/; find locale -type d -print | grep -E -v CVS)`
 do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/$d
 done
 
 # Install mo files.
-for f in `(cd $TARGET/i18n; find locale -type f -print | egrep -v 'CVS|~.*~|.*~')`
+for f in `(cd $TARGET/i18n; find locale -type f -print | grep -E -v 'CVS|~.*~|.*~')`
 do
     FILE=`basename $f`
     DIR=`dirname $f`
@@ -122,7 +122,7 @@ do
 done
 
 # Install po files.  (Do we really need to distribute the po files?)
-#for f in `(cd $TARGET/i18n; find locale -type f -print | egrep -v 'CVS|~.*~|.*~')`
+#for f in `(cd $TARGET/i18n; find locale -type f -print | grep -E -v 'CVS|~.*~|.*~')`
 #do
 #    FILE=`basename $f`
 #    DIR=`dirname $f`
