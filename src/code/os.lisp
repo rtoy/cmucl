@@ -68,6 +68,7 @@
   status code.  If the home directory does not exist NIL is returned.
   The status is 0 if no errors occurred.  Otherwise a non-zero value
   is returned. Examining errno may give information about what failed."
+  (declare (string name))
   (cond
     ((zerop (length name))
      (multiple-value-bind (user-info status)
