@@ -26,6 +26,12 @@
   Stream. Class FUNDAMENTAL-CHARACTER-STREAM provides a default method
   which returns CHARACTER."))
 
+(defgeneric (setf stream-element-type) (new-value stream)
+  (:documentation
+   _N"Set the type specifier of the kind of object returned by the
+  STREAM. There is no default method as this is optional and only
+  needed for bivalent streams."))
+
 (defmethod stream-element-type ((stream lisp-stream))
   (funcall (lisp-stream-misc stream) stream :element-type))
 
@@ -48,7 +54,7 @@
   (not (eq (lisp-stream-in stream) #'closed-flame)))
 
 (defmethod pcl-open-stream-p ((stream fundamental-stream))
-  nil)
+  (stream-open-p stream))
 
 (when (find-class 'stream:simple-stream nil)
   (defmethod pcl-open-stream-p ((stream stream:simple-stream))
@@ -71,6 +77,11 @@
     (funcall (lisp-stream-misc stream) stream :close abort))
   t)
 
+(defmethod pcl-close ((stream fundamental-stream) &key abort)
+  (declare (ignore abort))
+  (setf (stream-open-p stream) nil)
+  t)
+
 (when (find-class 'stream:simple-stream nil)
   (defmethod pcl-close ((stream stream:simple-stream) &key abort)
     (stream:device-close stream abort)))
@@ -84,6 +95,10 @@
 
 (defgeneric input-stream-p (stream)
   (:documentation _N"Returns non-nil if the given Stream can perform input operations."))
+
+(defmethod input-stream-p (stream)
+  (declare (ignore stream))
+  nil)
 
 (defmethod input-stream-p ((stream lisp-stream))
   (and (not (eq (lisp-stream-in stream) #'closed-flame))
@@ -105,6 +120,10 @@
 (defgeneric output-stream-p (stream)
   (:documentation _N"Returns non-nil if the given Stream can perform output operations."))
 
+(defmethod output-stream-p (stream)
+  (declare (ignore stream))
+  nil)
+
 (defmethod output-stream-p ((stream lisp-stream))
   (and (not (eq (lisp-stream-in stream) #'closed-flame))
        (or (not (eq (lisp-stream-out stream) #'ill-out))
@@ -116,6 +135,30 @@
 (when (find-class 'stream:simple-stream nil)
   (defmethod output-stream-p ((stream stream:simple-stream))
     (stream::%output-stream-p stream)))
+
+
+
+(defgeneric pcl-pathname (pathspec)
+  (:documentation _N"Convert pathspec (a pathname, string or stream) into a pathname."))
+
+(let ((func #'pathname))
+  (defmethod pcl-pathname (pathspec)
+    (funcall func pathspec)))
+
+(setf (fdefinition 'pathname) #'pcl-pathname)
+
+
+
+(defgeneric pcl-truename (filespec)
+  (:documentation _N"Return the pathname for the actual file described by the filespec.
+  An error of type file-error is signalled if no such file exists,
+  or the pathname is wild."))
+
+(let ((func #'truename))
+  (defmethod pcl-truename (filespec)
+    (funcall func filespec)))
+
+(setf (fdefinition 'truename) #'pcl-truename)
 
 
 ;;; Character input streams.
@@ -205,12 +248,42 @@
    _N"Implements CLEAR-INPUT for the stream, returning NIL.  The default
   method does nothing."))
 
-(defmethod stream-clear-input ((stream fundamental-character-input-stream))
+(defmethod stream-clear-input ((stream fundamental-input-stream))
   nil)
 
 (defgeneric stream-read-sequence (stream seq &optional start end)
   (:documentation
    _N"Implements READ-SEQUENCE for the stream."))
+
+(defmethod stream-read-sequence
+    ((stream fundamental-character-input-stream) sequence &optional start end)
+  (prog ((pos (or start 0))
+         (end (or end (length sequence)))
+         value)
+     (declare (fixnum pos end))
+   next
+     (when (< pos end)
+       (setf value (stream-read-char stream))
+       (unless (eq value :eof)
+         (setf (elt sequence pos) value)
+         (incf pos)
+         (go next)))
+     (return pos)))
+
+(defmethod stream-read-sequence
+    ((stream fundamental-binary-input-stream) sequence &optional start end)
+  (prog ((pos (or start 0))
+         (end (or end (length sequence)))
+         value)
+     (declare (fixnum pos end))
+   next
+     (when (< pos end)
+       (setf value (stream-read-byte stream))
+       (unless (eq value :eof)
+         (setf (elt sequence pos) value)
+         (incf pos)
+         (go next)))
+     (return pos)))
 
 
 ;;; Character output streams.
@@ -349,6 +422,30 @@
 (defgeneric stream-write-sequence (stream seq &optional start end)
   (:documentation
    _N"Implements WRITE-SEQUENCE for the stream."))
+
+(defmethod stream-write-sequence
+    ((stream fundamental-character-output-stream) sequence &optional start end)
+  (prog ((pos (or start 0))
+         (end (or end (length sequence))))
+     (declare (fixnum pos end))
+   next
+     (when (< pos end)
+       (stream-write-char stream (elt sequence pos))
+       (incf pos)
+       (go next)))
+  sequence)
+
+(defmethod stream-write-sequence
+    ((stream fundamental-binary-output-stream) sequence &optional start end)
+  (prog ((pos (or start 0))
+         (end (or end (length sequence))))
+     (declare (fixnum pos end))
+   next
+     (when (< pos end)
+       (stream-write-byte stream (elt sequence pos))
+       (incf pos)
+       (go next)))
+  sequence)
 
 (defgeneric stream-file-position (stream)
   (:documentation
