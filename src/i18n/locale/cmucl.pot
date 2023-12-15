@@ -21157,6 +21157,13 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid ""
+"Set the type specifier of the kind of object returned by the\n"
+"  STREAM. There is no default method as this is optional and only\n"
+"  needed for bivalent streams."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid ""
 "Return true if Stream is not closed.  A default method is provided\n"
 "  by class FUNDAMENTAL-STREAM which returns true if CLOSE has not been\n"
 "  called on the stream."
@@ -21167,6 +21174,17 @@ msgid ""
 "Closes the given Stream.  No more I/O may be performed, but\n"
 "  inquiries may still be made.  If :Abort is non-nil, an attempt is made\n"
 "  to clean up the side effects of having created the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Convert pathspec (a pathname, string or stream) into a pathname."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid ""
+"Return the pathname for the actual file described by the filespec.\n"
+"  An error of type file-error is signalled if no such file exists,\n"
+"  or the pathname is wild."
 msgstr ""
 
 #: src/pcl/gray-streams.lisp
