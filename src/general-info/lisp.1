@@ -79,13 +79,15 @@ default is used.  The actual maximum allowed heap size is platform-specific.
 Requires an argument that should be the number of megabytes (1048576 bytes)
 that should be allocated for the binding stack.  If not specified, a platform-specific
 default is used.  The actual maximum allowed heap size is platform-specific.
+.TP
 .BR \-edit
 Causes Lisp to enter the 
 .I Hemlock
 editor.
 A file to edit may be specified by
 placing the name of the file between the program name (usually `lisp') and
-the first switch.
+the first switch.  For this option to be defined, lisp must have hemlock
+already loaded into the core.
 .TP
 .BR \-eval " expression"
 Evaluates the specified Lisp
@@ -122,7 +124,8 @@ Specifies that Lisp should start up as a
 .I slave
 Lisp and try to
 connect to an editor Lisp.  The name of the editor to connect to must be
-specified.  To find the editor's name, use the
+specified.  For this option to be defined, lisp must have already
+loaded hemlock into the core.  To find the editor's name, use the
 .I Hemlock
 `Accept Slave Connections' command.  
 .I editor-name
