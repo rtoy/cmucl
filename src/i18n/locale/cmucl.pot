@@ -21177,6 +21177,10 @@ msgid ""
 msgstr ""
 
 #: src/pcl/gray-streams.lisp
+msgid "Returns non-nil if the given Stream can is interactive."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
 msgid "Convert pathspec (a pathname, string or stream) into a pathname."
 msgstr ""
 

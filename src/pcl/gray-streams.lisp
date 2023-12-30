@@ -138,6 +138,24 @@
 
 
 
+(fmakunbound 'interactive-stream-p)
+
+(defgeneric interactive-stream-p (stream)
+  (:documentation _N"Returns non-nil if the given Stream can is interactive."))
+
+(defmethod interactive-stream-p (stream)
+  (declare (ignore stream))
+  nil)
+
+(defmethod interactive-stream-p ((stream lisp-stream))
+  (funcall (lisp-stream-misc stream) stream :interactive-p))
+
+(when (find-class 'stream:simple-stream nil)
+  (defmethod interactive-stream-p ((stream stream:simple-stream))
+    (stream::%interactive-stream-p stream)))
+
+
+
 (defgeneric pcl-pathname (pathspec)
   (:documentation _N"Convert pathspec (a pathname, string or stream) into a pathname."))
 
