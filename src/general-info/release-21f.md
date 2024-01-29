@@ -23,6 +23,7 @@ public domain.
     * Add support for Gray streams implementation of file-length via
       `ext:stream-file-length` generic function.
   * Changes:
+    * Update to ASDF 3.3.7
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
