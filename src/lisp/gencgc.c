@@ -5441,8 +5441,14 @@ scan_weak_pointers(void)
                 lispobj *header = (lispobj *) PTR(value);
 
                 if (maybe_static_array_p(*header)) {
-                    if ((HeaderValue(*header) & 1) == 1) {
-                        printf("  vectors_to_free[%d] = %p\n", k, (lispobj *) value);
+                    if (HeaderValue(*header) == 1) {
+                        /*
+                         * We have a static array with the mark
+                         * cleared which means it's not used.
+                         */
+                        printf("  vectors_to_free[%d] = %p %08lx\n",
+                               k, (lispobj *) value, *header);
+
                         /*
                          * Only add it if we don't already have it.
                          */
@@ -5461,12 +5467,13 @@ scan_weak_pointers(void)
                             vectors_to_free[k] = value;
                             ++k;
                         }
+
+                        /*
+                         * Now we can break the weak pointer to the static vector.
+                         */
+                        wp->value = NIL;
+                        wp->broken = T;
                     }
-                    /*
-                     * Now we can break the weak pointer to the static vector.
-                     */
-                    wp->value = NIL;
-                    wp->broken = T;
                 }
             }
         }
