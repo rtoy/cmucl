@@ -5411,17 +5411,23 @@ scan_weak_pointers(void)
         max_vectors++;
     }
 
+    printf("weak pointer count = %d\n", max_vectors);
+
+    /* Nothing to do if there are no weak pointers */
+    if (max_vectors == 0) {
+        return;
+    }
+    
     /*
      * Allocate max space
      */
     vectors_to_free = (lispobj*) malloc(max_vectors * sizeof(lispobj));
     gc_assert(vectors_to_free);
 
-    printf("weak pointer count = %d\n", max_vectors);
     printf("vectors_to_free = %p\n", vectors_to_free);
 
     /*
-     * Now process the weak pointers
+     * Now process the weak pointers.
      */
     for (wp = weak_pointers; wp; wp = wp->next) {
 	lispobj value = wp->value;
@@ -5440,16 +5446,14 @@ scan_weak_pointers(void)
                 /* The value may be a static vector */
                 lispobj *header = (lispobj *) PTR(value);
 
+                printf("value %p, header = %p\n", (lispobj*) value, header);
+                
                 if (maybe_static_array_p(*header)) {
                     if (HeaderValue(*header) == 1) {
                         /*
                          * We have a static array with the mark
                          * cleared which means it's not used.
-                         */
-                        printf("  vectors_to_free[%d] = %p %08lx\n",
-                               k, (lispobj *) value, *header);
-
-                        /*
+                         *
                          * Only add it if we don't already have it.
                          */
                         int m;
