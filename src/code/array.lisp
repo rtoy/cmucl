@@ -389,47 +389,6 @@
           (setf (sys:sap-ref-32 sap (* -2 vm:word-bytes))
                 (logand header #x7fffffff)))))))
 
-#+nil
-(defun finalize-static-vectors ()
-  ;; Run down the list of weak-pointers to static vectors.  Look at
-  ;; the static vector and see if vector is marked.  If so, clear the
-  ;; mark, and do nothing.  If the mark is not set, then the vector is
-  ;; free, so free it, and remove this weak-pointer from the list.
-  ;; The mark bit the MSB of the header word.  Look at scavenge in
-  ;; gencgc.c.
-  (when *static-vectors*
-    (when *debug-static-array-p*
-      (let ((*print-array* nil))
-	(format t (intl:gettext "Finalizing static vectors ~S~%") *static-vectors*)))
-    (setf *static-vectors*
-	  (delete-if
-	   #'(lambda (wp)
-	       (let ((vector (weak-pointer-value wp)))
-		 (when vector
-		   (let* ((sap (sys:vector-sap vector))
-			  (header (sys:sap-ref-32 sap (* -2 vm:word-bytes))))
-		     (when *debug-static-array-p*
-		       (format t (intl:gettext "static vector ~A.  header = ~X~%")
-			       vector header))
-		     (cond ((logbitp 31 header)
-			    ;; Clear mark
-			    (setf (sys:sap-ref-32 sap (* -2 vm:word-bytes))
-				  (logand header #x7fffffff))
-			    (when *debug-static-array-p*
-			      (let ((*print-array* nil))
-				(format t (intl:gettext "  static vector ~A in use~%") vector)))
-			    nil)
-			   (t
-			    ;; Mark was clear so free the vector
-			    (when *debug-static-array-p*
-			      (let ((*print-array* nil))
-				(format t (intl:gettext "  Free static vector ~A~%") vector)))
-			    (sys:without-interrupts
-			      (setf (weak-pointer-value wp) nil)
-			      (free-static-vector vector))
-			    t))))))
-	   *static-vectors*))))
-
 (defun finalize-static-vectors ()
   ;; Run down the list of weak-pointers to static vectors.  Look at
   ;; the static vector and see if vector is marked.  If so, clear the
