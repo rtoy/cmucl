@@ -5393,13 +5393,42 @@ size_weak_pointer(lispobj * where)
     return WEAK_POINTER_NWORDS;
 }
 
+
+static void
+update_static_vector_list(lispobj value, lispobj* vectors_to_free, int* num_static_vectors)
+{
+    /*
+     * We have a static array with the mark cleared which means it's
+     * not used.
+     *
+     * Only add it if we don't already have it.  We don't want
+     * duplicates because we'll end up trying to free things multiple
+     * times.
+     */
+    int m;
+    int found = 0;
+                        
+    for (m = 0; m < *num_static_vectors; ++m) {
+        if (value == vectors_to_free[m]) {
+            printf("Found %p at %d\n", (lispobj *) value, m);
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        printf("Adding %p at %d\n", (lispobj *) value, *num_static_vectors);
+        vectors_to_free[*num_static_vectors] = value;
+        ++*num_static_vectors;
+    }
+}
+
 void
 scan_weak_pointers(void)
 {
     struct weak_pointer *wp;
     lispobj* vectors_to_free = NULL;
-    int max_vectors = 0;
-    int k = 0;
+    int num_weak_pointers = 0;
+    int num_static_vectors = 0;
     int n;
     
     /*
@@ -5408,20 +5437,21 @@ scan_weak_pointers(void)
      */
     
     for (wp = weak_pointers; wp; wp = wp->next) {
-        max_vectors++;
+        num_weak_pointers++;
     }
 
-    printf("weak pointer count = %d\n", max_vectors);
+    printf("weak pointer count = %d\n", num_weak_pointers);
 
     /* Nothing to do if there are no weak pointers */
-    if (max_vectors == 0) {
+    if (num_weak_pointers == 0) {
         return;
     }
     
     /*
-     * Allocate max space
+     * Allocate enough space to hold all weak pointers in case they
+     * all point to static vectors.
      */
-    vectors_to_free = (lispobj*) malloc(max_vectors * sizeof(lispobj));
+    vectors_to_free = (lispobj*) malloc(num_weak_pointers * sizeof(lispobj));
     gc_assert(vectors_to_free);
 
     printf("vectors_to_free = %p\n", vectors_to_free);
@@ -5446,32 +5476,17 @@ scan_weak_pointers(void)
                 /* The value may be a static vector */
                 lispobj *header = (lispobj *) PTR(value);
 
-                printf("value %p, header = %p\n", (lispobj*) value, header);
+                printf("value %p, header = %0lx\n", (lispobj*) value, *header);
                 
                 if (maybe_static_array_p(*header)) {
+                    /*
+                     * A header value of 1 means we have a static
+                     * vector with the in-use bit cleared, so we can
+                     * collect the vector.
+                     */
                     if (HeaderValue(*header) == 1) {
-                        /*
-                         * We have a static array with the mark
-                         * cleared which means it's not used.
-                         *
-                         * Only add it if we don't already have it.
-                         */
-                        int m;
-                        int found = 0;
+                        update_static_vector_list(value, vectors_to_free, &num_static_vectors);
                         
-                        for (m = 0; m < k; ++m) {
-                            if (value == vectors_to_free[m]) {
-                                printf("Found %p at %d\n", (lispobj *) value, m);
-                                found = 1;
-                                break;
-                            }
-                        }
-                        if (!found) {
-                            printf("Adding %p at %d\n", (lispobj *) value, k);
-                            vectors_to_free[k] = value;
-                            ++k;
-                        }
-
                         /*
                          * Now we can break the weak pointer to the static vector.
                          */
@@ -5486,9 +5501,9 @@ scan_weak_pointers(void)
     /*
      * Free up any unreferenced static vectors now
      */
-    printf("%d static vectors to be freed\n", k);
+    printf("%d static vectors to be freed\n", num_static_vectors);
     
-    for (n = 0; n < k; ++n) {
+    for (n = 0; n < num_static_vectors; ++n) {
         lispobj *header = (lispobj *) PTR(vectors_to_free[n]);
         printf("free %p: %p\n", (void*) vectors_to_free[n], header);
         free(header);
