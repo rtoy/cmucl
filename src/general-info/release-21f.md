@@ -40,6 +40,8 @@ public domain.
     * ~~#258~~ Remove `get-page-size` from linux-os.lisp
     * ~~#269~~ Add function to get user's home directory
     * ~~#266~~ Support "~user" in namestrings
+    * ~~#275~~ Handle floating point underflow in float reader
+      allowing user to flush the value to 0.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
