@@ -1824,50 +1824,27 @@ the end of the stream."
 	  (t (error _"Internal error in floating point reader.")))))
 
 (defun make-float-aux (number divisor float-format stream)
-  (let ((ratio (/ number divisor))
-        result)
-    (handler-case
-        (progn
-          (setf result (coerce ratio float-format))
-          #+nil
-          (when (and (zerop result) (not (zerop number)))
-	    ;; The number we've read is so small that it gets
-	    ;; converted to 0.0, but is not actually zero.  In this
-	    ;; case, we want to round such small numbers to
-	    ;; least-positive-foo-float.  If it's still too small, we
-	    ;; want to signal an error saying that we can't really
-	    ;; convert it because the exponent is too small.
-	    ;; See CLHS 2.3.1.1.
-	    (let ((float-limit (ecase float-format
-			         ((short-float single-float)
-			          least-positive-single-float)
-			         (double-float
-			          least-positive-double-float)
-			         #+double-double
-			         (double-double-float
-			          ext:least-positive-double-double-float))))
-	      (if (>= (* 2 ratio) float-limit)
-	          (setf result float-limit)
-	          (error _"Underflow"))))
-          result)
-      (floating-point-underflow (c)
-        (describe c)
-        ;; Got an underflow.  Resignal it with the same
-        ;; operation/operands, but allowing a restart to set the value
-        ;; to 0.
-        (restart-case
-            (error 'floating-point-underflow
-                   :operation (arithmetic-error-operation c)
-                   :operands (arithmetic-error-operands c))
-          (return-zero  ()
-            :report (lambda (stream)
-                      (format stream _"Return ~A for ~A"
-                              (coerce 0 float-format)
-                              (read-buffer-to-string)))
-            (setf result (coerce 0 float-format)))))
-      (error ()
-        (%reader-error stream _"Number not representable as a ~S: ~S"
-		       float-format (read-buffer-to-string))))))
+  (handler-case
+      (let ((ratio (/ number divisor)))
+        (coerce ratio float-format))
+    (floating-point-underflow (c)
+      (describe c)
+      ;; Got an underflow.  Resignal it with the same
+      ;; operation/operands, but allowing a restart to set the value
+      ;; to 0.
+      (restart-case
+          (error 'floating-point-underflow
+                 :operation (arithmetic-error-operation c)
+                 :operands (arithmetic-error-operands c))
+        (return-zero  ()
+          :report (lambda (stream)
+                    (format stream _"Return ~A for ~A"
+                            (coerce 0 float-format)
+                            (read-buffer-to-string)))
+          (setf result (coerce 0 float-format)))))
+    (error ()
+      (%reader-error stream _"Number not representable as a ~S: ~S"
+		     float-format (read-buffer-to-string))))))
 
 
 (defun make-ratio (stream)
