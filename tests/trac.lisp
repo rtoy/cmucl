@@ -348,7 +348,7 @@
      (ext:with-float-traps-masked (:divide-by-zero) (log -0w0)))))
 
 (define-test trac.93
-  (:tag :trac)
+    (:tag :trac)
   ;; These small values should read to least-positive-foo-float
   ;; because that's the closest non-zero float.
   (assert-eql least-positive-short-float
@@ -359,13 +359,21 @@
 	      (values (read-from-string "4d-324")))
   (assert-eql (kernel:make-double-double-float least-positive-double-float 0d0)
 	      (values (read-from-string "4w-324")))
-  ;; These should signal reader errors because the numbers are not
-  ;; zero, but are too small to be represented by the corresponding
-  ;; float type.
-  (assert-error 'reader-error (read-from-string ".1s-45"))
-  (assert-error 'reader-error (read-from-string ".1e-45"))
-  (assert-error 'reader-error (read-from-string "1d-324"))
-  (assert-error 'reader-error (read-from-string "1w-324")))
+  ;; When FP underflow is enabled, these should signal underflow
+  ;; errors because the numbers are not zero, but are too small to be
+  ;; represented by the corresponding float type.
+  (kernel::with-float-traps-enabled (:underflow)
+    (assert-error 'floating-point-underflow (read-from-string ".1s-45"))
+    (assert-error 'floating-point-underflow (read-from-string ".1e-45"))
+    (assert-error 'floating-point-underflow (read-from-string "1d-324"))
+    (assert-error 'floating-point-underflow (read-from-string "1w-324")))
+  ;; The same tests above should return 0 when FP underflows are
+  ;; disabled.
+  (kernel::with-float-traps-masked (:underflow)
+    (assert-eql 0s0 (read-from-string ".1s-45"))
+    (assert-eql 0f0 (read-from-string ".1e-45"))
+    (assert-eql 0d0 (read-from-string "1d-324"))
+    (assert-eql 0w0 (read-from-string "1w-324"))))
 
 (defparameter *test-path*
   (merge-pathnames (make-pathname :name :unspecific :type :unspecific
