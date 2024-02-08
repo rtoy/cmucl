@@ -1135,8 +1135,9 @@
 			  (assert (= len (the fixnum (1+ digits))))
 			  (multiple-value-bind (f0)
 			      (floatit (ash bits -1))
-			    ;;#+nil
+			    #+nil
 			    (progn
+                              (format t "x = ~A~%" x)
 			      (format t "1: f0, f1 = ~A~%" f0)
 			      (format t "   scale = ~A~%" (1+ scale)))
 			    
