@@ -8728,10 +8728,6 @@ msgid "Internal error in floating point reader."
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Underflow"
-msgstr ""
-
-#: src/code/reader.lisp
 msgid "Return ~A for ~A"
 msgstr ""
 
