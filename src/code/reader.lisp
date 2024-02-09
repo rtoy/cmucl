@@ -1833,25 +1833,31 @@ the end of the stream."
   ;; super accurate with the limits.  The rest of the code will handle
   ;; it correctly, even if we're too small or too large.
   (unless (zerop number)
-    (let ((log2-num (+ (kernel::log2 (float (/ number divisor) 1d0))
-                       (* exponent #.(kernel::log2 10d0)))))
-      (multiple-value-bind (log2-low log2-high)
-          (ecase float-format
-            ((short-float single-float)
-             ;; Single-float exponents range is -149 to 127
-             (values (* 2 -149) (* 2 127)))
-            ((double-float long-float
-                           #+double-double kernel:double-double-float)
-             ;; Double-float exponent range is -1074 to -1023
-             (values (* 2 -1074) (* 2 1023))))
-        (when (< log2-num log2-low)
-          ;; If the number is too small, just return 0.
-          (return-from make-float-aux (coerce 0 float-format)))
+    (flet ((fast-log2 (n)
+             ;;  For an integer, the integer-length is close enough to
+             ;;  the log2 of the number.
+             (integer-length n)))
+      ;; log2(x) = exponent*log2(10) + log2(number)-log2(divisor)
+      (let ((log2-num (+ (* exponent #.(kernel::log2 10d0))
+                         (fast-log2 number)
+                         (- (fast-log2 divisor)))))
+        (multiple-value-bind (log2-low log2-high)
+            (ecase float-format
+              ((short-float single-float)
+               ;; Single-float exponents range is -149 to 127
+               (values (* 2 -149) (* 2 127)))
+              ((double-float long-float
+                             #+double-double kernel:double-double-float)
+               ;; Double-float exponent range is -1074 to -1023
+               (values (* 2 -1074) (* 2 1023))))
+          (when (< log2-num log2-low)
+            ;; If the number is too small, just return 0.
+            (return-from make-float-aux (coerce 0 float-format)))
       
-        (when (> log2-num log2-high)
-          ;; The numbe is definitely too large to fit.  Signal an error.
-          (%reader-error stream _"Number not representable as a ~S: ~S"
-			 float-format (read-buffer-to-string))))))
+          (when (> log2-num log2-high)
+            ;; The numbe is definitely too large to fit.  Signal an error.
+            (%reader-error stream _"Number not representable as a ~S: ~S"
+			   float-format (read-buffer-to-string)))))))
 
   ;; Otherwise the number might fit, so we carefully compute the result
   (handler-case
