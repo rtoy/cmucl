@@ -48,7 +48,8 @@
   (assert-equal 0 (kernel::random-state-rand *test-state*))
   (assert-equal nil (kernel::random-state-cached-p *test-state*))
 
-  (dolist (item '((#x18d5f05c086e0086 (#x228f4926843b364d #x74dfe78e715c81be))
+  (dolist (item #-x86
+                '((#x18d5f05c086e0086 (#x228f4926843b364d #x74dfe78e715c81be))
 		  (#x976f30b4f597b80b (#x5b6bd4558bd96a68 #x567b7f35650aea8f))
 		  (#xb1e7538af0e454f7 (#x13e5253e242fac52 #xed380e70d10ab60e))
 		  (#x011d33aef53a6260 (#x9d0764952ca00d8a #x5251a5cfedd2b4ef))
@@ -57,7 +58,18 @@
 		  (#x529e44a0bc46f0a8 (#x2becb68d5a7194c7 #x3a6ec964899bb5f3))
 		  (#x665b7ff1e40d4aba (#xededfd481d0a19fe #x3ea213411827fe9d))
 		  (#x2c9010893532189b (#xd7bb59bcd8fba26f #x52de763d34fee090))
-		  (#x2a99cffa0dfa82ff (#xf96e892c62d6ff2e #xc0542ff85652f81e))))
+		  (#x2a99cffa0dfa82ff (#xf96e892c62d6ff2e #xc0542ff85652f81e)))
+                #+x86
+                '((#x41db14eb317141fe (#x16dfbf3d760d0fa4 #xe9bfcf1ce2b9037c))
+                  (#xaa4ee6e025dfec01 (#xb237e99a3c7ad367 #x96819b1fec0e0432))
+                  (#xea080e50cb948fa5 (#xcc0fd8226093e0bc #x0e9aeaa496ce50ba))
+                  (#x647f057cff408a6e (#xd273573bfa97bfde #xcbb600d852a650de))
+                  (#x232ac586565d037e (#x75dc686d99e39c57 #x063de00338aafc75))
+                  (#xdf2da206813da6d6 (#x9616cabb961ebc4a #x292c044e7c310dd4))
+                  (#x00d17cb1b38c852f (#xca593a661127a754 #x45f633d7e759debd))
+                  (#xd7a1f881fc34e641 (#xe00fd868db5d20d3 #xcfcf3d31f5e1363e))
+                  (#x64853747af628d30 (#xa24296c5ebb11935 #xd782dda5f81cab25))
+                  (#xda40653710b7293d (#xfb4be9d4941ff086 #x75b6420eb8096c02))))
     (destructuring-bind (value state)
 	item
       (assert-equal value (64-bit-value *test-state*))

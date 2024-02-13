@@ -534,4 +534,4 @@
 	      x0)))
       (setf (aref state 0) (convert s0-1 s0-0))
       (setf (aref state 1) (convert s1-1 s1-0)))
-      rng-state))
+    rng-state))
