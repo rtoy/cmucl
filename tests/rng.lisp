@@ -81,10 +81,16 @@
 	(kernel::make-random-object :state (kernel::init-random-state #x12345678)
 				    :rand 0
 				    :cached-p nil))
-  (dolist (result '((#x291ddf8e6f6a7b67 #x1f9018a12f9e031f)
-		    (#x88a7aa12158558d0 #xe264d785ab1472d9)
-		    (#x207e16f73c51e7ba #x999c8a0a9a8d87c0)
-		    (#x28f8959d3bcf5ff1 #x38091e563ab6eb98)))
+  (dolist (result
+           #-x86 '((#x291ddf8e6f6a7b67 #x1f9018a12f9e031f)
+		   (#x88a7aa12158558d0 #xe264d785ab1472d9)
+		   (#x207e16f73c51e7ba #x999c8a0a9a8d87c0)
+		   (#x28f8959d3bcf5ff1 #x38091e563ab6eb98))
+           #+x86 '((#x19a22191480b0a4e #x43b3d7ee592dd4cf)
+                   (#x76cb87035d0b6e99 #xb6827bcf2ef8267c)
+                   (#x5125201dbdf76860 #x8984c075043869e2)
+                   (#x2c06f0667255309f #xa48cbe2e60fc1d65)
+                   ))
     (kernel:random-state-jump *test-state*)
     (assert-equal result (multiple-value-list
 			  (64-bit-rng-state *test-state*)))))

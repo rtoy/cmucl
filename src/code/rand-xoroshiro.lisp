@@ -496,6 +496,7 @@
 
 ;; Jump function for the generator.  See the jump function in
 ;; http://xoroshiro.di.unimi.it/xoroshiro128plus.c
+#-x86
 (defun random-state-jump (&optional (rng-state *random-state*))
   _N"Jump the RNG-STATE.  This is equivalent to 2^64 calls to the
   xoroshiro128+ generator.  It can be used to generate 2^64
@@ -514,6 +515,47 @@
     (dolist (jump '(#xeba5facb #xbeac0467 #x86aa9922 #xd86b048b))
       (declare (type (unsigned-byte 32) jump))
       (dotimes (b 32)
+	(declare (fixnum b))
+	(when (logbitp b jump)
+	  (multiple-value-bind (x1 x0)
+	      (kernel:double-float-bits (aref state 0))
+	    (setf s0-1 (logxor s0-1 (ldb (byte 32 0) x1))
+		  s0-0 (logxor s0-0 x0)))
+	  
+	  (multiple-value-bind (x1 x0)
+	      (kernel:double-float-bits (aref state 1))
+	    (setf s1-1 (logxor s1-1 (ldb (byte 32 0) x1))
+		  s1-0 (logxor s1-0 x0))))
+	(xoroshiro-gen state)))
+
+    (flet ((convert (x1 x0)
+	     (declare (type (unsigned-byte 32) x1 x0))
+	     (kernel:make-double-float
+	      (if (< x1 #x80000000) x1 (- x1 #x100000000))
+	      x0)))
+      (setf (aref state 0) (convert s0-1 s0-0))
+      (setf (aref state 1) (convert s1-1 s1-0)))
+    rng-state))
+
+#+x86
+(defun random-state-jump (&optional (rng-state *random-state*))
+  _N"Jump the RNG-STATE.  This is equivalent to 2^64 calls to the
+  xoroshiro128** generator.  It can be used to generate 2^64
+  non-overlapping subsequences for parallel computations."
+  (declare (type random-state rng-state))
+  (let ((state (random-state-state rng-state))
+	(s0-0 0)
+	(s0-1 0)
+	(s1-0 0)
+	(s1-1 0))
+    (declare (type (unsigned-byte 32) s0-0 s0-1 s1-0 s1-1)
+	     (optimize (speed 3) (safety 0)))
+    ;; The constants are #xdf900294d8f554a5 and #x170865df4b3201fc,
+    ;; and we process these numbers starting from the LSB.  We want ot
+    ;; process these in 32-bit chunks, so word-reverse the constants.
+    (dolist (jump '(#xdf900294d8f554a5 #x170865df4b3201fc))
+      (declare (type (unsigned-byte 64) jump))
+      (dotimes (b 64)
 	(declare (fixnum b))
 	(when (logbitp b jump)
 	  (multiple-value-bind (x1 x0)
