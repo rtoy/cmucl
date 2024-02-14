@@ -1163,7 +1163,7 @@ collected result will be returned as the value of the LOOP."
 		;; a common lisp type specifier or pattern (matching the variable) thereof.
 		(loop-pop-source)
 		(loop-pop-source))
-
+		      
 	       ((symbolp z)
 		;;This is the (sort of) "old" syntax, even though we didn't used to support all of
 		;; these type symbols.
