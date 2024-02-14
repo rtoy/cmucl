@@ -5397,6 +5397,7 @@ size_weak_pointer(lispobj * where)
 }
 
 
+#if 0
 static void
 update_static_vector_list(lispobj value, lispobj* vectors_to_free, int* num_static_vectors)
 {
@@ -5424,19 +5425,20 @@ update_static_vector_list(lispobj value, lispobj* vectors_to_free, int* num_stat
         ++*num_static_vectors;
     }
 }
+#endif
 
 void
 scan_weak_pointers(void)
 {
     struct weak_pointer *wp;
-    lispobj* vectors_to_free = NULL;
+    struct weak_pointer **clearable_list;
     int num_weak_pointers = 0;
     int num_static_vectors = 0;
     int n;
     
     /*
      * Count the number of weak pointers so we can allocate enough
-     * space for vectors_to_free.
+     * space for clearable_list.
      */
     
     for (wp = weak_pointers; wp; wp = wp->next) {
@@ -5454,10 +5456,10 @@ scan_weak_pointers(void)
      * Allocate enough space to hold all weak pointers in case they
      * all point to static vectors.
      */
-    vectors_to_free = (lispobj*) malloc(num_weak_pointers * sizeof(lispobj));
-    gc_assert(vectors_to_free);
+    clearable_list = (struct weak_pointer **) malloc(num_weak_pointers * sizeof(struct weak_pointer *));
+    gc_assert(clearable_list);
 
-    printf("vectors_to_free = %p\n", vectors_to_free);
+    printf("clearable_list = %p\n", clearable_list);
 
     /*
      * Now process the weak pointers.
@@ -5485,16 +5487,11 @@ scan_weak_pointers(void)
                     /*
                      * A header value of 1 means we have a static
                      * vector with the in-use bit cleared, so we can
-                     * collect the vector.
+                     * add this weak pointer to the clearable list.
                      */
                     if (HeaderValue(*header) == 1) {
-                        update_static_vector_list(value, vectors_to_free, &num_static_vectors);
-                        
-                        /*
-                         * Now we can break the weak pointer to the static vector.
-                         */
-                        wp->value = NIL;
-                        wp->broken = T;
+                        clearable_list[num_static_vectors] = wp;
+                        ++num_static_vectors;
                     }
                 }
             }
@@ -5502,17 +5499,49 @@ scan_weak_pointers(void)
     }
 
     /*
-     * Free up any unreferenced static vectors now
+     * Traverse the clearable list.  If the weak pointer points to an
+     * unmarked static vector, mark it.  If it points to a marked
+     * static vector, then we know it shares a referent with another
+     * weak pointer.  Break this weak pointer and remove it from the
+     * clearable list by setting it to NIL.
      */
-    printf("%d static vectors to be freed\n", num_static_vectors);
-    
     for (n = 0; n < num_static_vectors; ++n) {
-        lispobj *header = (lispobj *) PTR(vectors_to_free[n]);
-        printf("free %p: %p\n", (void*) vectors_to_free[n], header);
-        free(header);
+        struct weak_pointer *wp = clearable_list[n];
+        lispobj *header = (lispobj *) PTR(wp->value);
+
+        if (HeaderValue(*header) == 1) {
+            /*
+             * If the header value is 1, we have an unmarked static
+             * vector.  Mark it now.
+             */
+            *header |= 0x80000000;
+        } else {
+            /*
+             * We have a marked static vector.  Break this weak
+             * pointer and remove it from the list by setting it to
+             * NIL.
+             */
+            wp->value = NIL;
+            wp->broken = T;
+            clearable_list[n] = NULL;
+        }
     }
 
-    free(vectors_to_free);
+    /*
+     * Traverse the clearable list and free the static vector,
+     * skipping over any NIL values.
+     */
+
+    for (n = 0; n < num_static_vectors; ++n) {
+        struct weak_pointer *wp = clearable_list[n];
+        if (wp != NULL) {
+            lispobj *header = (lispobj *) PTR(wp->value);
+            printf("free wp %p: %p\n", (void*) wp, header);
+            free(header);
+        }
+    }
+
+    free(clearable_list);
 }
 
 
