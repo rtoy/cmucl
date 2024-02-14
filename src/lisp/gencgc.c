@@ -2707,9 +2707,6 @@ scav_static_vector(lispobj object)
     if (debug_static_array_p) {
         fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n",
                 (void*)object, ptr);
-    }
-
-    if (debug_static_array_p) {
         fprintf(stderr, "  Header value = 0x%lx\n", (unsigned long) header);
     }
 
