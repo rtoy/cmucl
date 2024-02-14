@@ -2698,6 +2698,43 @@ maybe_static_array_p(lispobj header)
     return result;
 }
 
+static int
+scav_static_vector(lispobj object)
+{
+    lispobj *ptr = (lispobj *) PTR(object);
+    lispobj header = *ptr;
+
+    if (debug_static_array_p) {
+        fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n",
+                (void*)object, ptr);
+        fprintf(stderr, "  Header value = 0x%lx\n", (unsigned long) header);
+    }
+
+    if (maybe_static_array_p(header)) {
+        int static_p;
+
+        if (debug_static_array_p) {
+            fprintf(stderr, "Possible static vector at %p.  header = 0x%lx\n",
+                    ptr, (unsigned long) header);
+        }
+
+        static_p = (HeaderValue(header) & 1) == 1;
+        if (static_p) {
+            /*
+             * We have a static vector.  Mark it as
+             * reachable by setting the MSB of the header.
+             */
+            *ptr = header | 0x80000000;
+            if (debug_static_array_p) {
+                fprintf(stderr, "Scavenged static vector @%p, header = 0x%lx\n",
+                        ptr, (unsigned long) header);
+            }
+        }
+    }
+
+    return 1;
+}
+
 
 
 /* Scavenging */
@@ -2756,41 +2793,7 @@ scavenge(void *start_obj, long nwords)
                        || other_space_p(object)) {
                 words_scavenged = 1;
             } else {
-                lispobj *ptr = (lispobj *) PTR(object);
-                words_scavenged = 1;
-                if (debug_static_array_p) {
-                    fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n",
-                            (void*)object, ptr);    
-                }
-                
-                if (1) {
-                    lispobj header = *ptr;
-                    if (debug_static_array_p) {
-                        fprintf(stderr, "  Header value = 0x%lx\n", (unsigned long) header);
-                    }
-                    
-                    if (maybe_static_array_p(header)) {
-                        int static_p;
-
-                        if (debug_static_array_p) {
-                            fprintf(stderr, "Possible static vector at %p.  header = 0x%lx\n",
-                                    ptr, (unsigned long) header);
-                        }
-                      
-                        static_p = (HeaderValue(header) & 1) == 1;
-                        if (static_p) {
-                            /*
-                             * We have a static vector.  Mark it as
-                             * reachable by setting the MSB of the header.
-                             */
-                            *ptr = header | 0x80000000;
-                            if (debug_static_array_p) {
-                                fprintf(stderr, "Scavenged static vector @%p, header = 0x%lx\n",
-                                        ptr, (unsigned long) header);
-                            }
-                        }
-                    }
-                }
+                words_scavenged = scav_static_vector(object);
             }
 	} else if ((object & 3) == 0)
 	    words_scavenged = 1;
