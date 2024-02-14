@@ -1720,10 +1720,10 @@
 
     ;; s0 = state[0]
     (inst movsd s0 (make-ea :dword :base state
-                                   :disp (- (+ (* vm:vector-data-offset
-					          vm:word-bytes)
-				               (* 8 0))
-				            vm:other-pointer-type)))
+                            :disp (- (+ (* vm:vector-data-offset
+					   vm:word-bytes)
+				        (* 8 0))
+				     vm:other-pointer-type)))
     ;; t0 = s0 * 5 = s0 << 2 + s0
     (inst movapd t0 s0)                 ; t0 = s0
     (inst psllq t0 2)                   ; t0 = t0 << 2 = 4*t0
@@ -1750,10 +1750,10 @@
 
     ;; s1 = state[1]
     (inst movsd s1 (make-ea :dword :base state
-			           :disp (- (+ (* vm:vector-data-offset
-					          vm:word-bytes)
-				               (* 8 1))
-				            vm:other-pointer-type)))
+			    :disp (- (+ (* vm:vector-data-offset
+					   vm:word-bytes)
+				        (* 8 1))
+				     vm:other-pointer-type)))
     (inst xorpd s1 s0)                  ; s1 = s1 ^ s0
 
     ;; s0 can now be reused as a temp.
@@ -1773,10 +1773,10 @@
 
     ;; Save s0 to state[0]
     (inst movsd (make-ea :dword :base state
-			        :disp (- (+ (* vm:vector-data-offset
-					       vm:word-bytes)
-				            (* 8 0))
-				         vm:other-pointer-type))
+			 :disp (- (+ (* vm:vector-data-offset
+					vm:word-bytes)
+				     (* 8 0))
+				  vm:other-pointer-type))
           s0)
 
     ;; s1 = rotl(s1, 37)
@@ -1787,9 +1787,9 @@
 
     ;; Save s1 to state[1]
     (inst movsd (make-ea :dword :base state
-			        :disp (- (+ (* vm:vector-data-offset
-					       vm:word-bytes)
-				            (* 8 1))
-				         vm:other-pointer-type))
+			 :disp (- (+ (* vm:vector-data-offset
+					vm:word-bytes)
+				     (* 8 1))
+				  vm:other-pointer-type))
           s1)))
 )
