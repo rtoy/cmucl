@@ -23,6 +23,9 @@ public domain.
     * Add support for Gray streams implementation of file-length via
       `ext:stream-file-length` generic function.
   * Changes:
+    * The RNG has changed from an old version of xoroshiro128+ to
+      xoroshiro128**.  This means sequences of random numbers will be
+      different from before.  See ~~#276~~.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
@@ -40,6 +43,7 @@ public domain.
     * ~~#258~~ Remove `get-page-size` from linux-os.lisp
     * ~~#269~~ Add function to get user's home directory
     * ~~#266~~ Support "~user" in namestrings
+    * ~~#276~~ Implement xoroshiro128** generator for x86
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
