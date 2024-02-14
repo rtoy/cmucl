@@ -2698,7 +2698,7 @@ maybe_static_array_p(lispobj header)
     return result;
 }
 
-int
+static int
 scav_static_vector(lispobj object)
 {
     lispobj *ptr = (lispobj *) PTR(object);
