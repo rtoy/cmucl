@@ -5431,8 +5431,17 @@ void
 scan_weak_pointers(void)
 {
     struct weak_pointer *wp;
+
+    /*
+     * Array of weak pointers to unmarked static vectors that can be
+     * freed.
+     */
     struct weak_pointer **clearable_list;
+
+    /* Total number of weak pointers */
     int num_weak_pointers = 0;
+
+    /* Number of static vectors that we can free */
     int num_static_vectors = 0;
     int n;
     
@@ -5514,6 +5523,9 @@ scan_weak_pointers(void)
     }
 
     /*
+     * At this point, clearable_list contains all the weak pointers to
+     * unmarked (unused) static vecotors.
+     *
      * Traverse the clearable list.  If the weak pointer points to an
      * unmarked static vector, mark it.  If it points to a marked
      * static vector, then we know it shares a referent with another
@@ -5559,8 +5571,12 @@ scan_weak_pointers(void)
     }
 
     /*
-     * Traverse the clearable list and free the static vector,
-     * skipping over any NIL values.
+     * At this point, the clearable list is either NIL or a weak
+     * pointer that references a unique dead static vector.
+     *
+     * Traverse the clearable list skipping over any NIL entries.  For
+     * all other entries, free the static vector and break the weak
+     * pointer.
      */
 
     if (debug_static_array_p) {
