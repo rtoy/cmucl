@@ -5403,7 +5403,9 @@ scan_static_vectors(void)
     struct weak_pointer *wp;
     struct weak_pointer *clearable_list = NULL;
 
-    printf("Phase 1: build clearable list\n");
+    if (debug_static_array_p) {
+        printf("Phase 1: build clearable list\n");
+    }
 
     /*
      * Find weak pointers to unmarked static arrays, using a linked
@@ -5424,18 +5426,26 @@ scan_static_vectors(void)
 
             if (maybe_static_array_p(*header)
                 && (HeaderValue(*header) == 1)) {
-                printf("Adding %p header = 0x%08lx, next = %p\n",
-                       wp, *header, wp->next);
+
+                if (debug_static_array_p) {
+                    printf("Adding %p header = 0x%08lx, next = %p\n",
+                           wp, *header, wp->next);
+                }
+
                 wp->next = clearable_list;
                 clearable_list = wp;
             } else {
-                printf("Skipping %p header = 0x%08lx\n", wp, *header);
+                if (debug_static_array_p) {
+                    printf("Skipping %p header = 0x%08lx\n", wp, *header);
+                }
             }
         }
         wp = next;
     }
 
-    printf("Phase 2\n");
+    if (debug_static_array_p) {
+        printf("Phase 2\n");
+    }
     
     /*
      * clearable_list now points to all weak pointers to unmarked
@@ -5448,19 +5458,30 @@ scan_static_vectors(void)
     for (wp = clearable_list; wp; wp = wp->next) {
         lispobj *header = (lispobj *) PTR(wp->value);
 
-        printf("wp %p value 0x%08lx header 0x%08lx\n",
-               wp, wp->value, *header);
+        if (debug_static_array_p) {
+            printf("wp %p value 0x%08lx header 0x%08lx\n",
+                   wp, wp->value, *header);
+        }
+
         if (HeaderValue(*header) == 1) {
-            printf("  Mark vector\n");
+            if (debug_static_array_p) {
+                printf("  Mark vector\n");
+            }
+
             *header |= 0x80000000;
         } else {
-            printf("  Break weak pointer %p\n", wp);
+            if (debug_static_array_p) {
+                printf("  Break weak pointer %p\n", wp);
+            }
+
             wp->value = NIL;
             wp->broken = T;
         }
     }
 
-    printf("Phase 3: Free static vectors\n");
+    if (debug_static_array_p) {
+        printf("Phase 3: Free static vectors\n");
+    }
 
     /*
      * Free up space.  Go through clearable_list and for each weak
@@ -5470,7 +5491,9 @@ scan_static_vectors(void)
     for (wp = clearable_list; wp; wp = wp->next) {
         if (wp->broken == NIL) {
             lispobj *static_array = (lispobj *) PTR(wp->value);
-            printf("free wp %p: %p\n", wp, static_array);
+            if (debug_static_array_p) {
+                printf("free wp %p: %p\n", wp, static_array);
+            }
 
             wp->value = NIL;
             wp->broken = T;
@@ -5489,14 +5512,9 @@ scan_weak_pointers(void)
      * Now process the weak pointers.
      */
 
-    printf("scan_weak_pointers...\n");
-    
     for (wp = weak_pointers; wp; wp = wp->next) {
 	lispobj value = wp->value;
 	lispobj *first_pointer = (lispobj *) PTR(value);
-
-        printf("scan_weak: wp = %p value %p header 0x%08lx\n",
-               wp, (lispobj*) value, *first_pointer);
 
 	wp->mark_bit = NIL;
 	if (Pointerp(value)) {
@@ -5510,7 +5528,6 @@ scan_weak_pointers(void)
             }
         }
     }
-    printf("scan_weak_pointers done\n");
 
     scan_static_vectors();
 }
