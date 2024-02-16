@@ -5409,6 +5409,9 @@ scan_static_vectors(void)
      * Find weak pointers to unmarked static arrays, using a linked
      * list.  We reuse the next slot ofthe weak pointer to chain these
      * weak pointers together.
+     *
+     * Invariant: clearable_list only has weak pointers to unmarked
+     * static vectors.
      */
     wp = weak_pointers;
     while (wp) {
@@ -5438,6 +5441,9 @@ scan_static_vectors(void)
      * clearable_list now points to all weak pointers to unmarked
      * static vectors.  Go through the list.  If it's not marked, mark
      * it.  If it's marked, break the weak pointer.
+     *
+     * Invariant: clearable_list contains only weak pointers that have
+     * been broken or that point to a unique dead static vector.
      */
     for (wp = clearable_list; wp; wp = wp->next) {
         lispobj *header = (lispobj *) PTR(wp->value);
@@ -5458,8 +5464,8 @@ scan_static_vectors(void)
 
     /*
      * Free up space.  Go through clearable_list and for each weak
-     * pointer that has not been broken, we can free the space.  And
-     * break the weak pointer too.
+     * pointer that has not been broken, we can free the space.  Then
+     * break the weak pointer too, since the space has been freed.
      */
     for (wp = clearable_list; wp; wp = wp->next) {
         if (wp->broken == NIL) {
