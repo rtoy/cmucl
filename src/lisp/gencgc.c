@@ -5401,19 +5401,20 @@ static void
 scan_static_vectors(void)
 {
     struct weak_pointer *wp;
-    struct weak_pointer *clearable_list = NULL;
+    struct weak_pointer *static_vector_list = NULL;
+    const int scan_mark_flag = 0x8000;
 
     if (debug_static_array_p) {
-        printf("Phase 1: build clearable list\n");
+        printf("Phase 1: find static vectors\n");
     }
 
     /*
-     * Find weak pointers to unmarked static arrays, using a linked
-     * list.  We reuse the next slot ofthe weak pointer to chain these
-     * weak pointers together.
+     * Find weak pointers to static arrays, using a linked list.  We
+     * reuse the next slot of the weak pointer to chain these weak
+     * pointers together.
      *
-     * Invariant: clearable_list only has weak pointers to unmarked
-     * static vectors.
+     * Invariant: static_vector_list only has weak pointers to static
+     * vectors.
      */
     wp = weak_pointers;
     while (wp) {
@@ -5424,16 +5425,15 @@ scan_static_vectors(void)
             /* The value may be a static vector */
             lispobj *header = (lispobj *) PTR(value);
 
-            if (maybe_static_array_p(*header)
-                && (HeaderValue(*header) == 1)) {
+            if (maybe_static_array_p(*header)) {
 
                 if (debug_static_array_p) {
                     printf("Adding %p header = 0x%08lx, next = %p\n",
                            wp, *header, wp->next);
                 }
 
-                wp->next = clearable_list;
-                clearable_list = wp;
+                wp->next = static_vector_list;
+                static_vector_list = wp;
             } else {
                 if (debug_static_array_p) {
                     printf("Skipping %p header = 0x%08lx\n", wp, *header);
@@ -5448,14 +5448,13 @@ scan_static_vectors(void)
     }
     
     /*
-     * clearable_list now points to all weak pointers to unmarked
-     * static vectors.  Go through the list.  If it's not marked, mark
-     * it.  If it's marked, break the weak pointer.
+     * static_vector_list now points to all weak pointers to static
+     * vectors.  For unmarked (unused) static vectors, set another bit
+     * in the header to say we've visited it.  If we've already
+     * visited the static vector, break the weak pointer.
      *
-     * Invariant: clearable_list contains only weak pointers that have
-     * been broken or that point to a unique dead static vector.
      */
-    for (wp = clearable_list; wp; wp = wp->next) {
+    for (wp = static_vector_list; wp; wp = wp->next) {
         lispobj *header = (lispobj *) PTR(wp->value);
 
         if (debug_static_array_p) {
@@ -5463,42 +5462,60 @@ scan_static_vectors(void)
                    wp, wp->value, *header);
         }
 
-        if (HeaderValue(*header) == 1) {
-            if (debug_static_array_p) {
-                printf("  Mark vector\n");
-            }
+        /*
+         * If the static vector is unused (mark bit clear) and if we
+         * haven't seen this vector before, set the scan flag.
+         */
+        if ((*header & 0x80000000) == 0) {
+            /* Unused static vector */
+            if ((*header & scan_mark_flag) == 0) {
+                if (debug_static_array_p) {
+                    printf("  Mark vector\n");
+                }
 
-            *header |= 0x80000000;
-        } else {
-            if (debug_static_array_p) {
-                printf("  Break weak pointer %p\n", wp);
-            }
+                *header |= scan_mark_flag;
+            } else {
+                if (debug_static_array_p) {
+                    printf("  Break weak pointer %p\n", wp);
+                }
 
-            wp->value = NIL;
-            wp->broken = T;
+                wp->value = NIL;
+                wp->broken = T;
+            }
         }
     }
+    
 
     if (debug_static_array_p) {
         printf("Phase 3: Free static vectors\n");
     }
 
     /*
-     * Free up space.  Go through clearable_list and for each weak
-     * pointer that has not been broken, we can free the space.  Then
-     * break the weak pointer too, since the space has been freed.
+     * Free up space.  Go through static_vector_list and for each weak
+     * pointer that hasn't been broken and is an unused static array,
+     * free the static vector.  Also break the weak pointer too, since
+     * the space has been freed.
      */
-    for (wp = clearable_list; wp; wp = wp->next) {
+    for (wp = static_vector_list; wp; wp = wp->next) {
+        lispobj *header = (lispobj *) PTR(wp->value);
+
+        printf("wp = %p, header = 0x%08lx\n", wp, *header);
+
+        /*
+         * Only free the arrays where the mark bit is clear.
+         */
         if (wp->broken == NIL) {
-            lispobj *static_array = (lispobj *) PTR(wp->value);
-            if (debug_static_array_p) {
-                printf("free wp %p: %p\n", wp, static_array);
+            if ((*header & 0x80000000) == 0)  {
+                lispobj *static_array = (lispobj *) PTR(wp->value);
+                if (debug_static_array_p) {
+                    printf("free wp %p: %p\n", wp, static_array);
+                }
+
+                wp->value = NIL;
+                wp->broken = T;
+
+                free(static_array);
             }
-
-            wp->value = NIL;
-            wp->broken = T;
-
-            free(static_array);
         }
     }
 }
