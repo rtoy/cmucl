@@ -5447,15 +5447,16 @@ scan_static_vectors(void)
             if (maybe_static_array_p(*header)) {
 
                 if (debug_static_array_p) {
-                    printf("  Add:  %p header = 0x%08lx, next = %p\n",
-                           wp, *header, wp->next);
+                    printf("  Add:  wp %p value %p header 0x%08lx, next = %p\n",
+                           wp, (lispobj *) wp->value, *header, wp->next);
                 }
 
                 wp->next = static_vector_list;
                 static_vector_list = wp;
             } else {
                 if (debug_static_array_p) {
-                    printf("  Skip: %p header = 0x%08lx\n", wp, *header);
+                    printf("  Skip: wp %p value %p header 0x%08lx\n",
+                           wp, (lispobj *) wp->value, *header);
                 }
             }
         }
@@ -5463,7 +5464,7 @@ scan_static_vectors(void)
     }
 
     if (debug_static_array_p) {
-        printf("Phase 2: Mark visited static vectors\n");
+        printf("Phase 2: Visit unused static vectors\n");
     }
     
     /*
@@ -5477,8 +5478,8 @@ scan_static_vectors(void)
         lispobj *header = (lispobj *) PTR(wp->value);
 
         if (debug_static_array_p) {
-            printf("  wp %p value 0x%08lx header 0x%08lx\n",
-                   wp, wp->value, *header);
+            printf("  wp %p value %p header 0x%08lx\n",
+                   wp, (lispobj *) wp->value, *header);
         }
 
         /*
@@ -5520,8 +5521,8 @@ scan_static_vectors(void)
         lispobj *header = (lispobj *) PTR(wp->value);
 
         if (debug_static_array_p) {
-            printf("  wp %p value 0x%08lx header 0x%08lx\n",
-                   wp, wp->value, *header);
+            printf("  wp %p value %p header 0x%08lx\n",
+                   wp, (lispobj*) wp->value, *header);
         }
 
         /*
@@ -5550,8 +5551,8 @@ scan_static_vectors(void)
         lispobj *header = (lispobj *) PTR(wp->value);
 
         if (debug_static_array_p) {
-            printf("  wp %p value %p header 0x%08lx\n",
-                   wp, (lispobj*) wp->value, *header);
+            printf("  wp %p value %p broken %d header 0x%08lx\n",
+                   wp, (lispobj*) wp->value, wp->broken == T, *header);
         }
 
         if ((*header & STATIC_VECTOR_MARK_BIT) != 0) {
