@@ -374,40 +374,20 @@
 				    sys:system-area-pointer))
       (sys:int-sap addr)))))
 
-(defun clear-static-vector-mark ()
-  ;; Run down the list of weak pointers to static vectors.  For each
-  ;; vector, clear the mark.
-  (dolist  (wp *static-vectors*)
-    (let ((vector (weak-pointer-value wp)))
-      ;; The value should never be NIL here?
-      (when vector
-	(let* ((sap (sys:vector-sap vector))
-	       (header (sys:sap-ref-32 sap (* -2 vm:word-bytes))))
-	  (when *debug-static-array-p*
-	    (format t (intl:gettext "static vector ~A.  header = ~X~%")
-		    vector header))
-          (setf (sys:sap-ref-32 sap (* -2 vm:word-bytes))
-                (logand header #x7fffffff)))))))
-
 (defun finalize-static-vectors ()
-  ;; Run down the list of weak-pointers to static vectors.  Look at
-  ;; the static vector and see if vector is marked.  If so, clear the
-  ;; mark, and do nothing.  If the mark is not set, then the vector is
-  ;; free, so free it, and remove this weak-pointer from the list.
-  ;; The mark bit the MSB of the header word.  Look at scavenge in
-  ;; gencgc.c.
+  ;; Run down the list of weak-pointers to static vectors and remove
+  ;; any weak pointers that have been broken.
   (when *static-vectors*
     (when *debug-static-array-p*
       (let ((*print-array* nil))
 	(format t (intl:gettext "Finalizing static vectors ~S~%") *static-vectors*)))
-    ;; Remove any weak pointers that whose value is NIL.  The
+    ;; Remove any weak pointers that have been broken.  The
     ;; corresponding static array has been freed by GC.
     (setf *static-vectors*
-	  (delete-if-not #'weak-pointer-value *static-vectors*))))
+	  (delete-if-not #'(lambda (wp)
+                             (nth-value 1 (weak-pointer-value wp)))
+                         *static-vectors*))))
 
-;; Clear the mark bit of all of static vectors before GC
-#+nil
-(pushnew 'clear-static-vector-mark *before-gc-hooks*)
 ;; Clean up any unreferenced static vectors after GC has run.
 (pushnew 'finalize-static-vectors *after-gc-hooks*)
 

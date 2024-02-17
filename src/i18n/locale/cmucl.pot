@@ -2380,10 +2380,6 @@ msgid "~&Freeing foreign vector at #x~X~%"
 msgstr ""
 
 #: src/code/array.lisp
-msgid "static vector ~A.  header = ~X~%"
-msgstr ""
-
-#: src/code/array.lisp
 msgid "Finalizing static vectors ~S~%"
 msgstr ""
 

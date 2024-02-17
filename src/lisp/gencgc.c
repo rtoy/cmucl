@@ -5532,7 +5532,7 @@ scan_static_vectors(void)
             if ((*header & STATIC_VECTOR_MARK_BIT) == 0)  {
                 lispobj *static_array = (lispobj *) PTR(wp->value);
                 if (debug_static_array_p) {
-                    printf("    Free wp\n");
+                    printf("    Free static vector\n");
                 }
 
                 wp->value = NIL;
