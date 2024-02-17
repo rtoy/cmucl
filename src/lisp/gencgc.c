@@ -260,7 +260,7 @@ unsigned counters_verbose = 0;
  * If true, then some debugging information is printed when scavenging
  * static (malloc'ed) arrays.
  */
-boolean debug_static_array_p = 1;
+boolean debug_static_array_p = 0;
 
 /*
  * To enable the use of page protection to help avoid the scavenging
