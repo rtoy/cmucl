@@ -32,6 +32,25 @@
  */
 #define EQ_BASED_HASH_VALUE     0x80000000
 
+/*
+ * If the header value for a vector has this bit set, then it is a
+ * static vector.
+ */
+#define STATIC_VECTOR_HEADER_BIT        0x1
+
+/*
+ * Mark bit for static vectors.  If set in the header, the static
+ * vector is in use.
+ */
+#define STATIC_VECTOR_MARK_BIT		0x80000000
+
+/*
+ * Visited bit for static vectors.  When scanning weak pointers for
+ * static vectors, this bit indicates that we've visited this static
+ * vector already.
+ */
+#define STATIC_VECTOR_VISITED_BIT	0x08000000
+
 #define gc_abort() lose("GC invariant lost!  File \"%s\", line %d\n", \
 			__FILE__, __LINE__)
 
@@ -241,7 +260,7 @@ unsigned counters_verbose = 0;
  * If true, then some debugging information is printed when scavenging
  * static (malloc'ed) arrays.
  */
-boolean debug_static_array_p = 0;
+boolean debug_static_array_p = 1;
 
 /*
  * To enable the use of page protection to help avoid the scavenging
@@ -2718,13 +2737,14 @@ scav_static_vector(lispobj object)
                     ptr, (unsigned long) header);
         }
 
-        static_p = (HeaderValue(header) & 1) == 1;
+        static_p = (HeaderValue(header) & STATIC_VECTOR_HEADER_BIT) == 1;
         if (static_p) {
             /*
-             * We have a static vector.  Mark it as
-             * reachable by setting the MSB of the header.
+             * We have a static vector.  Mark it as reachable by
+             * setting the MSB of the header.  And clear out any
+             * possible visited bit.
              */
-            *ptr = header | 0x80000000;
+            *ptr = (header | STATIC_VECTOR_MARK_BIT) & ~STATIC_VECTOR_VISITED_BIT;
             if (debug_static_array_p) {
                 fprintf(stderr, "Scavenged static vector @%p, header = 0x%lx\n",
                         ptr, (unsigned long) header);
@@ -5402,10 +5422,9 @@ scan_static_vectors(void)
 {
     struct weak_pointer *wp;
     struct weak_pointer *static_vector_list = NULL;
-    const int scan_mark_flag = 0x8000;
 
     if (debug_static_array_p) {
-        printf("Phase 1: find static vectors\n");
+        printf("Phase 1: Find static vectors\n");
     }
 
     /*
@@ -5428,7 +5447,7 @@ scan_static_vectors(void)
             if (maybe_static_array_p(*header)) {
 
                 if (debug_static_array_p) {
-                    printf("Adding %p header = 0x%08lx, next = %p\n",
+                    printf("  Add:  %p header = 0x%08lx, next = %p\n",
                            wp, *header, wp->next);
                 }
 
@@ -5436,7 +5455,7 @@ scan_static_vectors(void)
                 static_vector_list = wp;
             } else {
                 if (debug_static_array_p) {
-                    printf("Skipping %p header = 0x%08lx\n", wp, *header);
+                    printf("  Skip: %p header = 0x%08lx\n", wp, *header);
                 }
             }
         }
@@ -5444,7 +5463,7 @@ scan_static_vectors(void)
     }
 
     if (debug_static_array_p) {
-        printf("Phase 2\n");
+        printf("Phase 2: Mark visited static vectors\n");
     }
     
     /*
@@ -5458,25 +5477,26 @@ scan_static_vectors(void)
         lispobj *header = (lispobj *) PTR(wp->value);
 
         if (debug_static_array_p) {
-            printf("wp %p value 0x%08lx header 0x%08lx\n",
+            printf("  wp %p value 0x%08lx header 0x%08lx\n",
                    wp, wp->value, *header);
         }
 
         /*
          * If the static vector is unused (mark bit clear) and if we
-         * haven't seen this vector before, set the scan flag.
+         * haven't seen this vector before, set the visited flag.  If
+         * we have visited this vector before, break the weak pointer.
          */
-        if ((*header & 0x80000000) == 0) {
+        if ((*header & STATIC_VECTOR_MARK_BIT) == 0) {
             /* Unused static vector */
-            if ((*header & scan_mark_flag) == 0) {
+            if ((*header & STATIC_VECTOR_VISITED_BIT) == 0) {
                 if (debug_static_array_p) {
-                    printf("  Mark vector\n");
+                    printf("    Mark vector\n");
                 }
 
-                *header |= scan_mark_flag;
+                *header |= STATIC_VECTOR_VISITED_BIT;
             } else {
                 if (debug_static_array_p) {
-                    printf("  Break weak pointer %p\n", wp);
+                    printf("    Break weak pointer %p\n", wp);
                 }
 
                 wp->value = NIL;
@@ -5499,16 +5519,19 @@ scan_static_vectors(void)
     for (wp = static_vector_list; wp; wp = wp->next) {
         lispobj *header = (lispobj *) PTR(wp->value);
 
-        printf("wp = %p, header = 0x%08lx\n", wp, *header);
+        if (debug_static_array_p) {
+            printf("  wp %p value 0x%08lx header 0x%08lx\n",
+                   wp, wp->value, *header);
+        }
 
         /*
          * Only free the arrays where the mark bit is clear.
          */
         if (wp->broken == NIL) {
-            if ((*header & 0x80000000) == 0)  {
+            if ((*header & STATIC_VECTOR_MARK_BIT) == 0)  {
                 lispobj *static_array = (lispobj *) PTR(wp->value);
                 if (debug_static_array_p) {
-                    printf("free wp %p: %p\n", wp, static_array);
+                    printf("    Free wp\n");
                 }
 
                 wp->value = NIL;
@@ -5516,6 +5539,27 @@ scan_static_vectors(void)
 
                 free(static_array);
             }
+        }
+    }
+
+    if (debug_static_array_p) {
+        printf("Phase 4: unmark static vectors\n");
+    }
+
+    for (wp = static_vector_list; wp; wp = wp->next) {
+        lispobj *header = (lispobj *) PTR(wp->value);
+
+        if (debug_static_array_p) {
+            printf("  wp %p value %p header 0x%08lx\n",
+                   wp, (lispobj*) wp->value, *header);
+        }
+
+        if ((*header & STATIC_VECTOR_MARK_BIT) != 0) {
+            if (debug_static_array_p) {
+                printf("    Clearing mark bit\n");
+            }
+
+            *header &= ~STATIC_VECTOR_MARK_BIT;
         }
     }
 }
