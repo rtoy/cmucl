@@ -406,6 +406,7 @@
 	  (delete-if-not #'weak-pointer-value *static-vectors*))))
 
 ;; Clear the mark bit of all of static vectors before GC
+#+nil
 (pushnew 'clear-static-vector-mark *before-gc-hooks*)
 ;; Clean up any unreferenced static vectors after GC has run.
 (pushnew 'finalize-static-vectors *after-gc-hooks*)
