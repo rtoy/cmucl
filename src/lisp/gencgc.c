@@ -5518,28 +5518,32 @@ scan_static_vectors(void)
      * the space has been freed.
      */
     for (wp = static_vector_list; wp; wp = wp->next) {
-        lispobj *header = (lispobj *) PTR(wp->value);
+        /* Skip over broken weak pointers */
+        if (wp->broken == NIL) {
+            lispobj *header = (lispobj *) PTR(wp->value);
 
-        if (debug_static_array_p) {
-            printf("  wp %p value %p header 0x%08lx\n",
-                   wp, (lispobj*) wp->value, *header);
-        }
-
-        /*
-         * Only free the arrays where the mark bit is clear.
-         */
-        if ((wp->broken == NIL) && ((*header & STATIC_VECTOR_MARK_BIT) == 0))  {
-            lispobj *static_array = (lispobj *) PTR(wp->value);
             if (debug_static_array_p) {
-                printf("    Free static vector\n");
+                printf("  wp %p value %p header 0x%08lx\n",
+                       wp, (lispobj*) wp->value, *header);
             }
 
-            wp->value = NIL;
-            wp->broken = T;
+            /*
+             * Only free the arrays where the mark bit is clear.
+             */
+            if ((*header & STATIC_VECTOR_MARK_BIT) == 0)  {
+                lispobj *static_array = (lispobj *) PTR(wp->value);
+                if (debug_static_array_p) {
+                    printf("    Free static vector\n");
+                }
 
-            free(static_array);
+                wp->value = NIL;
+                wp->broken = T;
+
+                free(static_array);
+            }
         }
     }
+    
 
     if (debug_static_array_p) {
         printf("Phase 4: unmark static vectors\n");
@@ -5549,19 +5553,22 @@ scan_static_vectors(void)
      * Go through all the static vectors and clear the mark bit.
      */
     for (wp = static_vector_list; wp; wp = wp->next) {
-        lispobj *header = (lispobj *) PTR(wp->value);
+        /* Skip over broken weak pointers */
+        if (wp->broken == NIL) {
+            lispobj *header = (lispobj *) PTR(wp->value);
 
-        if (debug_static_array_p) {
-            printf("  wp %p value %p broken %d header 0x%08lx\n",
-                   wp, (lispobj*) wp->value, wp->broken == T, *header);
-        }
-
-        if ((wp->broken == NIL) && ((*header & STATIC_VECTOR_MARK_BIT) != 0)) {
             if (debug_static_array_p) {
-                printf("    Clearing mark bit\n");
+                printf("  wp %p value %p broken %d header 0x%08lx\n",
+                       wp, (lispobj*) wp->value, wp->broken == T, *header);
             }
 
-            *header &= ~STATIC_VECTOR_MARK_BIT;
+            if ((*header & STATIC_VECTOR_MARK_BIT) != 0) {
+                if (debug_static_array_p) {
+                    printf("    Clearing mark bit\n");
+                }
+
+                *header &= ~STATIC_VECTOR_MARK_BIT;
+            }
         }
     }
 }
