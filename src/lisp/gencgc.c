@@ -5579,14 +5579,12 @@ scan_weak_pointers(void)
 	lispobj *first_pointer = (lispobj *) PTR(value);
 
 	wp->mark_bit = NIL;
-	if (Pointerp(value)) {
-            if (from_space_p(value)) {
-                if (first_pointer[0] == 0x01)
-                    wp->value = first_pointer[1];
-                else {
-                    wp->value = NIL;
-                    wp->broken = T;
-                }
+	if (Pointerp(value) & from_space_p(value)) {
+            if (first_pointer[0] == 0x01)
+                wp->value = first_pointer[1];
+            else {
+                wp->value = NIL;
+                wp->broken = T;
             }
         }
     }
