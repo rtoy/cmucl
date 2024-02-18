@@ -5528,18 +5528,16 @@ scan_static_vectors(void)
         /*
          * Only free the arrays where the mark bit is clear.
          */
-        if (wp->broken == NIL) {
-            if ((*header & STATIC_VECTOR_MARK_BIT) == 0)  {
-                lispobj *static_array = (lispobj *) PTR(wp->value);
-                if (debug_static_array_p) {
-                    printf("    Free static vector\n");
-                }
-
-                wp->value = NIL;
-                wp->broken = T;
-
-                free(static_array);
+        if ((wp->broken == NIL) && ((*header & STATIC_VECTOR_MARK_BIT) == 0))  {
+            lispobj *static_array = (lispobj *) PTR(wp->value);
+            if (debug_static_array_p) {
+                printf("    Free static vector\n");
             }
+
+            wp->value = NIL;
+            wp->broken = T;
+
+            free(static_array);
         }
     }
 
@@ -5558,7 +5556,7 @@ scan_static_vectors(void)
                    wp, (lispobj*) wp->value, wp->broken == T, *header);
         }
 
-        if ((*header & STATIC_VECTOR_MARK_BIT) != 0) {
+        if ((wp->broken == NIL) && ((*header & STATIC_VECTOR_MARK_BIT) != 0)) {
             if (debug_static_array_p) {
                 printf("    Clearing mark bit\n");
             }
