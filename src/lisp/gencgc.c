@@ -5472,7 +5472,6 @@ scan_static_vectors(void)
      * vectors.  For unmarked (unused) static vectors, set another bit
      * in the header to say we've visited it.  If we've already
      * visited the static vector, break the weak pointer.
-     *
      */
     for (wp = static_vector_list; wp; wp = wp->next) {
         lispobj *header = (lispobj *) PTR(wp->value);
@@ -5512,6 +5511,9 @@ scan_static_vectors(void)
     }
 
     /*
+     * static_vector_list now contains either broken weak pointers or
+     * weak pointers to static arrays (whether alive or not).
+     *
      * Free up space.  Go through static_vector_list and for each weak
      * pointer that hasn't been broken and is an unused static array,
      * free the static vector.  Also break the weak pointer too, since
@@ -5550,7 +5552,11 @@ scan_static_vectors(void)
     }
 
     /*
-     * Go through all the static vectors and clear the mark bit.
+     * At this point, static_vector_list contains weak pointers that
+     * have been broken or weak pointres to live static vectors.  Go
+     * through all the weak pointers and if it hasn't been broken and
+     * if the mark bit of the static vector is set, then clear the
+     * mark bit .
      */
     for (wp = static_vector_list; wp; wp = wp->next) {
         /* Skip over broken weak pointers */
