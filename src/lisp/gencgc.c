@@ -5547,6 +5547,9 @@ scan_static_vectors(void)
         printf("Phase 4: unmark static vectors\n");
     }
 
+    /*
+     * Go through all the static vectors and clear the mark bit.
+     */
     for (wp = static_vector_list; wp; wp = wp->next) {
         lispobj *header = (lispobj *) PTR(wp->value);
 
