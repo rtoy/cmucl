@@ -5442,13 +5442,13 @@ scan_static_vectors(void)
 
 	if (Pointerp(value)) {
             /* The value may be a static vector */
-            lispobj *header = (lispobj *) PTR(value);
+            lispobj header = *(lispobj *) PTR(value);
 
-            if (maybe_static_array_p(*header)) {
+            if (maybe_static_array_p(header)) {
 
                 if (debug_static_array_p) {
                     printf("  Add:  wp %p value %p header 0x%08lx, next = %p\n",
-                           wp, (lispobj *) wp->value, *header, wp->next);
+                           wp, (lispobj *) wp->value, header, wp->next);
                 }
 
                 wp->next = static_vector_list;
@@ -5456,7 +5456,7 @@ scan_static_vectors(void)
             } else {
                 if (debug_static_array_p) {
                     printf("  Skip: wp %p value %p header 0x%08lx\n",
-                           wp, (lispobj *) wp->value, *header);
+                           wp, (lispobj *) wp->value, header);
                 }
             }
         }
@@ -5576,13 +5576,13 @@ scan_weak_pointers(void)
 
 	wp->mark_bit = NIL;
 	if (Pointerp(value) && from_space_p(value)) {
-            if (first_pointer[0] == 0x01)
-                wp->value = first_pointer[1];
-            else {
-                wp->value = NIL;
-                wp->broken = T;
-            }
-        }
+	    if (first_pointer[0] == 0x01)
+		wp->value = first_pointer[1];
+	    else {
+		wp->value = NIL;
+		wp->broken = T;
+	    }
+	}
     }
 
     scan_static_vectors();
