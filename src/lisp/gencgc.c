@@ -5570,16 +5570,12 @@ scan_weak_pointers(void)
 {
     struct weak_pointer *wp;
 
-    /*
-     * Now process the weak pointers.
-     */
-
     for (wp = weak_pointers; wp; wp = wp->next) {
 	lispobj value = wp->value;
 	lispobj *first_pointer = (lispobj *) PTR(value);
 
 	wp->mark_bit = NIL;
-	if (Pointerp(value) & from_space_p(value)) {
+	if (Pointerp(value) && from_space_p(value)) {
             if (first_pointer[0] == 0x01)
                 wp->value = first_pointer[1];
             else {
