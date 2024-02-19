@@ -5418,11 +5418,11 @@ size_weak_pointer(lispobj * where)
 
 
 static void
-scan_static_vectors(void)
+scan_static_vectors(struct weak_pointer *static_vector_list)
 {
     struct weak_pointer *wp;
-    struct weak_pointer *static_vector_list = NULL;
 
+#if 0
     if (debug_static_array_p) {
         printf("Phase 1: Find static vectors\n");
     }
@@ -5462,10 +5462,10 @@ scan_static_vectors(void)
         }
         wp = next;
     }
+#endif
 
-    if (debug_static_array_p) {
-        printf("Phase 2: Visit unused static vectors\n");
-    }
+    DPRINTF(debug_static_array_p,
+            (stdout, "Phase 2: Visit unused static vectors\n"));
     
     /*
      * static_vector_list now points to all weak pointers to static
@@ -5476,10 +5476,9 @@ scan_static_vectors(void)
     for (wp = static_vector_list; wp; wp = wp->next) {
         lispobj *header = (lispobj *) PTR(wp->value);
 
-        if (debug_static_array_p) {
-            printf("  wp %p value %p header 0x%08lx\n",
-                   wp, (lispobj *) wp->value, *header);
-        }
+        DPRINTF(debug_static_array_p,
+                (stdout, "  wp %p value %p header 0x%08lx\n",
+                 wp, (lispobj *) wp->value, *header));
 
         /*
          * If the static vector is unused (mark bit clear) and if we
@@ -5489,15 +5488,12 @@ scan_static_vectors(void)
         if ((*header & STATIC_VECTOR_MARK_BIT) == 0) {
             /* Unused static vector */
             if ((*header & STATIC_VECTOR_VISITED_BIT) == 0) {
-                if (debug_static_array_p) {
-                    printf("    Mark vector\n");
-                }
+                DPRINTF(debug_static_array_p, (stdout, "    Mark vector\n"));
 
                 *header |= STATIC_VECTOR_VISITED_BIT;
             } else {
-                if (debug_static_array_p) {
-                    printf("    Break weak pointer %p\n", wp);
-                }
+                DPRINTF(debug_static_array_p,
+                        (stdout, "    Break weak pointer %p\n", wp));
 
                 wp->value = NIL;
                 wp->broken = T;
@@ -5506,9 +5502,8 @@ scan_static_vectors(void)
     }
     
 
-    if (debug_static_array_p) {
-        printf("Phase 3: Free static vectors\n");
-    }
+    DPRINTF(debug_static_array_p,
+            (stdout, "Phase 3: Free static vectors\n"));
 
     /*
      * static_vector_list now contains either broken weak pointers or
@@ -5524,19 +5519,17 @@ scan_static_vectors(void)
         if (wp->broken == NIL) {
             lispobj *header = (lispobj *) PTR(wp->value);
 
-            if (debug_static_array_p) {
-                printf("  wp %p value %p header 0x%08lx\n",
-                       wp, (lispobj*) wp->value, *header);
-            }
+            DPRINTF(debug_static_array_p,
+                    (stdout, "  wp %p value %p header 0x%08lx\n",
+                     wp, (lispobj*) wp->value, *header));
 
             /*
              * Only free the arrays where the mark bit is clear.
              */
             if ((*header & STATIC_VECTOR_MARK_BIT) == 0)  {
                 lispobj *static_array = (lispobj *) PTR(wp->value);
-                if (debug_static_array_p) {
-                    printf("    Free static vector\n");
-                }
+                DPRINTF(debug_static_array_p,
+                        (stdout, "    Free static vector\n"));
 
                 wp->value = NIL;
                 wp->broken = T;
@@ -5547,9 +5540,8 @@ scan_static_vectors(void)
     }
     
 
-    if (debug_static_array_p) {
-        printf("Phase 4: unmark static vectors\n");
-    }
+    DPRINTF(debug_static_array_p,
+            (stdout, "Phase 4: unmark static vectors\n"));
 
     /*
      * At this point, static_vector_list contains weak pointers that
@@ -5563,15 +5555,13 @@ scan_static_vectors(void)
         if (wp->broken == NIL) {
             lispobj *header = (lispobj *) PTR(wp->value);
 
-            if (debug_static_array_p) {
-                printf("  wp %p value %p broken %d header 0x%08lx\n",
-                       wp, (lispobj*) wp->value, wp->broken == T, *header);
-            }
+            DPRINTF(debug_static_array_p,
+                    (stdout, "  wp %p value %p broken %d header 0x%08lx\n",
+                     wp, (lispobj*) wp->value, wp->broken == T, *header));
 
             if ((*header & STATIC_VECTOR_MARK_BIT) != 0) {
-                if (debug_static_array_p) {
-                    printf("    Clearing mark bit\n");
-                }
+                DPRINTF(debug_static_array_p,
+                        (stdout, "    Clearing mark bit\n"));
 
                 *header &= ~STATIC_VECTOR_MARK_BIT;
             }
@@ -5582,24 +5572,57 @@ scan_static_vectors(void)
 void
 scan_weak_pointers(void)
 {
-    struct weak_pointer *wp;
+    struct weak_pointer *wp = weak_pointers;
+    struct weak_pointer *static_vector_list = NULL;
 
-    for (wp = weak_pointers; wp; wp = wp->next) {
+    /*
+     * Scan through all the weak pointers, updating the value or
+     * breaking the weak pointer.
+     *
+     * Also find any weak pointers to static vectors.  This
+     * destructively modifies the next slot of the weak pointer to
+     * chain all the weak pointers to static vectors together.
+     */
+    DPRINTF(debug_static_array_p,
+            (stdout, "Phase 0: Process weak pointers\n"));
+
+    while (wp) {
+        struct weak_pointer *next = wp->next;
 	lispobj value = wp->value;
 	lispobj *first_pointer = (lispobj *) PTR(value);
 
 	wp->mark_bit = NIL;
-	if (Pointerp(value) && from_space_p(value)) {
-	    if (first_pointer[0] == 0x01)
-		wp->value = first_pointer[1];
-	    else {
-		wp->value = NIL;
-		wp->broken = T;
-	    }
-	}
+	if (Pointerp(value)) {
+            if (from_space_p(value)) {
+                if (first_pointer[0] == 0x01)
+                    wp->value = first_pointer[1];
+                else {
+                    wp->value = NIL;
+                    wp->broken = T;
+                }
+            } else {
+                /* The value may be a static vector */
+                lispobj header = *(lispobj *) PTR(value);
+
+                if (maybe_static_array_p(header)) {
+
+                    DPRINTF(debug_static_array_p,
+                            (stdout, "  Add static vector:  wp %p value %p header 0x%08lx\n",
+                             wp, (lispobj *) wp->value, header));
+
+                    wp->next = static_vector_list;
+                    static_vector_list = wp;
+                } else {
+                    DPRINTF(debug_static_array_p,
+                            (stdout, "  Skip: wp %p value %p header 0x%08lx\n",
+                             wp, (lispobj *) wp->value, header));
+                }
+            }
+        }
+        wp = next;
     }
 
-    scan_static_vectors();
+    scan_static_vectors(static_vector_list);
 }
 
 
