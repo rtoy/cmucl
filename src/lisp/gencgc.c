@@ -34,7 +34,8 @@
 
 /*
  * If the header value for a vector has this bit set, then it is a
- * static vector.
+ * static vector.  NOTE: This is a bit in the header value of a
+ * header, NOT the bit in the full header!
  */
 #define STATIC_VECTOR_HEADER_BIT        0x1
 
