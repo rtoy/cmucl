@@ -5423,48 +5423,6 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
 {
     struct weak_pointer *wp;
 
-#if 0
-    if (debug_static_array_p) {
-        printf("Phase 1: Find static vectors\n");
-    }
-
-    /*
-     * Find weak pointers to static arrays, using a linked list.  We
-     * reuse the next slot of the weak pointer to chain these weak
-     * pointers together.
-     *
-     * Invariant: static_vector_list only has weak pointers to static
-     * vectors.
-     */
-    wp = weak_pointers;
-    while (wp) {
-	lispobj value = wp->value;
-        struct weak_pointer *next = wp->next;
-
-	if (Pointerp(value)) {
-            /* The value may be a static vector */
-            lispobj header = *(lispobj *) PTR(value);
-
-            if (maybe_static_array_p(header)) {
-
-                if (debug_static_array_p) {
-                    printf("  Add:  wp %p value %p header 0x%08lx, next = %p\n",
-                           wp, (lispobj *) wp->value, header, wp->next);
-                }
-
-                wp->next = static_vector_list;
-                static_vector_list = wp;
-            } else {
-                if (debug_static_array_p) {
-                    printf("  Skip: wp %p value %p header 0x%08lx\n",
-                           wp, (lispobj *) wp->value, header);
-                }
-            }
-        }
-        wp = next;
-    }
-#endif
-
     DPRINTF(debug_static_array_p,
             (stdout, "Phase 2: Visit unused static vectors\n"));
     
@@ -5475,20 +5433,20 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
      * visited the static vector, break the weak pointer.
      */
     for (wp = static_vector_list; wp; wp = wp->next) {
-        lispobj *header = (lispobj *) PTR(wp->value);
+        lispobj header = *(lispobj *) PTR(wp->value);
 
         DPRINTF(debug_static_array_p,
                 (stdout, "  wp %p value %p header 0x%08lx\n",
-                 wp, (lispobj *) wp->value, *header));
+                 wp, (lispobj *) wp->value, header));
 
         /*
          * If the static vector is unused (mark bit clear) and if we
          * haven't seen this vector before, set the visited flag.  If
          * we have visited this vector before, break the weak pointer.
          */
-        if ((*header & STATIC_VECTOR_MARK_BIT) == 0) {
+        if ((header & STATIC_VECTOR_MARK_BIT) == 0) {
             /* Unused static vector */
-            if ((*header & STATIC_VECTOR_VISITED_BIT) == 0) {
+            if ((header & STATIC_VECTOR_VISITED_BIT) == 0) {
                 DPRINTF(debug_static_array_p, (stdout, "    Mark vector\n"));
 
                 *header |= STATIC_VECTOR_VISITED_BIT;
