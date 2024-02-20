@@ -5433,20 +5433,20 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
      * visited the static vector, break the weak pointer.
      */
     for (wp = static_vector_list; wp; wp = wp->next) {
-        lispobj header = *(lispobj *) PTR(wp->value);
+        lispobj *header = (lispobj *) PTR(wp->value);
 
         DPRINTF(debug_static_array_p,
                 (stdout, "  wp %p value %p header 0x%08lx\n",
-                 wp, (lispobj *) wp->value, header));
+                 wp, (lispobj *) wp->value, *header));
 
         /*
          * If the static vector is unused (mark bit clear) and if we
          * haven't seen this vector before, set the visited flag.  If
          * we have visited this vector before, break the weak pointer.
          */
-        if ((header & STATIC_VECTOR_MARK_BIT) == 0) {
+        if ((*header & STATIC_VECTOR_MARK_BIT) == 0) {
             /* Unused static vector */
-            if ((header & STATIC_VECTOR_VISITED_BIT) == 0) {
+            if ((*header & STATIC_VECTOR_VISITED_BIT) == 0) {
                 DPRINTF(debug_static_array_p, (stdout, "    Mark vector\n"));
 
                 *header |= STATIC_VECTOR_VISITED_BIT;
