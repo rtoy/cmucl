@@ -5422,7 +5422,6 @@ static void
 scan_static_vectors(struct weak_pointer *static_vector_list)
 {
     struct weak_pointer *wp;
-    struct weak_pointer *previous;
 
     DPRINTF(debug_static_array_p,
             (stdout, "Phase 2: Visit unused static vectors\n"));
@@ -5433,10 +5432,7 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
      * in the header to say we've visited it.  If we've already
      * visited the static vector, break the weak pointer.
      */
-    previous = NULL;
-    wp = static_vector_list;
-    while (wp) {
-        struct weak_pointer *next = wp->next;
+    for (wp = static_vector_list; wp; wp = wp->next) {
         lispobj *header = (lispobj *) PTR(wp->value);
 
         DPRINTF(debug_static_array_p,
@@ -5460,17 +5456,8 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
 
                 wp->value = NIL;
                 wp->broken = T;
-
-                /* Delete this from our list */
-                if (previous) {
-                    previous->next = next;
-                } else {
-                    static_vector_list = next;
-                }
             }
         }
-        previous = wp;
-        wp = next;
     }
     
 
@@ -5486,42 +5473,29 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
      * free the static vector.  Also break the weak pointer too, since
      * the space has been freed.
      */
-    previous = NULL;
-    wp = static_vector_list;
+    for (wp = static_vector_list; wp; wp = wp->next) {
+        /* Skip over broken weak pointers */
+        if (wp->broken == NIL) {
+            lispobj *header = (lispobj *) PTR(wp->value);
 
-    while (wp) {
-        struct weak_pointer *next = wp->next;
-        lispobj *header = (lispobj *) PTR(wp->value);
-
-        DPRINTF(debug_static_array_p,
-                (stdout, "  wp %p value %p header 0x%08lx\n",
-                 wp, (lispobj*) wp->value, *header));
-
-        /* There should be no broken weak pointers here! */
-        gc_assert(wp->broken == NIL);
-        
-        /*
-         * Only free the arrays where the mark bit is clear.
-         */
-        if ((*header & STATIC_VECTOR_MARK_BIT) == 0)  {
-            lispobj *static_array = (lispobj *) PTR(wp->value);
             DPRINTF(debug_static_array_p,
-                    (stdout, "    Free static vector\n"));
+                    (stdout, "  wp %p value %p header 0x%08lx\n",
+                     wp, (lispobj*) wp->value, *header));
 
-            wp->value = NIL;
-            wp->broken = T;
+            /*
+             * Only free the arrays where the mark bit is clear.
+             */
+            if ((*header & STATIC_VECTOR_MARK_BIT) == 0)  {
+                lispobj *static_array = (lispobj *) PTR(wp->value);
+                DPRINTF(debug_static_array_p,
+                        (stdout, "    Free static vector\n"));
 
-            free(static_array);
+                wp->value = NIL;
+                wp->broken = T;
 
-            /* Delete this broken weak pointer from our list */
-            if (previous) {
-                previous->next = next;
-            } else {
-                static_vector_list = next;
+                free(static_array);
             }
         }
-        previous = wp;
-        wp = next;
     }
     
 
@@ -5536,20 +5510,20 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
      * mark bit .
      */
     for (wp = static_vector_list; wp; wp = wp->next) {
-        lispobj *header = (lispobj *) PTR(wp->value);
+        /* Skip over broken weak pointers */
+        if (wp->broken == NIL) {
+            lispobj *header = (lispobj *) PTR(wp->value);
 
-        /* There should be no broken weak pointers here! */
-        DPRINTF(debug_static_array_p,
-                (stdout, "  wp %p value %p broken %d header 0x%08lx\n",
-                 wp, (lispobj*) wp->value, wp->broken == T, *header));
-
-        gc_assert(wp->broken == NIL);
-        
-        if ((*header & STATIC_VECTOR_MARK_BIT) != 0) {
             DPRINTF(debug_static_array_p,
-                    (stdout, "    Clearing mark bit\n"));
+                    (stdout, "  wp %p value %p broken %d header 0x%08lx\n",
+                     wp, (lispobj*) wp->value, wp->broken == T, *header));
 
-            *header &= ~STATIC_VECTOR_MARK_BIT;
+            if ((*header & STATIC_VECTOR_MARK_BIT) != 0) {
+                DPRINTF(debug_static_array_p,
+                        (stdout, "    Clearing mark bit\n"));
+
+                *header &= ~STATIC_VECTOR_MARK_BIT;
+            }
         }
     }
 }
