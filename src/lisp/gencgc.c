@@ -5421,7 +5421,8 @@ size_weak_pointer(lispobj * where)
 static void
 scan_static_vectors(struct weak_pointer *static_vector_list)
 {
-    struct weak_pointer *wp;
+    struct weak_pointer *wp = static_vector_list;
+    struct weak_pointer *previous = wp;
 
     DPRINTF(debug_static_array_p,
             (stdout, "Phase 2: Visit unused static vectors\n"));
@@ -5432,7 +5433,9 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
      * in the header to say we've visited it.  If we've already
      * visited the static vector, break the weak pointer.
      */
-    for (wp = static_vector_list; wp; wp = wp->next) {
+
+    while (wp) {
+        struct weak_pointer *next = wp->next;
         lispobj *header = (lispobj *) PTR(wp->value);
 
         DPRINTF(debug_static_array_p,
@@ -5456,8 +5459,32 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
 
                 wp->value = NIL;
                 wp->broken = T;
+                /*
+                 * Remove this weak pointer from static_vector_list;
+                 * we're done processing it.
+                 *
+                 * Three cases here:
+                 *
+                 *   1. wp is the first in the list; update
+                 *   static_vector_list to skip over this pointer.
+                 *
+                 *   2. wp is the last (next = NULL); set the next
+                 *   slot of the previous pointer to NULL.
+                 *
+                 *   3. wp is in the middle; update the next slot of
+                 *   the previous pointer to the next value.
+                 */
+                if (wp == static_vector_list) {
+                    static_vector_list = next;
+                } else if (next == NULL) {
+                    previous->next = NULL;
+                } else {
+                    previous->next = next;
+                }
             }
         }
+        previous = wp;
+        wp = next;
     }
     
 
@@ -5473,29 +5500,31 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
      * free the static vector.  Also break the weak pointer too, since
      * the space has been freed.
      */
-    for (wp = static_vector_list; wp; wp = wp->next) {
+    wp = static_vector_list;
+    while (wp) {
+        struct weak_pointer *next = wp->next;
+        lispobj *header = (lispobj *) PTR(wp->value);
         /* Skip over broken weak pointers */
-        if (wp->broken == NIL) {
-            lispobj *header = (lispobj *) PTR(wp->value);
 
+        DPRINTF(debug_static_array_p,
+                (stdout, "  wp %p value %p header 0x%08lx\n",
+                 wp, (lispobj*) wp->value, *header));
+
+        gc_assert(wp->broken == NIL);
+        /*
+         * Only free the arrays where the mark bit is clear.
+         */
+        if ((*header & STATIC_VECTOR_MARK_BIT) == 0)  {
+            lispobj *static_array = (lispobj *) PTR(wp->value);
             DPRINTF(debug_static_array_p,
-                    (stdout, "  wp %p value %p header 0x%08lx\n",
-                     wp, (lispobj*) wp->value, *header));
+                    (stdout, "    Free static vector\n"));
 
-            /*
-             * Only free the arrays where the mark bit is clear.
-             */
-            if ((*header & STATIC_VECTOR_MARK_BIT) == 0)  {
-                lispobj *static_array = (lispobj *) PTR(wp->value);
-                DPRINTF(debug_static_array_p,
-                        (stdout, "    Free static vector\n"));
+            wp->value = NIL;
+            wp->broken = T;
 
-                wp->value = NIL;
-                wp->broken = T;
-
-                free(static_array);
-            }
+            free(static_array);
         }
+        wp = next;
     }
     
 
