@@ -5636,8 +5636,7 @@ scan_weak_pointers(void)
                             (stdout, "  Add static vector:  wp %p value %p header 0x%08lx\n",
                              wp, (lispobj *) wp->value, header));
 
-                    wp->next = static_vector_list;
-                    static_vector_list = wp;
+                    push(wp, &static_vector_list);
                 } else {
                     DPRINTF(debug_static_array_p,
                             (stdout, "  Skip: wp %p value %p header 0x%08lx\n",
