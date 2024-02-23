@@ -5439,85 +5439,84 @@ push(struct weak_pointer* wp, struct weak_pointer **list)
     *list = wp;
 }
 
+/*
+ * Phase 2: Find the weak pointers to static vectors that are in use
+ * and not in use.  The vectors that are in use are added to
+ * inuse_list.  Those that are not in use are added to freeable_list.
+ * Only unique vectors are added to freeable list; a duplicate has its
+ * weak pointer to it broken.
+ */
 static void
-scan_static_vectors(struct weak_pointer *static_vector_list)
+scan_static_vectors_2(struct weak_pointer *static_vector_list,
+                      struct weak_pointer **freeable_list,
+                      struct weak_pointer **inuse_list)
 {
-    /* List of weak pointers to static vectors that can be freed. */
-    struct weak_pointer *freeable_list = NULL;
-
-    /* List of weak pointers to static vectors that are in in use. */
-    struct weak_pointer *inuse_list = NULL;
-    struct weak_pointer *wp;
-
     DPRINTF(debug_static_array_p,
             (stdout, "Phase 2: Find unused and unused static vectors\n"));
     
-    /*
-     * static_vector_list points to all weak pointers to static
-     * vectors.  If the static vector is in use, add it to the in-use
-     * list.  If the static vector is not in use, and has not been
-     * visited, mark it as visited and add it to the freeable list.
-     * If it has been visited, just break the weak pointer.
-     */
     while (static_vector_list) {
-        struct weak_pointer *this_wp;
+        struct weak_pointer *wp;
         lispobj *header;
 
         /* Pop weak pointer from the list */
-        this_wp = pop(&static_vector_list);
-        header = (lispobj *) PTR(this_wp->value);
+        wp = pop(&static_vector_list);
+        header = (lispobj *) PTR(wp->value);
 
         DPRINTF(debug_static_array_p,
                 (stdout, "  wp %p value %p header 0x%08lx\n",
-                 this_wp, (lispobj *) this_wp->value, *header));
+                 wp, (lispobj *) wp->value, *header));
 
-        /*
-         * If the static vector is unused (mark bit clear) and if we
-         * haven't seen this vector before, set the visited flag.  If
-         * we have visited this vector before, break the weak pointer.
-         */
         if ((*header & STATIC_VECTOR_MARK_BIT) != 0) {
             /*
              * Static vector is in use.  Add this to the in-use list.
              */
-            printf("    In-use vector; add to in-use list\n");
-            push(this_wp, &inuse_list);
+            DPRINTF(debug_static_array_p,
+                    (stdout, "    In-use vector; add to in-use list\n"));
+
+            push(wp, inuse_list);
         } else {
-            /* Unused static vector */
+            /*
+             * Static vector not in use.  If we haven't seen this
+             * vector before, set the visited flag and add it to
+             * freeable_list.  If we have visited this vector before,
+             * break the weak pointer.
+             */
             if ((*header & STATIC_VECTOR_VISITED_BIT) == 0) {
                 DPRINTF(debug_static_array_p,
                         (stdout, "    Visit unused vector, add to freeable list\n"));
 
                 *header |= STATIC_VECTOR_VISITED_BIT;
-
-                /*
-                 * Add this to the freeable list because it's a static
-                 * vector that we can free.
-                 */
-                push(this_wp, &freeable_list);
+                push(wp, freeable_list);
             } else {
                 DPRINTF(debug_static_array_p,
                         (stdout, "    Already visited unused vector; break weak pointer\n"));
 
-                this_wp->value = NIL;
-                this_wp->broken = T;
+                wp->value = NIL;
+                wp->broken = T;
             }
         }
     }
+}
+
+/*
+ * Free all the unused static vectors in freeable_list.
+ */
+static void
+scan_static_vectors_3(struct weak_pointer *freeable_list)
+{
+    struct weak_pointer *wp;
 
     DPRINTF(debug_static_array_p,
             (stdout, "Phase 3: Free static vectors\n"));
 
-    /*
-     * freeable_list now contains weak pointers to unique static
-     * vectors that are not in use.  Break the weak pointer and free
-     * the static vector.
-     */
     for (wp = freeable_list; wp; wp = wp->next) {
-        /* Invariant: weak pointer must not be broken */
-        gc_assert(wp->broken == NIL);
-        
         lispobj *header = (lispobj *) PTR(wp->value);
+        lispobj *static_array = (lispobj *) PTR(wp->value);
+
+        /*
+         * Invariant: weak pointer must not be broken
+         */
+        gc_assert(wp->broken == NIL);
 
         DPRINTF(debug_static_array_p,
                 (stdout, "  wp %p value %p header 0x%08lx\n",
@@ -5527,8 +5526,7 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
          * Invariant: Mark bit must be clear
          */
         gc_assert(((*header & STATIC_VECTOR_MARK_BIT) == 0));
-        
-        lispobj *static_array = (lispobj *) PTR(wp->value);
+
         DPRINTF(debug_static_array_p,
                 (stdout, "    Free static vector\n"));
 
@@ -5537,14 +5535,19 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
 
         free(static_array);
     }
+}
+
+/*
+ * Unmark all the vectors in inuse_list
+ */
+static void
+scan_static_vectors_4(struct weak_pointer *inuse_list)
+{
+    struct weak_pointer *wp;
 
     DPRINTF(debug_static_array_p,
             (stdout, "Phase 4: unmark static vectors\n"));
 
-    /*
-     * At this point, inuse_list is a list of weak pointers to static
-     * vectors that are still in use.  Clear the mark bit.
-     */
     for (wp = inuse_list; wp; wp = wp->next) {
         lispobj *header = (lispobj *) PTR(wp->value);
         /*
@@ -5560,6 +5563,7 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
                 (stdout, "  wp %p value %p broken %d header 0x%08lx\n",
                  wp, (lispobj*) wp->value, wp->broken == T, *header));
 
+        /* Only clear if we haven't already */
         if ((*header & STATIC_VECTOR_MARK_BIT) != 0) {
             DPRINTF(debug_static_array_p,
                     (stdout, "    Clearing mark bit\n"));
@@ -5567,6 +5571,28 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
             *header &= ~STATIC_VECTOR_MARK_BIT;
         }
     }
+}
+
+static void
+scan_static_vectors(struct weak_pointer *static_vector_list)
+{
+    /* List of weak pointers to static vectors that can be freed. */
+    struct weak_pointer *freeable_list = NULL;
+
+    /* List of weak pointers to static vectors that are in in use. */
+    struct weak_pointer *inuse_list = NULL;
+
+    /*
+     * For each weak pointer, add it either the inuse list or the
+     * freeable list.
+     */
+    scan_static_vectors_2(static_vector_list, &freeable_list, &inuse_list);
+
+    /* Free the unused unique static vectors. */
+    scan_static_vectors_3(freeable_list);
+
+    /* Unmark all the static vectors that are still alive. */
+    scan_static_vectors_4(inuse_list);
 }
 
 void
