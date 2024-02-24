@@ -2130,6 +2130,7 @@ static lispobj(*transother[256]) (lispobj object);
 static int (*sizetab[256]) (lispobj * where);
 
 static struct weak_pointer *weak_pointers;
+static struct weak_pointer *inuse_static_vector_list;
 static struct scavenger_hook *scavenger_hooks = (struct scavenger_hook *) NIL;
 
 /* Like (ceiling x y), but y is constrained to be a power of two */
@@ -5496,6 +5497,9 @@ scan_static_vectors_2(struct weak_pointer *static_vector_list,
             }
         }
     }
+
+    DPRINTF(debug_static_array_p,
+            (stdout, "Phase 2 done\n"));
 }
 
 /*
@@ -5535,13 +5539,20 @@ scan_static_vectors_3(struct weak_pointer *freeable_list)
 
         free(static_array);
     }
+
+    DPRINTF(debug_static_array_p,
+            (stdout, "Phase 3 done\n"));
 }
 
 /*
- * Unmark all the vectors in inuse_list
+ * Unmark all the vectors in inuse_list.  This needs to be called at
+ * the end of GC to unmark any live static vectors so that for the
+ * next GC we can tell if the static vector is used or not.
+ * Otherwise, the vectors will always look as if they're in use
+ * because the mark bit is never changed.
  */
 static void
-scan_static_vectors_4(struct weak_pointer *inuse_list)
+unmark_static_vectors_in_use(struct weak_pointer *inuse_list)
 {
     struct weak_pointer *wp;
 
@@ -5571,6 +5582,9 @@ scan_static_vectors_4(struct weak_pointer *inuse_list)
             *header &= ~STATIC_VECTOR_MARK_BIT;
         }
     }
+
+    DPRINTF(debug_static_array_p,
+            (stdout, "Phase 4 done\n"));
 }
 
 static void
@@ -5579,20 +5593,14 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
     /* List of weak pointers to static vectors that can be freed. */
     struct weak_pointer *freeable_list = NULL;
 
-    /* List of weak pointers to static vectors that are in in use. */
-    struct weak_pointer *inuse_list = NULL;
-
     /*
      * For each weak pointer, add it either the inuse list or the
      * freeable list.
      */
-    scan_static_vectors_2(static_vector_list, &freeable_list, &inuse_list);
+    scan_static_vectors_2(static_vector_list, &freeable_list, &inuse_static_vector_list);
 
     /* Free the unused unique static vectors. */
     scan_static_vectors_3(freeable_list);
-
-    /* Unmark all the static vectors that are still alive. */
-    scan_static_vectors_4(inuse_list);
 }
 
 void
@@ -8241,6 +8249,8 @@ collect_garbage(unsigned last_gen)
     int gen_to_wp;
     int i;
 
+    inuse_static_vectors_lisit = NULL;
+
     boxed_region.free_pointer = (void *) get_current_region_free();
 
     /* Check last_gen */
@@ -8380,6 +8390,13 @@ collect_garbage(unsigned last_gen)
 	}
 	scavenger_hooks = (struct scavenger_hook *) NIL;
     }
+
+    /*
+     * Unmark any live static vectors.  This needs to be done at the
+     * very end when all GCs are done, lest we accidentally free a
+     * static vector that was actually in use.
+     */
+    unmark_static_vectors_in_use(inuse_static_vector_list);
 }
 
 
