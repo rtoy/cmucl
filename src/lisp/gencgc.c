@@ -5597,6 +5597,7 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
      * For each weak pointer, add it either the inuse list or the
      * freeable list.
      */
+    inuse_static_vector_list = NULL;
     scan_static_vectors_2(static_vector_list, &freeable_list, &inuse_static_vector_list);
 
     /* Free the unused unique static vectors. */
@@ -8248,8 +8249,6 @@ collect_garbage(unsigned last_gen)
     int raise;
     int gen_to_wp;
     int i;
-
-    inuse_static_vectors_lisit = NULL;
 
     boxed_region.free_pointer = (void *) get_current_region_free();
 
