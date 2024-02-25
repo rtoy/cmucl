@@ -5450,8 +5450,7 @@ push_weak_pointer(struct weak_pointer* wp, struct weak_pointer **list)
  */
 static void
 scan_static_vectors_2(struct weak_pointer *static_vector_list,
-                      struct weak_pointer **freeable_list,
-                      struct weak_pointer **inuse_list)
+                      struct weak_pointer **freeable_list)
 {
     DPRINTF(debug_static_array_p,
             (stdout, "Phase 2: Find unused and unused static vectors\n"));
@@ -5468,34 +5467,24 @@ scan_static_vectors_2(struct weak_pointer *static_vector_list,
                 (stdout, "  wp %p value %p header 0x%08lx\n",
                  wp, (lispobj *) wp->value, *header));
 
-        if ((*header & STATIC_VECTOR_MARK_BIT) != 0) {
-            /*
-             * Static vector is in use.  Add this to the in-use list.
-             */
+        /*
+         * Static vector not in use.  If we haven't seen this
+         * vector before, set the visited flag and add it to
+         * freeable_list.  If we have visited this vector before,
+         * break the weak pointer.
+         */
+        if ((*header & STATIC_VECTOR_VISITED_BIT) == 0) {
             DPRINTF(debug_static_array_p,
-                    (stdout, "    In-use vector; add to in-use list\n"));
+                    (stdout, "    Visit unused vector, add to freeable list\n"));
 
-            push_weak_pointer(wp, inuse_list);
+            *header |= STATIC_VECTOR_VISITED_BIT;
+            push_weak_pointer(wp, freeable_list);
         } else {
-            /*
-             * Static vector not in use.  If we haven't seen this
-             * vector before, set the visited flag and add it to
-             * freeable_list.  If we have visited this vector before,
-             * break the weak pointer.
-             */
-            if ((*header & STATIC_VECTOR_VISITED_BIT) == 0) {
-                DPRINTF(debug_static_array_p,
-                        (stdout, "    Visit unused vector, add to freeable list\n"));
+            DPRINTF(debug_static_array_p,
+                    (stdout, "    Already visited unused vector; break weak pointer\n"));
 
-                *header |= STATIC_VECTOR_VISITED_BIT;
-                push_weak_pointer(wp, freeable_list);
-            } else {
-                DPRINTF(debug_static_array_p,
-                        (stdout, "    Already visited unused vector; break weak pointer\n"));
-
-                wp->value = NIL;
-                wp->broken = T;
-            }
+            wp->value = NIL;
+            wp->broken = T;
         }
     }
 
@@ -5598,8 +5587,7 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
      * For each weak pointer, add it either the inuse list or the
      * freeable list.
      */
-    inuse_static_vector_list = NULL;
-    scan_static_vectors_2(static_vector_list, &freeable_list, &inuse_static_vector_list);
+    scan_static_vectors_2(static_vector_list, &freeable_list);
 
     /* Free the unused unique static vectors. */
     scan_static_vectors_3(freeable_list);
