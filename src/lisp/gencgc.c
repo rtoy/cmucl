@@ -5418,24 +5418,25 @@ size_weak_pointer(lispobj * where)
     return WEAK_POINTER_NWORDS;
 }
 
-static inline struct weak_pointer *
-pop(struct weak_pointer **list) 
+/*
+ * Pop the first element from the list `list`, updating `list`, like
+ * CL POP.
+ */
+static struct weak_pointer *
+pop_weak_pointer(struct weak_pointer **list) 
 {
-    /*
-     * Pop the first element from the list `list`, updating `list`, like CL POP.
-     */
     struct weak_pointer *wp = *list;
     *list = (*list)->next;
 
     return wp;
 }
 
-static inline void
-push(struct weak_pointer* wp, struct weak_pointer **list)
+/*
+ * Push wp to the head of the list, updating list, like CL PUSH.
+ */
+static void
+push_weak_pointer(struct weak_pointer* wp, struct weak_pointer **list)
 {
-    /*
-     * Push wp to the head of the list, updating list, like CL PUSH.
-     */
     wp->next = *list;
     *list = wp;
 }
@@ -5460,7 +5461,7 @@ scan_static_vectors_2(struct weak_pointer *static_vector_list,
         lispobj *header;
 
         /* Pop weak pointer from the list */
-        wp = pop(&static_vector_list);
+        wp = pop_weak_pointer(&static_vector_list);
         header = (lispobj *) PTR(wp->value);
 
         DPRINTF(debug_static_array_p,
@@ -5474,7 +5475,7 @@ scan_static_vectors_2(struct weak_pointer *static_vector_list,
             DPRINTF(debug_static_array_p,
                     (stdout, "    In-use vector; add to in-use list\n"));
 
-            push(wp, inuse_list);
+            push_weak_pointer(wp, inuse_list);
         } else {
             /*
              * Static vector not in use.  If we haven't seen this
@@ -5487,7 +5488,7 @@ scan_static_vectors_2(struct weak_pointer *static_vector_list,
                         (stdout, "    Visit unused vector, add to freeable list\n"));
 
                 *header |= STATIC_VECTOR_VISITED_BIT;
-                push(wp, freeable_list);
+                push_weak_pointer(wp, freeable_list);
             } else {
                 DPRINTF(debug_static_array_p,
                         (stdout, "    Already visited unused vector; break weak pointer\n"));
@@ -5645,7 +5646,7 @@ scan_weak_pointers(void)
                             (stdout, "  Add static vector:  wp %p value %p header 0x%08lx\n",
                              wp, (lispobj *) wp->value, header));
 
-                    push(wp, &static_vector_list);
+                    push_weak_pointer(wp, &static_vector_list);
                 } else {
                     DPRINTF(debug_static_array_p,
                             (stdout, "  Skip: wp %p value %p header 0x%08lx\n",
