@@ -5638,19 +5638,26 @@ scan_weak_pointers(void)
                 }
             } else {
                 /* The value may be a static vector */
-                lispobj header = *(lispobj *) PTR(value);
+                lispobj *header = (lispobj *) PTR(value);
 
-                if (maybe_static_array_p(header)) {
+                if (maybe_static_array_p(*header)) {
+                    if (*header & STATIC_VECTOR_MARK_BIT) {
+                        DPRINTF(debug_static_array_p,
+                                (stdout, "  Update status bits for live vector: wp %p value %p header 0x%08lx\n",
+                                 wp, (lispobj *) wp->value, *header));
+                        *header = (*header & ~STATIC_VECTOR_MARK_BIT) | STATIC_VECTOR_VISITED_BIT;
+                    } else if ((*header & STATIC_VECTOR_VISITED_BIT) == 0) {
+                        /* Only add the vector if it is unmarked and has not been visited */
+                        DPRINTF(debug_static_array_p,
+                                (stdout, "  Add static vector:  wp %p value %p header 0x%08lx\n",
+                                 wp, (lispobj *) wp->value, *header));
 
-                    DPRINTF(debug_static_array_p,
-                            (stdout, "  Add static vector:  wp %p value %p header 0x%08lx\n",
-                             wp, (lispobj *) wp->value, header));
-
-                    push_weak_pointer(wp, &static_vector_list);
+                        push_weak_pointer(wp, &static_vector_list);
+                    }
                 } else {
                     DPRINTF(debug_static_array_p,
                             (stdout, "  Skip: wp %p value %p header 0x%08lx\n",
-                             wp, (lispobj *) wp->value, header));
+                             wp, (lispobj *) wp->value, *header));
                 }
             }
         }
