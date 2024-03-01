@@ -2745,7 +2745,7 @@ scav_static_vector(lispobj object)
              * setting the MSB of the header.  And clear out any
              * possible visited bit.
              */
-            *ptr = (header | STATIC_VECTOR_MARK_BIT);
+            *ptr = (header | STATIC_VECTOR_MARK_BIT) & ~STATIC_VECTOR_VISITED_BIT;
             if (debug_static_array_p) {
                 fprintf(stderr, "Scavenged static vector @%p, header = 0x%lx\n",
                         ptr, (unsigned long) header);
@@ -5388,11 +5388,6 @@ scav_weak_pointer(lispobj * where, lispobj object)
     struct weak_pointer *this_wp = (struct weak_pointer *) where;
 
     if (this_wp->mark_bit == NIL) {
-        lispobj *header = (lispobj *) PTR(this_wp->value);
-        if (maybe_static_array_p(*header)) {
-            *header &= ~STATIC_VECTOR_VISITED_BIT;
-        }
-
 	this_wp->mark_bit = T;
 	this_wp->next = weak_pointers;
 	weak_pointers = this_wp;
