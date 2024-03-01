@@ -2734,7 +2734,7 @@ scav_static_vector(lispobj object)
         int static_p;
 
         if (debug_static_array_p) {
-            fprintf(stderr, "Possible static vector at %p.  header = 0x%08lx\n",
+            fprintf(stderr, "Possible static vector at %p.  header = 0x%lx\n",
                     ptr, (unsigned long) header);
         }
 
@@ -2747,7 +2747,7 @@ scav_static_vector(lispobj object)
              */
             *ptr = (header | STATIC_VECTOR_MARK_BIT);
             if (debug_static_array_p) {
-                fprintf(stderr, "Scavenged static vector @%p, header = 0x%08lx\n",
+                fprintf(stderr, "Scavenged static vector @%p, header = 0x%lx\n",
                         ptr, (unsigned long) header);
             }
         }
@@ -5390,9 +5390,6 @@ scav_weak_pointer(lispobj * where, lispobj object)
     if (this_wp->mark_bit == NIL) {
         lispobj *header = (lispobj *) PTR(this_wp->value);
         if (maybe_static_array_p(*header)) {
-            printf("Scavenge wp %p to static array %p header 0x%08lx\n",
-                   this_wp, (lispobj *) this_wp->value, *header);
-
             *header &= ~STATIC_VECTOR_VISITED_BIT;
         }
 
@@ -5449,10 +5446,11 @@ push_weak_pointer(struct weak_pointer* wp, struct weak_pointer **list)
 }
 
 /*
- * Phase 2: Process the list of weak pointers to unused static
- * vectors.  We find the unique static vectors and add each
- * corresponding weak pointer to freeable_list.  For the duplicates,
- * the weak pointer is broken.
+ * Phase 2: Find the weak pointers to static vectors that are in use
+ * and not in use.  The vectors that are in use are added to
+ * inuse_list.  Those that are not in use are added to freeable_list.
+ * Only unique vectors are added to freeable list; a duplicate has its
+ * weak pointer to it broken.
  */
 static void
 scan_static_vectors_2(struct weak_pointer *static_vector_list,
@@ -5474,9 +5472,10 @@ scan_static_vectors_2(struct weak_pointer *static_vector_list,
                  wp, (lispobj *) wp->value, *header));
 
         /*
-         * If we haven't seen this vector before, set the visited flag
-         * and add it to freeable_list.  If we have visited this
-         * vector before, break the weak pointer.
+         * Static vector not in use.  If we haven't seen this
+         * vector before, set the visited flag and add it to
+         * freeable_list.  If we have visited this vector before,
+         * break the weak pointer.
          */
         if ((*header & STATIC_VECTOR_VISITED_BIT) == 0) {
             DPRINTF(debug_static_array_p,
@@ -5512,15 +5511,18 @@ scan_static_vectors_3(struct weak_pointer *freeable_list)
         lispobj *header = (lispobj *) PTR(wp->value);
         lispobj *static_array = (lispobj *) PTR(wp->value);
 
+        /*
+         * Invariant: weak pointer must not be broken
+         */
+        gc_assert(wp->broken == NIL);
+
         DPRINTF(debug_static_array_p,
                 (stdout, "  wp %p value %p header 0x%08lx\n",
                  wp, (lispobj*) wp->value, *header));
 
         /*
-         * Invariants: weak pointer must not be broken and the mark
-         * bit must be clear.
+         * Invariant: Mark bit must be clear
          */
-        gc_assert(wp->broken == NIL);
         gc_assert(((*header & STATIC_VECTOR_MARK_BIT) == 0));
 
         DPRINTF(debug_static_array_p,
@@ -5543,8 +5545,8 @@ scan_static_vectors(struct weak_pointer *static_vector_list)
     struct weak_pointer *freeable_list = NULL;
 
     /*
-     * For each weak pointer, either break it, or add it to the
-     * freeable list because it points to a unique static vector.
+     * For each weak pointer, add it either the inuse list or the
+     * freeable list.
      */
     scan_static_vectors_2(static_vector_list, &freeable_list);
 
@@ -5564,18 +5566,15 @@ scan_weak_pointers(void)
      *
      * Also find any weak pointers to static vectors.  This
      * destructively modifies the next slot of the weak pointer to
-     * chain all the weak pointers to unused static vectors together.
+     * chain all the weak pointers to static vectors together.
      */
     DPRINTF(debug_static_array_p,
             (stdout, "Phase 1: Process weak pointers\n"));
 
-    while (weak_pointers) {
-	lispobj value;
-	lispobj *first_pointer;
-
-        wp = pop_weak_pointer(&weak_pointers);
-	value = wp->value;
-	first_pointer = (lispobj *) PTR(value);
+    while (wp) {
+        struct weak_pointer *next = wp->next;
+	lispobj value = wp->value;
+	lispobj *first_pointer = (lispobj *) PTR(value);
 
 	wp->mark_bit = NIL;
 	if (Pointerp(value)) {
@@ -5611,6 +5610,7 @@ scan_weak_pointers(void)
                 }
             }
         }
+        wp = next;
     }
 
     scan_static_vectors(static_vector_list);
