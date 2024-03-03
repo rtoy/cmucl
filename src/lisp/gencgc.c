@@ -6756,10 +6756,6 @@ scavenge_newspace_generation_one_scan(int generation)
 {
     int i;
 
-#if 0
-    fprintf(stderr, "Starting one full scan of newspace generation %d\n",
-	    generation);
-#endif
     DPRINTF(gencgc_verbose,
             (stdout, "Starting one full scan of newspace generation %d\n",
              generation));
@@ -6867,10 +6863,7 @@ scavenge_newspace_generation_one_scan(int generation)
 	    i = last_page;
 	}
     }
-#if 0
-    fprintf(stderr, "Finished one full scan of newspace generation %d\n",
-	    generation);
-#endif
+
     DPRINTF(gencgc_verbose,
             (stdout, "Finished one full scan of newspace generation %d\n",
              generation));
@@ -6902,9 +6895,6 @@ scavenge_newspace_generation(int generation)
     struct new_area (*previous_new_areas)[] = NULL;
     int previous_new_areas_index;
 
-#if 0
-    fprintf(stderr, "Start scavenge_newspace_generation %d\n", generation);
-#endif
     DPRINTF(gencgc_verbose,
             (stdout, "Start scavenge_newspace_generation %d\n", generation));
 
@@ -7086,9 +7076,7 @@ scavenge_newspace_generation(int generation)
 		    "*** scav.new.gen. %d: write protected page %d written to? dont_move=%d\n",
 		    generation, i, PAGE_DONT_MOVE(i));
 #endif
-#if 0
-    fprintf(stderr, "Finished scavenge_newspace_generation %d\n", generation);
-#endif
+
     DPRINTF(gencgc_verbose,
             (stdout, "Finished scavenge_newspace_generation %d\n", generation));
 }
@@ -7857,11 +7845,6 @@ garbage_collect_generation(int generation, int raise)
     DPRINTF(gencgc_verbose,
             (stdout, "Done scavenging interrupt handlers\n"));
 
-#ifdef PRINTNOISE
-    printf("Scavenging the binding stack (%d bytes) ...\n",
-	   ((lispobj *) get_binding_stack_pointer() -
-	    binding_stack) * sizeof(lispobj));
-#endif
     DPRINTF(gencgc_verbose,
             (stdout, "Scavenging the binding stack (%d bytes) ...\n",
              ((lispobj *) get_binding_stack_pointer() -
@@ -7874,9 +7857,6 @@ garbage_collect_generation(int generation, int raise)
     DPRINTF(gencgc_verbose,
             (stdout, "Done scavenging the binding stack.\n"));
 
-#ifdef PRINTNOISE
-    printf("Done scavenging the binding stack.\n");
-#endif
     /*
      * Scavenge the scavenge_hooks in case this refers to a hook added
      * in a prior generation GC. From here on the scavenger_hook will
@@ -7884,9 +7864,6 @@ garbage_collect_generation(int generation, int raise)
      * doing here.
      */
 
-#ifdef PRINTNOISE
-    printf("Scavenging the scavenger hooks ...\n");
-#endif
     DPRINTF(gencgc_verbose,
             (stdout, "Scavenging the scavenger hooks ...\n"));
 
@@ -7895,15 +7872,11 @@ garbage_collect_generation(int generation, int raise)
     DPRINTF(gencgc_verbose,
             (stdout, "Done scavenging the scavenger hooks.\n"));
 
-#ifdef PRINTNOISE
-    printf("Done scavenging the scavenger hooks.\n");
-#endif
-
     static_space_size = (lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER)
 	- static_space;
 
     DPRINTF(gencgc_verbose,
-            (stderr, "Scavenge static space: %ld bytes\n",
+            (stdout, "Scavenge static space: %ld bytes\n",
              static_space_size * sizeof(lispobj)));
 
     scavenge(static_space, static_space_size);
