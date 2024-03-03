@@ -6760,6 +6760,9 @@ scavenge_newspace_generation_one_scan(int generation)
     fprintf(stderr, "Starting one full scan of newspace generation %d\n",
 	    generation);
 #endif
+    DPRINTF(gencgc_verbose,
+            (stdout, "Starting one full scan of newspace generation %d\n",
+             generation));
 
     for (i = 0; i < last_free_page; i++) {
 	if (PAGE_ALLOCATED(i) && !PAGE_UNBOXED(i)
@@ -6868,6 +6871,9 @@ scavenge_newspace_generation_one_scan(int generation)
     fprintf(stderr, "Finished one full scan of newspace generation %d\n",
 	    generation);
 #endif
+    DPRINTF(gencgc_verbose,
+            (stdout, "Finished one full scan of newspace generation %d\n",
+             generation));
 }
 
 /* Scan all weak objects and reset weak object lists */
@@ -6899,6 +6905,8 @@ scavenge_newspace_generation(int generation)
 #if 0
     fprintf(stderr, "Start scavenge_newspace_generation %d\n", generation);
 #endif
+    DPRINTF(gencgc_verbose,
+            (stdout, "Start scavenge_newspace_generation %d\n", generation));
 
 #define SC_NS_GEN_CK 0
 #if SC_NS_GEN_CK
@@ -7081,6 +7089,8 @@ scavenge_newspace_generation(int generation)
 #if 0
     fprintf(stderr, "Finished scavenge_newspace_generation %d\n", generation);
 #endif
+    DPRINTF(gencgc_verbose,
+            (stdout, "Finished scavenge_newspace_generation %d\n", generation));
 }
 
 
@@ -7839,16 +7849,30 @@ garbage_collect_generation(int generation, int raise)
     scavenge_control_stack();
 #endif
 
+    DPRINTF(gencgc_verbose,
+            (stdout, "Scavenging interrupt handlers ...\n"));
+
     scavenge_interrupt_handlers();
+
+    DPRINTF(gencgc_verbose,
+            (stdout, "Done scavenging interrupt handlers\n"));
 
 #ifdef PRINTNOISE
     printf("Scavenging the binding stack (%d bytes) ...\n",
 	   ((lispobj *) get_binding_stack_pointer() -
 	    binding_stack) * sizeof(lispobj));
 #endif
+    DPRINTF(gencgc_verbose,
+            (stdout, "Scavenging the binding stack (%d bytes) ...\n",
+             ((lispobj *) get_binding_stack_pointer() -
+              binding_stack) * sizeof(lispobj)));
+
     /* Scavenge the binding stack. */
     scavenge(binding_stack,
 	     (lispobj *) get_binding_stack_pointer() - binding_stack);
+
+    DPRINTF(gencgc_verbose,
+            (stdout, "Done scavenging the binding stack.\n"));
 
 #ifdef PRINTNOISE
     printf("Done scavenging the binding stack.\n");
@@ -7863,26 +7887,47 @@ garbage_collect_generation(int generation, int raise)
 #ifdef PRINTNOISE
     printf("Scavenging the scavenger hooks ...\n");
 #endif
+    DPRINTF(gencgc_verbose,
+            (stdout, "Scavenging the scavenger hooks ...\n"));
+
     scavenge(&scavenger_hooks, 1);
+
+    DPRINTF(gencgc_verbose,
+            (stdout, "Done scavenging the scavenger hooks.\n"));
+
 #ifdef PRINTNOISE
     printf("Done scavenging the scavenger hooks.\n");
 #endif
 
     static_space_size = (lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER)
 	- static_space;
-    if (gencgc_verbose > 1)
-	fprintf(stderr, "Scavenge static space: %ld bytes\n",
-		static_space_size * sizeof(lispobj));
+
+    DPRINTF(gencgc_verbose,
+            (stderr, "Scavenge static space: %ld bytes\n",
+             static_space_size * sizeof(lispobj)));
+
     scavenge(static_space, static_space_size);
+
+    DPRINTF(gencgc_verbose,
+            (stderr, "Done scavenging static space\n"));
 
     /*
      * All generations but the generation being GCed need to be
      * scavenged. The new_space generation needs special handling as
      * objects may be moved in - it is handle separately below.
      */
-    for (i = 0; i < NUM_GENERATIONS; i++)
-	if (i != generation && i != new_space)
+    for (i = 0; i < NUM_GENERATIONS; i++) {
+	if (i != generation && i != new_space) {
+            DPRINTF(gencgc_verbose,
+                    (stderr, "Scavenge generation %lu (gen = %d, new space = %d)\n",
+                     i, generation, new_space));
+
 	    scavenge_generation(i);
+
+            DPRINTF(gencgc_verbose,
+                    (stderr, "Done scavenging generation %lu\n", i));
+        }
+    }
 
     /*
      * Finally scavenge the new_space generation.  Keep going until no
