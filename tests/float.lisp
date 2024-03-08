@@ -136,5 +136,49 @@
     (ext:with-float-traps-masked (:overflow)
       (* 100 most-negative-double-float)))))
 
-  
-   
+(define-test float-ratio.single
+    (:tag :issues)
+  ;; least-positive-single-float is 1.4012985e-45.  Let's test with
+  ;; some rationals from 7/10*10^-45 to 1.41*10^-45 to make sure they
+  ;; return 0 or least-positive-single-float
+  (let ((expo (expt 10 -45)))
+    ;; Need to make sure underflows are masked.
+    (kernel::with-float-traps-masked (:underflow)
+      ;; 7/10*10^-45 is just under halfway between 0 and least-positive,
+      ;; so the answer is 0.
+      (assert-equal 0f0 (kernel::float-ratio-float (* 7/10 expo) 'single-float))
+
+      ;; These are all more than half way to
+      ;; least-positive-single-float, so they should return that.
+      (assert-equal least-positive-single-float
+                    (kernel::float-ratio-float (* 8/10 expo) 'single-float))
+      (assert-equal least-positive-single-float
+                    (kernel::float-ratio-float (* 1 expo) 'single-float))
+      (assert-equal least-positive-single-float
+                    (kernel::float-ratio-float (* 14/10 expo) 'single-float))
+      (assert-equal least-positive-single-float
+                    (kernel::float-ratio-float (* 2 expo) 'single-float)))))
+
+(define-test float-ratio.double
+    (:tag :issues)
+  ;; least-positive-double-float is 4.9406564584124654d-324.  Let's
+  ;; test with some rationals from about 2*10^-324 to 4.94*10^-324 to make
+  ;; sure they return 0 or least-positive-double-float
+  (let ((expo (expt 10 -324)))
+    ;; Need to make sure underflows are masked.
+    (kernel::with-float-traps-masked (:underflow)
+      ;; 247/100*10^-324 is just under halfway between 0 and least-positive,
+      ;; so the answer is 0.
+      (assert-equal 0d0 (kernel::float-ratio-float (* 247/100 expo) 'double-float))
+
+      ;; These are all more than half way to
+      ;; least-positive-double-float, so they should return that.
+      (assert-equal least-positive-double-float
+                    (kernel::float-ratio-float (* 248/100 expo) 'double-float))
+      (assert-equal least-positive-double-float
+                    (kernel::float-ratio-float (* 4 expo) 'double-float))
+      (assert-equal least-positive-double-float
+                    (kernel::float-ratio-float (* 494/100 expo) 'double-float))
+      (assert-equal least-positive-double-float
+                    (kernel::float-ratio-float (* 988/100 expo) 'double-float)))))
+    

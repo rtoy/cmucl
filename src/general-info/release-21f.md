@@ -44,6 +44,8 @@ public domain.
     * ~~#266~~ Support "~user" in namestrings
     * ~~#271~~ Update ASDF to 3.3.7
     * ~~#272~~ Move scavenge code for static vectors to its own function
+    * ~~#277~~ `float-ratio-float` returns least postive float for
+      ratios closer to that than zero.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
