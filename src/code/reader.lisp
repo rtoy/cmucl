@@ -1828,16 +1828,17 @@ the end of the stream."
   ;;
   ;; First check to see if x can possibly fit into a float of the
   ;; given format.  So compute log2(x) to get an approximate value of
-  ;; the base 2 exponent of x.  If it's too large, we can throw an
-  ;; error.  If it's very small, we can return 0.  We don't need to be
-  ;; super accurate with the limits.  The rest of the code will handle
-  ;; it correctly, even if we're too small or too large.
+  ;; the base 2 exponent of x.  If it's too large or too small, we can
+  ;; throw an error immediately.  We don't need to be super accurate
+  ;; with the limits.  The rest of the code will handle it correctly,
+  ;; even if we're too small or too large.
   (unless (zerop number)
     (flet ((fast-log2 (n)
              ;;  For an integer, the integer-length is close enough to
              ;;  the log2 of the number.
              (integer-length n)))
-      ;; log2(x) = exponent*log2(10) + log2(number)-log2(divisor)
+      ;; log2(x) = log(number*10^exponent/divisor)
+      ;;         = exponent*log2(10) + log2(number)-log2(divisor)
       (let ((log2-num (+ (* exponent #.(kernel::log2 10d0))
                          (fast-log2 number)
                          (- (fast-log2 divisor)))))
@@ -1850,12 +1851,9 @@ the end of the stream."
                              #+double-double kernel:double-double-float)
                ;; Double-float exponent range is -1074 to -1023
                (values (* 2 -1074) (* 2 1023))))
-          (when (< log2-num log2-low)
-            ;; If the number is too small, just return 0.
-            (return-from make-float-aux (coerce 0 float-format)))
-      
-          (when (> log2-num log2-high)
-            ;; The numbe is definitely too large to fit.  Signal an error.
+          (unless (< log2-low log2-num log2-high)
+            ;; The number is definitely too large or too small to fit.
+            ;; Signal an error.
             (%reader-error stream _"Number not representable as a ~S: ~S"
 			   float-format (read-buffer-to-string)))))))
 
