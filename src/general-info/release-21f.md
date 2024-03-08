@@ -23,6 +23,7 @@ public domain.
     * Add support for Gray streams implementation of file-length via
       `ext:stream-file-length` generic function.
   * Changes:
+    * Update to ASDF 3.3.7
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
@@ -38,8 +39,13 @@ public domain.
     * ~~#249~~ Replace LEA instruction with simpler shorter instructions in arithmetic vops for x86
     * ~~#253~~ Block-compile list-to-hashtable and callers
     * ~~#258~~ Remove `get-page-size` from linux-os.lisp
+    * ~~#256~~ loop for var nil works
     * ~~#269~~ Add function to get user's home directory
     * ~~#266~~ Support "~user" in namestrings
+    * ~~#271~~ Update ASDF to 3.3.7
+    * ~~#272~~ Move scavenge code for static vectors to its own function
+    * ~~#277~~ `float-ratio-float` returns least postive float for
+      ratios closer to that than zero.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
