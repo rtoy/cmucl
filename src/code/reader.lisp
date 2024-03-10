@@ -1845,12 +1845,22 @@ the end of the stream."
         (multiple-value-bind (log2-low log2-high)
             (ecase float-format
               ((short-float single-float)
-               ;; Single-float exponents range is -149 to 127
-               (values (* 2 -149) (* 2 127)))
+               ;; Single-float exponents range is -149 to 127, but we
+               ;; don't need to be super-accurate since we're
+               ;; multiplying the values by 2.
+               (values (* 2 (- vm:single-float-normal-exponent-min
+                               vm:single-float-bias
+                               vm:single-float-digits))
+                       (* 2 (- vm:single-float-normal-exponent-max
+                               vm:single-float-bias))))
               ((double-float long-float
                              #+double-double kernel:double-double-float)
-               ;; Double-float exponent range is -1074 to -1023
-               (values (* 2 -1074) (* 2 1023))))
+               (values (* 2 (- vm:double-float-normal-exponent-min
+                               vm:double-float-bias
+                               vm:double-float-digits))
+                       (* 2 (- vm:double-float-normal-exponent-max
+                               vm:double-float-bias)))))
+          ;; Double-float exponent range is -1074 to -1023
           (unless (< log2-low log2-num log2-high)
             ;; The number is definitely too large or too small to fit.
             ;; Signal an error.
