@@ -8728,11 +8728,11 @@ msgid "Internal error in floating point reader."
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Underflow"
+msgid "Number not representable as a ~S: ~S"
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Number not representable as a ~S: ~S"
+msgid "Underflow"
 msgstr ""
 
 #: src/code/reader.lisp

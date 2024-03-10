@@ -182,3 +182,33 @@
       (assert-equal least-positive-double-float
                     (kernel::float-ratio-float (* 988/100 expo) 'double-float)))))
     
+(define-test reader-error.small-single-floats
+    (:tag :issues)
+  ;; Test a number less than half of least-positive-single-float,
+  ;; something a bit smaller, hen then something really small that
+  ;; used to appear to hang cmucl because it was trying to compute the
+  ;; a rational with a huge number of digits.
+  (dolist (num '("1e-46" "1e-80" "1e-999999999"))
+    (assert-error 'reader-error (read-from-string num)
+                  num)))
+
+(define-test reader-error.small-double-floats
+    (:tag :issues)
+  ;; Like reader-error.small-single-floats but for doubles
+  (dolist (num '("1d-324" "1d-600" "1d-999999999"))
+    (assert-error 'reader-error (read-from-string num)
+                  num)))
+
+(define-test reader-error.big-single-floats
+    (:tag :issues)
+  ;; Signal error for a number just a bit larger than
+  ;; most-positive-single-float.  And a really big single-float.
+  (assert-error 'reader-error (read-from-string "3.5e38"))
+  (assert-error 'reader-error (read-from-string "1e999999999")))
+
+(define-test reader-error.big-double-floats
+    (:tag :issues)
+  ;; Signal error for a number just a bit larger than
+  ;; most-positive-double-float.  And a really big single-float.
+  (assert-error 'reader-error (read-from-string "1.8d308"))
+  (assert-error 'reader-error (read-from-string "1d999999999")))
