@@ -1785,7 +1785,7 @@ the end of the stream."
     ;; Is there an exponent letter?
     (cond ((eofp char)
            ;; If not, we've read the whole number.
-           (let ((num (make-float-aux number divisor
+           (let ((num (make-float-aux 0 number divisor
                                       *read-default-float-format*
 				      stream)))
              (return-from make-float (if negative-fraction (- num) num))))
@@ -1815,7 +1815,7 @@ the end of the stream."
 				  #+double-double
 				  (#\W 'kernel:double-double-float)))
                   num)
-	     (setq num (make-float-aux (* (expt 10 exponent) number) divisor
+	     (setq num (make-float-aux exponent number divisor
 				       float-format stream))
 
 	     (return-from make-float (if negative-fraction
@@ -1823,10 +1823,55 @@ the end of the stream."
                                              num))))
 	  (t (error _"Internal error in floating point reader.")))))
 
-(defun make-float-aux (number divisor float-format stream)
+(defun make-float-aux (exponent number divisor float-format stream)
+  ;; Computes x = number*10^exponent/divisor.
+  ;;
+  ;; First check to see if x can possibly fit into a float of the
+  ;; given format.  So compute log2(x) to get an approximate value of
+  ;; the base 2 exponent of x.  If it's too large or too small, we can
+  ;; throw an error immediately.  We don't need to be super accurate
+  ;; with the limits.  The rest of the code will handle it correctly,
+  ;; even if we're too small or too large.
+  (unless (zerop number)
+    (flet ((fast-log2 (n)
+             ;;  For an integer, the integer-length is close enough to
+             ;;  the log2 of the number.
+             (integer-length n)))
+      ;; log2(x) = log(number*10^exponent/divisor)
+      ;;         = exponent*log2(10) + log2(number)-log2(divisor)
+      (let ((log2-num (+ (* exponent #.(kernel::log2 10d0))
+                         (fast-log2 number)
+                         (- (fast-log2 divisor)))))
+        (multiple-value-bind (log2-low log2-high)
+            (ecase float-format
+              ((short-float single-float)
+               ;; Single-float exponents range is -149 to 127, but we
+               ;; don't need to be super-accurate since we're
+               ;; multiplying the values by 2.
+               (values (* 2 (- vm:single-float-normal-exponent-min
+                               vm:single-float-bias
+                               vm:single-float-digits))
+                       (* 2 (- vm:single-float-normal-exponent-max
+                               vm:single-float-bias))))
+              ((double-float long-float
+                             #+double-double kernel:double-double-float)
+               (values (* 2 (- vm:double-float-normal-exponent-min
+                               vm:double-float-bias
+                               vm:double-float-digits))
+                       (* 2 (- vm:double-float-normal-exponent-max
+                               vm:double-float-bias)))))
+          ;; Double-float exponent range is -1074 to -1023
+          (unless (< log2-low log2-num log2-high)
+            ;; The number is definitely too large or too small to fit.
+            ;; Signal an error.
+            (%reader-error stream _"Number not representable as a ~S: ~S"
+			   float-format (read-buffer-to-string)))))))
+
+  ;; Otherwise the number might fit, so we carefully compute the result
   (handler-case
       (with-float-traps-masked (:underflow)
-	(let* ((ratio (/ number divisor))
+	(let* ((ratio (/ (* (expt 10 exponent) number)
+                         divisor))
 	       (result (coerce ratio float-format)))
 	  (when (and (zerop result) (not (zerop number)))
 	    ;; The number we've read is so small that it gets
@@ -1850,7 +1895,7 @@ the end of the stream."
 	  result))
     (error ()
 	   (%reader-error stream _"Number not representable as a ~S: ~S"
-			  float-format (/ number divisor)))))
+			  float-format (read-buffer-to-string)))))
 
 
 (defun make-ratio (stream)
