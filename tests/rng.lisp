@@ -49,20 +49,7 @@
   (assert-equal nil (kernel::random-state-cached-p *test-state*))
 
   (dolist (item
-           ;; Results for xoroshiro128+
-           #-x86
-           '((#x18d5f05c086e0086 (#x228f4926843b364d #x74dfe78e715c81be))
-	     (#x976f30b4f597b80b (#x5b6bd4558bd96a68 #x567b7f35650aea8f))
-	     (#xb1e7538af0e454f7 (#x13e5253e242fac52 #xed380e70d10ab60e))
-	     (#x011d33aef53a6260 (#x9d0764952ca00d8a #x5251a5cfedd2b4ef))
-	     (#xef590a651a72c279 (#xba4ef2b425bda963 #x172b965cf56c15ac))
-	     (#xd17a89111b29bf0f (#x458277a5e5f0a21b #xd1bccfad6564e8d))
-	     (#x529e44a0bc46f0a8 (#x2becb68d5a7194c7 #x3a6ec964899bb5f3))
-	     (#x665b7ff1e40d4aba (#xededfd481d0a19fe #x3ea213411827fe9d))
-	     (#x2c9010893532189b (#xd7bb59bcd8fba26f #x52de763d34fee090))
-	     (#x2a99cffa0dfa82ff (#xf96e892c62d6ff2e #xc0542ff85652f81e)))
            ;; Results for xoroshiro128**
-           #+x86
            '((#x41db14eb317141fe (#x16dfbf3d760d0fa4 #xe9bfcf1ce2b9037c))
              (#xaa4ee6e025dfec01 (#xb237e99a3c7ad367 #x96819b1fec0e0432))
              (#xea080e50cb948fa5 (#xcc0fd8226093e0bc #x0e9aeaa496ce50ba))
@@ -85,17 +72,12 @@
 				    :rand 0
 				    :cached-p nil))
   (dolist (result
-           ;; Results for xoroshiro128+ jump function
-           #-x86 '((#x291ddf8e6f6a7b67 #x1f9018a12f9e031f)
-		   (#x88a7aa12158558d0 #xe264d785ab1472d9)
-		   (#x207e16f73c51e7ba #x999c8a0a9a8d87c0)
-		   (#x28f8959d3bcf5ff1 #x38091e563ab6eb98))
            ;; Results for xoroshiro128** jump function
-           #+x86 '((#x19a22191480b0a4e #x43b3d7ee592dd4cf)
-                   (#x76cb87035d0b6e99 #xb6827bcf2ef8267c)
-                   (#x5125201dbdf76860 #x8984c075043869e2)
-                   (#x2c06f0667255309f #xa48cbe2e60fc1d65)
-                   ))
+           '((#x19a22191480b0a4e #x43b3d7ee592dd4cf)
+             (#x76cb87035d0b6e99 #xb6827bcf2ef8267c)
+             (#x5125201dbdf76860 #x8984c075043869e2)
+             (#x2c06f0667255309f #xa48cbe2e60fc1d65)
+             ))
     (kernel:random-state-jump *test-state*)
     (assert-equal result (multiple-value-list
 			  (64-bit-rng-state *test-state*)))))
