@@ -33,8 +33,9 @@ shift $[$OPTIND - 1]
 
 set -x
 if [ -d ../ansi-test ]; then
-    # We already have clone; make sure it's clean by stashing any changes.
-    (cd ../ansi-test; git stash)
+    # We already have clone; make sure it's clean by stashing any
+    # changes.  Then pull any updates.
+    (cd ../ansi-test; git stash; git pull --rebase)
 else    
     (cd ../; git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git)
 fi
