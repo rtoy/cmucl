@@ -10,7 +10,7 @@
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; Support for the xoroshiro128+ random number generator by David
+;;; Support for the xoroshiro128** random number generator by David
 ;;; Blackman and Sebastiano Vigna (vigna@acm.org). See
 ;;; http://xoroshiro.di.unimi.it/.
 
