@@ -33,14 +33,15 @@ shift $[$OPTIND - 1]
 
 set -x
 if [ -d ../ansi-test ]; then
-    # We already have clone; make sure it's clean by stashing any changes.
-    (cd ../ansi-test; git stash)
+    # We already have clone; make sure it's clean by stashing any
+    # changes.  Then pull any updates.
+    (cd ../ansi-test; git stash; git pull --rebase)
 else    
     (cd ../; git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git)
 fi
 
 cd ../ansi-test
-git checkout cmucl-expected-failures
+git checkout issue-276-xoroshiro
 
 make LISP="$LISP batch -noinit -nositeinit"
 # There should be no unexpected successes or failures; check these separately

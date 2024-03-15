@@ -10,7 +10,7 @@
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; Support for the xoroshiro128+ random number generator by David
+;;; Support for the xoroshiro128** random number generator by David
 ;;; Blackman and Sebastiano Vigna (vigna@acm.org). See
 ;;; http://xoroshiro.di.unimi.it/.
 
@@ -225,127 +225,143 @@
 
 ;;;; Random entries:
 
-;; Sparc and x86 have vops to implement xoroshiro-gen that are much
-;; faster than the portable lisp version.  Use them.
-#+(or x86 sparc)
+;; X86 has a vop to implement xoroshiro-gen that is about 4.5 times
+;; faster than the portable lisp version below.  For other
+;; architectures, we use the portable version until a vop is written.
+#+x86
 (declaim (inline xoroshiro-gen))
-#+(or x86 sparc)
+#+x86
 (defun xoroshiro-gen (state)
+  _N"Generate the next 64-bit result from the xoroshiro128** generator
+  using the state in STATE, a simple-array of 2 double-floats.  The
+  64-bit result is returned as 2 32-bit values, with the high 32-bits
+  being the first value."
   (declare (type (simple-array double-float (2)) state)
 	   (optimize (speed 3) (safety 0)))
   (vm::xoroshiro-next state))
 
-#-(or x86 sparc)
+#-x86
 (defun xoroshiro-gen (state)
+  _N"Generate the next 64-bit result from the xoroshiro128** generator
+  using the state in STATE, a simple-array of 2 double-floats.  The
+  64-bit result is returned as 2 32-bit values, with the high 32-bits
+  being the first value."
   (declare (type (simple-array double-float (2)) state)
 	   (optimize (speed 3) (safety 0)))
-  ;; Portable implementation of the xoroshiro128+ generator. See
-  ;; http://xoroshiro.di.unimi.it/xoroshiro128plus.c for the
-  ;; definitive definition.
-  ;;
-  ;; uint64_t s[2];
-  ;;
-  ;; static inline uint64_t rotl(const uint64_t x, int k) {
-  ;; 	return (x << k) | (x >> (64 - k));
-  ;; }
-  ;;
-  ;; uint64_t next(void) {
-  ;; 	const uint64_t s0 = s[0];
-  ;; 	uint64_t s1 = s[1];
-  ;; 	const uint64_t result = s0 + s1;
-  ;;
-  ;; 	s1 ^= s0;
-  ;; 	s[0] = rotl(s0, 55) ^ s1 ^ (s1 << 14); // a, b
-  ;; 	s[1] = rotl(s1, 36); // c
-  ;;
-  ;; 	return result;
-  ;; }
-  ;;
-  (flet ((rotl-55 (x1 x0)
-	   ;; Rotate [x1|x0] left 55 bits, returning the result as two
-	   ;; values.
-	   (declare (type (unsigned-byte 32) x0 x1)
-		    (optimize (speed 3) (safety 0)))
-	   ;; x << 55
-	   (let ((sl55-h (ldb (byte 32 0) (ash x0 (- 55 32))))
-		 (sl55-l 0))
-	     ;; x >> 9
-	     (let ((sr9-h (ash x1 -9))
-		   (sr9-l (ldb (byte 32 0)
-			       (logior (ash x0 -9)
-				       (ash x1 23)))))
-	       (values (logior sl55-h sr9-h)
-		       (logior sl55-l sr9-l)))))
-	 (rotl-36 (x1 x0)
-	   ;; Rotate [x1|x0] left 36 bits, returning the result as two
-	   ;; values.
-	   (declare (type (unsigned-byte 32) x0 x1)
-		    (optimize (speed 3) (safety 0)))
-	   ;; x << 36
-	   (let ((sl36-h (ldb (byte 32 0) (ash x0 4))))
-	     ;; x >> 28
-	     (let ((sr28-l (ldb (byte 32 0)
-				(logior (ash x0 -28)
-					(ash x1 4))))
-		   (sr28-h (ash x1 -28)))
-	       (values (logior sl36-h sr28-h)
-		       sr28-l))))
-	 (shl-14 (x1 x0)
-	   ;; Shift [x1|x0] left by 14 bits, returning the result as
-	   ;; two values.
-	   (declare (type (unsigned-byte 32) x1 x0)
-		    (optimize (speed 3) (safety 0)))
-	   (values (ldb (byte 32 0)
-			(logior (ash x1 14)
-				(ash x0 (- 14 32))))
-		   (ldb (byte 32 0)
-			(ash x0 14))))
-	 (make-double (hi lo)
-	   (kernel:make-double-float
-	    (if (< hi #x80000000)
-		hi
-		(- hi #x100000000))
-	    lo)))
+  (flet
+      ((make-double (hi lo)
+	 ;; Convert [hi lo] to a double-float, where hi and lo are the
+	 ;; high and low 32 bits of a 64-bit double-float.
+	 (declare (type (unsigned-byte 32) hi lo))
+	 (kernel:make-double-float
+	  (if (< hi #x80000000)
+	      hi
+	      (- hi #x100000000))
+	  lo))
+       (mul-shift (x1 x0 shift)
+	 ;; Perform multiplication by 2^shift+1, by doing a shift and
+	 ;; an add.
+	 (declare (type (unsigned-byte 32) x1 x0)
+		  (optimize (speed 3)))
+	 (let* ((overflow (ash x0 (- (- 32 shift))))
+		(s0 (ldb (byte 32 0) (ash x0 shift)))
+		(s1 (logior (ldb (byte 32 0) (ash x1 shift))
+			    overflow)))
+	   (multiple-value-bind (sum0 carry)
+	       (bignum:%add-with-carry s0 x0 0)
+	     (multiple-value-bind (sum1)
+		 (bignum:%add-with-carry s1 x1 carry)
+	       (values sum1 sum0)))))
+       (shl (x1 x0 n)
+	 ;; Shift left [x1 x0] by n bits, where 0 <= n < 31.
+	 (declare (type (unsigned-byte 32) x1 x0)
+		  (type (integer 0 31) n)
+		  (optimize (speed 3)))
+	 (let ((out (ldb (byte n (- 32 n)) x0)))
+	   (values (logior (ldb (byte 32 0) (ash x1 n)) out)
+		   (ldb (byte 32 0) (ash x0 n)))))
+       (rotl (x1 x0 n)
+	 ;; Rotate left [x1 x0] by n bits where n < 32.
+	 (declare (type (unsigned-byte 32) x1 x0)
+		  (type (integer 0 31) n)
+		  (optimize (speed 3)))
+	 (let ((x1-hi (ldb (byte n (- 32 n)) x1))
+	       (x0-hi (ldb (byte n (- 32 n)) x0)))
+	   ;; x1-hi and x0-hi are the bits that are shifted out of x1
+	   ;; and x0.
+	   (values (logior (ldb (byte 32 0) (ash x1 n))
+			   x0-hi)
+		   (logior (ldb (byte 32 0) (ash x0 n))
+			   x1-hi))))
+       (rotr (x1 x0 n)
+	 ;; Rotate right [x1 x0] by n bits where n < 32.
+	 (declare (type (unsigned-byte 32) x1 x0)
+		  (type (integer 0 31) n)
+		  (optimize (speed 3)))
+	 (let ((x1-lo (ldb (byte n 0) x1))
+	       (x0-lo (ldb (byte n 0) x0))
+	       (-n (- n))
+	       (32-n (- 32 n)))
+	   ;; x1-lo and x0-lo are the bits of x1/x0 that would be
+	   ;; shifted out.
+	   (values (logior (ldb (byte 32 0) (ash x1 -n))
+			   (ldb (byte 32 0) (ash x0-lo 32-n)))
+		   (logior (ldb (byte 32 0) (ash x0 -n))
+			   (ldb (byte 32 0) (ash x1-lo 32-n)))))))
+    (declare (inline mul-shift shl rotl rotr))
     (let ((s0-1 0)
 	  (s0-0 0)
 	  (s1-1 0)
-	  (s1-0 0))
-      (declare (type (unsigned-byte 32) s0-1 s0-0 s1-1 s1-0))
-      ;; Load the state to s0 and s1. s0-1 is the high 32-bit part and
-      ;; s0-0 is the low 32-bit part of the 64-bit value.  Similarly
-      ;; for s1.
+	  (s1-0 0)
+	  (result-1 0)
+	  (result-0 0))
+      (declare (type (unsigned-byte 32) s0-1 s0-0 s1-1 s1-0 result-1 result-0))
+      ;; [s0-1 s0-0] is the first 64-bit word of the state.
       (multiple-value-bind (x1 x0)
 	  (kernel:double-float-bits (aref state 0))
 	(setf s0-1 (ldb (byte 32 0) x1)
 	      s0-0 x0))
+      ;; [s1-1 s1-0] is the second 64-bit word of the state.
       (multiple-value-bind (x1 x0)
 	  (kernel:double-float-bits (aref state 1))
 	(setf s1-1 (ldb (byte 32 0) x1)
 	      s1-0 x0))
 
-      ;; Compute the 64-bit random value: s0 + s1
-      (multiple-value-prog1
-	  (multiple-value-bind (sum-0 c)
-	      (bignum::%add-with-carry s0-0 s1-0 0)
-	    (values (bignum::%add-with-carry s0-1 s1-1 c)
-		    sum-0))
-	;; s1 ^= s0
-	(setf s1-1 (logxor s1-1 s0-1)
-	      s1-0 (logxor s1-0 s0-0))
-	;; s[0] = rotl(s0,55) ^ s1 ^ (s1 << 14)
-	(multiple-value-setq (s0-1 s0-0)
-	  (rotl-55 s0-1 s0-0))
-	(setf s0-1 (logxor s0-1 s1-1)
-	      s0-0 (logxor s0-0 s1-0))
-	(multiple-value-bind (s14-1 s14-0)
-	    (shl-14 s1-1 s1-0)
-	  (setf s0-1 (logxor s0-1 s14-1)
-		s0-0 (logxor s0-0 s14-0)))
+      ;; [result-1 result-0] = s0 * 5
+      (multiple-value-setq (result-1 result-0)
+	(mul-shift s0-1 s0-0 2))
 
-	(multiple-value-bind (r1 r0)
-	    (rotl-36 s1-1 s1-0)
-	  (setf (aref state 0) (make-double s0-1 s0-0)
-		(aref state 1) (make-double r1 r0)))))))
+      ;; [result-1 result-0] = rotl(result, 7)
+      (multiple-value-setq (result-1 result-0)
+	(rotl result-1 result-0 7))
+
+      ;; [result-1 result-0] = result*9
+      (multiple-value-setq (result-1 result-0)
+	(mul-shift result-1 result-0 3))
+
+      ;; s1 ^= s0
+      (setf s1-1 (logxor s1-1 s0-1)
+	    s1-0 (logxor s1-0 s0-0))
+      (multiple-value-bind (s24-hi s24-lo)
+	  (rotl s0-1 s0-0 24)
+	(declare (type (unsigned-byte 32) s24-hi s24-lo))
+	;; [s24-hi s24-lo] = rotl(s0, 24) ^ s1
+	(setf s24-hi (logxor s24-hi s1-1)
+	      s24-lo (logxor s24-lo s1-0))
+	(multiple-value-bind (s16-hi s16-lo)
+	    (shl s1-1 s1-0 16)
+	  ;; [s24-hi s24-lo] = s24 ^ (s1 << 16) = state[0]
+	  (setf s24-hi (logxor s24-hi s16-hi)
+		s24-lo (logxor s24-lo s16-lo))
+	  (setf (aref state 0) (make-double s24-hi s24-lo))))
+      (multiple-value-bind (s37-hi s37-lo)
+	  (rotr s1-1 s1-0 (- 64 37))
+	;; [s37-hi s37-lo] = rotl(s1, 37) = state[1].  But rotating
+	;; left by 37 is the same as rotating right by 64-37.
+	(setf (aref state 1) (make-double s37-hi s37-lo)))
+      ;; Return result.
+      (values result-1
+	      result-0))))
 
 ;;; Size of the chunks returned by random-chunk.
 ;;;
@@ -495,10 +511,10 @@
 	    :format-arguments (list arg)))))
 
 ;; Jump function for the generator.  See the jump function in
-;; http://xoroshiro.di.unimi.it/xoroshiro128plus.c
+;; https://prng.di.unimi.it/xoroshiro128starstar.c
 (defun random-state-jump (&optional (rng-state *random-state*))
   _N"Jump the RNG-STATE.  This is equivalent to 2^64 calls to the
-  xoroshiro128+ generator.  It can be used to generate 2^64
+  xoroshiro128** generator.  It can be used to generate 2^64
   non-overlapping subsequences for parallel computations."
   (declare (type random-state rng-state))
   (let ((state (random-state-state rng-state))
@@ -508,12 +524,12 @@
 	(s1-1 0))
     (declare (type (unsigned-byte 32) s0-0 s0-1 s1-0 s1-1)
 	     (optimize (speed 3) (safety 0)))
-    ;; The constants are #xbeac0467eba5facb and #xd86b048b86aa9922,
+    ;; The constants are #xdf900294d8f554a5 and #x170865df4b3201fc,
     ;; and we process these numbers starting from the LSB.  We want ot
     ;; process these in 32-bit chunks, so word-reverse the constants.
-    (dolist (jump '(#xeba5facb #xbeac0467 #x86aa9922 #xd86b048b))
-      (declare (type (unsigned-byte 32) jump))
-      (dotimes (b 32)
+    (dolist (jump '(#xdf900294d8f554a5 #x170865df4b3201fc))
+      (declare (type (unsigned-byte 64) jump))
+      (dotimes (b 64)
 	(declare (fixnum b))
 	(when (logbitp b jump)
 	  (multiple-value-bind (x1 x0)
@@ -534,4 +550,4 @@
 	      x0)))
       (setf (aref state 0) (convert s0-1 s0-0))
       (setf (aref state 1) (convert s1-1 s1-0)))
-      rng-state))
+    rng-state))
