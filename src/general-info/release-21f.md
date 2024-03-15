@@ -24,6 +24,9 @@ public domain.
       `ext:stream-file-length` generic function.
   * Changes:
     * Update to ASDF 3.3.7
+    * The RNG has changed from an old version of xoroshiro128+ to
+      xoroshiro128**.  This means sequences of random numbers will be
+      different from before.  See ~~#276~~.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
@@ -44,8 +47,7 @@ public domain.
     * ~~#266~~ Support "~user" in namestrings
     * ~~#271~~ Update ASDF to 3.3.7
     * ~~#272~~ Move scavenge code for static vectors to its own function
-    * ~~#277~~ `float-ratio-float` returns least postive float for
-      ratios closer to that than zero.
+    * ~~#276~~ Implement xoroshiro128** generator for x86
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
