@@ -42,12 +42,24 @@ public domain.
     * ~~#249~~ Replace LEA instruction with simpler shorter instructions in arithmetic vops for x86
     * ~~#253~~ Block-compile list-to-hashtable and callers
     * ~~#258~~ Remove `get-page-size` from linux-os.lisp
+    * ~~#252~~ Add script to run ansi-tests
     * ~~#256~~ loop for var nil works
+    * ~~#259~~ `system::*software-version*` undefined when compiling
+      on linux
+    * ~~#260~~ Command line options `-edit` and `-slave` no longer
+      available for Hemlock
+    * ~~#261~~ Remove `get-system-info` from "bsd-os.lisp"
+    * ~~#268~~ Can't clone ansi-test repo on Mac OS CI box
+    * ~~#265~~ CI for mac os is broken
     * ~~#269~~ Add function to get user's home directory
     * ~~#266~~ Support "~user" in namestrings
     * ~~#271~~ Update ASDF to 3.3.7
     * ~~#272~~ Move scavenge code for static vectors to its own function
+    * ~~#274~~ 1d99999999 hangs
     * ~~#276~~ Implement xoroshiro128** generator for x86
+    * ~~#277~~ `float-ratio-float` returns 0 for numbers close to
+      least-positive-float
+    * ~~#278~~ Add some more debugging prints to gencgc
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
