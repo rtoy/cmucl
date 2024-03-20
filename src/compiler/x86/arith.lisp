@@ -755,6 +755,26 @@
     (inst xor res res)
     DONE))
 
+(define-vop (unsigned-byte-32-len)
+  (:translate integer-length)
+  (:note _N"inline (unsigned-byte 32) integer-length")
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
+  (:generator 30
+    (move res arg)
+    ;; BSR is undefined if the source is 0, so check for that here.
+    (inst cmp res 0)
+    (inst jmp :eq DONE)
+    (inst bsr res res)
+    ;; The result of BSR is one too small for what we want, so
+    ;; increment the result.
+    (inst inc res)
+    (inst shl res 2)
+    DONE))
+
 (define-vop (unsigned-byte-32-count)
   (:translate logcount)
   (:note _N"inline (unsigned-byte 32) logcount")
