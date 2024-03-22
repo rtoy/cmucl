@@ -60,6 +60,7 @@ public domain.
     * ~~#277~~ `float-ratio-float` returns 0 for numbers close to
       least-positive-float
     * ~~#278~~ Add some more debugging prints to gencgc
+    * ~~#283~~ Add VOP for `integer-length` for `(unsigned-byte 32)` arg.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
