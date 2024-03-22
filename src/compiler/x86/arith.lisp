@@ -755,6 +755,28 @@
     (inst xor res res)
     DONE))
 
+(define-vop (unsigned-byte-32-len)
+  (:translate integer-length)
+  (:note _N"inline (unsigned-byte 32) integer-length")
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
+  (:generator 30
+    (move res arg)
+    ;; The Intel docs say that BSR leaves the destination register
+    ;; undefined if the source is 0.  But AMD64 says the destination
+    ;; register is unchanged.  This also appears to be the case for
+    ;; GCC and LLVM.
+    (inst bsr res res)
+    (inst jmp :z DONE)
+    ;; The result of BSR is one too small for what we want, so
+    ;; increment the result.
+    (inst inc res)
+    (inst shl res 2)
+    DONE))
+
 (define-vop (unsigned-byte-32-count)
   (:translate logcount)
   (:note _N"inline (unsigned-byte 32) logcount")
@@ -1695,58 +1717,101 @@
   (:temporary (:sc double-reg) s0)
   (:temporary (:sc double-reg) s1)
   (:temporary (:sc double-reg) t0)
+  (:temporary (:sc double-reg) t1)
   (:generator 10
+    ;; See https://prng.di.unimi.it/xoroshiro128starstar.c for the official code.
+    ;;
+    ;; This is what we're implementing, where s[] is our state vector.
+    ;;
+    ;; static uint64_t s[2];
+    ;; static inline uint64_t rotl(const uint64_t x, int k) {
+    ;;   return (x << k) | (x >> (64 - k));
+    ;; }
+    ;;
+    ;; uint64_t next(void) {
+    ;;   const uint64_t s0 = s[0];
+    ;; 	 uint64_t s1 = s[1];
+    ;; 	 const uint64_t result = rotl(s0 * 5, 7) * 9;
+    ;; 
+    ;; 	 s1 ^= s0;
+    ;; 	 s[0] = rotl(s0, 24) ^ s1 ^ (s1 << 16); // a, b
+    ;; 	 s[1] = rotl(s1, 37); // c
+    ;; 
+    ;; 	 return result;
+    ;; }
+
     ;; s0 = state[0]
     (inst movsd s0 (make-ea :dword :base state
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 8 0))
-				  vm:other-pointer-type)))
-    ;; s1 = state[1]
-    (inst movsd s1 (make-ea :dword :base state
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 8 1))
-				  vm:other-pointer-type)))
-    ;; Compute result = s0 + s1
-    (inst movapd t0 s0)
-    (inst paddq t0 s1)
-    ;; Save the 64-bit result as two 32-bit results
+                            :disp (- (+ (* vm:vector-data-offset
+					   vm:word-bytes)
+				        (* 8 0))
+				     vm:other-pointer-type)))
+    ;; t0 = s0 * 5 = s0 << 2 + s0
+    (inst movapd t0 s0)                 ; t0 = s0
+    (inst psllq t0 2)                   ; t0 = t0 << 2 = 4*t0
+    (inst paddq t0 s0)                  ; t0 = t0 + s0 = 5*t0
+
+    ;; t0 = rotl(t0, 7) = t0 << 7 | t0 >> (64-7)
+    ;;    = rotl(s0*5, 7)
+    (inst movapd t1 t0)        ; t1 = t0
+    (inst psllq t1 7)          ; t1 = t0 << 7
+    (inst psrlq t0 (- 64 7))   ; t0 = t0 >> 57
+    (inst orpd t0 t1)          ; t0 = t0 << 7 | t0 >> 57 = rotl(t0, 7)
+
+    ;; t0 = t0 * 9 = t0 << 3 + t0
+    ;;    = rotl(s0*5, 7) * 9
+    (inst movapd t1 t0)                 ; t1 = t0
+    (inst psllq t1 3)                   ; t1 = t0 << 3
+    (inst paddq t0 t1)                  ; t0 = t0 << 3 + t0 = 9*t0
+
+    ;; Save the result as two 32-bit results.  r1 is the high 32 bits
+    ;; and r0 is the low 32.
     (inst movd r0 t0)
     (inst psrlq t0 32)
     (inst movd r1 t0)
 
-    ;; s1 = s1 ^ s0
-    (inst xorpd s1 s0)
+    ;; s1 = state[1]
+    (inst movsd s1 (make-ea :dword :base state
+			    :disp (- (+ (* vm:vector-data-offset
+					   vm:word-bytes)
+				        (* 8 1))
+				     vm:other-pointer-type)))
+    (inst xorpd s1 s0)                  ; s1 = s1 ^ s0
 
-    ;; s0 = rotl(s0,55) = s0 << 55 | s0 >> 9
-    (inst movapd t0 s0)
-    (inst psllq s0 55)			; s0 = s0 << 55
-    (inst psrlq t0 9)			; t0 = s0 >> 9
-    (inst orpd s0 t0)			; s0 = rotl(s0, 55)
+    ;; s0 can now be reused as a temp.
+    ;; s0 = rotl(s0, 24)
+    (inst movapd t0 s0)                 ; t0 = s0
+    (inst psllq t0 24)                  ; t0 = s0 << 24
+    (inst psrlq s0 (- 64 24))           ; s0 = s0 >> 40
+    (inst orpd s0 t0)                   ; s0 = s0 | t0 = rotl(s0, 24)
 
-    (inst movapd t0 s1)
-    (inst xorpd s0 s1)			; s0 = s0 ^ s1
-    (inst psllq t0 14)			; t0 = s1 << 14
-    (inst xorpd s0 t0)			; s0 = s0 ^ t0
+    ;; s0 = s0 ^ s1 = rotl(s0, 24) ^ s1
+    (inst xorpd s0 s1)
+
+    ;; s0 = s0 ^ (s1 << 16)
+    (inst movapd t0 s1)          ; t0 = s1
+    (inst psllq t0 16)           ; t0 = s1 << 16
+    (inst xorpd s0 t0)           ; s0 = rotl(s0, 24) ^ s1 ^ (s1 << 16)
+
+    ;; Save s0 to state[0]
     (inst movsd (make-ea :dword :base state
 			 :disp (- (+ (* vm:vector-data-offset
 					vm:word-bytes)
 				     (* 8 0))
 				  vm:other-pointer-type))
-	  s0)
+          s0)
 
-    ;; s1 = rotl(s1, 36) = s1 << 36 | s1 >> 28, using t0 as temp
-    (inst movapd t0 s1)
-    (inst psllq s1 36)
-    (inst psrlq t0 28)
-    (inst orpd s1 t0)
+    ;; s1 = rotl(s1, 37)
+    (inst movapd t0 s1)                 ; t0 = s1
+    (inst psllq t0 37)                  ; t0 = s1 << 37
+    (inst psrlq s1 (- 64 37))           ; s1 = s1 >> 27
+    (inst orpd s1 t0)                   ; s1 = t0 | s1 = rotl(s1, 37)
 
+    ;; Save s1 to state[1]
     (inst movsd (make-ea :dword :base state
 			 :disp (- (+ (* vm:vector-data-offset
 					vm:word-bytes)
 				     (* 8 1))
 				  vm:other-pointer-type))
-	  s1)))
-)    
-    
+          s1)))
+)

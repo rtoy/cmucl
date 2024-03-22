@@ -8728,11 +8728,11 @@ msgid "Internal error in floating point reader."
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Return ~A for ~A"
+msgid "Number not representable as a ~S: ~S"
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Number not representable as a ~S: ~S"
+msgid "Underflow"
 msgstr ""
 
 #: src/code/reader.lisp
@@ -12222,6 +12222,14 @@ msgstr ""
 
 #: src/code/rand-xoroshiro.lisp
 msgid ""
+"Generate the next 64-bit result from the xoroshiro128** generator\n"
+"  using the state in STATE, a simple-array of 2 double-floats.  The\n"
+"  64-bit result is returned as 2 32-bit values, with the high 32-bits\n"
+"  being the first value."
+msgstr ""
+
+#: src/code/rand-xoroshiro.lisp
+msgid ""
 "Generate a uniformly distributed pseudo-random number between zero\n"
 "  and Arg.  State, if supplied, is the random state to use."
 msgstr ""
@@ -12233,7 +12241,7 @@ msgstr ""
 #: src/code/rand-xoroshiro.lisp
 msgid ""
 "Jump the RNG-STATE.  This is equivalent to 2^64 calls to the\n"
-"  xoroshiro128+ generator.  It can be used to generate 2^64\n"
+"  xoroshiro128** generator.  It can be used to generate 2^64\n"
 "  non-overlapping subsequences for parallel computations."
 msgstr ""
 
