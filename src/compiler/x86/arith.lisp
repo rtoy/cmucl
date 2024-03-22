@@ -747,12 +747,9 @@
     (inst not res)
     POS
     (inst bsr res res)
-    (inst jmp :z zero)
+    (inst jmp :z DONE)
     (inst inc res)
     (inst shl res 2)
-    (inst jmp done)
-    ZERO
-    (inst xor res res)
     DONE))
 
 (define-vop (unsigned-byte-32-len)
