@@ -765,10 +765,12 @@
   (:result-types positive-fixnum)
   (:generator 30
     (move res arg)
-    ;; BSR is undefined if the source is 0, so check for that here.
-    (inst cmp res 0)
-    (inst jmp :eq DONE)
+    ;; The Intel docs say that BSR leaves the destination register
+    ;; undefined if the source is 0.  But AMD64 says the destination
+    ;; register is unchanged.  This also appears to be the case for
+    ;; GCC and LLVM.
     (inst bsr res res)
+    (inst jmp :z DONE)
     ;; The result of BSR is one too small for what we want, so
     ;; increment the result.
     (inst inc res)
