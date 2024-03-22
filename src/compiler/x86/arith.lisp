@@ -731,7 +731,6 @@
     DONE))
 
 
-;;; note documentation for this function is wrong - rtfm
 (define-vop (signed-byte-32-len)
   (:translate integer-length)
   (:note _N"inline (signed-byte 32) integer-length")
