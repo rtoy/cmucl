@@ -760,12 +760,11 @@
   (:results (res :scs (any-reg)))
   (:result-types positive-fixnum)
   (:generator 30
-    (move res arg)
     ;; The Intel docs say that BSR leaves the destination register
-    ;; undefined if the source is 0.  But AMD64 says the destination
-    ;; register is unchanged.  This also appears to be the case for
-    ;; GCC and LLVM.
-    (inst bsr res res)
+    ;; undefined if the source is 0.  However, gcc, LLVM, and MSVC
+    ;; generate code that pretty much says BSR basically moves the
+    ;; source to the destination if the source is 0.
+    (inst bsr res arg)
     (inst jmp :z DONE)
     ;; The result of BSR is one too small for what we want, so
     ;; increment the result.
