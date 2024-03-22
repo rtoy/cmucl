@@ -755,6 +755,28 @@
     (inst xor res res)
     DONE))
 
+(define-vop (unsigned-byte-32-len)
+  (:translate integer-length)
+  (:note _N"inline (unsigned-byte 32) integer-length")
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
+  (:generator 30
+    (move res arg)
+    ;; The Intel docs say that BSR leaves the destination register
+    ;; undefined if the source is 0.  But AMD64 says the destination
+    ;; register is unchanged.  This also appears to be the case for
+    ;; GCC and LLVM.
+    (inst bsr res res)
+    (inst jmp :z DONE)
+    ;; The result of BSR is one too small for what we want, so
+    ;; increment the result.
+    (inst inc res)
+    (inst shl res 2)
+    DONE))
+
 (define-vop (unsigned-byte-32-count)
   (:translate logcount)
   (:note _N"inline (unsigned-byte 32) logcount")
