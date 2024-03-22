@@ -41,7 +41,7 @@ else
 fi
 
 cd ../ansi-test
-git checkout issue-276-xoroshiro
+git checkout cmucl-expected-failures
 
 make LISP="$LISP batch -noinit -nositeinit"
 # There should be no unexpected successes or failures; check these separately
