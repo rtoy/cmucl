@@ -8736,6 +8736,10 @@ msgid "Underflow"
 msgstr ""
 
 #: src/code/reader.lisp
+msgid "Return ~A for ~A"
+msgstr ""
+
+#: src/code/reader.lisp
 msgid "Invalid ratio: ~S/~S"
 msgstr ""
 
