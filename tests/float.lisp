@@ -212,3 +212,17 @@
   ;; most-positive-double-float.  And a really big single-float.
   (assert-error 'reader-error (read-from-string "1.8d308"))
   (assert-error 'reader-error (read-from-string "1d999999999")))
+
+(define-test reader.float-underflow
+    (:tag :issues)
+  (lisp::with-float-traps-enabled (:underflow)
+    ;; A denormal
+    (assert-error 'floating-point-underflow
+                  (read-from-string "1e-40"))
+    (assert-error 'floating-point-underflow
+                  (read-from-string (format nil "~A" least-positive-single-float)))
+    ;; The same for double-floats
+    (assert-error 'floating-point-underflow
+                  (read-from-string "1d-308"))
+    (assert-error 'floating-point-underflow
+                  (read-from-string (format nil "~A" least-positive-double-float)))))
