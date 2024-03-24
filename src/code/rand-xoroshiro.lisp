@@ -425,25 +425,16 @@
   ;; xoroshiro-gen produces 64-bit values.  Should we use that
   ;; directly to get the random bits instead of two calls to
   ;; RANDOM-CHUNK?
-  #+nil
-  (* arg
-     (- (lisp::make-double-float
-	 (dpb (ash (random-chunk state)
-		   (- vm:double-float-digits random-chunk-length
-		      vm:word-bits))
-	      vm:double-float-significand-byte
-	      (lisp::double-float-high-bits 1d0))
-	 (random-chunk state))
-	1d0))
   (let ((hi (random-chunk state))
         (lo (random-chunk state)))
-    (declare (type (unsigned-byte 32) hi lo))
-    (setq lo (ash lo -11))
-    (setq lo (logior lo (ash (logand hi #x7FF) 21)))
-    (setq hi (ash hi -11))
-    (* arg
-       (* (kernel:make-double-float hi lo)
-          (scale-float 1d0 1021)))))
+    (declare (type (unsigned-byte 32) hi lo)
+             (optimize (speed 3)))
+    (let ((new-lo (logior (ash lo -11)
+                          (ash (logand hi #x7FF) 21)))
+          (new-hi (ash hi -11)))
+      (* arg
+         (* (kernel:make-double-float new-hi new-lo)
+            (scale-float 1d0 1021))))))
 
 #+double-double
 (defun %random-double-double-float (arg state)
