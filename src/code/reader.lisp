@@ -1868,7 +1868,7 @@ the end of the stream."
 			   float-format (read-buffer-to-string)))))))
 
   ;; Otherwise the number might fit, so we carefully compute the result.
-  (handler-case 
+  (handler-case
       (with-float-traps-masked (:underflow)
         (let* ((ratio (/ (* (expt 10 exponent) number)
                          divisor))
