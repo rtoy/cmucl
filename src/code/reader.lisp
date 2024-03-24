@@ -1870,18 +1870,18 @@ the end of the stream."
   ;; Otherwise the number might fit, so we carefully compute the result.
   (handler-case
       (with-float-traps-masked (:underflow)
-        (let* ((ratio (/ (* (expt 10 exponent) number)
+	(let* ((ratio (/ (* (expt 10 exponent) number)
                          divisor))
 	       (result (coerce ratio float-format)))
-          (when (and (zerop result) (not (zerop number)))
+	  (when (and (zerop result) (not (zerop number)))
 	    ;; The number we've read is so small that it gets
 	    ;; converted to 0.0, but is not actually zero.  Signal an
 	    ;; error.  See CLHS 2.3.1.1.
-            (error "Underflow"))
+            (error _"Underflow"))
           result))
     (error ()
-      (%reader-error stream _"Number not representable as a ~S: ~S"
-		           float-format (read-buffer-to-string)))))
+	   (%reader-error stream _"Number not representable as a ~S: ~S"
+			  float-format (read-buffer-to-string)))))
 
 
 (defun make-ratio (stream)
