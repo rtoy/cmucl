@@ -1867,7 +1867,7 @@ the end of the stream."
             (%reader-error stream _"Number not representable as a ~S: ~S"
 			   float-format (read-buffer-to-string)))))))
 
-  ;; Otherwise the number might fit, so we carefully compute the result
+  ;; Otherwise the number might fit, so we carefully compute the result.
   (handler-case
       (with-float-traps-masked (:underflow)
 	(let* ((ratio (/ (* (expt 10 exponent) number)
@@ -1875,24 +1875,10 @@ the end of the stream."
 	       (result (coerce ratio float-format)))
 	  (when (and (zerop result) (not (zerop number)))
 	    ;; The number we've read is so small that it gets
-	    ;; converted to 0.0, but is not actually zero.  In this
-	    ;; case, we want to round such small numbers to
-	    ;; least-positive-foo-float.  If it's still too small, we
-	    ;; want to signal an error saying that we can't really
-	    ;; convert it because the exponent is too small.
-	    ;; See CLHS 2.3.1.1.
-	    (let ((float-limit (ecase float-format
-				 ((short-float single-float)
-				  least-positive-single-float)
-				 (double-float
-				  least-positive-double-float)
-				 #+double-double
-				 (double-double-float
-				  ext:least-positive-double-double-float))))
-	      (if (>= (* 2 ratio) float-limit)
-		  (setf result float-limit)
-		  (error _"Underflow"))))
-	  result))
+	    ;; converted to 0.0, but is not actually zero.  Signal an
+	    ;; error.  See CLHS 2.3.1.1.
+            (error _"Underflow"))
+          result))
     (error ()
 	   (%reader-error stream _"Number not representable as a ~S: ~S"
 			  float-format (read-buffer-to-string)))))
