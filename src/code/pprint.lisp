@@ -1460,8 +1460,8 @@ When annotations are present, invoke them at the right positions."
 
 (defun pprint-handler-case (stream list &rest noise)
   (declare (ignore noise))
-  ;; Like pprint-handler-bind, but the each of the error clauses is
-  ;; printed with declaractions and forms on a separate line, indented
+  ;; Like pprint-handler-bind, but each of the error clauses is
+  ;; printed with declarations and forms on a separate line, indented
   ;; like a function body.  The handler-case part, "~:<~^~W~3I
   ;; ~:_~W~1I~@{ ~:@_...~:>" comes from pprint-handler-bind, but the
   ;; last "~W" is replaced to print out the error clauses in the way
