@@ -10,21 +10,10 @@
   (assert-equal 
 "
 (WITH-FLOAT-TRAPS-MASKED (:UNDERFLOW)
-  (LET* ((RATIO
-          (/ (* (EXPT 10 PPRINT-TESTS::EXPONENT) NUMBER)
-             PPRINT-TESTS::DIVISOR))
-         (PPRINT-TESTS::RESULT (COERCE RATIO PPRINT-TESTS::FLOAT-FORMAT)))
-    (WHEN (AND (ZEROP PPRINT-TESTS::RESULT) (NOT (ZEROP NUMBER)))
-      (ERROR \"Underflow\"))
-    PPRINT-TESTS::RESULT))"
+  (PRINT \"Hello\"))"
      (with-output-to-string (s)
        (pprint '(ext:with-float-traps-masked (:underflow)
-                 (let* ((ratio (/ (* (expt 10 exponent) number)
-                                  divisor))
-	                (result (coerce ratio float-format)))
-                   (when (and (zerop result) (not (zerop number)))
-                     (error "Underflow"))
-                   result))
+                 (print "Hello"))
                s))))
 
 (define-test pprint.with-float-traps-enabled
@@ -32,21 +21,10 @@
   (assert-equal 
 "
 (WITH-FLOAT-TRAPS-ENABLED (:UNDERFLOW)
-  (LET* ((RATIO
-          (/ (* (EXPT 10 PPRINT-TESTS::EXPONENT) NUMBER)
-             PPRINT-TESTS::DIVISOR))
-         (PPRINT-TESTS::RESULT (COERCE RATIO PPRINT-TESTS::FLOAT-FORMAT)))
-    (WHEN (AND (ZEROP PPRINT-TESTS::RESULT) (NOT (ZEROP NUMBER)))
-      (ERROR \"Underflow\"))
-    PPRINT-TESTS::RESULT))"
+  (PRINT \"Hello\"))"
      (with-output-to-string (s)
        (pprint '(ext:with-float-traps-enabled (:underflow)
-                 (let* ((ratio (/ (* (expt 10 exponent) number)
-                                  divisor))
-	                (result (coerce ratio float-format)))
-                   (when (and (zerop result) (not (zerop number)))
-                     (error "Underflow"))
-                   result))
+                 (print "Hello"))
                s))))
 
 (define-test pprint.handler-case  

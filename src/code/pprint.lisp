@@ -2089,7 +2089,9 @@ When annotations are present, invoke them at the right positions."
     (c:sc-case pprint-sc-case)
     (c:define-assembly-routine pprint-define-assembly)
     (c:deftransform pprint-defun)
-    (c:defoptimizer pprint-defun)))
+    (c:defoptimizer pprint-defun)
+    (ext:with-float-traps-masked pprint-with-like)
+    (ext:with-float-traps-enabled pprint-with-like)))
 
 (defun pprint-init ()
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))
