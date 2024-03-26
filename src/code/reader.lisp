@@ -1869,16 +1869,15 @@ the end of the stream."
 
   ;; Otherwise the number might fit, so we carefully compute the result.
   (handler-case
-      (with-float-traps-masked (:underflow)
-	(let* ((ratio (/ (* (expt 10 exponent) number)
-                         divisor))
-	       (result (coerce ratio float-format)))
-	  (when (and (zerop result) (not (zerop number)))
-	    ;; The number we've read is so small that it gets
-	    ;; converted to 0.0, but is not actually zero.  Signal an
-	    ;; error.  See CLHS 2.3.1.1.
-            (error _"Underflow"))
-          result))
+      (let* ((ratio (/ (* (expt 10 exponent) number)
+                       divisor))
+	     (result (coerce ratio float-format)))
+	(when (and (zerop result) (not (zerop number)))
+	  ;; The number we've read is so small that it gets
+	  ;; converted to 0.0, but is not actually zero.  Signal an
+	  ;; error.  See CLHS 2.3.1.1.
+          (error _"Underflow"))
+        result)
     (floating-point-underflow ()
       ;; Resignal the underflow, but allow the user to continue with
       ;; 0.
