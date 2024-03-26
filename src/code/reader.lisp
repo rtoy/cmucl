@@ -1880,6 +1880,8 @@ the end of the stream."
             (error _"Underflow"))
           result))
     (floating-point-underflow ()
+      ;; Resignal the underflow, but allow the user to continue with
+      ;; 0.
       (let ((zero (coerce 0 float-format)))
         (restart-case
             (error 'floating-point-underflow)
