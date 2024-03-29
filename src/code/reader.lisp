@@ -1855,12 +1855,12 @@ the end of the stream."
                                vm:single-float-bias))))
               ((double-float long-float
                              #+double-double kernel:double-double-float)
+               ;; Double-float exponent range is -1074 to -1023
                (values (* 2 (- vm:double-float-normal-exponent-min
                                vm:double-float-bias
                                vm:double-float-digits))
                        (* 2 (- vm:double-float-normal-exponent-max
                                vm:double-float-bias)))))
-          ;; Double-float exponent range is -1074 to -1023
           (unless (< log2-low log2-num log2-high)
             ;; The number is definitely too large or too small to fit.
             ;; Signal an error.
@@ -1890,8 +1890,8 @@ the end of the stream."
                       (format stream "Return ~A" zero))
             zero))))
     (error ()
-      (%reader-error stream _"Number not representable as a ~S: ~S"
-		           float-format (read-buffer-to-string)))))
+	   (%reader-error stream _"Number not representable as a ~S: ~S"
+			  float-format (read-buffer-to-string)))))
 
 
 (defun make-ratio (stream)
