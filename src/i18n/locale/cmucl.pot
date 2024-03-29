@@ -8732,6 +8732,14 @@ msgid "Number not representable as a ~S: ~S"
 msgstr ""
 
 #: src/code/reader.lisp
+msgid "Underflow"
+msgstr ""
+
+#: src/code/reader.lisp
+msgid "Underflow when reading ~S"
+msgstr ""
+
+#: src/code/reader.lisp
 msgid "Invalid ratio: ~S/~S"
 msgstr ""
 

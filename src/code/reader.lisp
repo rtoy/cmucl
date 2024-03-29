@@ -1879,11 +1879,12 @@ the end of the stream."
           (error _"Underflow"))
         result)
     (floating-point-underflow ()
-      ;; Resignal the underflow, but allow the user to continue with
+      ;; Resignal a reader error, but allow the user to continue with
       ;; 0.
       (let ((zero (coerce 0 float-format)))
         (restart-case
-            (error 'floating-point-underflow)
+            (%reader-error stream _"Underflow when reading ~S"
+                           (read-buffer-to-string))
           (continue ()
             :report (lambda (stream)
                       (format stream "Return ~A" zero))
