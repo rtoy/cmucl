@@ -19006,6 +19006,10 @@ msgid "use inline (unsigned-byte 32) operations"
 msgstr ""
 
 #: src/compiler/float-tran.lisp
+msgid "Shouldn't happen"
+msgstr ""
+
+#: src/compiler/float-tran.lisp
 msgid "Can't open-code float to rational comparison."
 msgstr ""
 

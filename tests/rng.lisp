@@ -82,3 +82,27 @@
     (assert-equal result (multiple-value-list
 			  (64-bit-rng-state *test-state*)))))
 
+;; Test that the deftransform for random integers is working.
+(defun rng-int-trans (state)
+  (declare (type random-state state)
+           (optimize (speed 3)))
+  (random 100000 state))
+
+(defun rng-int (n state)
+  (declare (type random-state state))
+  (random n state))
+
+(define-test deftransform-random-int
+    (:tag :issues)
+  ;; Using the same state, generate a random integer with RNG-INT.
+  ;; This is the expected value.  The generate an integer with
+  ;; RNG-INT-TRANS.  The compiler should have used a deftransform in
+  ;; this function.  The values returned should be the same.
+  (let ((state (kernel::make-random-object :state (kernel::init-random-state 31415926535))))
+    (dotimes (k 2)
+      (print state)
+      (assert-equal (rng-int 100000 (make-random-state state))
+                    (rng-int-trans (make-random-state state)))
+      ;; Generate a random number to change our state.
+      (random 100000 state))))
+    
