@@ -212,3 +212,50 @@
   ;; most-positive-double-float.  And a really big single-float.
   (assert-error 'reader-error (read-from-string "1.8d308"))
   (assert-error 'reader-error (read-from-string "1d999999999")))
+
+(define-test fp-overflow-restarts.infinity
+    (:tag :issues)
+  ;; Test that the "infinity" restart from reader on floating-point
+  ;; overflow returns an infinity of the correct type and sign.
+  (dolist (item (list (list "4e38" ext:single-float-positive-infinity)
+                      (list "-4e38" ext:single-float-negative-infinity)
+                      (list "2d308" ext:double-float-positive-infinity)
+                      (list "-2d308" ext:double-float-negative-infinity)
+                      ;; These test the short-cut case in the reader for
+                      ;; very large numbers.
+                      (list "4e999" ext:single-float-positive-infinity)
+                      (list "-4e999" ext:single-float-negative-infinity)
+                      (list "1d999" ext:double-float-positive-infinity)
+                      (list "-1d999" ext:double-float-negative-infinity)))
+    (destructuring-bind (string expected-result)
+        item
+      (assert-equal expected-result
+                    (values (handler-bind ((reader-error
+                                             (lambda (c)
+                                               (declare (ignore c))
+                                               (invoke-restart 'lisp::infinity))))
+                              (read-from-string string)))))))
+
+(define-test fp-overflow-restarts.huge
+    (:tag :issues)
+  ;; Test that the "largest-float" restart from reader on
+  ;; floating-point overflow returns the largest float of the correct
+  ;; type and sign.
+  (dolist (item (list (list "4e38" most-positive-single-float)
+                      (list "-4e38" most-negative-single-float)
+                      (list "2d308" most-positive-double-float)
+                      (list "-2d308" most-negative-double-float)
+                      ;; These test the short-cut case in the reader for
+                      ;; very large numbers.
+                      (list "4e999" most-positive-single-float)
+                      (list "-4e999" most-negative-single-float)
+                      (list "1d999" most-positive-double-float)
+                      (list "-1d999" most-negative-double-float)))
+    (destructuring-bind (string expected-result)
+        item
+      (assert-equal expected-result
+                    (handler-bind ((reader-error
+                                     (lambda (c)
+                                       (declare (ignore c))
+                                       (values (invoke-restart 'lisp::largest-float)))))
+                      (read-from-string string))))))
