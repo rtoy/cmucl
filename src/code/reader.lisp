@@ -1883,7 +1883,7 @@ the end of the stream."
       ;; 0.
       (let ((zero (coerce 0 float-format)))
         (restart-case
-            (%reader-error stream _"Underflow when reading ~S"
+            (%reader-error stream _"Floating point underflow when reading ~S"
                            (read-buffer-to-string))
           (continue ()
             :report (lambda (stream)
