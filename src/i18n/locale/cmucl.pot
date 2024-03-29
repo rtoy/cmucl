@@ -8736,7 +8736,7 @@ msgid "Underflow"
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Underflow when reading ~S"
+msgid "Floating point underflow when reading ~S"
 msgstr ""
 
 #: src/code/reader.lisp
