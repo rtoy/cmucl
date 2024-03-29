@@ -1823,6 +1823,51 @@ the end of the stream."
                                              num))))
 	  (t (error _"Internal error in floating point reader.")))))
 
+(defun restart-overflow (sign-num sign-div float-format stream)
+  (flet
+      ((floating-point-infinity (sign float-format)
+         (ecase float-format
+           ((short-float single-float)
+            (if (minusp sign)
+                ext:single-float-negative-infinity
+                ext:single-float-positive-infinity))
+           ((double-float long-float)
+            (if (minusp sign)
+                ext:double-float-negative-infinity
+                ext:double-float-positive-infinity))
+           #+double-double
+           ((kernel::double-double-float)
+            (if (minusp sign)
+                kernel::double-double-float-negative-infinity
+                kernel::double-double-float-positive-infinity))))
+       (largest-float (sign float-format)
+         (ecase float-format
+           ((short-float single-float)
+            (if (minusp sign)
+                most-negative-single-float
+                most-positive-single-float))
+           ((double-float long-float)
+            (if (minusp sign)
+                most-negative-double-float
+                most-positive-double-float))
+           #+double-double
+           ((kernel::double-double-float)
+            (if (minusp sign)
+                ext:most-negative-double-double-float
+                ext:most-positive-double-double-float)))))
+
+  (restart-case
+      (%reader-error stream _"~S overflow reading ~S"
+                     float-format (read-buffer-to-string))
+    (infinity ()
+      :report (lambda (stream)
+                (format stream "Return floating-point infinity"))
+      (floating-point-infinity (* sign-num sign-div) float-format))
+    (largest-float ()
+      :report (lambda (stream)
+                (format stream "Return largest floating-point value"))
+      (largest-float (* sign-num sign-div) float-format)))))
+
 (defun make-float-aux (exponent number divisor float-format stream)
   ;; Computes x = number*10^exponent/divisor.
   ;;
@@ -1855,33 +1900,49 @@ the end of the stream."
                                vm:single-float-bias))))
               ((double-float long-float
                              #+double-double kernel:double-double-float)
+               ;; Double-float exponent range is -1074 to -1023
                (values (* 2 (- vm:double-float-normal-exponent-min
                                vm:double-float-bias
                                vm:double-float-digits))
                        (* 2 (- vm:double-float-normal-exponent-max
                                vm:double-float-bias)))))
-          ;; Double-float exponent range is -1074 to -1023
           (unless (< log2-low log2-num log2-high)
             ;; The number is definitely too large or too small to fit.
             ;; Signal an error.
-            (%reader-error stream _"Number not representable as a ~S: ~S"
-			   float-format (read-buffer-to-string)))))))
+            (return-from make-float-aux
+              (restart-overflow (signum number) (signum divisor)
+                                float-format stream)))))))
 
   ;; Otherwise the number might fit, so we carefully compute the result.
   (handler-case
-      (with-float-traps-masked (:underflow)
-	(let* ((ratio (/ (* (expt 10 exponent) number)
-                         divisor))
-	       (result (coerce ratio float-format)))
-	  (when (and (zerop result) (not (zerop number)))
-	    ;; The number we've read is so small that it gets
-	    ;; converted to 0.0, but is not actually zero.  Signal an
-	    ;; error.  See CLHS 2.3.1.1.
-            (error _"Underflow"))
-          result))
+      (let* ((ratio (/ (* (expt 10 exponent) number)
+                       divisor))
+	     (result (coerce ratio float-format)))
+	(when (and (zerop result) (not (zerop number)))
+	  ;; The number we've read is so small that it gets
+	  ;; converted to 0.0, but is not actually zero.  Signal an
+	  ;; error.  See CLHS 2.3.1.1.
+          (error _"Underflow"))
+        result)
+    (floating-point-underflow ()
+      ;; Resignal a reader error, but allow the user to continue with
+      ;; 0.
+      (let ((zero (coerce 0 float-format)))
+        (restart-case
+            (%reader-error stream _"Floating point underflow when reading ~S"
+                           (read-buffer-to-string))
+          (continue ()
+            :report (lambda (stream)
+                      (format stream "Return ~A" zero))
+            zero))))
+    (floating-point-overflow ()
+      ;; Resignal a reader error, but allow the user to replace
+      ;; overflow with another value.
+      (restart-overflow (signum number) (signum divisor)
+                        float-format stream))
     (error ()
-	   (%reader-error stream _"Number not representable as a ~S: ~S"
-			  float-format (read-buffer-to-string)))))
+      (%reader-error stream _"Number not representable as a ~S: ~S"
+		     float-format (read-buffer-to-string)))))
 
 
 (defun make-ratio (stream)
