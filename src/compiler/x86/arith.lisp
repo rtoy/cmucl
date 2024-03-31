@@ -1810,3 +1810,36 @@
 				  vm:other-pointer-type))
           s1)))
 )
+
+#+random-xoroshiro
+(progn
+(defknown kernel::random-xoroshiro-update ((simple-array double-float (2)))
+  (values (unsigned-byte 32) (unsigned-byte 32))
+  (movable))
+
+
+(define-vop (random-xoroshiro-update)
+  (:policy :fast-safe)
+  (:translate kernel::random-xoroshiro-update)
+  (:args (state :scs (descriptor-reg) :target state-arg))
+  (:arg-types simple-array-double-float)
+  (:results (hi :scs (unsigned-reg))
+            (lo :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  (:temporary (:sc descriptor-reg :offset eax-offset) state-arg)
+  (:temporary (:sc double-reg :offset xmm0-offset) s0)
+  (:temporary (:sc double-reg :offset xmm1-offset) s1)
+  (:temporary (:sc double-reg :offset xmm2-offset) t0)
+  (:temporary (:sc double-reg :offset xmm3-offset) t1)
+  (:temporary (:sc unsigned-reg :offset edx-offset :target hi) r1)
+  (:temporary (:sc unsigned-reg :offset ebx-offset :target lo) r0)
+  (:generator 50
+    (move state-arg state)
+    (move s0 s0)
+    (move s1 s1)
+    (move t0 t0)
+    (move t1 t1)
+    (inst call (make-fixup 'vm::xoroshiro-update :assembly-routine))
+    (move hi r1)
+    (move lo r0)))
+)
