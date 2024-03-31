@@ -412,45 +412,48 @@
   (inst pop k)
   (inst ret))
 
-
-#+(and random-xoroshiro)
+;;; Support for the xoroshiro128** generator.  See
+;;; https://prng.di.unimi.it/xoroshiro128starstar.c for the official
+;;; code.
+;;;
+;;; This is what we're implementing, where s[] is our state vector.
+;;;
+;;; static uint64_t s[2];
+;;; static inline uint64_t rotl(const uint64_t x, int k) {
+;;;   return (x << k) | (x >> (64 - k));
+;;; }
+;;;
+;;; uint64_t next(void) {
+;;;   const uint64_t s0 = s[0];
+;;; 	 uint64_t s1 = s[1];
+;;; 	 const uint64_t result = rotl(s0 * 5, 7) * 9;
+;;; 
+;;; 	 s1 ^= s0;
+;;; 	 s[0] = rotl(s0, 24) ^ s1 ^ (s1 << 16); // a, b
+;;; 	 s[1] = rotl(s1, 37); // c
+;;; 
+;;; 	 return result;
+;;; }
+;;;
+;;; A VOP is also generated to call this assembly routine.  This
+;;; routine computes a new 64-bit random number and also updates the
+;;; state, which is (simple-array (double-float) (2)).
+#+random-xoroshiro
 (define-assembly-routine
   (xoroshiro-update
    (:translate kernel::random-xoroshiro-update)
    (:return-style :raw)
    (:cost 30)
    (:policy :fast-safe)
-   #+nil
-   (:save-p t)
    (:arg-types simple-array-double-float)
    (:result-types unsigned-num unsigned-num))
   ((:arg state descriptor-reg eax-offset)
-   (:res result1 unsigned-reg edx-offset)
-   (:res result0 unsigned-reg ebx-offset)
+   (:res r1 unsigned-reg edx-offset)
+   (:res r0 unsigned-reg ebx-offset)
    (:temp s0 double-reg xmm0-offset)
    (:temp s1 double-reg xmm1-offset)
    (:temp t0 double-reg xmm2-offset)
    (:temp t1 double-reg xmm3-offset))
-  ;; See https://prng.di.unimi.it/xoroshiro128starstar.c for the official code.
-  ;;
-  ;; This is what we're implementing, where s[] is our state vector.
-  ;;
-  ;; static uint64_t s[2];
-  ;; static inline uint64_t rotl(const uint64_t x, int k) {
-  ;;   return (x << k) | (x >> (64 - k));
-  ;; }
-  ;;
-  ;; uint64_t next(void) {
-  ;;   const uint64_t s0 = s[0];
-  ;; 	 uint64_t s1 = s[1];
-  ;; 	 const uint64_t result = rotl(s0 * 5, 7) * 9;
-  ;; 
-  ;; 	 s1 ^= s0;
-  ;; 	 s[0] = rotl(s0, 24) ^ s1 ^ (s1 << 16); // a, b
-  ;; 	 s[1] = rotl(s1, 37); // c
-  ;; 
-  ;; 	 return result;
-  ;; }
 
   ;; s0 = state[0]
   (inst movsd s0 (make-ea :dword :base state
@@ -476,11 +479,11 @@
   (inst psllq t1 3)                     ; t1 = t0 << 3
   (inst paddq t0 t1)                    ; t0 = t0 << 3 + t0 = 9*t0
 
-  ;; Save the result as two 32-bit results.  result1 is the high 32 bits
-  ;; and result0 is the low 32.
-  (inst movd result0 t0)
+  ;; Save the result as two 32-bit results.  r1 is the high 32 bits
+  ;; and r0 is the low 32.
+  (inst movd r0 t0)
   (inst psrlq t0 32)
-  (inst movd result1 t0)
+  (inst movd r1 t0)
 
   ;; s1 = state[1]
   (inst movsd s1 (make-ea :dword :base state
