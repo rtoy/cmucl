@@ -415,9 +415,9 @@
 
 #+(and random-xoroshiro assembler)
 (define-assembly-routine
-  (random-xoroshiro-update
+  (xoroshiro-update
    (:translate kernel::xoroshiro-update)
-   (:return-style :none)
+   (:return-style :raw)
    (:cost 30)
    (:policy :safe)
    (:save-p t))
@@ -522,4 +522,5 @@
 					     vm:word-bytes)
 				          (* 8 1))
 				       vm:other-pointer-type))
-        s1))
+        s1)
+  (inst ret))
