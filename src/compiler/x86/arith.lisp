@@ -1812,39 +1812,6 @@
 )
 
 #+random-xoroshiro
-(progn
 (defknown kernel::random-xoroshiro-update ((simple-array double-float (2)))
   (values (unsigned-byte 32) (unsigned-byte 32))
   (movable))
-
-
-#+nil
-(define-vop (random-xoroshiro-update)
-  (:policy :fast-safe)
-  (:translate kernel::random-xoroshiro-update)
-  (:args (state :scs (descriptor-reg) :target state-arg))
-  (:arg-types simple-array-double-float)
-  (:results (hi :scs (unsigned-reg))
-            (lo :scs (unsigned-reg)))
-  (:result-types unsigned-num unsigned-num)
-  (:temporary (:sc descriptor-reg :offset eax-offset :from (:argument 0) :to (:eval 2))
-              state-arg)
-  (:temporary (:sc double-reg :offset xmm0-offset :from (:eval 1) :to (:eval 3))
-              s0)
-  (:temporary (:sc double-reg :offset xmm1-offset :from (:eval 1) :to (:eval 3))
-              s1)
-  (:temporary (:sc double-reg :offset xmm2-offset :from (:eval 1) :to (:eval 3))
-              t0)
-  (:temporary (:sc double-reg :offset xmm3-offset :from (:eval 1) :to (:eval 3))
-              t1)
-  (:temporary (:sc unsigned-reg :offset edx-offset :target hi :from (:eval 2) :to (:result 0))
-              r1)
-  (:temporary (:sc unsigned-reg :offset ebx-offset :target lo :from (:eval 2) :to (:result 1))
-              r0)
-  (:ignore s0 s1 t0 t1)
-  (:generator 50
-    (move state-arg state)
-    (inst call (make-fixup 'vm::xoroshiro-update :assembly-routine))
-    (move hi r1)
-    (move lo r0)))
-)
