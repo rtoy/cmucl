@@ -413,17 +413,20 @@
   (inst ret))
 
 
-#+(and random-xoroshiro assembler)
+#+(and random-xoroshiro)
 (define-assembly-routine
   (xoroshiro-update
-   (:translate kernel::xoroshiro-update)
+   (:translate kernel::random-xoroshiro-update)
    (:return-style :raw)
    (:cost 30)
-   (:policy :safe)
-   (:save-p t))
+   (:policy :fast-safe)
+   #+nil
+   (:save-p t)
+   (:arg-types simple-array-double-float)
+   (:result-types unsigned-num unsigned-num))
   ((:arg state descriptor-reg eax-offset)
-   (:res r1 unsigned-reg edx-offset)
-   (:res r0 unsigned-reg ebx-offset)
+   (:res result1 unsigned-reg edx-offset)
+   (:res result0 unsigned-reg ebx-offset)
    (:temp s0 double-reg xmm0-offset)
    (:temp s1 double-reg xmm1-offset)
    (:temp t0 double-reg xmm2-offset)
@@ -473,11 +476,11 @@
   (inst psllq t1 3)                     ; t1 = t0 << 3
   (inst paddq t0 t1)                    ; t0 = t0 << 3 + t0 = 9*t0
 
-  ;; Save the result as two 32-bit results.  r1 is the high 32 bits
-  ;; and r0 is the low 32.
-  (inst movd r0 t0)
+  ;; Save the result as two 32-bit results.  result1 is the high 32 bits
+  ;; and result0 is the low 32.
+  (inst movd result0 t0)
   (inst psrlq t0 32)
-  (inst movd r1 t0)
+  (inst movd result1 t0)
 
   ;; s1 = state[1]
   (inst movsd s1 (make-ea :dword :base state
@@ -522,5 +525,4 @@
 					     vm:word-bytes)
 				          (* 8 1))
 				       vm:other-pointer-type))
-        s1)
-  (inst ret))
+        s1))
