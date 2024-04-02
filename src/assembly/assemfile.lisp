@@ -209,7 +209,61 @@
 				    ,(reg-spec-temp res))))
 		     results))))))
 
+;;; Define-assembly-routine -- Public
+;;;
+;;;   Parse the code to produce an assembly routine and create a VOP
+;;;   that calls the assembly routine.
 (defmacro define-assembly-routine (name&options vars &rest code)
+  "Define-assembly-routine (name&options vars Code*)
+  Define a Lisp assembly routine, and a VOP to that calls the assembly
+  routine, if enabled.  (A VOP is not created if the reader
+  conditional #+assembler precedes the definition of the assembly
+  routine.)
+
+  Name&options
+    A list giving the name of the assembly routine and options
+    describing the assembly routine options and VOP options.  The
+    format is (Name ({Key Value})*) where Name is the name of the
+    assembly routine.  Options is a list of options:
+
+    Options
+
+      :Cost Cost
+        The cost of the VOP.  This is used in the generated VOP.
+
+      :Policy Policy
+        The policy for the VOP
+
+      :Translate Name
+        The translation for the VOP
+
+      :Arg-Types arg-types
+      :Result-Types result-types
+        The template restrictions for the arguments of the VOP and the
+        results of the VOP.
+
+      :Return-Style {:Raw :Full-Call :None}
+ 
+    Vars is a list of the arguments and returned results and
+    temporaries used by the assembly routine.
+
+      :Arg Arg-name (Sc*) Sc-Offset
+        Input argument for the assembly routine with the name
+        Arg-Name.  The argument must be one of the Sc types.  The register
+        assigned to this argument is given by Sc-Offset which must be
+        the offset for the register holding this argument.
+
+      :Res Res-Name Sc Sc-offset
+        Result of the assembly routine with the name Res-Name.  The
+        result must be a register of the specified storage class Sc.  The
+        Sc-offset is the register used for the result.
+
+      :Temp Temp-Name Sc Sc-offset
+        Like :res, except this names a temporary register that the
+        assembly routine can use.
+
+  Code
+    The code for the assembly routine."
   (multiple-value-bind (name options)
 		       (if (atom name&options)
 			   (values name&options nil)
