@@ -2,6 +2,7 @@
 include Config.sparc_common
 
 CC = cc -xlibmieee -g
+CFLAGS += $(COPT)
 CFLAGS += -Di386
 CPP = cc -E
 DEPEND_FLAGS = -xM1
@@ -11,4 +12,4 @@ ARCH_SRC = x86-arch.c
 
 OS_SRC = solaris-os.c os-common.c undefineds.c elf.c
 OS_LINK_FLAGS=
-OS_LIBS= -lsocket -lnsl -ldl
+OS_LIBS= -lsocket -lnsl -ldl -lrt

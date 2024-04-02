@@ -212,12 +212,15 @@ static void
 brief_otherimm(lispobj obj)
 {
     int type, c, idx;
-    char buffer[10];
 
     type = TypeOf(obj);
     switch (type) {
       case type_BaseChar:
-	  c = (obj >> 8) & 0xff;
+          /*
+           * A base-char should only be 16 bits long now.  But
+           * sometimes it uses all 24.  So just grab all the bits.
+           */
+	  c = (obj >> 8) & 0xfffff;
 	  switch (c) {
 	    case '\0':
 		printf("#\\Null");
@@ -228,20 +231,35 @@ brief_otherimm(lispobj obj)
 	    case '\b':
 		printf("#\\Backspace");
 		break;
+            case '\11':
+                printf("#\\Tab");
+                break;
+            case '\13':
+                printf("#\\Vt");
+                break;
+            case '\15':
+                printf("#\\Return");
+                break;
+            case '\33':
+                printf("#\\Escape");
+                break;
+            case '\40':
+                printf("#\\Space");
+                break;
 	    case '\177':
 		printf("#\\Delete");
 		break;
 	    default:
-		strcpy(buffer, "#\\");
 		if (c >= 128) {
-		    strcat(buffer, "m-");
-		    c -= 128;
-		}
-		if (c < 32) {
-		    strcat(buffer, "c-");
-		    c += '@';
-		}
-		printf("%s%c", buffer, c);
+                    /* Just print out the code value */
+		    printf("#\\u+%04X", c);
+		} else if (c < 32) {
+                    /* Print it out as a control character */
+                    printf("#\\^%c", c + '@');
+		} else {
+                    /* Plain ASCII character */
+                    printf("#\\%c", c);
+                }
 		break;
 	  }
 	  break;
@@ -354,7 +372,7 @@ print_struct(lispobj obj)
 {
     struct instance *instance = (struct instance *) PTR(obj);
     int i;
-    char buffer[16];
+    char buffer[32];
 
     print_obj("type: ", ((struct instance *) PTR(obj))->slots[0]);
     for (i = 1; i < HeaderValue(instance->header); i++) {

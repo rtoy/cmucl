@@ -33,7 +33,7 @@ msgstr ""
 #: src/code/intl.lisp src/compiler/globaldb.lisp src/code/defstruct.lisp
 #: src/code/remote.lisp src/code/wire.lisp src/code/internet.lisp
 #: src/code/loop.lisp src/code/run-program.lisp src/code/parse-time.lisp
-#: src/code/profile.lisp src/code/ntrace.lisp src/code/rand-mt19937.lisp
+#: src/code/profile.lisp src/code/ntrace.lisp src/code/rand-xoroshiro.lisp
 #: src/code/debug.lisp src/code/debug-int.lisp src/code/debug-info.lisp
 #: src/code/eval.lisp src/code/filesys.lisp src/code/pathname.lisp
 #: src/code/fd-stream.lisp src/code/extfmts.lisp src/code/serve-event.lisp
@@ -309,8 +309,9 @@ msgstr ""
 
 #: src/code/lispinit.lisp
 msgid ""
-"Terminates the current Lisp.  Things are cleaned up unless Recklessly-P is\n"
-"  non-Nil."
+"Terminates the current Lisp.  Things are cleaned up unless\n"
+"  Recklessly-P is non-Nil.  On quitting, Lisp sets the return code to\n"
+"  Code, defaulting to 0."
 msgstr ""
 
 #: src/code/lispinit.lisp
@@ -1155,6 +1156,13 @@ msgid ""
 msgstr ""
 
 #: src/code/type.lisp
+msgid ""
+"The minimum length of either list argument for subsetp where a\n"
+"  hashtable is used to speed up processing instead of using a basic\n"
+"  list implementation.  This value was determined by experimentation."
+msgstr ""
+
+#: src/code/type.lisp
 msgid "Subtypep is illegal on this type:~%  ~S"
 msgstr ""
 
@@ -1592,8 +1600,8 @@ msgstr ""
 msgid ""
 "Returns T if X and Y are EQL or if they are structured components\n"
 "  whose elements are EQUAL.  Strings and bit-vectors are EQUAL if they\n"
-"  are the same length and have indentical components.  Other arrays must be\n"
-"  EQ to be EQUAL."
+"  are the same length and have identical components.  Other arrays\n"
+"  must be EQ to be EQUAL."
 msgstr ""
 
 #: src/code/pred.lisp
@@ -3208,15 +3216,7 @@ msgid "Test and test-not both supplied."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Destructively returns the union list1 and list2."
-msgstr ""
-
-#: src/code/list.lisp
 msgid "Returns the intersection of list1 and list2."
-msgstr ""
-
-#: src/code/list.lisp
-msgid "Destructively returns the intersection of list1 and list2."
 msgstr ""
 
 #: src/code/list.lisp
@@ -3224,11 +3224,19 @@ msgid "Returns the elements of list1 which are not in list2."
 msgstr ""
 
 #: src/code/list.lisp
+msgid "Destructively returns the union list1 and list2."
+msgstr ""
+
+#: src/code/list.lisp
+msgid "Destructively returns the intersection of list1 and list2."
+msgstr ""
+
+#: src/code/list.lisp
 msgid "Destructively returns the elements of list1 which are not in list2."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Return new list of elements appearing exactly once in LIST1 and LIST2."
+msgid "Return new list of elements appearing exactly one of LIST1 and LIST2."
 msgstr ""
 
 #: src/code/list.lisp
@@ -4009,6 +4017,13 @@ msgid ""
 "Convert String to Unicode Normalization Form KC (NFKC).  If the\n"
 "  string is a simple string and is already normalized, the original\n"
 "  string is returned."
+msgstr ""
+
+#: src/code/string.lisp
+msgid ""
+"Convert STRING to NFD (or NFKD).  If :darwinp is non-NIL, then\n"
+"  characters in the ranges U2000-U2FFF, UF900-UFA6A, and U2F800-U2FA1D\n"
+"  are not decomposed, as specified for Darwin pathnames."
 msgstr ""
 
 #: src/code/string.lisp
@@ -5606,17 +5621,6 @@ msgstr ""
 
 #: src/code/misc.lisp
 msgid ""
-"Returns the documentation string of Doc-Type for X, or NIL if\n"
-"  none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,\n"
-"  SETF, and T."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid "~S is not the name of a structure type."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid ""
 "If X is an atom, see if it is present in *FEATURES*.  Also\n"
 "  handle arbitrary combinations of atoms using NOT, AND, OR."
 msgstr ""
@@ -5650,11 +5654,15 @@ msgid "Returns a string describing the supporting software."
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
+msgid "Version string for supporting software"
 msgstr ""
 
 #: src/code/misc.lisp
-msgid "Unknown"
+msgid "Returns a string describing version of the supporting software."
+msgstr ""
+
+#: src/code/misc.lisp
+msgid "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp."
 msgstr ""
 
 #: src/code/misc.lisp
@@ -5663,10 +5671,6 @@ msgstr ""
 
 #: src/code/misc.lisp
 msgid "The value of LONG-SITE-NAME.  Set in library:site-init.lisp."
-msgstr ""
-
-#: src/code/misc.lisp
-msgid "Site name not initialized"
 msgstr ""
 
 #: src/code/misc.lisp
@@ -5697,7 +5701,20 @@ msgid ""
 "If\n"
 "  it is not already compiled, the compiler is called to produce something "
 "to\n"
-"  disassemble."
+"  disassemble.\n"
+"\n"
+"  Also see disassem:disassemble for finer control of disassembly."
+msgstr ""
+
+#: src/code/misc-doc.lisp
+msgid ""
+"Returns the documentation string of Doc-Type for X, or NIL if\n"
+"  none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,\n"
+"  SETF, and T."
+msgstr ""
+
+#: src/code/misc-doc.lisp
+msgid "~S is not the name of a structure type."
 msgstr ""
 
 #: src/code/extensions.lisp
@@ -6148,6 +6165,14 @@ msgstr ""
 msgid "Same as -help."
 msgstr ""
 
+#: src/code/commandline.lisp
+msgid "Prints the cmucl version and exits"
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "Prints the cmucl version and exits; same as -version"
+msgstr ""
+
 #: src/code/env-access.lisp
 msgid ""
 "Returns information about the symbol VAR in the lexical environment ENV.\n"
@@ -6333,10 +6358,19 @@ msgstr ""
 
 #: src/code/room.lisp
 msgid ""
-"Print a breakdown by instance type of all the instances allocated in\n"
-"  Space.  If TOP-N is true, print only information for the the TOP-N types "
-"with\n"
-"  largest usage."
+"Print a breakdown by instance type of all the allocation in Space.  \n"
+"\n"
+"  :TOP-N \n"
+"      If true, print only the TOP-N types by largest usage.\n"
+"\n"
+"  :ENTRIES-VAR\n"
+"      If bound, contains the name of the symbol used to store the hash-table"
+"\n"
+"      of allocated entries for later processing.\n"
+"\n"
+"  :CALL-SOURCE\n"
+"      A string identifying the location from which instance-usage was "
+"called."
 msgstr ""
 
 #: src/code/room.lisp
@@ -6410,6 +6444,39 @@ msgstr ""
 msgid ""
 "Return a hashtable translating code objects to function constant counts for\n"
 "  all code objects in Space with more than Above function constants."
+msgstr ""
+
+#: src/code/gc.lisp
+msgid ""
+"Returns a list of the current GC assertion settings. The list is\n"
+"    in the same format as the keyword arguments to SET-GC-ASSERTIONS,\n"
+"    i.e.,\n"
+"\n"
+"      (apply #'set-gc-assertions (get-gc-assertions))\n"
+"\n"
+"   See SET-GC-ASSERTIONS for more information."
+msgstr ""
+
+#: src/code/gc.lisp
+msgid ""
+"Set GC assertion to the specified value:\n"
+"       :ASSERT-LEVEL\n"
+"           Defaults to 0, higher values indicate more assertions are "
+"enabled.\n"
+"\n"
+"       :VERIFY-AFTER-FREE-HEAP\n"
+"           If non-NIL, the heap is verified for consistency whenever\n"
+"           part of the heap is collected.\n"
+"\n"
+"       :VERIFY-GENERATIONS\n"
+"           Set to generation number.  When GC occurs, generations\n"
+"           equal to or higher than this value are checked for\n"
+"           consistency.\n"
+"\n"
+"       :VERIFY-NEW-OBJECTS\n"
+"           When GC occurs for the newest generation, the heap for this\n"
+"           generation is checked for validity.\n"
+""
 msgstr ""
 
 #: src/code/gc.lisp
@@ -6669,6 +6736,12 @@ msgstr ""
 #: src/code/save.lisp
 msgid ""
 "This is true if and only if the lisp was started with the -edit switch."
+msgstr ""
+
+#: src/code/save.lisp
+msgid ""
+"Add external format alias for :locale to the format specified by\n"
+"  the locale as set by setlocale(3C)."
 msgstr ""
 
 #: src/code/save.lisp
@@ -6958,7 +7031,15 @@ msgid "Impossible case reached in PEEK-CHAR"
 msgstr ""
 
 #: src/code/stream.lisp
-msgid "Returns T if a character is available on the given Stream."
+msgid ""
+"Returns T if a character is available on the given Stream.\n"
+"  Argument Width is only used by instances of SIMPLE-STREAM. If\n"
+"  Stream is a LISP-STREAM or FUNDAMENTAL-STREAM, passing more\n"
+"  than one argument is invalid."
+msgstr ""
+
+#: src/code/interr.lisp src/code/stream.lisp
+msgid "Invalid number of arguments: ~S"
 msgstr ""
 
 #: src/code/stream.lisp
@@ -9009,7 +9090,8 @@ msgstr ""
 #: src/code/extfmts.lisp
 msgid ""
 "The default external format to use if no other external format is\n"
-"  specified"
+"  specified.  This is unaffected by any locale settings or by\n"
+"  SET-SYSTEM-EXTERNAL-FORMAT."
 msgstr ""
 
 #: src/code/extfmts.lisp
@@ -9071,6 +9153,12 @@ msgstr ""
 
 #: src/code/extfmts.lisp
 msgid "~&Could not find external format ~S~%"
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
+"List of external formats that are builtin so that they don't need to\n"
+"  be loaded on first use."
 msgstr ""
 
 #: src/code/extfmts.lisp
@@ -9211,6 +9299,13 @@ msgid ""
 "UTF-8 is a variable-length character encoding for Unicode.  By\n"
 "default, illegal input sequences are replaced by the Unicode\n"
 "replacement character."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
+"US ASCII 7-bit encoding.  Illegal input sequences are replaced with\n"
+"the Unicode replacment character.  Illegal output characters are\n"
+"replaced with a question mark."
 msgstr ""
 
 #: src/code/fd-stream.lisp
@@ -10356,6 +10451,12 @@ msgid "*load-verbose* is bound to this before loading files."
 msgstr ""
 
 #: src/code/module.lisp
+msgid ""
+"Provider functions for cmucl modules and libraries.  These are\n"
+"  searched first before trying *module-provider-functions*"
+msgstr ""
+
+#: src/code/module.lisp
 msgid "See function documentation for REQUIRE"
 msgstr ""
 
@@ -10838,10 +10939,6 @@ msgstr ""
 
 #: src/code/interr.lisp
 msgid "Unknown error:~{ ~S~})"
-msgstr ""
-
-#: src/code/interr.lisp
-msgid "Invalid number of arguments: ~S"
 msgstr ""
 
 #: src/code/interr.lisp
@@ -12105,13 +12202,13 @@ msgstr ""
 msgid "Type \"yes\" for yes or \"no\" for no. "
 msgstr ""
 
-#: src/code/rand-mt19937.lisp
+#: src/code/rand-xoroshiro.lisp
 msgid ""
 "Generate an random state vector from the given SEED.  The seed can be\n"
-"  either an integer or a vector of (unsigned-byte 32)"
+"  either an integer or a vector of (unsigned-byte 64)"
 msgstr ""
 
-#: src/code/rand-mt19937.lisp
+#: src/code/rand-xoroshiro.lisp
 msgid ""
 "Make a random state object.  If STATE is not supplied, return a copy\n"
 "  of the default random state.  If STATE is a random state, then return a\n"
@@ -12119,18 +12216,25 @@ msgid ""
 "  the universal time or /dev/urandom if available."
 msgstr ""
 
-#: src/code/rand-mt19937.lisp
-msgid "Argument is not a RANDOM-STATE, T or NIL: ~S"
+#: src/code/rand-xoroshiro.lisp
+msgid "Argument is not a RANDOM-STATE, T, or NIL: ~S"
 msgstr ""
 
-#: src/code/rand-mt19937.lisp
+#: src/code/rand-xoroshiro.lisp
 msgid ""
 "Generate a uniformly distributed pseudo-random number between zero\n"
 "  and Arg.  State, if supplied, is the random state to use."
 msgstr ""
 
-#: src/code/rand-mt19937.lisp
+#: src/code/rand-xoroshiro.lisp
 msgid "Argument is not a positive integer or a positive float: ~S"
+msgstr ""
+
+#: src/code/rand-xoroshiro.lisp
+msgid ""
+"Jump the RNG-STATE.  This is equivalent to 2^64 calls to the\n"
+"  xoroshiro128+ generator.  It can be used to generate 2^64\n"
+"  non-overlapping subsequences for parallel computations."
 msgstr ""
 
 #: src/code/ntrace.lisp
@@ -15201,6 +15305,23 @@ msgid ""
 "  delimited by non-case-modifiable chars.  "
 msgstr ""
 
+#: src/code/unicode.lisp
+msgid ""
+"Decompose the Hangul syllable codepoint CP to an equivalent sequence\n"
+"  of conjoining jamo and print the decomposed result to the stream\n"
+"  STREAM."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid "Test if CODEPOINT is a Hangul syllable"
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"Decompose any Hangul syllables in STRING to an equivalent sequence of\n"
+"  conjoining jamo characters."
+msgstr ""
+
 #: src/compiler/macros.lisp
 msgid ""
 "Policy Node Condition*\n"
@@ -17294,6 +17415,10 @@ msgid "Can't make a compiled function from ~S"
 msgstr ""
 
 #: src/compiler/disassem.lisp
+msgid "Default value for :radix argument for disassem:disassemble"
+msgstr ""
+
+#: src/compiler/disassem.lisp
 msgid ""
 "Disassemble the machine code associated with OBJECT, which can be a\n"
 "  function, a lambda expression, or a symbol with a function definition.  "
@@ -17311,7 +17436,7 @@ msgid ""
 "  :Radix\n"
 "      The disassembler uses the specified base, case, and radix when\n"
 "      printing the disassembled code.  The default values are 16,\n"
-"      :downcase, and *print-radix*, respectively."
+"      :downcase, and *disassemble-print-radix*, respectively."
 msgstr ""
 
 #: src/compiler/disassem.lisp
@@ -18866,10 +18991,6 @@ msgstr ""
 
 #: src/compiler/float-tran.lisp
 msgid "use inline (unsigned-byte 32) operations"
-msgstr ""
-
-#: src/compiler/float-tran.lisp
-msgid "Shouldn't happen"
 msgstr ""
 
 #: src/compiler/float-tran.lisp
@@ -21222,12 +21343,6 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid "    Gray Streams Protocol Support"
-msgstr ""
-
-msgid ""
-"US ASCII 7-bit encoding.  Illegal input sequences are replaced with\n"
-"the Unicode replacment character.  Illegal output characters are\n"
-"replaced with a question mark."
 msgstr ""
 
 msgid ""

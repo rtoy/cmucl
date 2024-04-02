@@ -12,7 +12,7 @@
 
 (when (find-package "PCL")
   ;; Load the lisp:documentation functions.
-  (load "target:code/misc")
+  (load "target:code/misc-doc")
 
   ;;
   ;; Blow away make-instance optimizer so that it doesn't confuse

@@ -1,0 +1,21 @@
+# -*- Mode: makefile -*-
+include Config.x86_common
+
+CC = clang
+CPPFLAGS += -m32 -D__NO_CTYPE
+CFLAGS += $(COPT)
+
+# Allow sse2 instructions (-msse2); and tune for pentium4
+# (-mtune=pentium4), the first chip to have sse2; and finally generate
+# code assuming instructions can trap (-ftrapping-math).
+CFLAGS += -msse2 -mtune=pentium4 -ftrapping-math
+CFLAGS += -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+
+UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
+ASSEM_SRC +=  linux-stubs.S
+OS_SRC += Linux-os.c elf.c
+OS_LIBS = -ldl
+OS_LINK_FLAGS = -m32 -rdynamic -Xlinker --export-dynamic -Xlinker -Map -Xlinker foo
+OS_LINK_FLAGS += -Wl,-z,noexecstack
+
+EXEC_FINAL_OBJ = exec-final.o

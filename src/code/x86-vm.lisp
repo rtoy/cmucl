@@ -42,9 +42,6 @@
   (setf *features* (delete :x87 *features*))
   (sys:register-lisp-feature :sse2))
 
-#+(or darwin linux)
-(sys:register-lisp-runtime-feature :relocatable-stacks)
-
 
 ;;;; The sigcontext structure.
 
@@ -60,14 +57,56 @@
 #-cross-compiler
 (defun machine-type ()
   _N"Returns a string describing the type of the local machine."
-  "X86")
+  ;; Use cpuid to get the processor type.
+  (with-output-to-string (s)
+    (multiple-value-bind (max-input ebx ecx edx)
+	(x86::cpuid 0)
+      (declare (ignore max-input))
+      (flet ((int-to-string (int)
+	       (dotimes (k 4)
+		 (let ((code (ldb (byte 8 (* 8 k)) int)))
+		   ;; Don't print out null chars.  We're
+		   ;; assuming this only happens at the end
+		   ;; of the brand string.
+		   (unless (zerop code)
+		     (write-char (code-char code) s))))))
+	(int-to-string ebx)
+	(int-to-string edx)
+	(int-to-string ecx)))))
 
 
 #-cross-compiler
 (defun machine-version ()
   _N"Returns a string describing the version of the local machine."
-  "X86")
-
+  ;; UWe use the processor brand string method to get more detailed
+  ;; information about the processor.  If it's not available, just
+  ;; give up, even though we could use the brand index (CPUID with
+  ;; EAX=1) to get an identifier.
+  (let ((max-cpuid (x86::cpuid #x80000000)))
+    (cond ((or (not (logbitp 31 max-cpuid))
+	       (< max-cpuid #x80000004))
+	   ;; Processor brand string not supported, just give up.
+	   "X86")
+	  (t
+	   (with-output-to-string (s)
+	     (labels ((int-to-string (int)
+			(dotimes (k 4)
+			  (let ((code (ldb (byte 8 (* 8 k)) int)))
+			    ;; Don't print out null chars.  We're
+			    ;; assuming this only happens at the end
+			    ;; of the brand string.
+			    (unless (zerop code)
+			      (write-char (code-char code) s)))))
+		      (cpuid-to-string (input)
+			(multiple-value-bind (eax ebx ecx edx)
+			    (x86::cpuid input)
+			  (int-to-string eax)
+			  (int-to-string ebx)
+			  (int-to-string ecx)
+			  (int-to-string edx))))
+	       (cpuid-to-string #x80000002)
+	       (cpuid-to-string #x80000003)
+	       (cpuid-to-string #x80000004)))))))
 
 
 ;;; Fixup-Code-Object -- Interface
@@ -195,12 +234,20 @@
   (with-alien ((scp (* unix:sigcontext) scp))
     (let ((pc (sigcontext-program-counter scp)))
       (declare (type system-area-pointer pc))
-      ;; using INT3 the pc is .. INT3 <here> code length bytes...
-      (let* ((length (sap-ref-8 pc 1))
+      ;; The pc should point to the start of the UD1 instruction.  So
+      ;; we have something like:
+      ;;
+      ;;   offset  contents
+      ;;   0       UD1 (contains the trap code)
+      ;;   3       length
+      ;;   4...    bytes
+      (let* ((length (sap-ref-8 pc 3))
 	     (vector (make-array length :element-type '(unsigned-byte 8))))
 	(declare (type (unsigned-byte 8) length)
 		 (type (simple-array (unsigned-byte 8) (*)) vector))
-	(copy-from-system-area pc (* vm:byte-bits 2)
+	;; Grab bytes after the length byte where the number of bytes is
+	;; given by value of the length byte.
+	(copy-from-system-area pc (* vm:byte-bits 4)
 			       vector (* vm:word-bits
 					 vm:vector-data-offset)
 			       (* length vm:byte-bits))
@@ -388,21 +435,8 @@
 ;;; cases. Note these are initialise by genesis as they are needed
 ;;; early.
 ;;;
-(defvar *fp-constant-0s0*)
-(defvar *fp-constant-1s0*)
+(defvar *fp-constant-0f0*)
 (defvar *fp-constant-0d0*)
-(defvar *fp-constant-1d0*)
-;;; The long-float constants.
-(defvar *fp-constant-0l0*)
-(defvar *fp-constant-1l0*)
-(defvar *fp-constant-pi*)
-(defvar *fp-constant-l2t*)
-(defvar *fp-constant-l2e*)
-(defvar *fp-constant-lg2*)
-(defvar *fp-constant-ln2*)
-
-;;; Enable/Disable scavenging of the read-only space.
-(defvar *scavenge-read-only-space* nil)
 
 ;;; The current alien stack pointer; saved/restored for non-local
 ;;; exits.
@@ -413,6 +447,7 @@
 ;;; transformed to a call to this routine allowing its use in byte
 ;;; compiled code.
 ;;;
+#+random-mt19937
 (defun random-mt19937 (state)
   (declare (type (simple-array (unsigned-byte 32) (627)) state))
   (random-mt19937 state))

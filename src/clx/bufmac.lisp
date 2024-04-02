@@ -19,9 +19,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: bufmac.lisp,v 1.6 2009/06/17 18:22:45 rtoy Rel $")
-
 (in-package :xlib)
 
 ;;; The read- macros are in buffer.lisp, because event-case depends on (most of) them.

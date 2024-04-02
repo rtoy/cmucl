@@ -172,3 +172,62 @@
 	   (assert-eql 1 (expt -1 (1+ power)))))
     (assert-eql 0 (expt 0 power))
     (assert-error 'division-by-zero (expt 0 (- power)))))
+
+(define-test sqrt-exceptional-vales
+  ;; Short cuts for +infinity, -infinity, and NaN (where NaN has a
+  ;; positive sign).
+  (let ((nan (abs (ext:with-float-traps-masked (:invalid :divide-by-zero)
+	       ;; This produces some NaN.  We don't care what the
+	       ;; actual bits are.
+	       (/ 0d0 0d0))))
+	(inf #.ext:double-float-positive-infinity)
+	(minf #.ext:double-float-negative-infinity))
+    ;; These tests come from Kahan's paper, Branch Cuts for Elementary
+    ;; Functions.
+    (ext:with-float-traps-masked (:invalid)
+      ;; sqrt(-beta +/- i0) = +0 +/- sqrt(beta), beta >= 0
+      (assert-eql (complex +0d0 2d0)
+		  (sqrt (complex -4d0 +0d0)))
+      (assert-eql (complex +0d0 -2d0)
+		  (sqrt (complex -4d0 -0d0)))
+      ;; sqrt(x +/- inf) = +inf +/- inf for all finite x.
+      (assert-eql (complex inf inf)
+		  (sqrt (complex 4d0 inf)))
+      (assert-eql (complex inf minf)
+		  (sqrt (complex 4d0 minf)))
+      ;; sqrt(NaN + i*beta) = NaN + i NaN
+      (let ((z (sqrt (complex nan 4d0))))
+	(assert-true (ext:float-nan-p (realpart z)))
+	(assert-true (ext:float-nan-p (imagpart z))))
+      ;; sqrt(beta +i NaN) = NaN + i NaN
+      (let ((z (sqrt (complex 4d0 nan))))
+	(assert-true (ext:float-nan-p (realpart z)))
+	(assert-true (ext:float-nan-p (imagpart z))))
+      ;; sqrt(NaN + iNaN) = NaN + i NaN
+      (let ((z (sqrt (complex nan nan))))
+	(assert-true (ext:float-nan-p (realpart z)))
+	(assert-true (ext:float-nan-p (imagpart z))))
+      ;; sqrt(inf +/- i beta) = inf +/- i0
+      (assert-eql (complex inf +0d0)
+		  (sqrt (complex inf 4d0)))
+      (assert-eql (complex inf -0d0)
+		  (sqrt (complex inf -4d0)))
+      ;; sqrt(inf +/- i NaN) = inf + i NaN
+      (let ((z (sqrt (complex inf nan))))
+	(assert-eql inf (realpart z))
+	(assert-true (ext:float-nan-p (imagpart z))))
+      (let ((z (sqrt (complex inf (- nan)))))
+	(assert-eql inf (realpart z))
+	(assert-true (ext:float-nan-p (imagpart z))))
+      ;; sqrt(-inf +/- i beta) = +0 +/- i*inf
+      (assert-eql (complex 0d0 inf)
+		  (sqrt (complex minf +4d0)))
+      (assert-eql (complex 0d0 minf)
+		  (sqrt (complex minf -4d0)))
+      ;; sqrt(-inf +/- i NaN) = NaN +/- i inf
+      (let ((z (sqrt (complex minf nan))))
+	(assert-true (ext:float-nan-p (realpart z)))
+	(assert-eql inf (imagpart z)))
+      (let ((z (sqrt (complex minf (- nan)))))
+	(assert-true (ext:float-nan-p (realpart z)))
+	(assert-eql minf (imagpart z))))))

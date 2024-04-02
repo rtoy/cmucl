@@ -5,6 +5,12 @@
 
 (in-package "ISSUES-TESTS")
 
+(defparameter *test-path*
+  (merge-pathnames (make-pathname :name :unspecific :type :unspecific
+                                  :version :unspecific)
+                   *load-truename*)
+  "Path to where this file is.")
+
 (defun square (x)
   (expt x 2))
 
@@ -12,8 +18,10 @@
   (declare (ignore arg))
   form)
 
-(defparameter *test-path*
-  (merge-pathnames (make-pathname :name :unspecific :type :unspecific
+(defparameter *tmp-dir*
+  (merge-pathnames (make-pathname :directory '(:relative "tmp")
+				  :name :unspecific
+				  :type :unspecific
                                   :version :unspecific)
                    *load-truename*)
   "Directory for temporary test files.")
@@ -252,6 +260,13 @@
 	(assert-equal (map 'list #'char-code out-string)
 		      (map 'list #'char-code expected))))))
 
+(define-test issue.25c-setup
+    (:tag :issues)
+  ;; Get the external format before running the test issue.25c.  See
+  ;; issue #161
+  ;; (https://gitlab.common-lisp.net/cmucl/cmucl/-/issues/161).
+  (assert-true (stream::find-external-format :utf16-be)))
+
 (define-test issue.25c
     (:tag :issues)
   ;; Modified test to verify that each octet read from run-program is
@@ -397,6 +412,18 @@
       (sleep 5)
       (assert-eql :exited (ext:process-status p)))))
 
+;; For some reason this used to work with linux CI but now doesn't.
+;; But this test passes on my Fedora and debian systems.  See issue
+;; #64.  So until we figure this out, disable this test when we're
+;; running a pipeline with linux, but otherwise enable it.  The
+;; pipeline defines the envvar GITLAB_CI so check for that.
+;;
+;; This also fails on Darwin CI now.  Let's just disable the test if
+;; running on CI.
+;;
+;; It would be better if lisp-unit had a way of marking tests as known
+;; failures, but it doesn't.
+#+#.(cl:if (cl:and (unix:unix-getenv "GITLAB_CI")) '(or) '(and))
 (define-test issue.41.1
     (:tag :issues)
   (issue-41-tester unix:sigstop))
@@ -434,4 +461,647 @@
 			    "./"
 			    test-dir-name
 			    "ls-link")))))
-					       
+
+(define-test issue.47
+  (:tag :issues)
+  (with-standard-io-syntax
+    (assert-equal "`(,@VARS ,@VARS)"
+		  (with-output-to-string (s)
+		    (write (read-from-string "`(,@vars ,@vars)")
+			   :pretty t
+			   :stream s)))))
+
+(define-test issue.59
+  (:tag :issues)
+  (let ((f (compile nil #'(lambda (z)
+			    (declare (type (double-float -2d0 0d0) z))
+			    (nth-value 2 (decode-float z))))))
+    (assert-equal -1d0 (funcall f -1d0))))
+
+(define-test issue.59.1-double
+  (:tag :issues)
+  (dolist (entry '(((-2d0 2d0) (-1073 2))
+		   ((-2d0 0d0) (-1073 2))
+		   ((0d0 2d0) (-1073 2))
+		   ((1d0 4d0) (1 3))
+		   ((-4d0 -1d0) (1 3))
+		   (((0d0) (10d0)) (-1073 4))
+		   ((-2f0 2f0) (-148 2))
+		   ((-2f0 0f0) (-148 2))
+		   ((0f0 2f0) (-148 2))
+		   ((1f0 4f0) (1 3))
+		   ((-4f0 -1f0) (1 3))
+		   ((0f0) (10f0)) (-148 4)))
+    (destructuring-bind ((arg-lo arg-hi) (result-lo result-hi))
+	entry
+      (assert-equalp (c::specifier-type `(integer ,result-lo ,result-hi))
+		     (c::decode-float-exp-derive-type-aux
+		      (c::specifier-type `(double-float ,arg-lo ,arg-hi)))))))
+
+(define-test issue.59.1-double
+  (:tag :issues)
+  (dolist (entry '(((-2d0 2d0) (-1073 2))
+		   ((-2d0 0d0) (-1073 2))
+		   ((0d0 2d0) (-1073 2))
+		   ((1d0 4d0) (1 3))
+		   ((-4d0 -1d0) (1 3))
+		   (((0d0) (10d0)) (-1073 4))
+		   (((0.5d0) (4d0)) (0 3))))
+    (destructuring-bind ((arg-lo arg-hi) (result-lo result-hi))
+	entry
+      (assert-equalp (c::specifier-type `(integer ,result-lo ,result-hi))
+		     (c::decode-float-exp-derive-type-aux
+		      (c::specifier-type `(double-float ,arg-lo ,arg-hi)))
+		     arg-lo
+		     arg-hi))))
+
+(define-test issue.59.1-float
+  (:tag :issues)
+  (dolist (entry '(((-2f0 2f0) (-148 2))
+		   ((-2f0 0f0) (-148 2))
+		   ((0f0 2f0) (-148 2))
+		   ((1f0 4f0) (1 3))
+		   ((-4f0 -1f0) (1 3))
+		   (((0f0) (10f0)) (-148 4))
+		   (((0.5f0) (4f0)) (0 3))))
+    (destructuring-bind ((arg-lo arg-hi) (result-lo result-hi))
+	entry
+      (assert-equalp (c::specifier-type `(integer ,result-lo ,result-hi))
+		     (c::decode-float-exp-derive-type-aux
+		      (c::specifier-type `(single-float ,arg-lo ,arg-hi)))
+		     arg-lo
+		     arg-hi))))
+
+(define-test issue.60
+  (:tag :issues)
+  (let ((c14 (compile nil #'(lambda (x)
+			      (fround (the (member 1.0 2d0) x))))))
+    (assert-equalp
+     (values 1.0 0.0)
+     (funcall c14 1.0))
+    (assert-equalp
+     (values 2d0 0d0)
+     (funcall c14 2d0))))
+
+(define-test issue.58
+  (:tag :issues)
+  (let ((c9 (compile nil #'(lambda (x)
+			     (= (the (eql 1.0d0) x) #c(1/2 1/2))))))
+    (assert-false (funcall c9 1.d0))))
+
+(define-test issue.61
+  (:tag :issues)
+  ;; Verifies that the compiler doesn't segfault and that we return
+  ;; the correct value.
+  (assert-false
+   (funcall (compile nil '(lambda () (array-has-fill-pointer-p #*10))))))
+
+(define-test issue.62
+  (:tag :issues)
+  ;; Verifies that the compiler doesn't segfault and that we return
+  ;; the correct value.
+  (assert-false
+   (funcall (compile nil '(lambda () (array-displacement "aaaaaaaa"))))))
+
+(define-test issue.101
+    (:tag :issues)
+  ;; Verifies that we don't get unexpected overflow.  The actual value
+  ;; is not really important.  The important part is no overflow is
+  ;; signaled.
+  ;;
+  ;; See https://gitlab.common-lisp.net/cmucl/cmucl/-/issues/101 for
+  ;; more details.
+  (assert-equalp
+   3.0380154777955097d205
+   (expt 1.7976931348623157d308 0.6666)))
+
+(define-test issue.121
+    (:tag :issues)
+  ;; Output should only have one newline character in it.  Previously,
+  ;; we printed two.
+  (assert-equalp
+   (concatenate 'string "xxx" (string #\Newline))
+   (let ((a (make-array 0 :element-type 'character :fill-pointer 0
+                              :adjustable t)))
+           (with-output-to-string (s a)
+             (format s "xxx")
+             (terpri s)
+             (fresh-line s))
+           a)))
+
+(define-test issue.127
+    (:tag :issues)
+  ;; Let's just start at uid 10000 and keep going up until we fail.
+  ;; There should be no segfaults when we find an invalid uid.
+  (loop for uid from 10000
+	with user-info = (unix:unix-getpwuid uid)
+	while user-info
+	finally (assert-false user-info)))
+
+(define-test issue.132.1
+    (:tag :issues)
+  ;; From a message on cmucl-imp 2008/06/01.  If "d1" is a directory,
+  ;; (rename "d1" "d2") should rename the directory "d1" to "d2".
+  ;; Previously that produced an error trying to rename "d1" to
+  ;; "d1/d2".
+  ;;
+  ;; Create the test directory (that is a subdirectory of "dir").
+  (assert-true (ensure-directories-exist "dir/orig-dir/"))
+  (let ((*default-pathname-defaults* (merge-pathnames "dir/" (ext:default-directory))))
+    (multiple-value-bind (defaulted-new-name old-truename new-truename)
+	;; Rename "dir/orig-dir" to "orig/new-dir".
+	(rename-file "orig-dir/" "new-dir")
+      (let ((orig (merge-pathnames
+		   (make-pathname :directory '(:relative "orig-dir"))))
+	    (new (merge-pathnames
+		  (make-pathname :directory '(:relative "new-dir")))))
+	;; Ensure that the rename worked and that the returned values
+	;; have the expected values.
+	(assert-true defaulted-new-name)
+	(assert-equalp old-truename orig)
+	(assert-equalp new-truename new)))))
+
+(define-test issue.132.2
+    (:tag :issues)
+  (assert-true (ensure-directories-exist "dir/orig.dir/"))
+  (let ((*default-pathname-defaults* (merge-pathnames "dir/" (ext:default-directory))))
+    (multiple-value-bind (defaulted-new-name old-truename new-truename)
+	;; Rename "dir/orig.dir" to "orig/new-dir".  Since the
+	;; original name has a pathname-name of "orig" and a
+	;; pathname-type of "dir", the new file name is merged to
+	;; produce a pathname-name of "new" with a pathname-type of
+	;; "dir".
+	(rename-file "orig.dir" "new")
+      (let ((orig (merge-pathnames
+		   (make-pathname :directory '(:relative "orig.dir"))))
+	    (new (merge-pathnames
+		  (make-pathname :directory '(:relative "new.dir")))))
+	;; Ensure that the rename worked and that the returned values
+	;; have the expected values.
+	(assert-true defaulted-new-name)
+	(assert-equalp old-truename orig)
+	(assert-equalp new-truename new)))))
+
+(define-test issue.132.3
+    (:tag :issues)
+  (assert-true (ensure-directories-exist "dir/orig.dir/"))
+  (let ((*default-pathname-defaults* (merge-pathnames "dir/" (ext:default-directory))))
+    (multiple-value-bind (defaulted-new-name old-truename new-truename)
+	;; Rename "dir/orig.dir/" to "orig/new".  Note that the
+	;; original name is "orig.dir/" which marks a directory so
+	;; that when we merge the new name with the old to fill in
+	;; missing components, there are none because the old name is
+	;; a directory with no pathname-name or pathname-type, so the
+	;; new name stays the same.
+	(rename-file "orig.dir/" "new")
+      (let ((orig (merge-pathnames
+		   (make-pathname :directory '(:relative "orig.dir"))))
+	    (new (merge-pathnames
+		  (make-pathname :directory '(:relative "new")))))
+	;; Ensure that the rename worked and that the returned values
+	;; have the expected values.
+	(assert-true defaulted-new-name)
+	(assert-equalp old-truename orig)
+	(assert-equalp new-truename new)))))
+
+(define-test issue.134
+    (:tag :issues)
+  ;; Verify that we can compute (3+4*%i)^%i (in Maxima format).  This
+  ;; can be written analytically as
+  ;; %i*%e^-atan(4/3)*sin(log(5))+%e^-atan(4/3)*cos(log(5)), so use
+  ;; %this as the reference value.
+  (let ((answer (complex (* (cos (log 5w0))
+			    (exp (- (atan (float (/ 4 3) 0w0)))))
+			 (* (sin (log 5w0))
+			    (exp (- (atan (float (/ 4 3) 0w0))))))))
+    (flet ((relerr (actual true)
+	     ;; Return the relative error between ACTUAL and TRUE
+	     (/ (abs (- actual true))
+		(abs true))))
+      (dolist (test '((#c(3 4) 3.5918w-8)
+		      (#c(3.0 4) 3.5918w-8)
+		      (#c(3d0 4) 9.2977w-17)
+		      (#c(3w0 4) 0w0)))
+	(destructuring-bind (base eps)
+	    test
+	  (let* ((value (expt base #c(0 1)))
+		 (err (relerr value answer)))
+	    (assert-true (<= err eps) base err eps)))))))
+
+(define-test issue.130
+    (:tag :issues)
+  ;; Just verify that file-author works.  In particular "." should
+  ;; work and not return NIL.
+  (assert-true (file-author "."))
+  (assert-true (file-author "bin/build.sh"))
+  (assert-true
+   (file-author
+    (merge-pathnames 
+     (concatenate 'string
+		  ;; Write the test file name this way so
+		  ;; that it's independent of the encoding
+		  ;; used to load this file.  The name is
+		  ;; "안녕하십니까".
+		  '(#\Hangul_Syllable_An #\Hangul_Syllable_Nyeong #\Hangul_Syllable_Ha
+		    #\Hangul_Syllable_Sib #\Hangul_Syllable_Ni #\Hangul_Syllable_Gga)
+		  ".txt")
+     *test-path*))))
+
+(define-test issue.139-default-external-format
+    (:tag :issues)
+  (assert-eq :utf-8 stream:*default-external-format*)
+  ;; Find the alias for :locale, and verify it exists and verify that
+  ;; the system streams have that format.
+  (let ((locale-format (gethash :locale stream::*external-format-aliases*)))
+    (assert locale-format)
+    (assert-eq locale-format (stream-external-format sys:*stdin*))
+    (assert-eq locale-format (stream-external-format sys:*stdout*))
+    (assert-eq locale-format (stream-external-format sys:*stderr*))
+    ;; sys:*tty* can either be an fd-stream or a two-way-stream.
+    (etypecase sys:*tty*
+      (system:fd-stream
+       (assert-eq locale-format (stream-external-format sys:*tty*)))
+      (two-way-stream
+       (assert-eq locale-format
+		  (stream-external-format (two-way-stream-input-stream sys:*tty*)))
+       (assert-eq locale-format
+		  (stream-external-format (two-way-stream-output-stream sys:*tty*)))))))
+
+(define-test issue.139-default-external-format-read-file
+    (:tag :issues)
+  (let ((string (concatenate 'string
+			     ;; This is "hello" in Korean
+			     '(#\Hangul_syllable_an
+			       #\Hangul_Syllable_Nyeong
+			       #\Hangul_Syllable_Ha
+			       #\Hangul_Syllable_Se
+			       #\Hangul_Syllable_Yo))))
+    ;; Test that opening a file for reading uses the the default :utf8
+    ;; encoding.
+    (with-open-file (s (merge-pathnames "utf8.txt"
+					*test-path*)
+		       :direction :input)
+      ;; The first line should be "hello" in Hangul.
+      (assert-equal (map 'list #'char-name string)
+		    (map 'list #'char-name (read-line s))))))
+
+(define-test issue.139-default-external-format-write-file
+    (:tag :issues)
+  ;; Test that opening a file for writing uses the default :utf8.
+  ;; First write something out to the file.  Then read it back in
+  ;; using an explicit format of utf8 and verifying that we got the
+  ;; right contents.
+  (let ((string (concatenate 'string
+			     ;; This is "hello" in Korean
+			     '(#\Hangul_syllable_an
+			       #\Hangul_Syllable_Nyeong
+			       #\Hangul_Syllable_Ha
+			       #\Hangul_Syllable_Se
+			       #\Hangul_Syllable_Yo))))
+    (with-open-file (s (merge-pathnames "out-utf8.txt"
+					*test-path*)
+		       :direction :output
+		       :if-exists :supersede)
+      (write-line string s))
+    (with-open-file (s (merge-pathnames "out-utf8.txt"
+					*test-path*)
+		       :direction :input
+		       :external-format :utf-8)
+      (assert-equal (map 'list #'char-name string)
+		    (map 'list #'char-name (read-line s))))))
+  
+(define-test issue.139-locale-external-format
+    (:tag :issues)
+  ;; Just verify that :locale format exists
+  (assert-true (stream::find-external-format :locale nil)))
+
+;;; Test stream-external-format for various types of streams.
+
+(define-test issue.140.two-way-stream
+    (:tag :issues)
+  (ensure-directories-exist *tmp-dir*)
+  (with-open-file (in (merge-pathnames "issues.lisp" cmucl-test-runner::*load-path*)
+		      :direction :input
+		      :external-format :utf-8)
+    (with-open-file (out (merge-pathnames "output.tst" *tmp-dir*)
+			 :direction :output
+			 :external-format :utf-8
+			 :if-exists :supersede)
+      (let ((two-way-stream (make-two-way-stream in out)))
+	(assert-error 'type-error
+		      (stream-external-format two-way-stream))))))
+
+;; Test synonym-stream returns the format of the underlying stream.
+(define-test issue.140.synonym-stream
+    (:tag :issues)
+  (with-open-file (s (merge-pathnames "issues.lisp" cmucl-test-runner::*load-path*)
+		     :direction :input
+		     :external-format :iso8859-1)
+    (let ((syn (make-synonym-stream '*syn-stream*)))
+      (setf syn s)
+      (assert-equal :iso8859-1 (stream-external-format syn)))))
+
+(define-test issue.140.broadcast-stream
+    (:tag :issues)
+  ;; Create 3 output streams.  The exact external formats aren't
+  ;; really important here as long as they're different for each file
+  ;; so we can tell if we got the right answer.
+  (with-open-file (s1 (merge-pathnames "broad-1" *tmp-dir*)
+		      :direction :output
+		      :if-exists :supersede
+		      :external-format :latin1)
+    (with-open-file (s2 (merge-pathnames "broad-2" *tmp-dir*)
+			:direction :output
+			:if-exists :supersede
+			:external-format :utf-8)
+      (with-open-file (s3 (merge-pathnames "broad-3" *tmp-dir*)
+			  :direction :output
+			  :if-exists :supersede
+			  :external-format :utf-16)
+	;; The format must be the value from the last stream.
+	(assert-equal :utf-16
+		      (stream-external-format
+		       (make-broadcast-stream s1 s2 s3)))))))
+
+(define-test issue.150
+    (:tag :issues)
+  (let ((ext:*gc-verbose* nil)
+	(*compile-print* nil))
+    (assert-true (stream::find-external-format :euckr))
+    (assert-true (stream::find-external-format :cp949))))
+
+(define-test issue.154
+    (:tag :issues)
+  (let ((old-locale intl::*locale*)
+	(locale "en_US.UTF-8@piglatin")
+	(piglatin-text "Ethay izesay ofway away eamstray inway-ufferbay."))
+    (unwind-protect
+	 (progn
+	   (assert-equal locale (intl:setlocale "en_US.UTF-8@piglatin"))
+	   (print (intl::find-domain "cmucl" intl::*locale*))
+	   (assert-equal piglatin-text (intl:dgettext "cmucl" "The size of a stream in-buffer."))
+	   )
+      (intl:setlocale old-locale))))
+
+(define-test issue.158
+    (:tag :issues)
+  (let* ((name (string #\Hangul_Syllable_Gyek))
+	 (path (make-pathname :directory (list :relative name)
+			      :name name
+			      :type name)))
+    ;; Enable this when we implement normalization for Darwin
+    #+(and nil darwin)
+    (let ((expected '(4352 4456 4543)))
+      ;; Tests that on Darwin the Hangul pathname has been normalized
+      ;; correctly.  We fill in the directory, name, and type components
+      ;; with the same thing since it shouldn't really matter.
+      ;;
+      ;; The expected value is the conjoining jamo for the character
+      ;; #\Hangul_Syllable_Gyek.
+      (assert-equal (map 'list #'char-code (second (pathname-directory path)))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-name path))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-type path))
+		    expected))
+    #-darwin
+    (let ((expected (list (char-code #\Hangul_Syllable_Gyek))))
+      ;; For other OSes, just assume that the pathname is unchanged.
+      (assert-equal (map 'list #'char-code (second (pathname-directory path)))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-name path))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-type path))
+		    expected))))
+
+(define-test issue.158.dir
+    (:tag :issues)
+  (flet ((get-file ()
+	   ;; This assumes that there is only one file in resources/darwin
+	   (let ((files (directory (merge-pathnames "resources/darwin/*.txt" *test-path*))))
+	     (assert-equal (length files) 1)
+	     (first files))))
+    (let ((f (get-file))
+	  (expected-name "안녕하십니까"))
+      #+darwin
+      (assert-equal (pathname-name f)
+		    (unicode::decompose-hangul expected-name))
+      #-darwin
+      (assert-equal (pathname-name f) expected-name))))
+    
+
+
+(define-test issue.166
+    (:tag :issues)
+  ;; While this tests for the correct return value, the problem was
+  ;; that the compiler was miscompiling the function below and causing
+  ;; an error when the function run.
+  (let ((f (compile nil #'(lambda ()
+			    (nth-value 1 (integer-decode-float least-positive-double-float))))))
+    (assert-equal -1126 (funcall f))))
+
+
+
+(define-test issue.167.single
+    (:tag :issues)
+  (let ((df-min-expo (nth-value 1 (decode-float least-positive-single-float)))
+	(df-max-expo (nth-value 1 (decode-float most-positive-single-float))))
+    ;; Verify that the min exponent for kernel:single-float-exponent
+    ;; is the actual min exponent from decode-float.
+    (assert-true (typep df-min-expo 'kernel:single-float-exponent))
+    (assert-true (typep (1+ df-min-expo) 'kernel:single-float-exponent))
+    (assert-false (typep (1- df-min-expo) 'kernel:single-float-exponent))
+
+    ;; Verify that the max exponent for kernel:single-float-exponent
+    ;; is the actual max exponent from decode-float.
+    (assert-true (typep df-max-expo 'kernel:single-float-exponent))
+    (assert-true (typep (1- df-max-expo) 'kernel:single-float-exponent))
+    (assert-false (typep (1+ df-max-expo) 'kernel:single-float-exponent)))
+
+  ;; Same as for decode-float, but for integer-decode-float.
+  (let ((idf-min-expo (nth-value 1 (integer-decode-float least-positive-single-float)))
+	(idf-max-expo (nth-value 1 (integer-decode-float most-positive-single-float))))
+    (assert-true (typep idf-min-expo 'kernel:single-float-int-exponent))
+    (assert-true (typep (1+ idf-min-expo) 'kernel:single-float-int-exponent))
+    (assert-false (typep (1- idf-min-expo) 'kernel:single-float-int-exponent))
+
+    (assert-true (typep idf-max-expo 'kernel:single-float-int-exponent))
+    (assert-true (typep (1- idf-max-expo) 'kernel:single-float-int-exponent))
+    (assert-false (typep (1+ idf-max-expo) 'kernel:single-float-int-exponent))))
+
+(define-test issue.167.double
+    (:tag :issues)
+  (let ((df-min-expo (nth-value 1 (decode-float least-positive-double-float)))
+	(df-max-expo (nth-value 1 (decode-float most-positive-double-float))))
+    ;; Verify that the min exponent for kernel:double-float-exponent
+    ;; is the actual min exponent from decode-float.
+    (assert-true (typep df-min-expo 'kernel:double-float-exponent))
+    (assert-true (typep (1+ df-min-expo) 'kernel:double-float-exponent))
+    (assert-false (typep (1- df-min-expo) 'kernel:double-float-exponent))
+
+    ;; Verify that the max exponent for kernel:double-float-exponent
+    ;; is the actual max exponent from decode-float.
+    (assert-true (typep df-max-expo 'kernel:double-float-exponent))
+    (assert-true (typep (1- df-max-expo) 'kernel:double-float-exponent))
+    (assert-false (typep (1+ df-max-expo) 'kernel:double-float-exponent)))
+
+  ;; Same as for decode-float, but for integer-decode-float.
+  (let ((idf-min-expo (nth-value 1 (integer-decode-float least-positive-double-float)))
+	(idf-max-expo (nth-value 1 (integer-decode-float most-positive-double-float))))
+    (assert-true (typep idf-min-expo 'kernel:double-float-int-exponent))
+    (assert-true (typep (1+ idf-min-expo) 'kernel:double-float-int-exponent))
+    (assert-false (typep (1- idf-min-expo) 'kernel:double-float-int-exponent))
+
+    (assert-true (typep idf-max-expo 'kernel:double-float-int-exponent))
+    (assert-true (typep (1- idf-max-expo) 'kernel:double-float-int-exponent))
+    (assert-false (typep (1+ idf-max-expo) 'kernel:double-float-int-exponent))))
+
+(define-test issue.192.device
+  (assert-true (equal (make-pathname :device :unspecific)
+		      (make-pathname :device nil)))
+  (assert-true (equal (make-pathname :device nil)
+		      (make-pathname :device :unspecific))))
+
+(define-test issue.192.name
+  (assert-true (equal (make-pathname :name :unspecific)
+		      (make-pathname :name nil)))
+  (assert-true (equal (make-pathname :name nil)
+		      (make-pathname :name :unspecific))))
+
+(define-test issue.192.type
+  (assert-true (equal (make-pathname :type :unspecific)
+		      (make-pathname :type nil)))
+  (assert-true (equal (make-pathname :type nil)
+		      (make-pathname :type :unspecific))))
+
+(define-test issue.192.version
+  (assert-true (equal (make-pathname :version :newest)
+		      (make-pathname :version nil)))
+  (assert-true (equal (make-pathname :version nil)
+		      (make-pathname :version :newest)))
+  (assert-true (equal (make-pathname :version :unspecific)
+		      (make-pathname :version nil)))
+  (assert-true (equal (make-pathname :version nil)
+		      (make-pathname :version :unspecific)))
+  (assert-true (equal (make-pathname :version :unspecific)
+		      (make-pathname :version :newest)))
+  (assert-true (equal (make-pathname :version :newest)
+		      (make-pathname :version :unspecific)))
+)
+
+(define-test issue.216.enough-namestring-relative-dir
+    (:tag :issues)
+  (let ((pathname #p"foo/bar.lisp"))
+  (dolist (defaults '(#p"/tmp/zot/" #p"/tmp/zot/foo/"))
+    (let ((enough (enough-namestring pathname defaults)))
+      ;; This is the condition from the CLHS entry for enough-namestring
+      (assert-equal (merge-pathnames enough defaults)
+		    (merge-pathnames (parse-namestring pathname nil defaults) defaults))))))
+
+(define-test issue.242-load-foreign
+  ;; load-foreign apparently returns NIL if it succeeds.
+  (assert-true (eql nil (ext:load-foreign (merge-pathnames "test-return.o" *test-path*)))))
+
+(alien:def-alien-variable "test_arg" c-call:int)
+
+(define-test issue.242.test-alien-return-signed-char
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_signed_char"
+				(function c-call:char))))
+	 (sign-extend (n)
+	   (let ((n (ldb (byte 8 0) n)))
+	     (if (> n #x7f)
+		 (- n #x100)
+		 n))))
+    (dolist (x '(99 -99 1023 -1023))
+      (assert-equal (sign-extend x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-signed-short
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_short"
+				(function c-call:short))))
+	 (sign-extend (n)
+	   (let ((n (ldb (byte 16 0) n)))
+	     (if (> n #x7fff)
+		 (- n #x10000)
+		 n))))
+    (dolist (x '(1023 -1023 100000 -100000))
+      (assert-equal (sign-extend x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-signed-int
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_int"
+				(function c-call:int)))))
+    (dolist (x '(1023 -1023 #x7fffffff #x-80000000))
+      (assert-equal x (fun x) x))))
+
+(define-test issue.242.test-alien-return-unsigned-char
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_char"
+				(function c-call:unsigned-char))))
+	 (expected (n)
+	   (ldb (byte 8 0) n)))
+    (dolist (x '(99 -99 1023 -1023))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-unsigned-short
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_short"
+				(function c-call:unsigned-short))))
+	 (expected (n)
+	   (ldb (byte 16 0) n)))
+    (dolist (x '(1023 -1023 100000 -100000))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-unsigned-int
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_int"
+				(function c-call:unsigned-int))))
+	 (expected (n)
+	   (ldb (byte 32 0) n)))
+    (dolist (x '(1023 -1023 #x7fffffff #x-80000000))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-bool
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_bool"
+				(function c-call:char))))
+	 (expected (n)
+	   (if (zerop n)
+	       0
+	       1)))
+    (dolist (x '(0 1 1000))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-bool.2
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_bool"
+				(function alien:boolean))))
+	 (expected (n)
+	   (not (zerop n))))
+    (dolist (x '(0 1 1000))
+      (assert-equal (expected x) (fun x) x))))

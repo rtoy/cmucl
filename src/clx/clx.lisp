@@ -76,9 +76,6 @@
 ;;; objects, and the additional functionality to match the C Xlib is still in
 ;;; progress.  Bug reports should be addressed to bug-clx@expo.lcs.mit.edu.
 
-#+cmu
-(ext:file-comment "$Id: clx.lisp,v 1.16 2009/06/17 18:22:45 rtoy Rel $")
-
 ;; Note: all of the following is in the package XLIB.
 
 (in-package :xlib)
@@ -86,7 +83,7 @@
 (pushnew :clx *features*)
 (pushnew :xlib *features*)
 
-(defparameter *version* "Telent CLX 0.7.3 + CMUCL mods, based on MIT R5.02")
+(defparameter *version* "MIT R5.02")
 (pushnew :clx-mit-r4 *features*)
 (pushnew :clx-mit-r5 *features*)
 
@@ -161,20 +158,6 @@
 (deftype int8 () '(signed-byte 8))
 
 (deftype card4 () '(unsigned-byte 4))
-
-#-clx-ansi-common-lisp
-(deftype real (&optional (min '*) (max '*))
-  (labels ((convert (limit floatp)
-	     (typecase limit
-	       (number (if floatp (float limit 0s0) (rational limit)))
-	       (list (map 'list #'convert limit))
-	       (otherwise limit))))
-    `(or (float ,(convert min t) ,(convert max t))
-	 (rational ,(convert min nil) ,(convert max nil)))))
-
-#-clx-ansi-common-lisp
-(deftype base-char ()
-  'string-char)
 
 ; Note that we are explicitly using a different rgb representation than what
 ; is actually transmitted in the protocol.
@@ -346,8 +329,7 @@
   (atom-id-map (make-hash-table :test (resource-id-map-test)
 				:size *atom-cache-size*)
 	       :type hash-table)
-  (extended-max-request-length 0 :type card32)
-  )
+  (extended-max-request-length 0 :type card32))
 
 (defun print-display-name (display stream)
   (declare (type (or null display) display))
@@ -376,8 +358,8 @@
 (def-clx-class (drawable (:copier nil) (:print-function print-drawable))
   (id 0 :type resource-id)
   (display nil :type (or null display))
-  (plist nil :type list)			; Extension hook
-  )
+  ;; Extension hook
+  (plist nil :type list))
 
 (defun print-drawable (drawable stream depth)
   (declare (type drawable drawable)
@@ -388,12 +370,10 @@
     (let ((*print-base* 16)) (prin1 (drawable-id drawable) stream))))
 
 (def-clx-class (window (:include drawable) (:copier nil)
-		       (:print-function print-drawable))
-  )
+		       (:print-function print-drawable)))
 
 (def-clx-class (pixmap (:include drawable) (:copier nil)
-		       (:print-function print-drawable))
-  )
+		       (:print-function print-drawable)))
 
 (def-clx-class (visual-info (:copier nil) (:print-function print-visual-info))
   (id 0 :type resource-id)
@@ -423,8 +403,7 @@
 (def-clx-class (colormap (:copier nil) (:print-function print-colormap))
   (id 0 :type resource-id)
   (display nil :type (or null display))
-  (visual-info nil :type (or null visual-info))
-  )
+  (visual-info nil :type (or null visual-info)))
 
 (defun print-colormap (colormap stream depth)
   (declare (type colormap colormap)
@@ -439,8 +418,7 @@
 
 (def-clx-class (cursor (:copier nil) (:print-function print-cursor))
   (id 0 :type resource-id)
-  (display nil :type (or null display))
-  )
+  (display nil :type (or null display)))
 
 (defun print-cursor (cursor stream depth)
   (declare (type cursor cursor)
@@ -553,8 +531,7 @@
   (server-state (allocate-gcontext-state) :type gcontext-state)
   (local-state (allocate-gcontext-state) :type gcontext-state)
   (plist nil :type list)			; Extension hook
-  (next nil #-explorer :type #-explorer (or null gcontext))
-  )
+  (next nil #-explorer :type #-explorer (or null gcontext)))
 
 (defun print-gcontext (gcontext stream depth)
   (declare (type gcontext gcontext)

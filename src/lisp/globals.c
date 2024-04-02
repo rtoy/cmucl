@@ -27,11 +27,7 @@ lispobj *dynamic_0_space;
 lispobj *dynamic_1_space;
 unsigned dynamic_space_size;
 lispobj *control_stack;
-
-
-#if (defined(i386) || defined(__x86_64) || defined(__arm__))
 lispobj *control_stack_end;
-#endif
 lispobj *binding_stack;
 
 lispobj *current_dynamic_space;

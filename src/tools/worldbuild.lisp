@@ -117,6 +117,7 @@
     "target:code/string"
     "target:code/mipsstrops"
     "target:code/misc"
+    "target:code/misc-doc"
     "target:code/dfixnum"
     ,@(unless (c:backend-featurep :gengc)
 	'("target:code/gc"))
@@ -125,9 +126,12 @@
     "target:code/scavhook"
 
     "target:code/save"
-    ,@(if (c:backend-featurep :random-mt19937)
-	  '("target:code/rand-mt19937")
-	  '("target:code/rand"))
+    ,@(cond ((c:backend-featurep :random-mt19937)
+	     '("target:code/rand-mt19937"))
+	    ((c:backend-featurep :random-xoroshiro)
+	     '("target:code/rand-xoroshiro"))
+	    (t
+	     '("target:code/rand")))
     "target:code/alieneval"
     "target:code/c-call"
     "target:code/sap"
@@ -147,6 +151,7 @@
 	'("target:code/bsd-os"))
     ,@(when (c:backend-featurep :Linux)
 	'("target:code/linux-os"))
+    "target:code/os"
     "target:code/serve-event"
     "target:code/stream"
     "target:code/fd-stream"

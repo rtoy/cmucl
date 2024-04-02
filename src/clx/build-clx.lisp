@@ -1,8 +1,5 @@
 ;;; -*- Mode: Lisp; Package: Xlib; Log: clx.log -*-
 
-#+cmu
-(ext:file-comment "$Id: build-clx.lisp,v 1.5 2009/06/17 18:22:45 rtoy Rel $")
-
 ;;; Load this file if you want to compile CLX in its entirety.
 (proclaim '(optimize (speed 3) (safety 1) (space 1)
 		     (compilation-speed 0)))

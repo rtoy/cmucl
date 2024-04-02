@@ -17,19 +17,17 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: src/code/linux-os.lisp
-msgid "Returns a string describing version of the supporting software."
-msgstr ""
-"Eturnsray away ingstray escribingday ersionvay ofway ethay upportingsay "
-"oftwaresay."
-
-#: src/code/linux-os.lisp
-msgid "Unix system call getrusage failed: ~A."
-msgstr "Unixway ystemsay allcay etrusagegay ailedfay: ~Away."
-
-#: src/code/linux-os.lisp
 msgid "Getpagesize failed: ~A"
 msgstr "Etpagesizegay ailedfay: ~Away"
 
 #: src/code/signal.lisp
 msgid "Stack fault on coprocessor"
 msgstr "Tacksay aultfay onway oprocessorcay"
+
+#~ msgid "Returns a string describing version of the supporting software."
+#~ msgstr ""
+#~ "Eturnsray away ingstray escribingday ersionvay ofway ethay upportingsay "
+#~ "oftwaresay."
+
+#~ msgid "Unix system call getrusage failed: ~A."
+#~ msgstr "Unixway ystemsay allcay etrusagegay ailedfay: ~Away."

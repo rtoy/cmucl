@@ -2588,3 +2588,60 @@
 		 (unsigned-byte 32))
   "recode as shifts and adds"
   (*-transformer y))
+
+(in-package "VM")
+
+#+random-xoroshiro
+(progn
+(defknown xoroshiro-next ((simple-array double-float (2)))
+  (values (unsigned-byte 32) (unsigned-byte 32))
+  (movable))
+
+(define-vop (xoroshiro-next)
+  (:policy :fast-safe)
+  (:translate xoroshiro-next)
+  (:args (state :scs (descriptor-reg) :to (:result 3)))
+  (:arg-types simple-array-double-float)
+  (:results (r1 :scs (unsigned-reg))
+	    (r0 :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  ;; Must be sure to use %o registers for temps because we want to use
+  ;; 64-bit registers that will get preserved.
+  (:temporary (:sc unsigned-reg :offset nl5-offset) s0)
+  (:temporary (:sc unsigned-reg :offset nl4-offset) s1)
+  (:temporary (:sc unsigned-reg :offset nl3-offset) t0)
+  (:generator 10
+    (let ((s0-offset (+ (* 0 double-float-bytes)
+			(- (* vm:vector-data-offset vm:word-bytes)
+			   vm:other-pointer-type)))
+	  (s1-offset (+ (* 1 double-float-bytes)
+			(- (* vm:vector-data-offset vm:word-bytes)
+			   vm:other-pointer-type))))
+      (inst ldx s0 state s0-offset)
+      (inst ldx s1 state s1-offset)
+      ;; result = s0 + s1, split into low 32-bits in r0 and high 32-bits
+      ;; in r1
+      (inst add r0 s0 s1)
+      (inst srlx r1 r0 32)
+
+      ;; s1 = s1 ^ s0
+      (inst xor s1 s0)
+
+      ;; s0 = rotl(s0,55) = s0 << 55 | s0 >> 9
+      (inst sllx t0 s0 55)
+      (inst srlx s0 s0 9)
+      (inst or s0 t0)
+
+      (inst xor s0 s1)			; s0 = s0 ^ s1
+      (inst sllx t0 s1 14)		; t0 = s1 << 14
+      (inst xor s0 t0)			; s0 = s0 ^ t0
+
+      (inst stx s0 state s0-offset)
+
+      ;; s1 = rotl(s1, 36) = s1 << 36 | s1 >> 28, using t0 as temp
+      (inst sllx t0 s1 36)
+      (inst srlx s1 28)
+      (inst or s1 t0)
+
+      (inst stx s1 state s1-offset))))
+)

@@ -610,8 +610,8 @@
 			 ;; We are an absolute pathname, so we can just use it.
 			 pathname-directory)
 			(t
-			 ;; We are a relative directory.  So we lose.
-			 (lose)))))
+			 ;; We are a relative directory, so just return it as is.
+			 pathname-directory))))
 	    (strings (unparse-unix-directory-list result-dir)))
 	  (let* ((pathname-version (%pathname-version pathname))
 		 (version-needed (and pathname-version
@@ -950,7 +950,11 @@
   File after it was renamed."
   (let* ((original (truename file))
 	 (original-namestring (unix-namestring original t))
-	 (new-name (merge-pathnames new-name file))
+	 ;; First, merge NEW-FILE-NAME with *DEFAULT-PATHNAME-DEFAULTS* to
+	 ;; fill in the missing components and then merge again with
+	 ;; the FILE to get any missing components from FILE.
+	 (new-name (merge-pathnames (merge-pathnames new-name)
+				    file))
 	 (new-namestring (unix-namestring new-name nil)))
     (unless new-namestring
       (error 'simple-file-error
@@ -1075,13 +1079,21 @@ optionally keeping some of the most recent old versions."
 		 :pathname file
 		 :format-control (intl:gettext "~S doesn't exist.")
 		 :format-arguments (list file)))
-	(multiple-value-bind (winp dev ino mode nlink uid)
-			     (unix:unix-stat name)
-	  (declare (ignore dev ino mode nlink))
-	  (when winp
-            (let ((user-info (unix:unix-getpwuid uid)))
-              (when user-info
-                (unix:user-info-name user-info))))))))
+	;; unix-namestring converts "." to "".  Convert it back to
+	;; "." so we can stat the current directory.  (Perhaps
+	;; that's a bug in unix-namestring?)
+	(when (zerop (length name))
+	  (setf name "."))
+	(let (author)
+	  (unwind-protect
+	       (progn
+		 (setf author (alien:alien-funcall
+			       (alien:extern-alien "os_file_author"
+						   (function (alien:* c-call:c-string) c-call:c-string))
+			       (unix::%name->file name)))
+		 (unless (alien:null-alien author)
+		   (alien:cast author c-call:c-string)))
+	    (alien:free-alien author))))))
 
 
 ;;;; DIRECTORY.
@@ -1110,11 +1122,7 @@ optionally keeping some of the most recent old versions."
     (let ((results nil))
       (enumerate-search-list
 	  (pathname (merge-pathnames pathname
-				     (make-pathname :name :wild
-						    :type :wild
-						    :version :wild
-						    :defaults *default-pathname-defaults*)
-				     :wild))
+				     *default-pathname-defaults*))
 	(enumerate-matches (name pathname nil :follow-links follow-links)
 	  (when (or all
 		    (let ((slash (position #\/ name :from-end t)))
@@ -1474,4 +1482,4 @@ optionally keeping some of the most recent old versions."
 			 (retry () :report "Try to create the directory again"
 				(go retry))))))
 	 ;; Only the first path in a search-list is considered.
-	 (return (values pathname created-p))))))
+	 (return (values pathspec created-p))))))

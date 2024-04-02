@@ -343,7 +343,7 @@
   #-gengc (setf unix::*interrupt-pending* nil)
   (setf *type-system-initialized* nil)
   (setf *break-on-signals* nil)
-  (setf unix::*filename-encoding* nil)
+  (setf unix::*filename-encoding* :null)
   #+gengc (setf conditions::*handler-clusters* nil)
   (setq intl::*default-domain* "cmucl")
   (setq intl::*locale* "C")
@@ -492,14 +492,15 @@
 
 ;;; Quit gets us out, one way or another.
 
-(defun quit (&optional recklessly-p)
-  "Terminates the current Lisp.  Things are cleaned up unless Recklessly-P is
-  non-Nil."
+(defun quit (&optional recklessly-p (code 0))
+  "Terminates the current Lisp.  Things are cleaned up unless
+  Recklessly-P is non-Nil.  On quitting, Lisp sets the return code to
+  Code, defaulting to 0."
   (if recklessly-p
-      (unix:unix-exit 0)
+      (unix:unix-exit code)
       (progn
         (mapc (lambda (fn) (ignore-errors (funcall fn))) *cleanup-functions*)
-        (throw '%end-of-the-world 0))))
+        (throw '%end-of-the-world code))))
 
 
 #-mp ; Multi-processing version defined in multi-proc.lisp.

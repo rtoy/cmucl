@@ -16,9 +16,6 @@
 ;;; express or implied warranty.
 ;;;
 
-#+cmu
-(ext:file-comment "$Id: fonts.lisp,v 1.7 2009/06/17 18:22:46 rtoy Rel $")
-
 (in-package :xlib)
 
 ;; The char-info stuff is here instead of CLX because of uses of int16->card16.
@@ -255,7 +252,8 @@
       (setf (display-font-cache display) (delete font (display-font-cache display)))
       ;; Close the font
       (with-buffer-request (display +x-closefont+)
-	(resource-id id)))))
+	(resource-id id))
+      (deallocate-resource-id display id 'font))))
 
 (defun list-font-names (display pattern &key (max-fonts 65535) (result-type 'list))
   (declare (type display display)

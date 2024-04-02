@@ -35,7 +35,7 @@ h3 {
 .code {
    background: #faf0e6;
    border:solid #faf0e6 1px;
-   white-space:pre;
+   white-space:pre-line;
 }
 
 .technical {

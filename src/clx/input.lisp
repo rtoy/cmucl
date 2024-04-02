@@ -25,9 +25,6 @@
 ;;; -------------------------------------------------------------------------------------
 ;;; 12/10/87	LGO	Created
 
-#+cmu
-(ext:file-comment "$Id: input.lisp,v 1.12 2009/06/17 18:22:46 rtoy Rel $")
-
 (in-package :xlib)
 
 ;; Event Resource
@@ -84,7 +81,8 @@
 ;; Any event-code greater than 34 is for an extension
 (defparameter *first-extension-event-code* 35)
 
-(defvar *extensions* nil) ;; alist of (extension-name-symbol events errors)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *extensions* nil)) ;; alist of (extension-name-symbol events errors)
 
 (defmacro define-extension (name &key events errors)
   ;; Define extension NAME with EVENTS and ERRORS.
@@ -109,10 +107,11 @@
     (declare (clx-values event-key))
     (kintern event)))
 
-(defun extension-event-key-p (key)
-  (dolist (extension *extensions* nil)
-    (when (member key (second extension))
-      (return t))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun extension-event-key-p (key)
+    (dolist (extension *extensions* nil)
+      (when (member key (second extension))
+        (return t)))))
     
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun allocate-extension-event-code (name)
@@ -387,14 +386,11 @@
 
 (defun read-input (display timeout force-output-p predicate &rest predicate-args)
   (declare (type display display)
-	   (type (or null number) timeout)
+	   (type (or null real) timeout)
 	   (type generalized-boolean force-output-p)
 	   (dynamic-extent predicate-args))
   (declare (type function predicate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent predicate)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg predicate))
+	   (dynamic-extent predicate))
   (let ((reply-buffer nil)
 	(token (or (current-process) (cons nil nil))))
     (declare (type (or null reply-buffer) reply-buffer))
@@ -422,10 +418,7 @@
 			    (declare (type display display)
 				     (dynamic-extent predicate-args)
 				     (type function predicate)
-				     #+clx-ansi-common-lisp
-				     (dynamic-extent predicate)
-				     #+(and lispm (not clx-ansi-common-lisp))
-				     (sys:downward-funarg predicate))
+				     (dynamic-extent predicate))
 			    (or (apply predicate predicate-args)
 				(null (display-input-in-progress display))
 				(not (null (display-dead display)))))
@@ -508,7 +501,7 @@
 
 (defun wait-for-event (display timeout force-output-p)
   (declare (type display display)
-	   (type (or null number) timeout)
+	   (type (or null real) timeout)
 	   (type generalized-boolean force-output-p))
   (let ((event-process-p (not (eql timeout 0))))
     (declare (type generalized-boolean event-process-p))
@@ -766,10 +759,7 @@
 	     (declare (type display display)
 		      (type reply-buffer event))
 	     (declare (type function handler)
-		      #+clx-ansi-common-lisp
-		      (dynamic-extent handler)
-		      #+(and lispm (not clx-ansi-common-lisp))
-		      (sys:downward-funarg handler))
+		      (dynamic-extent handler))
 	     (reading-event (event :display display :sizes (8 16 ,@get-sizes))
 	       (funcall handler
 			:display display
@@ -1030,7 +1020,7 @@
 
 (defun event-loop-step-before (display timeout force-output-p current-event-symbol)
   (declare (type display display)
-	   (type (or null number) timeout)
+	   (type (or null real) timeout)
 	   (type generalized-boolean force-output-p)
 	   (type symbol current-event-symbol)
 	   (clx-values event eof-or-timeout))
@@ -1175,41 +1165,37 @@
   ;;
   ;; T for peek-p means the event (for which the handler returns non-nil) is not removed
   ;; from the queue (it is left in place), NIL means the event is removed.
-  
   (declare (type display display)
-	   (type (or null number) timeout)
-	   (type generalized-boolean peek-p discard-p force-output-p))
-  (declare (type t handler)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent handler)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg #+Genera * #-Genera handler))
+           (type (or null real) timeout)
+           (type generalized-boolean peek-p discard-p force-output-p)
+           (type t handler)
+           (dynamic-extent handler))
   (event-loop (display event timeout force-output-p discard-p)
     (let* ((event-code (event-code event)) ;; Event decoder defined by DECLARE-EVENT
-	   (event-decoder (and (index< event-code (length *event-handler-vector*))
-			       (svref *event-handler-vector* event-code))))
+           (event-decoder (and (index< event-code (length *event-handler-vector*))
+                               (svref *event-handler-vector* event-code))))
       (declare (type array-index event-code)
-	       (type (or null function) event-decoder))
+               (type (or null function) event-decoder))
       (if event-decoder
-	  (let ((event-handler (if (functionp handler)
-				   handler
-				   (and (type? handler 'sequence)
-					(< event-code (length handler))
-					(elt handler event-code)))))
-	    (if event-handler
-		(let ((result (funcall event-decoder display event event-handler)))
-		  (when result
-		    (unless peek-p
-		      (discard-current-event display))
-		    (return result)))
-	      (cerror "Ignore this event"
-		      "No handler for ~s event"
-		      (svref *event-key-vector* event-code))))
-	(cerror "Ignore this event"
-		"Server Error: event with unknown event code ~d received."
-		event-code)))))
+          (let ((event-handler (if (functionp handler)
+                                   handler
+                                   (and (type? handler 'sequence)
+                                        (< event-code (length handler))
+                                        (elt handler event-code)))))
+            (if event-handler
+                (let ((result (funcall event-decoder display event event-handler)))
+                  (when result
+                    (unless peek-p
+                      (discard-current-event display))
+                    (return result)))
+              (cerror "Ignore this event"
+                      "No handler for ~s event"
+                      (svref *event-key-vector* event-code))))
+        (cerror "Ignore this event"
+                "Server Error: event with unknown event code ~d received."
+                event-code)))))
 
-(defun make-event-handlers (&key (type 'array) default)
+(defun make-event-handlers (&key (type 'vector) default)
   (declare (type t type)			;Sequence type specifier
 	   (type (or null function) default)
 	   (clx-values sequence))			;Default handler for initial content
@@ -1536,17 +1522,6 @@
       (when (= code (second extension))
 	(return (first extension))))))
 
-#-(or clx-ansi-common-lisp excl lcl3.0 CMU)
-(define-condition request-error (x-error)
-  ((display :reader request-error-display)
-   (error-key :reader request-error-error-key)
-   (major :reader request-error-major)
-   (minor :reader request-error-minor)
-   (sequence :reader request-error-sequence)
-   (current-sequence :reader request-error-current-sequence)
-   (asynchronous :reader request-error-asynchronous))
-  (:report report-request-error))
-
 (defun report-request-error (condition stream)
   (let ((error-key (request-error-error-key condition))
 	(asynchronous (request-error-asynchronous condition))
@@ -1561,7 +1536,6 @@
 
 ;; Since the :report arg is evaluated as (function report-request-error) the
 ;; define-condition must come after the function definition.
-#+(or clx-ansi-common-lisp excl lcl3.0 CMU)
 (define-condition request-error (x-error)
   ((display :reader request-error-display :initarg :display)
    (error-key :reader request-error-error-key :initarg :error-key)

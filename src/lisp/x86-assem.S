@@ -18,6 +18,21 @@
 #include "internals.h"
 #include "lispregs.h"
 
+/*
+ * Emit the appropriate instruction used for implementing traps.
+ * Currently, this is the UD1 instruction.  However, it make it
+ * easy to add the trap code, use a sequence of bytes.  The code
+ * is smashed into the mod r/m byte with the mod bits set to
+ * #b11.  This MUST be coordinated with the Lisp code and the C
+ * code.
+ *
+ * Also, clang doesn't recognize the ud1 instruction.
+ */
+#define UD1(code) \
+	.byte 0x0f		; \
+	.byte 0xb9		; \
+	.byte 0xc0 + code
+
 /* Minimize conditionalization for different OS naming schemes */
 #ifdef DARWIN	
 #define GNAME(var) _##var
@@ -244,8 +259,7 @@ ENDFUNC(sse_restore)
  * The undefined-function trampoline.
  */
 FUNCDEF(undefined_tramp)
-	INT3
-	.byte	trap_Error
+	UD1(trap_Error)
         /* Number of argument bytes */
         .byte   2
 	.byte	UNDEFINED_SYMBOL_ERROR
@@ -286,32 +300,28 @@ multiple_value_return:
 	
 	.globl GNAME(function_end_breakpoint_trap)
 GNAME(function_end_breakpoint_trap):
-	INT3
-	.byte 	trap_FunctionEndBreakpoint
+	UD1(trap_FunctionEndBreakpoint)
 	hlt			# Should never return here.
+ENDFUNC(function_end_breakpoint_trap)
 
 	.globl GNAME(function_end_breakpoint_end)
 GNAME(function_end_breakpoint_end):
 
-
 FUNCDEF(do_pending_interrupt)
-	INT3
-	.byte 	trap_PendingInterrupt
+	UD1(trap_PendingInterrupt)
 	ret
 ENDFUNC(do_pending_interrupt)
 	
 #ifdef trap_DynamicSpaceOverflowError
 FUNCDEF(do_dynamic_space_overflow_error)
-	INT3
-	.byte 	trap_DynamicSpaceOverflowError
+	UD1(trap_DynamicSpaceOverflowError)
 	ret
 ENDFUNC(do_dynamic_space_overflow_error)
 #endif				
 	
 #ifdef trap_DynamicSpaceOverflowWarning
 FUNCDEF(do_dynamic_space_overflow_warning)
-	INT3
-	.byte 	trap_DynamicSpaceOverflowWarning
+	UD1(trap_DynamicSpaceOverflowWarning)
 	ret
 ENDFUNC(do_dynamic_space_overflow_warning)
 #endif				
@@ -382,7 +392,39 @@ ENDFUNC(fastcopy16)
  * %eax = address
  */
 FUNCDEF(alloc_overflow_sse2)
-	STACK_PROLOGUE(20)
+	# Need 8*16 bytes for the xmm registers, and space to save ecx
+	# and edx, space for mxcsr, a temp, and one arg to pass to alloc.
+	# That's 8*16 + 5*4 = 148 bytes.  Might as well have a few
+	# more so the xmm0 area is 16-byte aligned. That makes it 160
+	# bytes.
+	#
+	# Stack looks like:
+	#
+	#      +160
+	#      +144 -> xmm7
+	#      +128 -> xmm6
+	#      +112 -> xmm5
+	#      +96  -> xmm4
+	#      +80  -> xmm3
+	#      +64  -> xmm2
+	#      +48  -> xmm1
+	#      +32  -> xmm0
+	#      +20  -> unused
+	#      +16  -> temp
+	#      +12  -> mxcsr
+	#      + 8  -> save ecx
+	#      + 4  -> save edx
+	#  esp + 0  -> arg for alloc
+	STACK_PROLOGUE(160)
+	movapd  %xmm0, (32 + 0*16)(%esp)
+	movapd  %xmm1, (32 + 1*16)(%esp)
+	movapd  %xmm2, (32 + 2*16)(%esp)
+	movapd  %xmm3, (32 + 3*16)(%esp)
+	movapd  %xmm4, (32 + 4*16)(%esp)
+	movapd  %xmm5, (32 + 5*16)(%esp)
+	movapd  %xmm6, (32 + 6*16)(%esp)
+	movapd  %xmm7, (32 + 7*16)(%esp)
+
 	movl	%ecx, 8(%esp)	# Save ecx and edx registers
 	movl	%edx, 4(%esp)
 	stmxcsr 12(%esp)	# Save MXCSR
@@ -398,10 +440,20 @@ FUNCDEF(alloc_overflow_sse2)
 	movl	4(%esp), %edx	# Restore edx and ecx registers.  eax has the return value.
 	movl	8(%esp), %ecx
 	ldmxcsr	12(%esp)
+
+	movapd  (32 + 0*16)(%esp), %xmm0
+	movapd  (32 + 1*16)(%esp), %xmm1
+	movapd  (32 + 2*16)(%esp), %xmm2
+	movapd  (32 + 3*16)(%esp), %xmm3
+	movapd  (32 + 4*16)(%esp), %xmm4
+	movapd  (32 + 5*16)(%esp), %xmm5
+	movapd  (32 + 6*16)(%esp), %xmm6
+	movapd  (32 + 7*16)(%esp), %xmm7
+
 	STACK_EPILOGUE
 	ret
 ENDFUNC(alloc_overflow_sse2)	
-		
+
 #ifdef LINKAGE_TABLE
 
 /* Call into C code to resolve a linkage entry.  The initial code in the 
@@ -451,8 +503,7 @@ FUNCDEF(undefined_foreign_symbol_trap)
         movl 8(%ebp),%eax
 
 	/* Now trap to Lisp */
-	INT3
-	.byte	trap_Error
+	UD1(trap_Error)
         /* Number of argument bytes */
         .byte   2
 	.byte	UNDEFINED_FOREIGN_SYMBOL_ERROR

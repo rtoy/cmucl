@@ -16,6 +16,15 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: src/code/unix.lisp
+msgid ""
+"The encoding to use for converting a namestring to a string that can\n"
+"  be used by the operations system.  It must be a valid\n"
+"  external-format name or :NULL.  :NULL means the string\n"
+"  is passed as is to the operating system.  The operating system will\n"
+"  get the low 8 bits of each UTF-16 code unit of the string."
+msgstr ""
+
+#: src/code/unix.lisp
 msgid "Syscall ~A failed: ~A"
 msgstr ""
 
@@ -462,10 +471,6 @@ msgid ""
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Unix-getpagesize returns the number of bytes in a system page."
-msgstr ""
-
-#: src/code/unix.lisp
 msgid "Unix-gethostname returns the name of the host machine as a string."
 msgstr ""
 
@@ -489,22 +494,71 @@ msgstr ""
 #: src/code/unix.lisp
 msgid ""
 "Unix-stat retrieves information about the specified\n"
-"   file returning them in the form of multiple values.\n"
-"   See the UNIX Programmer's Manual for a description\n"
-"   of the values returned.  If the call fails, then NIL\n"
-"   and an error number is returned instead."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid ""
-"Unix-lstat is similar to unix-stat except the specified\n"
-"   file must be a symbolic link."
+"   file returning them in the form of multiple values.  If the call\n"
+"   fails, then NIL and an error number is returned.  If the call\n"
+"   succeeds, then T is returned in addition to the following values\n"
+"   from the stat struct st:\n"
+"\n"
+"     st_dev        Device ID\n"
+"     st_ino        File serial number\n"
+"     st_mode       Mode of file\n"
+"     st_nlink      Number of hard links to the file\n"
+"     st_uid        User ID\n"
+"     st_gid        Group ID\n"
+"     st_rdev       Device ID (if file is character or block special)\n"
+"     st_atime      Last data access time, in sec\n"
+"     st_mtime      Last data modification time, in sec\n"
+"     st_ctime      Last file status change time, in sec\n"
+"     st_blksize    Preferred I/O block size\n"
+"     st_blocks     Number of blocks allocated. (Block size is implementation"
+" dependent.)\n"
+""
 msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
 "Unix-fstat is similar to unix-stat except the file is specified\n"
-"   by the file descriptor fd."
+"   by the file descriptor fd.  If the call fails, then NIL and an\n"
+"   error number is returned.  If the call succeeds, then T is returned\n"
+"   in addition to the following values from the stat struct st:\n"
+"\n"
+"     st_dev        Device ID\n"
+"     st_ino        File serial number\n"
+"     st_mode       Mode of file\n"
+"     st_nlink      Number of hard links to the file\n"
+"     st_uid        User ID\n"
+"     st_gid        Group ID\n"
+"     st_rdev       Device ID (if file is character or block special)\n"
+"     st_atime      Last data access time, in sec\n"
+"     st_mtime      Last data modification time, in sec\n"
+"     st_ctime      Last file status change time, in sec\n"
+"     st_blksize    Preferred I/O block size\n"
+"     st_blocks     Number of blocks allocated. (Block size is implementation"
+" dependent.)\n"
+""
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Unix-lstat is similar to unix-stat except the specified\n"
+"   file must be a symbolic link.  If the call fails, then NIL and an\n"
+"   error number is returned.  If the call succeeds, then T is returned\n"
+"   in addition to the following values from the stat struct st:\n"
+"\n"
+"     st_dev        Device ID\n"
+"     st_ino        File serial number\n"
+"     st_mode       Mode of file\n"
+"     st_nlink      Number of hard links to the file\n"
+"     st_uid        User ID\n"
+"     st_gid        Group ID\n"
+"     st_rdev       Device ID (if file is character or block special)\n"
+"     st_atime      Last data access time, in sec\n"
+"     st_mtime      Last data modification time, in sec\n"
+"     st_ctime      Last file status change time, in sec\n"
+"     st_blksize    Preferred I/O block size\n"
+"     st_blocks     Number of blocks allocated. (Block size is implementation"
+" dependent.)\n"
+""
 msgstr ""
 
 #: src/code/unix.lisp
@@ -1304,6 +1358,14 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
+"Return a USER-INFO structure for the user identified by UID.  If\n"
+"  not found, NIL is returned with a second value indicating the cause\n"
+"  of the failure.  In particular, if the second value is 0 (or\n"
+"  ENONENT, ESRCH, EBADF, etc.), then the uid was not found."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
 "Unix-times returns information about the cpu time usage of the process\n"
 "   and its children."
 msgstr ""
@@ -1353,5 +1415,20 @@ msgid ""
 "Executes the unix fork system call.  Returns 0 in the child and the pid\n"
 "   of the child in the parent if it works, or NIL and an error number if it\n"
 "   doesn't work."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Call setlocale(3c) with fixed args.  Returns 0 on success."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Get LC_MESSAGES from the current locale.  If we can't, return\n"
+"  NIL.  A call to UNIX-SETLOCALE must have been done previously before\n"
+"  calling this so that the correct locale is returned."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Get the codeset from the locale"
 msgstr ""
 

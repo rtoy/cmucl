@@ -319,7 +319,7 @@
 (defknown (float-digits float-precision) (float) float-digits
   (movable foldable flushable explicit-check))
 (defknown integer-decode-float (float)
-	  (values integer float-exponent (member -1 1))
+	  (values integer float-int-exponent (member -1 1))
 	  (movable foldable flushable explicit-check))
 
 (defknown complex (real &optional real) number
@@ -1027,7 +1027,10 @@
 							  :type :version))
   boolean
   (flushable))
-(defknown pathname-match-p (pathnamelike pathnamelike) boolean
+(defknown pathname-match-p (pathnamelike pathnamelike)
+  ;; CLHS says the return type is a generalized boolean.  We currently
+  ;; return a pathname on a match.
+  (or null pathname)
   (flushable))
 (defknown translate-pathname (pathnamelike pathnamelike pathnamelike &key)
   pathname

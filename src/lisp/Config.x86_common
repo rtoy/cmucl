@@ -44,8 +44,12 @@ endif
 
 CPPFLAGS := $(CPP_DEFINE_OPTIONS) $(CPP_INCLUDE_OPTIONS) 
 CFLAGS += -Wstrict-prototypes -Wall -g -fno-omit-frame-pointer
-CFLAGS += -O2
-ASFLAGS = -g 
+
+# Default optimization level.  This can be changed in the individual
+# configs.
+COPT = -O2
+
+ASFLAGS = -g
 
 ASSEM_SRC = x86-assem.S
 ARCH_SRC = x86-arch.c

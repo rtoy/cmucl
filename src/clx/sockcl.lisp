@@ -23,9 +23,6 @@
 ;;; Compile this file with compile-file.
 ;;; Load it with (si:faslink "sockcl.o" "socket.o -lc")
 
-#+cmu
-(ext:file-comment "$Id: sockcl.lisp,v 1.4 2009/06/17 18:22:46 rtoy Rel $")
-
 (in-package :xlib)
 
 ;;; The cmpinclude.h file does not have this type definition from

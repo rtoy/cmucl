@@ -96,8 +96,12 @@
 (maybe-byte-load "code:time")
 (maybe-byte-load "code:tty-inspect")
 (maybe-byte-load "code:describe")
-#+random-mt19937 (maybe-byte-load "code:rand-mt19937")
-#-random-mt19937 (maybe-byte-load "code:rand")
+#+random-mt19937
+(maybe-byte-load "code:rand-mt19937")
+#+random-xoroshiro
+(maybe-byte-load "code:rand-xoroshiro")
+#-(or random-mt19937 random-xoroshiro)
+(maybe-byte-load "code:rand")
 (maybe-byte-load "target:pcl/walk")
 (maybe-byte-load "code:fwrappers")
 (maybe-byte-load "code:ntrace")

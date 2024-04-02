@@ -3,6 +3,7 @@ include Config.x86_common
 # Set the path to your verison of GCC here.
 CC = gcc -m32
 
+CFLAGS += $(COPT)
 CPPFLAGS += -march=pentium4 -mfpmath=sse
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
