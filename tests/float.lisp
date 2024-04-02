@@ -212,3 +212,38 @@
   ;; most-positive-double-float.  And a really big single-float.
   (assert-error 'reader-error (read-from-string "1.8d308"))
   (assert-error 'reader-error (read-from-string "1d999999999")))
+
+(defun rounding-test (x)
+  (declare (double-float x)
+           (optimize (speed 3)))
+  (* x (/ 1d0 x)))
+
+(define-test rounding-mode.nearest
+    (:tag :issues)
+  (ext:with-float-rounding-mode (:nearest)
+    (assert-equal 1d0 (rounding-test 3d0))))
+
+(define-test rounding-mode.zero.1
+    (:tag :issues)
+  (ext:with-float-rounding-mode (:zero)
+    (assert-equal 0.9999999999999999d0
+                  (rounding-test 3d0))))
+
+(define-test rounding-mode.zero.2
+    (:tag :issues)
+  (ext:with-float-rounding-mode (:zero)
+    (assert-equal 0.9999999999999999d0
+                  (rounding-test -3d0))))
+
+(define-test rounding-mode.positive-infinity
+    (:tag :issues)
+  (ext:with-float-rounding-mode (:positive-infinity)
+    (assert-equal 1.0000000000000002d0
+                  (rounding-test 3d0))))
+
+(define-test rounding-mode.negative-infinity
+    (:tag :issues)
+  (ext:with-float-rounding-mode (:negative-infinity)
+    (assert-equal 0.9999999999999999d0
+                  (rounding-test 3d0))))
+
