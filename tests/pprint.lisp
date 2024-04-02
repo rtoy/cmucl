@@ -126,11 +126,12 @@
     (:tag :issues)
   (assert-equal
    "
-(NEW-ASSEM:ASSEMBLE (*CODE-SEGMENT* 'XOROSHIRO-UPDATE)
-    XOROSHIRO-UPDATE
-  (PUSH (CONS 'XOROSHIRO-UPDATE XOROSHIRO-UPDATE) C::*ASSEMBLER-ROUTINES*))"
+(NEW-ASSEM:ASSEMBLE (C:*CODE-SEGMENT* 'X86::XOROSHIRO-UPDATE)
+    X86::XOROSHIRO-UPDATE
+  (PUSH (CONS 'X86::XOROSHIRO-UPDATE X86::XOROSHIRO-UPDATE)
+        C::*ASSEMBLER-ROUTINES*))"
    (with-output-to-string (s)
-     (pprint '(new-assem:assemble (*code-segment* 'xoroshiro-update)
-               xoroshiro-update
-               (push (cons 'xoroshiro-update xoroshiro-update) c::*assembler-routines*))
+     (pprint '(new-assem:assemble (c::*code-segment* 'vm::xoroshiro-update)
+               vm::xoroshiro-update
+               (push (cons 'vm::xoroshiro-update vm::xoroshiro-update) c::*assembler-routines*))
              s))))
