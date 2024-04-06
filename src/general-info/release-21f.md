@@ -51,8 +51,8 @@ public domain.
     * ~~#261~~ Remove `get-system-info` from "bsd-os.lisp"
     * ~~#268~~ Can't clone ansi-test repo on Mac OS CI box
     * ~~#265~~ CI for mac os is broken
-    * ~~#269~~ Add function to get user's home directory
     * ~~#266~~ Support "~user" in namestrings
+    * ~~#269~~ Add function to get user's home directory
     * ~~#271~~ Update ASDF to 3.3.7
     * ~~#272~~ Move scavenge code for static vectors to its own function
     * ~~#274~~ 1d99999999 hangs
