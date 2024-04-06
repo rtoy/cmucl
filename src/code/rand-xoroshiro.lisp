@@ -490,11 +490,8 @@
   (declare (inline %random-single-float %random-double-float))
   (cond
     ((typep arg '(integer 1 #x100000000))
-     ;; Do the same thing as the deftransform would do.
-     (if (= arg (expt 2 32))
-	 (random-chunk state)
-	 (values (bignum::%multiply (random-chunk state)
-				    arg))))
+     ;; Let the compiler deftransform take care of this case.
+     (random arg state))
     ((and (typep arg 'single-float) (> arg 0.0F0))
      (%random-single-float arg state))
     ((and (typep arg 'double-float) (> arg 0.0D0))
