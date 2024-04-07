@@ -512,7 +512,7 @@
 
   Only the rounding mode is restored on exit; other floating-point
   modes are not modified. "
-  (let ((old-rounding-mode (gensym "OLD-ROUNDING-MODE-"))
+  (let ((old-mode (gensym "OLD-MODE-"))
         (new-mode (gensym "NEW-MODE-")))
   `(let ((,old-rounding-mode (ldb float-rounding-mode (floating-point-modes)))
          (,new-mode (cdr (assoc ,rounding-mode rounding-mode-alist))))
