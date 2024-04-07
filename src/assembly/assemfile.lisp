@@ -249,7 +249,7 @@
 
       :Arg Arg-Name (SC*) SC-Offset
         Input argument for the assembly routine with the name
-        Arg-Name.  The argument must be one of the Sc types.  The register
+        Arg-Name.  The argument must be one of the SC types.  The register
         assigned to this argument is given by SC-Offset which must be
         the offset for the register holding this argument.
 
