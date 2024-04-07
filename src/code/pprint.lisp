@@ -2088,6 +2088,7 @@ When annotations are present, invoke them at the right positions."
     (c:define-vop pprint-define-vop)
     (c:sc-case pprint-sc-case)
     (c:define-assembly-routine pprint-define-assembly)
+    (new-assem:assemble pprint-multiple-value-bind)
     (c:deftransform pprint-defun)
     (c:defoptimizer pprint-defun)
     (ext:with-float-traps-masked pprint-with-like)

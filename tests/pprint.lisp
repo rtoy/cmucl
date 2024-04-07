@@ -121,3 +121,17 @@
                (:no-error ()
                 (format nil "Nothing bad happened.")))
              s))))
+
+(define-test pprint.assemble
+    (:tag :issues)
+  (assert-equal
+   "
+(NEW-ASSEM:ASSEMBLE (C:*CODE-SEGMENT* 'X86::XOROSHIRO-UPDATE)
+    X86::XOROSHIRO-UPDATE
+  (PUSH (CONS 'X86::XOROSHIRO-UPDATE X86::XOROSHIRO-UPDATE)
+        C::*ASSEMBLER-ROUTINES*))"
+   (with-output-to-string (s)
+     (pprint '(new-assem:assemble (c::*code-segment* 'vm::xoroshiro-update)
+               vm::xoroshiro-update
+               (push (cons 'vm::xoroshiro-update vm::xoroshiro-update) c::*assembler-routines*))
+             s))))
