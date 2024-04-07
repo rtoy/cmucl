@@ -209,18 +209,18 @@
 				    ,(reg-spec-temp res))))
 		     results))))))
 
-;;; Define-assembly-routine -- Public
+;;; Define-Assembly-Routine -- Public
 ;;;
 ;;;   Parse the code to produce an assembly routine and create a VOP
 ;;;   that calls the assembly routine.
 (defmacro define-assembly-routine (name&options vars &rest code)
-  "Define-assembly-routine (name&options vars Code*)
+  "Define-Assembly-Routine (Name&Options Vars Code*)
   Define a Lisp assembly routine, and a VOP to that calls the assembly
   routine, if enabled.  (A VOP is not created if the reader
   conditional #+assembler precedes the definition of the assembly
   routine.)
 
-  Name&options
+  Name&Options
     A list giving the name of the assembly routine and options
     describing the assembly routine options and VOP options.  The
     format is (Name ({Key Value})*) where Name is the name of the
@@ -231,11 +231,11 @@
       :Cost Cost
         The cost of the VOP.  This is used in the generated VOP.
 
-      :Policy Policy
-        The policy for the VOP
+      :Policy {:Small | :Fast | :Safe | :Fast-Safe}
+        The policy for the VOP.
 
       :Translate Name
-        The translation for the VOP
+        The translation for the VOP.
 
       :Arg-Types arg-types
       :Result-Types result-types
@@ -247,19 +247,19 @@
     Vars is a list of the arguments and returned results and
     temporaries used by the assembly routine.
 
-      :Arg Arg-name (Sc*) Sc-Offset
+      :Arg Arg-Name (SC*) SC-Offset
         Input argument for the assembly routine with the name
         Arg-Name.  The argument must be one of the Sc types.  The register
-        assigned to this argument is given by Sc-Offset which must be
+        assigned to this argument is given by SC-Offset which must be
         the offset for the register holding this argument.
 
-      :Res Res-Name Sc Sc-offset
+      :Res Res-Name SC SC-Offset
         Result of the assembly routine with the name Res-Name.  The
-        result must be a register of the specified storage class Sc.  The
+        result must be a register of the specified storage class SC.  The
         Sc-offset is the register used for the result.
 
-      :Temp Temp-Name Sc Sc-offset
-        Like :res, except this names a temporary register that the
+      :Temp Temp-Name SC SC-Offset
+        Like :Res, except this names a temporary register that the
         assembly routine can use.
 
   Code
