@@ -1857,7 +1857,7 @@ the end of the stream."
                 ext:most-positive-double-double-float)))))
 
   (restart-case
-      (%reader-error stream _"~S overflow reading ~S"
+      (%reader-error stream _"Floating-point overflow reading ~S: ~S"
                      float-format (read-buffer-to-string))
     (infinity ()
       :report (lambda (stream)
