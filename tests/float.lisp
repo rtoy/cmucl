@@ -213,6 +213,39 @@
   (assert-error 'reader-error (read-from-string "1.8d308"))
   (assert-error 'reader-error (read-from-string "1d999999999")))
 
+(define-test reader.float-underflow
+    (:tag :issues)
+  (lisp::with-float-traps-enabled (:underflow)
+    ;; A denormal
+    (assert-error 'reader-error
+                  (read-from-string "1e-40"))
+    (assert-error 'reader-error
+                  (read-from-string (format nil "~A" least-positive-single-float)))
+    ;; The same for double-floats
+    (assert-error 'reader-error
+                  (read-from-string "1d-308"))
+    (assert-error 'reader-error
+                  (read-from-string (format nil "~A" least-positive-double-float)))))
+
+(define-test reader.float-underflow
+    (:tag :issues)
+  (lisp::with-float-traps-enabled (:underflow)
+    ;; The expected string comes from make-float-aux.
+    (let ((expected "Floating point underflow when reading ~S"))
+      (flet ((test-reader-underflow (string)
+               ;; Test that the we got a reader-error when a number
+               ;; would underflow and that the message says we got an
+               ;; underflow.
+               (let ((condition (nth-value 1 (ignore-errors (read-from-string string)))))
+                 (assert-equal 'reader-error (type-of condition))
+                 (assert-equal expected (lisp::reader-error-format-control condition)))))
+        ;; Underflow single-floats
+        (test-reader-underflow "1e-40")
+        (test-reader-underflow (format nil "~A" least-positive-single-float))
+        ;; Underflow double-floats
+        (test-reader-underflow "1d-308")
+        (test-reader-underflow (format nil "~A" least-positive-double-float))))))
+
 (define-test fp-overflow-restarts.infinity
     (:tag :issues)
   ;; Test that the "infinity" restart from reader on floating-point
