@@ -231,7 +231,7 @@
     (:tag :issues)
   (lisp::with-float-traps-enabled (:underflow)
     ;; The expected string comes from make-float-aux.
-    (let ((expected "Floating point underflow when reading ~S"))
+    (let ((expected "Floating point underflow when reading ~S: ~S"))
       (flet ((test-reader-underflow (string)
                ;; Test that the we got a reader-error when a number
                ;; would underflow and that the message says we got an
