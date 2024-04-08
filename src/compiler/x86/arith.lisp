@@ -1810,3 +1810,8 @@
 				  vm:other-pointer-type))
           s1)))
 )
+
+#+random-xoroshiro
+(defknown kernel::random-xoroshiro-update ((simple-array double-float (2)))
+  (values (unsigned-byte 32) (unsigned-byte 32))
+  (movable))

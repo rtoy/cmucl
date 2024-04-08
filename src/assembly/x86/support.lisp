@@ -39,7 +39,7 @@
 (def-vm-support-routine generate-return-sequence (style)
   (ecase style
     (:raw
-     `(inst ret))
+     `((inst ret)))
     (:full-call
      `(
        (inst pop eax-tn)

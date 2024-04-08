@@ -65,6 +65,7 @@ public domain.
     * ~~#288~~ Re-enable `deftransform` for random integers.
     * ~~#290~~ Pprint `with-float-traps-masked` better
     * ~~#291~~ Pprint `handler-case` neatly.
+    * ~~#297~~ Pprint `new-assem:assemble` with less indentation.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
