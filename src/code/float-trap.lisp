@@ -514,7 +514,7 @@
   SET-FLOATING-POINT-MODES.
 
   Only the rounding mode is restored on exit; other floating-point
-  modes are not modified. "
+  modes are not modified."
   (let ((old-mode (gensym "OLD-MODE-"))
         (new-mode (gensym "NEW-MODE-")))
   `(let ((,old-mode (ldb float-rounding-mode (floating-point-modes)))
