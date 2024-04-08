@@ -514,7 +514,7 @@
   modes are not modified. "
   (let ((old-mode (gensym "OLD-MODE-"))
         (new-mode (gensym "NEW-MODE-")))
-  `(let ((,old-rounding-mode (ldb float-rounding-mode (floating-point-modes)))
+  `(let ((,old-mode (ldb float-rounding-mode (floating-point-modes)))
          (,new-mode (cdr (assoc ,rounding-mode rounding-mode-alist))))
      (unwind-protect
           (progn
@@ -523,4 +523,4 @@
             ,@body)
        ;; Restore just the rounding mode to the original value.
        (setf (floating-point-modes)
-             (dpb ,old-rounding-mode float-rounding-mode (floating-point-modes)))))))
+             (dpb ,old-mode float-rounding-mode (floating-point-modes)))))))
