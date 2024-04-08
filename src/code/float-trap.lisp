@@ -498,17 +498,20 @@
 
 (defmacro with-float-rounding-mode ((rounding-mode) &body body)
   _N"Execute BODY with the floating-point rounding mode set to
- ROUNDING-MODE.  ROUNDING-MODE must a one of
+  ROUNDING-MODE.  ROUNDING-MODE must be a one:
 
-    :NEAREST
-       the default mode of round to nearest even
-    :ZERO
+   :NEAREST
+       the default mode of round to nearest even.
+   :ZERO
        round numbers down towards zero.  Positive numbers round down
        and negative numbers round up.
-    :POSITIVE-INFINITY
-       round numbers up towards positive infinity
-    :NEGATIVE-INFINITY
-       round numbers down towards negative infinity
+   :POSITIVE-INFINITY
+       round numbers up towards positive infinity.
+   :NEGATIVE-INFINITY
+       round numbers down towards negative infinity.
+
+  These are the same as the possible values for the rounding mode in
+  SET-FLOATING-POINT-MODES.
 
   Only the rounding mode is restored on exit; other floating-point
   modes are not modified. "
