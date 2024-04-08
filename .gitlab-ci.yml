@@ -1,6 +1,6 @@
 variables:
   download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2023/08"
-  version: "xoroshiro-assembly"
+  version: "xoroshiro-assembly-x86"
   bootstrap: ""
 
 
