@@ -48,7 +48,9 @@ linux:build:
     # Regular build using the cross-compiled result or snapshot
     - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o snapshot/bin/lisp
     # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
-    - bin/make-dist.sh -V ci-build -I dist linux-4
+    # Use -V to specify the version in case some tag makes git
+    # describe return something that make-dist.sh doesn't like.
+    - bin/make-dist.sh -V `git describe --dirty` -I dist linux-4
 
 linux:test:
   stage: test
@@ -131,7 +133,9 @@ osx:build:
     # Regular build using the cross-compiled result or snapshot.
     # Need /opt/local/bin to get msgmerge and msgfmt programs.
     - PATH=/opt/local/bin:$PATH bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
-    - bin/make-dist.sh -V ci-build -I dist darwin-4
+    # Use -V to specify the version in case some tag makes git
+    # describe return something that make-dist.sh doesn't like.
+    - bin/make-dist.sh -V `git describe --dirty` -I dist darwin-4
 
 osx:test:
   stage: test
