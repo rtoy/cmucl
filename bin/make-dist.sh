@@ -98,6 +98,8 @@ def_arch_os
 # ("snapshot-yyyy-mm") or a release number..
 GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
 
+echo GIT_HASH = ${GIT_HASH}
+
 if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
     DEFAULT_VERSION=`expr "${GIT_HASH}" : "snapshot-\(.*\)"`
 fi

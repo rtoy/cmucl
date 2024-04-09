@@ -238,7 +238,7 @@
   being the first value."
   (declare (type (simple-array double-float (2)) state)
 	   (optimize (speed 3) (safety 0)))
-  (vm::xoroshiro-next state))
+  (kernel::random-xoroshiro-update state))
 
 #-x86
 (defun xoroshiro-gen (state)

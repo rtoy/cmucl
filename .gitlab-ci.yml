@@ -1,7 +1,7 @@
 variables:
   download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2023/08"
-  version: "2023-08-x86"
-  bootstrap: "-B boot-2023-08"
+  version: "xoroshiro-assembly-x86"
+  bootstrap: ""
 
 
 stages:
@@ -48,7 +48,7 @@ linux:build:
     # Regular build using the cross-compiled result or snapshot
     - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o snapshot/bin/lisp
     # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
-    - bin/make-dist.sh -I dist linux-4
+    - bin/make-dist.sh -V ci-build -I dist linux-4
 
 linux:test:
   stage: test
@@ -131,7 +131,7 @@ osx:build:
     # Regular build using the cross-compiled result or snapshot.
     # Need /opt/local/bin to get msgmerge and msgfmt programs.
     - PATH=/opt/local/bin:$PATH bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
-    - bin/make-dist.sh -I dist darwin-4
+    - bin/make-dist.sh -V ci-build -I dist darwin-4
 
 osx:test:
   stage: test
