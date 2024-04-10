@@ -1912,7 +1912,7 @@ the end of the stream."
                      (error 'floating-point-underflow))
                    (when (>= log2-num log2-high)
                      ;; Number is definitely too large; signal an error
-                     (error "Overflow"))))))))
+                     (error 'floating-point-overflow))))))))
 
     ;; Otherwise the number might fit, so we carefully compute the result.
     (handler-case
