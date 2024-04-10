@@ -247,3 +247,21 @@
     (assert-equal 0.9999999999999999d0
                   (rounding-test 3d0))))
 
+(define-test reader-underflow-enabled
+    (:tag :issues)
+  ;; Test with FP underflow enabled, we can still read denormals
+  ;; without problem.  For this test we only care that we get a
+  ;; number, not the actual value.
+  (ext:with-float-traps-enabled (:underflow)
+    (dolist (n (list least-positive-single-float
+                     least-positive-normalized-single-float
+                     (/ (+ least-positive-single-float
+                           least-positive-normalized-single-float)
+                        2)
+                     least-positive-double-float
+                     least-positive-normalized-double-float
+                     (/ (+ least-positive-double-float
+                           least-positive-normalized-double-float)
+                        2)
+                     ))
+    (assert-true (floatp (read-from-string (format nil "~A" n)))))))
