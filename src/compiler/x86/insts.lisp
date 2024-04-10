@@ -509,6 +509,14 @@
       (print-byte-reg value stream dstate)
       (print-mem-access value stream t dstate)))
 
+(defun print-word-reg/mem (value stream dstate)
+  (declare (type (or list reg) value)
+	   (type stream stream)
+	   (type disassem:disassem-state dstate))
+  (if (typep value 'reg)
+      (print-word-reg value stream dstate)
+      (print-mem-access value stream nil dstate)))
+
 (defun print-label (value stream dstate)
   (declare (ignore dstate))
   (princ (if (and (numberp value) (minusp value))
@@ -716,7 +724,11 @@
 (disassem:define-argument-type byte-reg/mem
   :prefilter #'prefilter-reg/mem
   :printer #'print-byte-reg/mem)
-
+(disassem:define-argument-type word-reg/mem
+  ;; Like reg/mem but if the reg/mem field is a register, it's a word
+  ;; register.
+  :prefilter #'prefilter-reg/mem
+  :printer #'print-word-reg/mem)
 ;;;
 ;;; added by jrd
 ;;;
@@ -3478,7 +3490,7 @@
 ;;; We do not support the MMX version of this instruction.
 (define-instruction movd (segment dst src)
   (:printer ext-xmm-reg/mem ((prefix #x66) (op #x6e)))
-  (:printer ext-xmm-reg/mem ((prefix #x66) (op #x7e))
+  (:printer ext-xmm-reg/mem ((prefix #x66) (op #x7e) (reg/mem nil :type 'word-reg/mem))
             '(:name :tab reg/mem ", " reg))
   (:emitter
    (cond ((xmm-register-p dst)
