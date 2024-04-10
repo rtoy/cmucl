@@ -51,8 +51,8 @@ public domain.
     * ~~#261~~ Remove `get-system-info` from "bsd-os.lisp"
     * ~~#268~~ Can't clone ansi-test repo on Mac OS CI box
     * ~~#265~~ CI for mac os is broken
-    * ~~#269~~ Add function to get user's home directory
     * ~~#266~~ Support "~user" in namestrings
+    * ~~#269~~ Add function to get user's home directory
     * ~~#271~~ Update ASDF to 3.3.7
     * ~~#272~~ Move scavenge code for static vectors to its own function
     * ~~#274~~ 1d99999999 hangs
@@ -65,6 +65,7 @@ public domain.
     * ~~#288~~ Re-enable `deftransform` for random integers.
     * ~~#290~~ Pprint `with-float-traps-masked` better
     * ~~#291~~ Pprint `handler-case` neatly.
+    * ~~#297~~ Pprint `new-assem:assemble` with less indentation.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

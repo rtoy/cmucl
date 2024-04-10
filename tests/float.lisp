@@ -213,35 +213,37 @@
   (assert-error 'reader-error (read-from-string "1.8d308"))
   (assert-error 'reader-error (read-from-string "1d999999999")))
 
-(define-test reader.float-underflow
-    (:tag :issues)
-  (lisp::with-float-traps-enabled (:underflow)
-    ;; A denormal
-    (assert-error 'reader-error
-                  (read-from-string "1e-40"))
-    (assert-error 'reader-error
-                  (read-from-string (format nil "~A" least-positive-single-float)))
-    ;; The same for double-floats
-    (assert-error 'reader-error
-                  (read-from-string "1d-308"))
-    (assert-error 'reader-error
-                  (read-from-string (format nil "~A" least-positive-double-float)))))
+(defun rounding-test (x)
+  (declare (double-float x)
+           (optimize (speed 3)))
+  (* x (/ 1d0 x)))
 
-(define-test reader.float-underflow
+(define-test rounding-mode.nearest
     (:tag :issues)
-  (lisp::with-float-traps-enabled (:underflow)
-    ;; The expected string comes from make-float-aux.
-    (let ((expected "Floating point underflow when reading ~S: ~S"))
-      (flet ((test-reader-underflow (string)
-               ;; Test that the we got a reader-error when a number
-               ;; would underflow and that the message says we got an
-               ;; underflow.
-               (let ((condition (nth-value 1 (ignore-errors (read-from-string string)))))
-                 (assert-equal 'reader-error (type-of condition))
-                 (assert-equal expected (lisp::reader-error-format-control condition)))))
-        ;; Underflow single-floats
-        (test-reader-underflow "1e-40")
-        (test-reader-underflow (format nil "~A" least-positive-single-float))
-        ;; Underflow double-floats
-        (test-reader-underflow "1d-308")
-        (test-reader-underflow (format nil "~A" least-positive-double-float))))))
+  (ext:with-float-rounding-mode (:nearest)
+    (assert-equal 1d0 (rounding-test 3d0))))
+
+(define-test rounding-mode.zero.1
+    (:tag :issues)
+  (ext:with-float-rounding-mode (:zero)
+    (assert-equal 0.9999999999999999d0
+                  (rounding-test 3d0))))
+
+(define-test rounding-mode.zero.2
+    (:tag :issues)
+  (ext:with-float-rounding-mode (:zero)
+    (assert-equal 0.9999999999999999d0
+                  (rounding-test -3d0))))
+
+(define-test rounding-mode.positive-infinity
+    (:tag :issues)
+  (ext:with-float-rounding-mode (:positive-infinity)
+    (assert-equal 1.0000000000000002d0
+                  (rounding-test 3d0))))
+
+(define-test rounding-mode.negative-infinity
+    (:tag :issues)
+  (ext:with-float-rounding-mode (:negative-infinity)
+    (assert-equal 0.9999999999999999d0
+                  (rounding-test 3d0))))
+

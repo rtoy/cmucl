@@ -27,7 +27,8 @@
 	  decode-floating-point-modes
 	  encode-floating-point-modes
 	  with-float-traps-masked
-	  with-float-traps-enabled))
+	  with-float-traps-enabled
+          with-float-rounding-mode))
 (in-package "VM")
 
 (eval-when (compile load eval)
@@ -495,3 +496,34 @@
   accrued exceptions are cleared at the start of the body to support
   their testing within, and restored on exit."))
 
+(defmacro with-float-rounding-mode ((rounding-mode) &body body)
+  _N"Execute BODY with the floating-point rounding mode set to
+  ROUNDING-MODE.  ROUNDING-MODE must be a one:
+
+   :NEAREST
+       the default mode of round to nearest even.
+   :ZERO
+       round numbers down towards zero.  Positive numbers round down
+       and negative numbers round up.
+   :POSITIVE-INFINITY
+       round numbers up towards positive infinity.
+   :NEGATIVE-INFINITY
+       round numbers down towards negative infinity.
+
+  These are the same as the possible values for the rounding mode in
+  SET-FLOATING-POINT-MODES.
+
+  Only the rounding mode is restored on exit; other floating-point
+  modes are not modified."
+  (let ((old-mode (gensym "OLD-MODE-"))
+        (new-mode (gensym "NEW-MODE-")))
+  `(let ((,old-mode (ldb float-rounding-mode (floating-point-modes)))
+         (,new-mode (cdr (assoc ,rounding-mode rounding-mode-alist))))
+     (unwind-protect
+          (progn
+            (setf (floating-point-modes)
+                  (dpb ,new-mode float-rounding-mode (floating-point-modes)))
+            ,@body)
+       ;; Restore just the rounding mode to the original value.
+       (setf (floating-point-modes)
+             (dpb ,old-mode float-rounding-mode (floating-point-modes)))))))
