@@ -4868,6 +4868,28 @@ msgid ""
 "  their testing within, and restored on exit."
 msgstr ""
 
+#: src/code/float-trap.lisp
+msgid ""
+"Execute BODY with the floating-point rounding mode set to\n"
+"  ROUNDING-MODE.  ROUNDING-MODE must be a one:\n"
+"\n"
+"   :NEAREST\n"
+"       the default mode of round to nearest even.\n"
+"   :ZERO\n"
+"       round numbers down towards zero.  Positive numbers round down\n"
+"       and negative numbers round up.\n"
+"   :POSITIVE-INFINITY\n"
+"       round numbers up towards positive infinity.\n"
+"   :NEGATIVE-INFINITY\n"
+"       round numbers down towards negative infinity.\n"
+"\n"
+"  These are the same as the possible values for the rounding mode in\n"
+"  SET-FLOATING-POINT-MODES.\n"
+"\n"
+"  Only the rounding mode is restored on exit; other floating-point\n"
+"  modes are not modified."
+msgstr ""
+
 #: src/code/float.lisp
 msgid "Return true if the float X is denormalized."
 msgstr ""
@@ -8725,14 +8747,6 @@ msgstr ""
 
 #: src/code/reader.lisp
 msgid "Internal error in floating point reader."
-msgstr ""
-
-#: src/code/reader.lisp
-msgid "Floating-point overflow reading ~S: ~S"
-msgstr ""
-
-#: src/code/reader.lisp
-msgid "Underflow"
 msgstr ""
 
 #: src/code/reader.lisp
