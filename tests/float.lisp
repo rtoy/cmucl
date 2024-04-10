@@ -263,8 +263,9 @@
                          least-positive-normalized-double-float)
                       2)
                    ))
-    (ext:with-float-traps-enabled (:underflow)
-      (assert-true (floatp (read-from-string (format nil "~A" n)))))))
+    (assert-true (floatp
+                  (ext:with-float-traps-enabled (:underflow)
+                    (read-from-string (format nil "~A" n)))))))
 
 (define-test reader-restarts.underflow
     (:tag :issues)
