@@ -247,21 +247,43 @@
     (assert-equal 0.9999999999999999d0
                   (rounding-test 3d0))))
 
-(define-test reader-underflow-enabled
+(define-test reader.underflow-enabled
     (:tag :issues)
   ;; Test with FP underflow enabled, we can still read denormals
   ;; without problem.  For this test we only care that we get a
   ;; number, not the actual value.
-  (ext:with-float-traps-enabled (:underflow)
-    (dolist (n (list least-positive-single-float
-                     least-positive-normalized-single-float
-                     (/ (+ least-positive-single-float
-                           least-positive-normalized-single-float)
-                        2)
-                     least-positive-double-float
-                     least-positive-normalized-double-float
-                     (/ (+ least-positive-double-float
-                           least-positive-normalized-double-float)
-                        2)
-                     ))
-    (assert-true (floatp (read-from-string (format nil "~A" n)))))))
+  (dolist (n (list least-positive-single-float
+                   least-positive-normalized-single-float
+                   (/ (+ least-positive-single-float
+                         least-positive-normalized-single-float)
+                      2)
+                   least-positive-double-float
+                   least-positive-normalized-double-float
+                   (/ (+ least-positive-double-float
+                         least-positive-normalized-double-float)
+                      2)
+                   ))
+    (ext:with-float-traps-enabled (:underflow)
+      (assert-true (floatp (read-from-string (format nil "~A" n)))))))
+
+(define-test reader-restarts.underflow
+    (:tag :issues)
+  ;; Test that we get a restart when reading floating-point numbers
+  ;; that are too small to fit in a float.  Invoke the restart to
+  ;; return 0.  All the numbers must be less than half the
+  ;; leasst-positive float.
+  (dolist (item '(("1e-46" 0f0)
+                  ("1e-999" 0f0)
+                  ("1d-324" 0d0)
+                  ("1d-999" 0d0)))
+    (destructuring-bind (string expected-value)
+        item
+      (assert-equal expected-value
+                    (values (handler-bind
+                                ((reader-error
+                                   (lambda (c)
+                                     (declare (ignore c))
+                                     (invoke-restart 'lisp::continue))))
+                              (read-from-string string)))))))
+   
+
