@@ -56,6 +56,7 @@ public domain.
     * ~~#271~~ Update ASDF to 3.3.7
     * ~~#272~~ Move scavenge code for static vectors to its own function
     * ~~#274~~ 1d99999999 hangs
+    * ~~#275~~ FP underflow in reader allows restarting with 0
     * ~~#276~~ Implement xoroshiro128** generator for x86
     * ~~#277~~ `float-ratio-float` returns 0 for numbers close to
       least-positive-float
