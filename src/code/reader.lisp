@@ -1832,56 +1832,70 @@ the end of the stream."
   ;; throw an error immediately.  We don't need to be super accurate
   ;; with the limits.  The rest of the code will handle it correctly,
   ;; even if we're too small or too large.
-  (unless (zerop number)
-    (flet ((fast-log2 (n)
-             ;;  For an integer, the integer-length is close enough to
-             ;;  the log2 of the number.
-             (integer-length n)))
-      ;; log2(x) = log(number*10^exponent/divisor)
-      ;;         = exponent*log2(10) + log2(number)-log2(divisor)
-      (let ((log2-num (+ (* exponent #.(kernel::log2 10d0))
-                         (fast-log2 number)
-                         (- (fast-log2 divisor)))))
-        (multiple-value-bind (log2-low log2-high)
-            (ecase float-format
-              ((short-float single-float)
-               ;; Single-float exponents range is -149 to 127, but we
-               ;; don't need to be super-accurate since we're
-               ;; multiplying the values by 2.
-               (values (* 2 (- vm:single-float-normal-exponent-min
-                               vm:single-float-bias
-                               vm:single-float-digits))
-                       (* 2 (- vm:single-float-normal-exponent-max
-                               vm:single-float-bias))))
-              ((double-float long-float
-                             #+double-double kernel:double-double-float)
-               (values (* 2 (- vm:double-float-normal-exponent-min
-                               vm:double-float-bias
-                               vm:double-float-digits))
-                       (* 2 (- vm:double-float-normal-exponent-max
-                               vm:double-float-bias)))))
-          ;; Double-float exponent range is -1074 to -1023
-          (unless (< log2-low log2-num log2-high)
-            ;; The number is definitely too large or too small to fit.
-            ;; Signal an error.
-            (%reader-error stream _"Number not representable as a ~S: ~S"
-			   float-format (read-buffer-to-string)))))))
+  (flet ((handle-extreme-numbers ()
+           (unless (zerop number)
+             (flet ((fast-log2 (n)
+                      ;;  For an integer, the integer-length is close enough to
+                      ;;  the log2 of the number.
+                      (integer-length n)))
+               ;; log2(x) = log(number*10^exponent/divisor)
+               ;;         = exponent*log2(10) + log2(number)-log2(divisor)
+               (let ((log2-num (+ (* exponent #.(kernel::log2 10d0))
+                                  (fast-log2 number)
+                                  (- (fast-log2 divisor)))))
+                 (multiple-value-bind (log2-low log2-high)
+                     (ecase float-format
+                       ((short-float single-float)
+                        ;; Single-float exponents range is -149 to 127, but we
+                        ;; don't need to be super-accurate since we're
+                        ;; multiplying the values by 2.
+                        (values (* 2 (- vm:single-float-normal-exponent-min
+                                        vm:single-float-bias
+                                        vm:single-float-digits))
+                                (* 2 (- vm:single-float-normal-exponent-max
+                                        vm:single-float-bias))))
+                       ((double-float long-float
+                                      #+double-double kernel:double-double-float)
+                        ;; Double-float exponent range is -1074 to -1023
+                        (values (* 2 (- vm:double-float-normal-exponent-min
+                                        vm:double-float-bias
+                                        vm:double-float-digits))
+                                (* 2 (- vm:double-float-normal-exponent-max
+                                        vm:double-float-bias)))))
+                   (when (<= log2-num log2-low)
+                     ;; Number is definitely too small; signal an underflow.
+                     (error 'floating-point-underflow))
+                   (when (>= log2-num log2-high)
+                     ;; Number is definitely too large; signal an error
+                     (error "Overflow"))))))))
 
-  ;; Otherwise the number might fit, so we carefully compute the result.
-  (handler-case
-      (with-float-traps-masked (:underflow)
-	(let* ((ratio (/ (* (expt 10 exponent) number)
-                         divisor))
-	       (result (coerce ratio float-format)))
-	  (when (and (zerop result) (not (zerop number)))
-	    ;; The number we've read is so small that it gets
-	    ;; converted to 0.0, but is not actually zero.  Signal an
-	    ;; error.  See CLHS 2.3.1.1.
-            (error _"Underflow"))
-          result))
-    (error ()
-	   (%reader-error stream _"Number not representable as a ~S: ~S"
-			  float-format (read-buffer-to-string)))))
+    ;; Otherwise the number might fit, so we carefully compute the result.
+    (handler-case
+        (with-float-traps-masked (:underflow)
+          (handle-extreme-numbers)
+          (let* ((ratio (/ (* (expt 10 exponent) number)
+                           divisor))
+	         (result (coerce ratio float-format)))
+	    (when (and (zerop result) (not (zerop number)))
+	      ;; The number we've read is so small that it gets
+	      ;; converted to 0.0, but is not actually zero.  Signal an
+	      ;; error.  See CLHS 2.3.1.1.
+              (error 'floating-point-underflow))
+            result))
+      (floating-point-underflow ()
+        ;; Resignal a reader error, but allow the user to continue with
+        ;; 0.
+        (let ((zero (coerce 0 float-format)))
+          (restart-case
+              (%reader-error stream _"Floating point underflow when reading ~S: ~S"
+                             float-format (read-buffer-to-string))
+            (continue ()
+              :report (lambda (stream)
+                        (format stream "Return ~A" zero))
+              zero))))
+      (error ()
+	(%reader-error stream _"Number not representable as a ~S: ~S"
+		       float-format (read-buffer-to-string))))))
 
 
 (defun make-ratio (stream)
