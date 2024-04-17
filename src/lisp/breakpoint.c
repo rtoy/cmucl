@@ -47,6 +47,13 @@
 #endif
 #endif
 
+/*
+ * Set to positive value to enabled debug prints related to the sigill
+ * and sigtrap handlers.  Also enables prints related to handling of
+ * breakpoints.
+ */
+unsigned int debug_handlers = 0;
+
 
 static void *
 compute_pc(lispobj code_obj, int pc_offset)

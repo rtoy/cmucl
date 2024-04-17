@@ -65,6 +65,12 @@ extern void sse_restore(void *);
 extern void save_fpu_state(void*);
 extern void restore_fpu_state(void*);
 
+/*
+ * Set to non-zero to enable debug prints for debugging the sigill and
+ * sigtrap handlers and for debugging breakpoints.
+ */
+extern unsigned int debug_handlers;
+
 #if defined(i386) || defined(__x86_64)
 #include "x86-arch.h"
 #endif

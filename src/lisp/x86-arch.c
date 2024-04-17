@@ -31,13 +31,6 @@
 static const unsigned char ud1[] = {0x0f, 0xb9};
       
 
-/*
- * Set to positive value to enabled debug prints related to the sigill
- * and sigtrap handlers.  Also enables prints related to handling of
- * breakpoints.
- */
-unsigned int debug_handlers = 0;
-
 #if defined(SOLARIS)
 /*
  * Use the /dev/cpu/self/cpuid interface on Solaris.  We could use the

@@ -11,11 +11,6 @@
 extern int arch_support_sse2(void);
 extern boolean os_support_sse2(void);
 
-/*
- * Set to non-zero to enable debug prints for debugging the sigill and
- * sigtrap handlers and for debugging breakpoints.
- */
-extern unsigned int debug_handlers;
 
 
 /*
