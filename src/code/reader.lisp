@@ -620,8 +620,7 @@
 	  ;; Of course, we want to be able to modify the standard
 	  ;; readtable here!
 	  (invoke-restart 'kernel::continue))))
-    (let ((*readtable* std-lisp-readtable)
-	  (*assert-not-standard-readtable* nil))
+    (let ((*readtable* std-lisp-readtable))
       (set-cat-entry #\tab #.whitespace)
       (set-cat-entry #\linefeed #.whitespace)  
       (set-cat-entry #\space #.whitespace)
