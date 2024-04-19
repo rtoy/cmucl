@@ -30,14 +30,17 @@ public domain.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
+    *
     * ~~#154~~ piglatin translation does not work anymore
-	* ~~#171~~ Readably print `(make-pathname :name :unspecfic)`
+    * ~~#171~~ Readably print `(make-pathname :name :unspecfic)`
+    * ~~#180~~ Move `get-page-size` to C
     * ~~#196~~ Fix issues with mapping and nconc accumulation (mapcan)
     * ~~#216~~ `enough-namestring` with relative pathname fails
     * ~~#234~~ Make :ASCII external format builtin
     * ~~#240~~ Speed up set operations
     * ~~#242~~ Fix bug in `alien-funcall` with `c-call:char` as result type
     * ~~#244~~ Add `c-call:signed-char`
+    * ~~#245~~ Replace `egrep` with `grep -E` in `make-dist.sh`
     * ~~#248~~ Print MOVS instruction with correct case
     * ~~#249~~ Replace LEA instruction with simpler shorter instructions in arithmetic vops for x86
     * ~~#253~~ Block-compile list-to-hashtable and callers
@@ -53,6 +56,7 @@ public domain.
     * ~~#265~~ CI for mac os is broken
     * ~~#266~~ Support "~user" in namestrings
     * ~~#269~~ Add function to get user's home directory
+    * ~~#270~~ Simplify `os_file_author` interface
     * ~~#271~~ Update ASDF to 3.3.7
     * ~~#272~~ Move scavenge code for static vectors to its own function
     * ~~#274~~ 1d99999999 hangs
@@ -67,7 +71,11 @@ public domain.
     * ~~#290~~ Pprint `with-float-traps-masked` better
     * ~~#291~~ Pprint `handler-case` neatly.
     * ~~#293~~ Allow restarts for FP overflow in reader.
+    * ~~#294~~ Implement assembly routine for xoroshiro update function
+    * ~~#296~~ Disassembly of movd instruction broken
     * ~~#297~~ Pprint `new-assem:assemble` with less indentation.
+    * ~~#298~~ Add `with-float-rounding-mode` macro
+    * ~~#299~~ Enable xoroshiro assembly routine
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
