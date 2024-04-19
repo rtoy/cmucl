@@ -4325,7 +4325,7 @@ u32_vector(lispobj obj, unsigned *length)
 static inline void
 free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
 {
-    unsigned length = UINT_MAX; // to compare to
+    unsigned length = UINT_MAX;
     unsigned *index_vector = u32_vector(hash_table->index_vector, &length);
     unsigned *next_vector = u32_vector(hash_table->next_vector, 0);
     int free_p = 1;
