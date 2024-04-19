@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <signal.h>
+#include <ucontext.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -26,7 +27,7 @@
 #include <asm/unistd.h>
 #include <errno.h>
 
-typedef caddr_t os_vm_address_t;	/* like hpux */
+typedef char *os_vm_address_t;
 typedef size_t os_vm_size_t;	/* like hpux */
 typedef off_t os_vm_offset_t;	/* like hpux */
 typedef int os_vm_prot_t;	/* like hpux */

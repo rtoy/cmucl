@@ -152,7 +152,7 @@
 
 static void *invalid_stack_start, *invalid_stack_end;
 
-static inline void
+static void
 check_escaped_stack_object(lispobj * where, lispobj obj)
 {
 #if !defined(DARWIN) && !defined(__ppc__)
@@ -974,7 +974,7 @@ handle_heap_overflow(const char *msg, int size)
  */
 boolean gencgc_debug_madvise = FALSE;
 
-static inline void
+static void
 handle_madvise_first_page(int first_page)
 {
     int flags = page_table[first_page].flags;
@@ -1505,7 +1505,7 @@ gc_alloc_update_page_tables(int unboxed, struct alloc_region *alloc_region)
 
 
 
-static inline void *gc_quick_alloc(int nbytes);
+static void *gc_quick_alloc(int nbytes);
 
 /*
  * Allocate a possibly large object.
@@ -1829,7 +1829,7 @@ struct alloc_stats unboxed_stats =
  * allocation and return the object.  If it's not possible, return
  * (void*) -1.
  */
-static inline void *
+static void *
 gc_alloc_try_current_region(int nbytes, struct alloc_region *region, int unboxed,
                             struct alloc_stats *stats)
 {
@@ -1974,7 +1974,7 @@ gc_alloc_region(int nbytes, struct alloc_region *region, int unboxed, struct all
  * room, if not then it calls gc_alloc_new_region to find a new region
  * with enough space. A pointer to the start of the region is returned.
  */
-static inline void *
+static void *
 gc_alloc(int nbytes)
 {
     void* obj;
@@ -1989,7 +1989,7 @@ gc_alloc(int nbytes)
  * space then call gc_alloc to do the job. A pointer to the start of
  * the region is returned.
  */
-static inline void *
+static void *
 gc_quick_alloc(int nbytes)
 {
     char *new_free_pointer;
@@ -2015,7 +2015,7 @@ gc_quick_alloc(int nbytes)
  * not enough free space then call gc_alloc to do the job. A pointer
  * to the start of the region is returned.
  */
-static inline void *
+static void *
 gc_quick_alloc_large(int nbytes)
 {
     char *new_free_pointer;
@@ -2038,7 +2038,7 @@ gc_quick_alloc_large(int nbytes)
     return gc_alloc(nbytes);
 }
 
-static inline void *
+static void *
 gc_alloc_unboxed(int nbytes)
 {
     void *obj;
@@ -2048,7 +2048,7 @@ gc_alloc_unboxed(int nbytes)
     return obj;
 }
 
-static inline void *
+static void *
 gc_quick_alloc_unboxed(int nbytes)
 {
     char *new_free_pointer;
@@ -2076,7 +2076,7 @@ gc_quick_alloc_unboxed(int nbytes)
  *
  * A pointer to the start of the region is returned.
  */
-static inline void *
+static void *
 gc_quick_alloc_large_unboxed(int nbytes)
 {
     char *new_free_pointer;
@@ -2118,7 +2118,7 @@ static struct scavenger_hook *scavenger_hooks = (struct scavenger_hook *) NIL;
 
 /* Predicates */
 
-static inline boolean
+static boolean
 from_space_p(lispobj obj)
 {
     int page_index = (char *) obj - heap_base;
@@ -2129,7 +2129,7 @@ from_space_p(lispobj obj)
 	&& PAGE_GENERATION(page_index) == from_space;
 }
 
-static inline boolean
+static boolean
 new_space_p(lispobj obj)
 {
     int page_index = (char *) obj - heap_base;
@@ -2140,7 +2140,7 @@ new_space_p(lispobj obj)
 	&& PAGE_GENERATION(page_index) == new_space;
 }
 
-static inline boolean
+static boolean
 dynamic_space_p(lispobj obj)
 {
     lispobj end = DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE;
@@ -2148,7 +2148,7 @@ dynamic_space_p(lispobj obj)
     return (obj >= DYNAMIC_0_SPACE_START) && (obj < end);
 }
 
-static inline boolean
+static boolean
 static_space_p(lispobj obj)
 {
     lispobj end = SymbolValue(STATIC_SPACE_FREE_POINTER);
@@ -2156,7 +2156,7 @@ static_space_p(lispobj obj)
     return (obj >= STATIC_SPACE_START) && (obj < end);
 }
 
-static inline boolean
+static boolean
 read_only_space_p(lispobj obj)
 {
     lispobj end = SymbolValue(READ_ONLY_SPACE_FREE_POINTER);
@@ -2164,7 +2164,7 @@ read_only_space_p(lispobj obj)
     return (obj >= READ_ONLY_SPACE_START) && (obj < end);
 }
 
-static inline boolean
+static boolean
 control_stack_space_p(lispobj obj)
 {
     char *object = (char *) obj;
@@ -2173,7 +2173,7 @@ control_stack_space_p(lispobj obj)
     return (object >= (char *) control_stack) && (object < end);
 }
 
-static inline boolean
+static boolean
 binding_stack_space_p(lispobj obj)
 {
     char *object = (char *) obj;
@@ -2182,7 +2182,7 @@ binding_stack_space_p(lispobj obj)
     return (object >= (char *) binding_stack) && (object < end);
 }
     
-static inline boolean
+static boolean
 signal_space_p(lispobj obj)
 {
 #ifdef SIGNAL_STACK_START
@@ -2218,7 +2218,7 @@ extern int undefined_tramp;
  * Other random places that can't be in malloc space.  Return TRUE if
  * obj is in some other known space
  */
-static inline boolean
+static boolean
 other_space_p(lispobj obj)
 {
     boolean in_space = FALSE;
@@ -2268,7 +2268,7 @@ other_space_p(lispobj obj)
 
 
 /* Copying Boxed Objects */
-static inline lispobj
+static lispobj
 copy_object(lispobj object, int nwords)
 {
     int tag;
@@ -2469,7 +2469,7 @@ copy_large_object(lispobj object, int nwords)
 }
 
 /* Copying UnBoxed Objects. */
-static inline lispobj
+static lispobj
 copy_unboxed_object(lispobj object, int nwords)
 {
     int tag;
@@ -2653,7 +2653,7 @@ copy_large_unboxed_object(lispobj object, int nwords)
     }
 }
 
-static inline boolean
+static boolean
 maybe_static_array_p(lispobj header)
 {
     boolean result;
@@ -4288,7 +4288,7 @@ static lispobj weak_hash_tables;
 
 /* Return true if OBJ will survive the current GC.  */
 
-static inline int
+static int
 survives_gc(lispobj obj)
 {
     if (!Pointerp(obj) || !from_space_p(obj))
@@ -4300,7 +4300,7 @@ survives_gc(lispobj obj)
    element, otherwise return null.  If LENGTH is not null, return in it
    the array's length.  */
 
-static inline unsigned *
+static unsigned *
 u32_vector(lispobj obj, unsigned *length)
 {
     unsigned *ptr = NULL;
@@ -4322,7 +4322,7 @@ u32_vector(lispobj obj, unsigned *length)
    the hash-table's INDEX-VECTOR) is HASH_INDEX, and whose index
    in the hash-table's TABLE vector is KV_INDEX.  */
 
-static inline void
+static void
 free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
 {
     unsigned length = UINT_MAX;
@@ -4389,7 +4389,7 @@ free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
    the hash-table's INDEX-VECTOR) is HASH_INDEX, and whose index
    in the hash-table's TABLE vector is KV_INDEX, for rehashing.  */
 
-static inline void
+static void
 record_for_rehashing(struct hash_table *hash_table, int hash_index,
 		     int kv_index)
 {
@@ -4420,13 +4420,13 @@ record_for_rehashing(struct hash_table *hash_table, int hash_index,
     }
 }
 
-static inline boolean
+static boolean
 eq_based_hash_vector(unsigned int* hash_vector, unsigned int index)
 {
     return (hash_vector == 0) || (hash_vector[index] == EQ_BASED_HASH_VALUE);
 }
 
-static inline boolean
+static boolean
 removable_weak_key(lispobj old_key, unsigned int index_value, boolean eq_hash_p)
 {
   return (!survives_gc(old_key)
@@ -4434,7 +4434,7 @@ removable_weak_key(lispobj old_key, unsigned int index_value, boolean eq_hash_p)
           && (index_value != 0));
 }
 
-static inline boolean
+static boolean
 removable_weak_value(lispobj value, unsigned int index_value)
 {
     /*
@@ -4444,7 +4444,7 @@ removable_weak_value(lispobj value, unsigned int index_value)
             && (index_value != 0));
 }
 
-static inline boolean
+static boolean
 removable_weak_key_and_value(lispobj old_key, lispobj value, unsigned int index_value,
                              boolean eq_hash_p)
 {
@@ -4464,7 +4464,7 @@ removable_weak_key_and_value(lispobj old_key, lispobj value, unsigned int index_
   return removable_key || removable_val;
 }
 
-static inline boolean
+static boolean
 removable_weak_key_or_value(lispobj old_key, lispobj value, unsigned int index_value,
                             boolean eq_hash_p)
 {
@@ -4591,7 +4591,7 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
     }
 }
 
-static inline boolean
+static boolean
 weak_key_survives(lispobj old_key, unsigned index_value, unsigned int eq_hash_p)
 {
     return (survives_gc(old_key)
@@ -4599,7 +4599,7 @@ weak_key_survives(lispobj old_key, unsigned index_value, unsigned int eq_hash_p)
 	    && eq_hash_p);
 }
 
-static inline boolean
+static boolean
 weak_value_survives(lispobj value)
 {
     return (survives_gc(value));
