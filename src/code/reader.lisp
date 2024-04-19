@@ -1823,6 +1823,51 @@ the end of the stream."
                                              num))))
 	  (t (error _"Internal error in floating point reader.")))))
 
+(defun restart-overflow (sign-num sign-div float-format stream)
+  (flet
+      ((floating-point-infinity (sign float-format)
+         (ecase float-format
+           ((short-float single-float)
+            (if (minusp sign)
+                ext:single-float-negative-infinity
+                ext:single-float-positive-infinity))
+           ((double-float long-float)
+            (if (minusp sign)
+                ext:double-float-negative-infinity
+                ext:double-float-positive-infinity))
+           #+double-double
+           ((kernel::double-double-float)
+            (if (minusp sign)
+                kernel::double-double-float-negative-infinity
+                kernel::double-double-float-positive-infinity))))
+       (largest-float (sign float-format)
+         (ecase float-format
+           ((short-float single-float)
+            (if (minusp sign)
+                most-negative-single-float
+                most-positive-single-float))
+           ((double-float long-float)
+            (if (minusp sign)
+                most-negative-double-float
+                most-positive-double-float))
+           #+double-double
+           ((kernel::double-double-float)
+            (if (minusp sign)
+                ext:most-negative-double-double-float
+                ext:most-positive-double-double-float)))))
+
+  (restart-case
+      (%reader-error stream _"Floating-point overflow reading ~S: ~S"
+                     float-format (read-buffer-to-string))
+    (infinity ()
+      :report (lambda (stream)
+                (format stream "Return floating-point infinity"))
+      (floating-point-infinity (* sign-num sign-div) float-format))
+    (largest-float ()
+      :report (lambda (stream)
+                (format stream "Return largest floating-point value"))
+      (largest-float (* sign-num sign-div) float-format)))))
+
 (defun make-float-aux (exponent number divisor float-format stream)
   ;; Computes x = number*10^exponent/divisor.
   ;;
@@ -1867,7 +1912,7 @@ the end of the stream."
                      (error 'floating-point-underflow))
                    (when (>= log2-num log2-high)
                      ;; Number is definitely too large; signal an error
-                     (error "Overflow"))))))))
+                     (error 'floating-point-overflow))))))))
 
     ;; Otherwise the number might fit, so we carefully compute the result.
     (handler-case
@@ -1893,10 +1938,14 @@ the end of the stream."
               :report (lambda (stream)
                         (format stream "Return ~A" zero))
               zero))))
+      (floating-point-overflow ()
+        ;; Resignal a reader error, but allow the user to replace
+        ;; overflow with another value.
+        (restart-overflow (signum number) (signum divisor)
+                          float-format stream))
       (error ()
 	(%reader-error stream _"Number not representable as a ~S: ~S"
 		       float-format (read-buffer-to-string))))))
-
 
 (defun make-ratio (stream)
   ;;assume *read-buffer* contains a legal ratio.  Build the number from
