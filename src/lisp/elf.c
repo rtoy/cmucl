@@ -442,7 +442,7 @@ map_core_sections(const char *exec_name)
 	image_static_space_size,
 	image_read_only_space_size;
 
-    if (!(exec_fd = open(exec_name, O_RDONLY))) {
+    if ((exec_fd = open(exec_name, O_RDONLY)) == -1) {
 	perror("Can't open executable!");
 	exit(-1);
     }
