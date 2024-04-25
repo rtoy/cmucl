@@ -762,10 +762,10 @@ os_file_author(const char *path)
           case ERANGE:
               /* Buffer is too small, double its size and try again */
               size *= 2;
-              obuffer = (buffer == initial) ? NULL : buffer;
               if ((buffer = realloc(obuffer, size)) == NULL) {
                   goto exit;
               }
+	      obuffer = buffer;
               continue;
           default:
               /* All other errors */
