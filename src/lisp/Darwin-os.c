@@ -107,10 +107,13 @@ os_init0(const char *argv[], const char *envp[])
 void
 os_init(const char *argv[], const char *envp[])
 {
+    extern char *altstack;
     os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
 #ifdef __ppc__
     timebase_init();
 #endif
+
+    altstack = malloc(SIGNAL_STACK_SIZE);
 }
 
 
