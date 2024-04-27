@@ -165,6 +165,7 @@ os_init0(const char *argv[], const char *envp[])
 void
 os_init(const char *argv[], const char *envp[])
 {
+    extern char *altstack;
     struct utsname name;
 
     uname(&name);
@@ -177,6 +178,8 @@ os_init(const char *argv[], const char *envp[])
     }
 
     os_vm_page_size = getpagesize();
+
+    altstack = malloc(SIGNAL_STACK_SIZE);
 }
 
 #ifdef __i386
