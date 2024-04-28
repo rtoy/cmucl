@@ -45,7 +45,7 @@
 
 
 static void
-check_ptr(void* ptr, const char* msg)
+check_ptr(const void* ptr, const char* msg)
 {
     if (ptr == NULL) {
         perror(msg);
@@ -276,6 +276,8 @@ default_cmucllib(const char *argv0arg)
 	/* Create the colon separated list of directories */
 
 	defpath = malloc(total_len + 1);
+        check_ptr(defpath, "No space for cmucllib path");
+        
 	*defpath = '\0';
 
 	ptr = cmucllib_search_list;
@@ -395,6 +397,8 @@ prepend_core_path(const char *lib, const char *corefile)
     }
 
     result = malloc(strlen(path) + strlen(lib) + 2);
+    check_ptr(result, "No space final core path");
+    
     strcpy(result, path);
     strcat(result, ":");
     strcat(result, lib);
@@ -748,12 +752,14 @@ main(int argc, const char *argv[], const char *envp[])
      */
     if (lib != NULL) {
 	cmucllib = strdup(lib);
+        check_ptr(cmucllib, "No space for strdup(lib)");
     } else {
 	char *libvar;
 
 	libvar = getenv("CMUCLLIB");
 	if (libvar != NULL) {
 	    cmucllib = strdup(libvar);
+            check_ptr(cmucllib, "No space for strdup(libvar)");
 	} else {
 	    /*
              * The following doesn't make sense for executables.  They
@@ -783,7 +789,6 @@ main(int argc, const char *argv[], const char *envp[])
             }
         }
     }
-
 
     /* Only look for a core file if we're not using a built-in image. */
     if (builtin_image_flag == 0) {
