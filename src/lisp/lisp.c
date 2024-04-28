@@ -44,6 +44,15 @@
 
 
 
+static void
+check_ptr(void* ptr, const char* msg)
+{
+    if (ptr == NULL) {
+        perror(msg);
+        exit(1);
+    }
+}
+
 /* SIGINT handler that invokes the monitor. */
 
 static void
@@ -103,10 +112,7 @@ getcwd_or_die(char* buf, size_t size)
 {
     char *result = getcwd(buf, size);
 
-    if (result == NULL) {
-        perror("Cannot get cwd");
-        exit(1);
-    }
+    check_ptr(result, "Cannot get cwd");
 }
 
 /* Set this to see how we're doing our search */
@@ -131,7 +137,8 @@ default_cmucllib(const char *argv0arg)
     char *defpath;
     char *cwd;
     char *argv0_dir = strdup(argv0arg);
-
+    check_ptr(argv0_dir, "Cannot dup argv0");
+        
     /*
      * From argv[0], create the appropriate directory by lopping off the
      * executable name
@@ -156,6 +163,8 @@ default_cmucllib(const char *argv0arg)
 
     if (argv0_dir[0] == '/') {
 	cwd = malloc(strlen(argv0_dir) + 2);
+        check_ptr(cwd, "No space to duplicate argv0");
+        
 	strcpy(cwd, argv0_dir);
 	strcat(cwd, "/");
 	if (debug_lisp_search) {
@@ -191,6 +200,8 @@ default_cmucllib(const char *argv0arg)
 	}
 
 	cwd = malloc(FILENAME_MAX + strlen(argv0arg) + 100);
+        check_ptr(cwd, "No space to hold cwd buffer");
+        
 	cwd[0] = '\0';
 
 	if (path) {
@@ -311,7 +322,8 @@ search_core(const char *lib, const char *default_core)
      * slash, and a the string terminator
      */
     buf = malloc(strlen(lib) + strlen(default_core) + 2);
-
+    check_ptr(buf, "No space for buffer");
+    
     do {
 	dst = buf;
 	/*
@@ -435,7 +447,7 @@ locate_core(const char* cmucllib, const char* core, const char* default_core)
         }
     }
 
-    if (access(core, R_OK) != 0) {
+    if (core && access(core, R_OK) != 0) {
       core = NULL;
     }
     
