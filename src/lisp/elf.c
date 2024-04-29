@@ -333,13 +333,20 @@ obj_run_linker(long init_func_address, char *file)
     extern int debug_lisp_search;
 #ifndef UNICODE
     paths = strdup((char *)vec->data);
+    if (paths == NULL) {
+	perror("strdup");
+	return -1;
+    }
 #else
     /*
      * What should we do here with 16-bit characters?  For now we just
      * take the low 8-bits.
      */
     paths = malloc(vec->length);
-    {
+    if (paths == NULL) {
+	perror("malloc");
+	return -1;
+    } else {
         int k;
         unsigned short *data;
         data = (unsigned short*) vec->data;
