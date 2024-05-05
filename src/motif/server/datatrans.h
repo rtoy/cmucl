@@ -38,7 +38,7 @@ extern void message_write_int_list();
 extern void message_write_event();
 extern void message_write_color();
 /* GCC complains without the full prototype */
-extern void message_write_float(message_t,float,int);
+extern void message_write_float(message_t,float*,int);
 
 
 
