@@ -231,3 +231,12 @@
       (let ((z (sqrt (complex minf (- nan)))))
 	(assert-true (ext:float-nan-p (realpart z)))
 	(assert-eql minf (imagpart z))))))
+
+;; See bug #314
+(define-test tanh-large
+    (:tag :issues)
+  (assert-eql (complex 1d0 -0d0)
+              (tanh #c(200d0 -200d0)))
+  (assert-eql (complex 1d0 +0d0)
+              (tanh #c(200d0 +200d0)))
+  
