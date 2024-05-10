@@ -265,10 +265,12 @@ void message_write_color(message_t m,XColor *color,int tag)
   message_put_word(m,color->blue);
 }
 
-void message_write_float(message_t m,float *f,int tag)
+void message_write_float(message_t m,void *f,int tag)
 {
+  float *fl = (float *) f;
+  
   message_put_dblword(m,combine_type_and_data(tag,0));
-  message_put_dblword(m,*f);
+  message_put_dblword(m,*fl);
 }
 
 
