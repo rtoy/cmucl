@@ -76,6 +76,7 @@ public domain.
     * ~~#297~~ Pprint `new-assem:assemble` with less indentation.
     * ~~#298~~ Add `with-float-rounding-mode` macro
     * ~~#299~~ Enable xoroshiro assembly routine
+    * ~~#314~~ tanh incorrect for large args
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
