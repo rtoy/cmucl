@@ -1800,12 +1800,10 @@ Z may be any number, but the result is always a complex."
 	(declare (optimize (speed 3) (space 0)
 			   (inhibit-warnings 3)))
       (cond ((> (abs x)
-		#-(or linux hpux) #.(/ (%asinh most-positive-double-float) 4d0)
-		;; This is more accurate under linux.
-		#+(or linux hpux) #.(/ (+ (%log 2.0d0)
-					  (%log most-positive-double-float)) 4d0))
+                ;; Don't need double-double accuracy here.
+		#.(/ (%asinh most-positive-double-float) 4d0))
 	     (complex (float-sign x)
-		      (float-sign y)))
+		      (float-sign y 0w0)))
 	    (t
 	     (let* ((tv (dd-%tan y))
 		    (beta (+ 1.0d0 (* tv tv)))
