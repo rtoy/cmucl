@@ -239,4 +239,9 @@
               (tanh #c(200d0 -200d0)))
   (assert-eql (complex 1d0 +0d0)
               (tanh #c(200d0 +200d0)))
+  (assert-eql (complex 1w0 -0w0)
+              (tanh #c(200w0 -200w0)))
+  (assert-eql (complex 1w0 +0w0)
+              (tanh #c(200w0 200w0))))
+  
   
