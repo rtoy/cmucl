@@ -60,6 +60,11 @@
 (deftype codepoint ()
   `(integer 0 (,codepoint-limit)))
 
+;; This MUST be greater than or equal to 127!
+(defconstant +unicode-lower-limit+
+  191
+  "A character code strictly larger than this is handled using Unicode rules.")
+
 
 (macrolet ((frob (char-names-list)
 	     (collect ((results))
@@ -210,7 +215,7 @@
        (let ((m (char-code (the base-char char))))
 	 (or (< 31 m 127)
 	     #+(and unicode (not unicode-bootstrap))
-	     (and (> m 127)
+	     (and (> m +unicode-lower-limit+)
 		  (>= (unicode-category m) +unicode-category-graphic+))))))
 
 
@@ -221,7 +226,7 @@
   (let ((m (char-code char)))
     (or (< 64 m 91) (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
+	(and (> m +unicode-lower-limit+)
 	     (<= +unicode-category-letter+ (unicode-category m)
 		 (+ +unicode-category-letter+ #x0F))))))
 
@@ -233,7 +238,7 @@
   (let ((m (char-code char)))
     (or (< 64 m 91)
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
+	(and (> m +unicode-lower-limit+)
 	     (= (unicode-category m) +unicode-category-upper+)))))
 
 
@@ -244,7 +249,7 @@
   (let ((m (char-code char)))
     (or (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
+	(and (> m +unicode-lower-limit+)
 	     (= (unicode-category m) +unicode-category-lower+)))))
 
 (defun title-case-p (char)
@@ -254,7 +259,7 @@
   (let ((m (char-code char)))
     (or (< 64 m 91)
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
+	(and (> m +unicode-lower-limit+)
 	     (= (unicode-category m) +unicode-category-title+)))))
 
 
@@ -266,7 +271,7 @@
   (let ((m (char-code char)))
     (or (< 64 m 91) (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
+	(and (> m +unicode-lower-limit+)
 	     (<= +unicode-category-upper+
 		 (unicode-category m)
 		 +unicode-category-title+)))))
@@ -300,7 +305,7 @@
     ;; Shortcut for ASCII digits and upper and lower case ASCII letters
     (or (< 47 m 58) (< 64 m 91) (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
+	(and (> m +unicode-lower-limit+)
 	     (<= +unicode-category-letter+ (unicode-category m)
 		 (+ +unicode-category-letter+ #x0F))))))
 
@@ -375,7 +380,7 @@
 	 #-(and unicode (not unicode-bootstrap))
 	 ch
 	 #+(and unicode (not unicode-bootstrap))
-	 (if (> ch 127) (unicode-lower ch) ch))))
+	 (if (> ch +unicode-lower-limit+) (unicode-lower ch) ch))))
 
 
 (defun char-equal (character &rest more-characters)
@@ -459,7 +464,7 @@
       char)
   #+(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
-    (cond ((> m 127) (code-char (unicode-upper m)))
+    (cond ((> m +unicode-lower-limit+) (code-char (unicode-upper m)))
 	  ((< 96 m 123) (code-char (- m 32)))
 	  (t char))))
 
@@ -472,7 +477,7 @@
       char)
   #+(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
-    (cond ((> m 127) (code-char (unicode-title m)))
+    (cond ((> m +unicode-lower-limit+) (code-char (unicode-title m)))
 	  ((< 96 m 123) (code-char (- m 32)))
 	  (t char))))
 
@@ -485,7 +490,7 @@
       char)
   #+(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
-    (cond ((> m 127) (code-char (unicode-lower m)))
+    (cond ((> m +unicode-lower-limit+) (code-char (unicode-lower m)))
 	  ((< 64 m 91) (code-char (+ m 32)))
 	  (t char))))
 

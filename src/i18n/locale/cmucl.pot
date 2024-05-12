@@ -5445,6 +5445,11 @@ msgstr ""
 
 #: src/code/char.lisp
 msgid ""
+"A character code strictly larger than this is handled using Unicode rules."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
 "This is the alist of (character-name . character) for characters with\n"
 "  long names.  The first name in this list for a given character is used\n"
 "  on typeout and is the preferred form for input."
