@@ -41,7 +41,7 @@ else
 fi
 
 cd ../ansi-test
-git checkout issue-288-new-failures
+git checkout issue-316-support-roundtrip-char-casing
 
 make LISP="$LISP batch -noinit -nositeinit"
 # There should be no unexpected successes or failures; check these separately
