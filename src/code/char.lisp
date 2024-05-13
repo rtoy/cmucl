@@ -62,7 +62,7 @@
 
 ;; This MUST be greater than or equal to 127!
 (defconstant +unicode-lower-limit+
-  191
+  127
   "A character code strictly larger than this is handled using Unicode rules.")
 
 
@@ -274,7 +274,7 @@
 	(and (> m +unicode-lower-limit+)
 	     (<= +unicode-category-upper+
 		 (unicode-category m)
-		 +unicode-category-title+)))))
+		 +unicode-category-lower+)))))
 
 
 (defun digit-char-p (char &optional (radix 10.))
