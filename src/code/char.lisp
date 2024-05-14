@@ -62,7 +62,7 @@
 
 ;; This MUST be greater than or equal to 127!
 (defconstant +unicode-lower-limit+
-  127
+  255
   "A character code strictly larger than this is handled using Unicode rules.")
 
 
