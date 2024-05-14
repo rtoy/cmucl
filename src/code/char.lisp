@@ -215,7 +215,8 @@
        (let ((m (char-code (the base-char char))))
 	 (or (< 31 m 127)
 	     #+(and unicode (not unicode-bootstrap))
-	     (and (> m +unicode-lower-limit+)
+	     (and (/= m 181)
+                  (> m +unicode-lower-limit+)
 		  (>= (unicode-category m) +unicode-category-graphic+))))))
 
 
@@ -272,6 +273,11 @@
     (or (< 64 m 91) (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +unicode-lower-limit+)
+             ;; Unicode says Micro_sign is a lower case letter, but
+             ;; for CL, we don't want it to be a lower case letter.
+             ;; This is for compatibility with other Lisp
+             ;; implementations.
+             (/= m 181)
 	     (<= +unicode-category-upper+
 		 (unicode-category m)
 		 +unicode-category-lower+)))))
@@ -464,8 +470,12 @@
       char)
   #+(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
-    (cond ((> m +unicode-lower-limit+) (code-char (unicode-upper m)))
-	  ((< 96 m 123) (code-char (- m 32)))
+    (cond ((< 96 m 123) (code-char (- m 32)))
+          ((= m 181) char)
+          ((> m +unicode-lower-limit+)
+           (if (member (unicode-category m) '(92 32 75 109))
+               char
+               (code-char (unicode-upper m))))
 	  (t char))))
 
 (defun char-titlecase (char)
@@ -490,7 +500,10 @@
       char)
   #+(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
-    (cond ((> m +unicode-lower-limit+) (code-char (unicode-lower m)))
+    (cond ((> m +unicode-lower-limit+)
+           (if (member (unicode-category m) '(92 75 109))
+               char
+               (code-char (unicode-lower m))))
 	  ((< 64 m 91) (code-char (+ m 32)))
 	  (t char))))
 

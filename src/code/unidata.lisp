@@ -883,9 +883,7 @@
   (unless (unidata-scase *unicode-data*) (load-scase))
   (let* ((scase (unidata-scase *unicode-data*))
 	 (n (logand (qref32 scase code) #xFF)))
-    (if (or (zerop n)
-            ;; Ignore category Lt, Mn, Nl, So
-            (member (unicode-category code) '(92 32 75 109)))
+    (if (zerop n)
 	code
 	(let* ((m (aref (scase-svec scase) (logand n #x7F))))
 	  (if (logbitp 7 n) (+ code m) (- code m))))))
@@ -896,9 +894,7 @@
   (unless (unidata-scase *unicode-data*) (load-scase))
   (let* ((scase (unidata-scase *unicode-data*))
 	 (n (logand (ash (qref32 scase code) -8) #xFF)))
-    (if (or (zerop n)
-            ;; Ignore category Lt, Nl, So
-            (member (unicode-category code) '(92 75 109)))
+    (if (zerop n)
 	code
 	(let ((m (aref (scase-svec scase) (logand n #x7F))))
 	  (if (logbitp 7 n) (+ code m) (- code m))))))
