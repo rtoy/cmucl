@@ -3345,7 +3345,6 @@
   #+(and unicode (not unicode-bootstrap))
   '(let ((m (char-code x)))
     (cond ((< 96 m 123) (code-char (- m 32)))
-          ((= m 181) x)
           ((> m lisp::+unicode-lower-limit+)
            (if (member (unicode-category m) '(92 32 75 109))
                x

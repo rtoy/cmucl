@@ -62,7 +62,7 @@
 
 ;; This MUST be greater than or equal to 127!
 (defconstant +unicode-lower-limit+
-  255
+  191
   "A character code strictly larger than this is handled using Unicode rules.")
 
 
@@ -471,7 +471,6 @@
   #+(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
     (cond ((< 96 m 123) (code-char (- m 32)))
-          ((= m 181) char)
           ((> m +unicode-lower-limit+)
            (if (member (unicode-category m) '(92 32 75 109))
                char
