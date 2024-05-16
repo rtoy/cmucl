@@ -463,18 +463,7 @@
 (defun char-upcase (char)
   "Returns CHAR converted to upper-case if that is possible."
   (declare (character char))
-  #-(and unicode (not unicode-bootstrap))
-  (if (lower-case-p char)
-      (code-char (- (char-code char) 32))
-      char)
-  #+(and unicode (not unicode-bootstrap))
-  (let ((m (char-code char)))
-    (cond ((< 96 m 123) (code-char (- m 32)))
-          ((> m +unicode-lower-limit+)
-           (if (member (unicode-category m) '(92 32 75 109))
-               char
-               (code-char (unicode-upper m))))
-	  (t char))))
+  (char-upcase char))
 
 (defun char-titlecase (char)
   "Returns CHAR converted to title-case if that is possible."
@@ -492,18 +481,7 @@
 (defun char-downcase (char)
   "Returns CHAR converted to lower-case if that is possible."
   (declare (character char))
-  #-(and unicode (not unicode-bootstrap))
-  (if (upper-case-p char)
-      (code-char (+ (char-code char) 32))
-      char)
-  #+(and unicode (not unicode-bootstrap))
-  (let ((m (char-code char)))
-    (cond ((> m +unicode-lower-limit+)
-           (if (member (unicode-category m) '(92 75 109))
-               char
-               (code-char (unicode-lower m))))
-	  ((< 64 m 91) (code-char (+ m 32)))
-	  (t char))))
+  (char-downcase char))
 
 (defun digit-char (weight &optional (radix 10))
   "All arguments must be integers.  Returns a character object that
