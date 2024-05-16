@@ -642,9 +642,13 @@
 	    (when wide (incf index))
 	    ;; Handle ASCII specially because this is called early in
 	    ;; initialization, before unidata is available.
+            #+nil
 	    (cond ((< 96 code 123) (decf code 32))
 		  #+unicode
 		  ((> code 127) (setq code (unicode-upper code))))
+            (if wide
+                (setq code (unicode-upper code))
+                (setf code (char-code (char-upcase (code-char code)))))
 	    ;;@@ WARNING: this may, in theory, need to extend newstring
 	    ;;  but that never actually occurs as of Unicode 5.1.0,
 	    ;;  so I'm just going to ignore it for now...
@@ -684,8 +688,12 @@
 	    (when wide (incf index))
 	    ;; Handle ASCII specially because this is called early in
 	    ;; initialization, before unidata is available.
+            #+nil
 	    (cond ((< 64 code 91) (incf code 32))
 		  ((> code 127) (setq code (unicode-lower code))))
+            (if wide
+                (setq code (unicode-lower code))
+                (setq code (char-code (char-downcase (code-char code)))))
 	    ;;@@ WARNING: this may, in theory, need to extend newstring
 	    ;;  but that never actually occurs as of Unicode 5.1.0,
 	    ;;  so I'm just going to ignore it for now...
