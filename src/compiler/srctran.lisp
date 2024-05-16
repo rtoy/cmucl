@@ -3335,9 +3335,8 @@
 	 (= (lisp::equal-char-code a)
 	    (lisp::equal-char-code b)))))
 
-(deftransform char-upcase ((x) (base-char))
+(deftransform char-upcase ((x) (character))
   "open code"
-  ;; NOTE:  This MUST match what the function char-upcase does.
   #-(and unicode (not unicode-bootstrap))
   '(if (lower-case-p x)
        (code-char (- (char-code x) 32))
@@ -3345,25 +3344,22 @@
   #+(and unicode (not unicode-bootstrap))
   '(let ((m (char-code x)))
     (cond ((< 96 m 123) (code-char (- m 32)))
-          ((> m lisp::+unicode-lower-limit+)
-           (if (member (unicode-category m) '(92 32 75 109))
-               x
-               (code-char (lisp::unicode-upper m))))
+          ((and (> m lisp::+unicode-lower-limit+)
+                (= (unicode-category m) lisp::+unicode-category-lower+))
+           (code-char (lisp::unicode-upper m)))
 	   (t x))))
 
-(deftransform char-downcase ((x) (base-char))
+(deftransform char-downcase ((x) (character))
   "open code"
-  ;; NOTE:  This MUST match what the function char-downcase does.
   #-(and unicode (not unicode-bootstrap))
   '(if (upper-case-p x)
        (code-char (+ (char-code x) 32))
        x)
   #+(and unicode (not unicode-bootstrap))
   '(let ((m (char-code x)))
-    (cond ((> m lisp::+unicode-lower-limit+)
-           (if (member (unicode-category m) '(92 75 109))
-               x
-               (code-char (lisp::unicode-lower m))))
+    (cond ((and (> m lisp::+unicode-lower-limit+)
+                (= (unicode-category m) lisp::+unicode-category-upper+))
+           (code-char (lisp::unicode-lower m)))
 	  ((< 64 m 91) (code-char (+ m 32)))
 	  (t x))))
 
