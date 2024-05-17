@@ -60,10 +60,12 @@
 (deftype codepoint ()
   `(integer 0 (,codepoint-limit)))
 
-;; This MUST be greater than or equal to 127!
+;; This MUST be greater than or equal to 127!  Be very careful about
+;; changing this.  It affects all kinds of casing issues.
 (defconstant +unicode-lower-limit+
   191
-  "A character code strictly larger than this is handled using Unicode rules.")
+  "A character code strictly larger than this is handled using Unicode
+  rules.")
 
 
 (macrolet ((frob (char-names-list)
