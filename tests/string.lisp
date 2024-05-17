@@ -22,7 +22,7 @@
      (loop for expected across s
            and actual across s-upcase
            when (char/= actual (char-upcase expected))
-             collect (list (char-upcase (char-code expected))
+             collect (list (char-upcase expected)
                            (char-code actual))))))
 
 (define-test string-downcase
@@ -33,5 +33,29 @@
      (loop for expected across s
            and actual across s-downcase
            when (char/= actual (char-downcase expected))
-             collect (list (char-downcase (char-code expected))
+             collect (list (char-downcase expected)
+                           (char-code actual))))))
+
+(define-test nstring-upcase
+    (:tag :issues)
+  (let* ((s (make-test-string))
+         (ns (make-test-string))
+         (ns-upcase (nstring-upcase ns)))
+    (assert-false
+     (loop for expected across s
+           and actual across ns
+           when (char/= actual (char-upcase expected))
+             collect (list (char-upcase expected)
+                           (char-code actual))))))
+
+(define-test nstring-downcase
+    (:tag :issues)
+  (let* ((s (make-test-string))
+         (ns (make-test-string))
+         (ns-downcase (nstring-downcase ns)))
+    (assert-false
+     (loop for expected across s
+           and actual across ns
+           when (char/= actual (char-downcase expected))
+             collect (list (char-downcase expected)
                            (char-code actual))))))
