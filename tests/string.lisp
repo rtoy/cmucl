@@ -5,37 +5,33 @@
 
 (in-package "STRING-TESTS")
 
+(defun make-test-string ()
+  ;; Create a string consisting of all the code units EXCEPT for the
+  ;; surrogates because string casing handles that differently.
+  (coerce
+   (loop for code from 0 to #xffff
+         unless (lisp::surrogatep code)
+         collect (code-char code))
+   'string))
+
 (define-test string-upcase
     (:tag :issues)
-  (let ((s (coerce (mapcar #'code-char
-                           ;; Some special characters for testing.
-                           ;; Micro_Sign shouldn't upcase.  #x1c5 and
-                           ;; #x1c8 have a unicode category of Lt so
-                           ;; they shouldn't upcase either.
-                           '(#xb5 #x1c5 #x1c8))
-                   'string)))
-    ;; Verify that string-upcase returns the same characters as if we
-    ;; did char-upcase on each one.  (This only works if we don't have
-    ;; surrogate characters in the string!)
-    (assert-equal (map 'list #'(lambda (c)
-                                 (char-name (char-upcase c)))
-                       s)
-                  (map 'list #'char-name
-                       (string-upcase s)))))
+  (let* ((s (make-test-string))
+         (s-upcase (string-upcase s)))
+    (assert-false
+     (loop for expected across s
+           and actual across s-upcase
+           when (char/= actual (char-upcase expected))
+             collect (list (char-upcase (char-code expected))
+                           (char-code actual))))))
 
 (define-test string-downcase
     (:tag :issues)
-  (let ((s (coerce (mapcar #'code-char
-                           ;; Some special characters for testing.
-                           ;; Micro_Sign shouldn't upcase.  #x1c5 and
-                           ;; #x1c8 have a unicode category of Lt so
-                           ;; they shouldn't upcase either.
-                           '(#xb5 #x1c5 #x1c8))
-                   'string)))
-    ;; Verify that string-downcase returns the same characters as if we
-    ;; did char-downcase on each one.  (This only works if we don't have
-    ;; surrogate characters in the string!)
-    (assert-equal (map 'list #'(lambda (c)
-                                 (char-name (char-downcase c)))
-                       s)
-                  (map 'list #'char-name (string-downcase s)))))
+  (let* ((s (make-test-string))
+         (s-downcase (string-downcase s)))
+    (assert-false
+     (loop for expected across s
+           and actual across s-downcase
+           when (char/= actual (char-downcase expected))
+             collect (list (char-downcase (char-code expected))
+                           (char-code actual))))))
