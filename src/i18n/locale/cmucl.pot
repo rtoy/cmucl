@@ -4868,6 +4868,28 @@ msgid ""
 "  their testing within, and restored on exit."
 msgstr ""
 
+#: src/code/float-trap.lisp
+msgid ""
+"Execute BODY with the floating-point rounding mode set to\n"
+"  ROUNDING-MODE.  ROUNDING-MODE must be a one:\n"
+"\n"
+"   :NEAREST\n"
+"       the default mode of round to nearest even.\n"
+"   :ZERO\n"
+"       round numbers down towards zero.  Positive numbers round down\n"
+"       and negative numbers round up.\n"
+"   :POSITIVE-INFINITY\n"
+"       round numbers up towards positive infinity.\n"
+"   :NEGATIVE-INFINITY\n"
+"       round numbers down towards negative infinity.\n"
+"\n"
+"  These are the same as the possible values for the rounding mode in\n"
+"  SET-FLOATING-POINT-MODES.\n"
+"\n"
+"  Only the rounding mode is restored on exit; other floating-point\n"
+"  modes are not modified."
+msgstr ""
+
 #: src/code/float.lisp
 msgid "Return true if the float X is denormalized."
 msgstr ""
@@ -8164,14 +8186,14 @@ msgid ""
 "Defines a new package called PACKAGE.  Each of OPTIONS should be one of the\n"
 "   following:\n"
 "     (:NICKNAMES {package-name}*)\n"
-"     (:SIZE <integer>)\n"
+"     (:DOCUMENTATION doc-string)\n"
+"     (:USE {package-name}*)\n"
 "     (:SHADOW {symbol-name}*)\n"
 "     (:SHADOWING-IMPORT-FROM <package-name> {symbol-name}*)\n"
-"     (:USE {package-name}*)\n"
 "     (:IMPORT-FROM <package-name> {symbol-name}*)\n"
-"     (:INTERN {symbol-name}*)\n"
 "     (:EXPORT {symbol-name}*)\n"
-"     (:DOCUMENTATION doc-string)\n"
+"     (:INTERN {symbol-name}*)\n"
+"     (:SIZE <integer>)\n"
 "   All options except :SIZE and :DOCUMENTATION can be used multiple times."
 msgstr ""
 
@@ -8728,7 +8750,11 @@ msgid "Internal error in floating point reader."
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Underflow"
+msgid "Floating-point overflow reading ~S: ~S"
+msgstr ""
+
+#: src/code/reader.lisp
+msgid "Floating point underflow when reading ~S: ~S"
 msgstr ""
 
 #: src/code/reader.lisp
@@ -12222,6 +12248,14 @@ msgstr ""
 
 #: src/code/rand-xoroshiro.lisp
 msgid ""
+"Generate the next 64-bit result from the xoroshiro128** generator\n"
+"  using the state in STATE, a simple-array of 2 double-floats.  The\n"
+"  64-bit result is returned as 2 32-bit values, with the high 32-bits\n"
+"  being the first value."
+msgstr ""
+
+#: src/code/rand-xoroshiro.lisp
+msgid ""
 "Generate a uniformly distributed pseudo-random number between zero\n"
 "  and Arg.  State, if supplied, is the random state to use."
 msgstr ""
@@ -12233,7 +12267,7 @@ msgstr ""
 #: src/code/rand-xoroshiro.lisp
 msgid ""
 "Jump the RNG-STATE.  This is equivalent to 2^64 calls to the\n"
-"  xoroshiro128+ generator.  It can be used to generate 2^64\n"
+"  xoroshiro128** generator.  It can be used to generate 2^64\n"
 "  non-overlapping subsequences for parallel computations."
 msgstr ""
 
@@ -18994,6 +19028,10 @@ msgid "use inline (unsigned-byte 32) operations"
 msgstr ""
 
 #: src/compiler/float-tran.lisp
+msgid "Shouldn't happen"
+msgstr ""
+
+#: src/compiler/float-tran.lisp
 msgid "Can't open-code float to rational comparison."
 msgstr ""
 
@@ -21157,6 +21195,13 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid ""
+"Set the type specifier of the kind of object returned by the\n"
+"  STREAM. There is no default method as this is optional and only\n"
+"  needed for bivalent streams."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid ""
 "Return true if Stream is not closed.  A default method is provided\n"
 "  by class FUNDAMENTAL-STREAM which returns true if CLOSE has not been\n"
 "  called on the stream."
@@ -21167,6 +21212,21 @@ msgid ""
 "Closes the given Stream.  No more I/O may be performed, but\n"
 "  inquiries may still be made.  If :Abort is non-nil, an attempt is made\n"
 "  to clean up the side effects of having created the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Returns non-nil if the given Stream can is interactive."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Convert pathspec (a pathname, string or stream) into a pathname."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid ""
+"Return the pathname for the actual file described by the filespec.\n"
+"  An error of type file-error is signalled if no such file exists,\n"
+"  or the pathname is wild."
 msgstr ""
 
 #: src/pcl/gray-streams.lisp
@@ -21327,6 +21387,10 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid "Implements FILE-POSITION for the stream for setting the position."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Implements FILE-LENGTH for the stream."
 msgstr ""
 
 #: src/pcl/gray-streams.lisp

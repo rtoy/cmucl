@@ -2032,7 +2032,7 @@ down to individual words.")
 	       (declare (type bignum-index len))
 	       (let ((exp (+ exp bias)))
 		 (when (> exp max)
-		   (error 'simple-type-error
+		   (error 'floating-point-overflow
 			  :datum x
                           :format-control (intl:gettext "Too large to be represented as a ~S:~%  ~S")
 			  :format-arguments (list format x)

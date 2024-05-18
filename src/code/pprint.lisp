@@ -1457,6 +1457,19 @@ When annotations are present, invoke them at the right positions."
   (declare (ignore noise))
   (funcall (formatter "~:<~^~W~3I ~:_~W~1I~@{ ~:@_~W~}~:>")
 	   stream list))
+
+(defun pprint-handler-case (stream list &rest noise)
+  (declare (ignore noise))
+  ;; Like pprint-handler-bind, but each of the error clauses is
+  ;; printed with declarations and forms on a separate line, indented
+  ;; like a function body.  The handler-case part, "~:<~^~W~3I
+  ;; ~:_~W~1I~@{ ~:@_...~:>" comes from pprint-handler-bind, but the
+  ;; last "~W" is replaced to print out the error clauses in the way
+  ;; we want.  These are done with "~:<~W~^~3I ~:_~W~^~1I~@{
+  ;; ~@:_~W~}~:>", taken from PPRINT-WITH-LIKE.
+  (funcall (formatter "~:<~^~W~3I ~:_~W~1I~@{ ~:@_~:<~W~^~3I ~:_~W~^~1I~@{ ~@:_~W~}~:>~}~:>")
+	   stream list))
+
   
 (defun pprint-quote (stream list &rest noise)
   (declare (ignore noise))
@@ -2021,7 +2034,7 @@ When annotations are present, invoke them at the right positions."
     (ecase pprint-case)
     (etypecase pprint-typecase)
     (handler-bind pprint-handler-bind)
-    (handler-case pprint-handler-bind)
+    (handler-case pprint-handler-case)
     ;; Loop is handled by pprint-loop.lisp
     #+nil(loop pprint-loop)
     (multiple-value-bind pprint-multiple-value-bind)
@@ -2075,8 +2088,11 @@ When annotations are present, invoke them at the right positions."
     (c:define-vop pprint-define-vop)
     (c:sc-case pprint-sc-case)
     (c:define-assembly-routine pprint-define-assembly)
+    (new-assem:assemble pprint-multiple-value-bind)
     (c:deftransform pprint-defun)
-    (c:defoptimizer pprint-defun)))
+    (c:defoptimizer pprint-defun)
+    (ext:with-float-traps-masked pprint-with-like)
+    (ext:with-float-traps-enabled pprint-with-like)))
 
 (defun pprint-init ()
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))

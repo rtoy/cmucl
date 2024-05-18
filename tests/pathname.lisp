@@ -111,3 +111,34 @@
 	  test
 	(assert-equal printed-value (output pathname))
 	(assert-equal namestring (namestring pathname))))))
+
+(define-test issue.266.pathname-tilde.unknown-user
+    (:tag :issues)
+  ;; This assumes that there's no user named "zotunknown".
+  (assert-error 'simple-error (parse-namestring "~zotunknown/*.*")))
+
+(define-test issue.266.pathname-tilde.1
+    (:tag :issues)
+  ;; Simple test for ~ in pathnames.  Get a directory list using
+  ;; #P"~/*.*".  This should produce exactly the same list as the
+  ;; #search-list P"home:*.*".
+  (let ((dir-home (directory #p"home:*.*" :truenamep nil :follow-links nil))
+        (dir-tilde (directory #p"~/*.*" :truenamep nil :follow-links nil)))
+    (assert-equal dir-tilde dir-home)))
+
+(define-test issue.266.pathname-tilde.2
+    (:tag :issues)
+  ;; Simple test for ~ in pathnames.  Get a directory list using
+  ;; #P"~user/*.*".  This should produce exactly the same list as the
+  ;; #search-list P"home:*.*".  We determine the user name via getuid
+  ;; #and getpwuid.
+  (let ((user-name (unix:user-info-name (unix:unix-getpwuid (unix:unix-getuid)))))
+    (assert-true user-name)
+    (let* ((dir-home (directory #p"home:*.*" :truenamep nil :follow-links nil))
+         
+           (dir-tilde (directory (concatenate 'string
+                                              "~"
+                                              user-name
+                                              "/*.*")
+                                 :truenamep nil :follow-links nil)))
+      (assert-equal dir-tilde dir-home))))
