@@ -1253,7 +1253,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; LRA, and the LRA is the word offset.
 ;;;
 #-(or gengc x86 amd64)
-(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-vm" #+ppc "cmucl-ppc-vm")
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-vm" #+ppc "cmucl-ppc-vm" #+arm "cmucl-arm-vm")
 (defun compute-calling-frame (caller lra up-frame)
   (declare (type system:system-area-pointer caller))
   (when (cstack-pointer-valid-p caller)
@@ -1362,7 +1362,7 @@ The result is a symbol or nil if the routine cannot be found."
 			       escaped))))))
 
 #-(or gengc x86 amd64)
-(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-vm" #+ppc "cmucl-ppc-vm")
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-vm" #+ppc "cmucl-ppc-vm" #+arm "cmucl-arm'vm")
 (defun find-escaped-frame (frame-pointer)
   (declare (type system:system-area-pointer frame-pointer))
   (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
@@ -1455,7 +1455,7 @@ The result is a symbol or nil if the routine cannot be found."
 		 (values code pc-offset scp)))))))))))
 
 #-(or gengc x86 amd64)
-(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-vm" #+ppc "cmucl-ppc-vm")
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-vm" #+ppc "cmucl-ppc-vm" #+arm "cmucl-arm-vm")
 (defun find-pc-from-assembly-fun (code scp)
   "find the PC"
   (let ((return-machine-address
@@ -3079,7 +3079,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; SUB-ACCESS-DEBUG-VAR-SLOT -- Internal.
 ;;;
 #-(or x86 amd64)
-(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-vm" #+ppc "cmucl-ppc-vm")
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-vm" #+ppc "cmucl-ppc-vm" #+arm "cmucl-arm-vm")
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (macrolet ((with-escaped-value ((var) &body forms)
 	       `(if escaped
@@ -3505,7 +3505,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; SUB-SET-DEBUG-VAR-SLOT -- Internal.
 ;;;
 #-(or x86 amd64)
-(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-vm" #+ppc "cmucl-ppc-vm")
+(intl:with-textdomain ("cmucl" #+sparc "cmucl-sparc-vm" #+ppc "cmucl-ppc-vm" #+arm "cmucl-arm-vm")
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (macrolet ((set-escaped-value (val)
 	       `(if escaped
@@ -4502,7 +4502,8 @@ The result is a symbol or nil if the routine cannot be found."
 ;;;
 (intl:with-textdomain ("cmucl" #+(or x86 amd64) "cmucl-x86-vm"
 			       #+sparc "cmucl-sparc-vm"
-			       #+ppc "cmucl-ppc-vm")
+			       #+ppc "cmucl-ppc-vm"
+			       #+arm "cmucl-arm-vm")
 (defun handle-breakpoint-aux (breakpoints data offset component signal-context)
   (unless breakpoints
     (error (intl:gettext "Breakpoint that nobody wants?")))
