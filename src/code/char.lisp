@@ -63,10 +63,50 @@
 ;; This MUST be greater than or equal to 127!  Be very careful about
 ;; changing this.  It affects all kinds of casing issues.
 (defconstant +unicode-lower-limit+
-  191
+  127
   "A character code strictly larger than this is handled using Unicode
   rules.")
 
+(alien:def-alien-variable "case_table" 
+    (alien:array (alien:* (alien:array c-call:unsigned-int 64)) 1024))
+
+(defconstant +upper-case-entry+ (byte 16 0))
+(defconstant +lower-case-entry+ (byte 16 16))
+(defconstant +stage2-size+ 6)
+
+(declaim (inline case-table-entry))
+
+(defun case-table-entry (code)
+  (declare (type (integer 0 (#.char-code-limit)) code)
+           (optimize (speed 3)))
+  (let* ((index1 (ldb (byte (- 16 +stage2-size+) +stage2-size+)
+                      code))
+         (index2 (ldb (byte +stage2-size+ 0)
+                      code))
+         (stage2-sap (alien:alien-sap (alien:deref case-table index1))))
+    #+nil
+    (progn
+      (format t "index1,2 = ~D ~D~%" index1 index2)
+      (format t "stage2-sap = ~A~%" stage2-sap))
+    (if (zerop (sys:sap-int stage2-sap))
+        0
+        (sys:sap-ref-32 stage2-sap (* 4 index2)))))
+
+(declaim (inline case-table-lower-case))
+(defun case-table-lower-case (code)
+  (declare (type (integer 0 (#.char-code-limit)) code)
+           (optimize (speed 3)))
+  (let ((entry (case-table-entry code)))
+    (ldb (byte 16 0)
+         (- code (ldb +lower-case-entry+ entry)))))
+
+(declaim (inline case-table-upper-case))
+(defun case-table-upper-case (code)
+  (declare (type (integer 0 (#.char-code-limit)) code)
+           (optimize (speed 3)))
+  (let ((entry (case-table-entry code)))
+    (ldb (byte 16 0)
+         (- code (ldb +upper-case-entry+ entry)))))
 
 (macrolet ((frob (char-names-list)
 	     (collect ((results))
@@ -241,7 +281,7 @@
     (or (< 64 m 91)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +unicode-lower-limit+)
-	     (= (unicode-category m) +unicode-category-upper+)))))
+             (not (zerop (ldb +lower-case-entry+ (case-table-entry m))))))))
 
 
 (defun lower-case-p (char)
@@ -252,11 +292,7 @@
     (or (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +unicode-lower-limit+)
-             ;; We don't want 223 to be a lower-case letter because
-             ;; CHAR-UPCASE returns the same character instead of the
-             ;; upper-case version.
-             (/= m 223)
-	     (= (unicode-category m) +unicode-category-lower+)))))
+	     (not (zerop (ldb +upper-case-entry+ (case-table-entry m))))))))
 
 (defun title-case-p (char)
   "The argument must be a character object; title-case-p returns T if the
@@ -278,10 +314,7 @@
     (or (< 64 m 91) (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +unicode-lower-limit+)
-             (/= m 223)
-	     (<= +unicode-category-upper+
-		 (unicode-category m)
-		 +unicode-category-lower+)))))
+             (not (zerop (case-table-entry m)))))))
 
 
 (defun digit-char-p (char &optional (radix 10.))

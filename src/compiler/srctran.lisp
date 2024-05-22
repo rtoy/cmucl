@@ -3344,9 +3344,8 @@
   #+(and unicode (not unicode-bootstrap))
   '(let ((m (char-code x)))
     (cond ((< 96 m 123) (code-char (- m 32)))
-          ((and (> m lisp::+unicode-lower-limit+)
-                (= (unicode-category m) lisp::+unicode-category-lower+))
-           (code-char (lisp::unicode-upper m)))
+          ((> m lisp::+unicode-lower-limit+)
+           (code-char (lisp::case-table-upper-case m)))
 	   (t x))))
 
 (deftransform char-downcase ((x) (character))
@@ -3357,10 +3356,9 @@
        x)
   #+(and unicode (not unicode-bootstrap))
   '(let ((m (char-code x)))
-    (cond ((and (> m lisp::+unicode-lower-limit+)
-                (= (unicode-category m) lisp::+unicode-category-upper+))
-           (code-char (lisp::unicode-lower m)))
-	  ((< 64 m 91) (code-char (+ m 32)))
+    (cond ((< 64 m 91) (code-char (+ m 32)))
+          ((> m lisp::+unicode-lower-limit+)
+           (code-char (lisp::case-table-lower-case m)))
 	  (t x))))
 
 
