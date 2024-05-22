@@ -22,28 +22,34 @@
   (let ((table (make-array (ash 1 (- 16 stage2-size)))))
     (dotimes (i (length table))
       (setf (aref table i) (make-array (ash 1 stage2-size)
-                                       :initial-element 0)))
+                                       :initial-element 0
+                                       :element-type '(unsigned-byte 32))))
     (dotimes (i char-code-limit)
       (let ((stage1 (ldb (byte (- 16 stage2-size) stage2-size) i))
 	    (stage2 (ldb (byte stage2-size 0) i)))
-        ;; Compute mapping from lower case to upper case.  The offset
-        ;; is stored in the low 16 bits of the stage2 table.
+        ;; Compute mapping from lower case to upper case which is
+        ;; stored in the low 16 bits of the stage2 table.
         ;;
         ;; Only consider characters that have an upper case letter and
         ;; whose lowercase version returns the original letter.
-        (when (and (/= i (lisp::unicode-upper i))
-		   (= i (lisp::unicode-lower (lisp::unicode-upper i))))
-	  (let ((delta (ldb (byte 16 0) (- i (lisp::unicode-upper i)))))
-	    (setf (aref (aref table stage1) stage2) delta)))
-        ;; Compute mapping from upper case to lower case.  The offset
-        ;; is stored in the high 16 bits ofthe stage2 table.
-        ;;
-        ;; Only consider characters that have a lower case letter and
-        ;; whose upper case version returns the original letter.
-        (when (and (/= i (lisp::unicode-lower i))
-		   (= i (lisp::unicode-upper (lisp::unicode-lower i))))
-	  (let ((delta (ldb (byte 16 0) (- i (lisp::unicode-lower i)))))
-	    (setf (aref (aref table stage1) stage2) (ash delta 16))))))
+        (let ((upper (lisp::unicode-upper i))
+              (lower (lisp::unicode-lower i))
+              (entry 0))
+          (declare (type (unsigned-byte 32) entry))
+          (when (and (/= i upper)
+		     (= i (lisp::unicode-lower upper)))
+	    (setf entry upper))
+          ;; Compute mapping from upper case to lower case.  The offset
+          ;; is stored in the high 16 bits ofthe stage2 table.
+          ;;
+          ;; Only consider characters that have a lower case letter and
+          ;; whose upper case version returns the original letter.
+          (when (and (/= i lower)
+		     (= i (lisp::unicode-upper lower)))
+            (setf entry (logior entry (ash lower 16))))
+
+	  (setf (aref (aref table stage1) stage2)
+                entry))))
     ;; Find each stage2 table that is all zeroes and replace it with
     ;; NIL.
     (dotimes (k (length table))
