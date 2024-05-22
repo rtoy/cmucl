@@ -1,44 +1,97 @@
-(defun build-case-table (&optional (stage2-size 6))
+;; Creates a table of tables that maps a lower case letter to an upper
+;; case letter or an upper case letter to a lower case letter.  This
+;; mapping only works if the roundtrip casing returns the original
+;; character, as required by CLHS.
+;;
+;; STAGE2-SIZE is the number of bits to used for the index of the
+;; second stage table.
+;;
+;; Let C be a 16-bit character code.  C is decomposed into two parts.
+;; The high bits are used as the index into the first table, and the
+;; low bits are used as the index into the second table.  The number
+;; of low bits is STAGE2-SIZE.
+;;
+;; If the second stage table is all zeroes, the table is replaced by
+;; NIL since it contains no valid mapping of lower or upper case
+;; letters.
+;;
+;; Each element of this table is 32-bits long.  The low 16 bits
+;; contains the mapping of C to the corresponding upper case letter.
+;; The high 16 bits maps C to the corresponding lower case letter.
+(defun compute-case-table (stage2-size)
   (let ((table (make-array (ash 1 (- 16 stage2-size)))))
     (dotimes (i (length table))
       (setf (aref table i) (make-array (ash 1 stage2-size)
                                        :initial-element 0)))
-    (dotimes (i #xFFFF)
-      ;; Compute mapping from lower case to upper case.  The offset is
-      ;; stored in the low 16 bits of the stage2 table.
-      (when (and (/= i (lisp::unicode-upper i))
-		 (= i (lisp::unicode-lower (lisp::unicode-upper i))))
-	  (let ((stage1 (ldb (byte (- 16 stage2-size) stage2-size) i))
-		(stage2 (ldb (byte stage2-size 0) i))
-		(delta (ldb (byte 16 0) (- i (lisp::unicode-upper i)))))
+    (dotimes (i char-code-limit)
+      (let ((stage1 (ldb (byte (- 16 stage2-size) stage2-size) i))
+	    (stage2 (ldb (byte stage2-size 0) i)))
+        ;; Compute mapping from lower case to upper case.  The offset
+        ;; is stored in the low 16 bits of the stage2 table.
+        ;;
+        ;; Only consider characters that have an upper case letter and
+        ;; whose lowercase version returns the original letter.
+        (when (and (/= i (lisp::unicode-upper i))
+		   (= i (lisp::unicode-lower (lisp::unicode-upper i))))
+	  (let ((delta (ldb (byte 16 0) (- i (lisp::unicode-upper i)))))
 	    (setf (aref (aref table stage1) stage2) delta)))
-      ;; Compute mapping from upper case to lower case.  The offset is
-      ;; stored in the high 16 bits ofthe stage2 table.
-      (when (and (/= i (lisp::unicode-lower i))
-		 (= i (lisp::unicode-upper (lisp::unicode-lower i))))
-	(let ((stage1 (ldb (byte (- 16 stage2-size) stage2-size) i))
-	      (stage2 (ldb (byte stage2-size 0) i))
-	      (delta (ldb (byte 16 0) (- i (lisp::unicode-lower i)))))
-	  (setf (aref (aref table stage1) stage2) (ash delta 16)))))
-    (let ((empty (count-if #'(lambda (x) (every #'zerop x)) table)))
-      (format t "~D non-empty ~D empty~%" (- (length table) empty) empty)
-      (dotimes (k (length table))
-        (let ((empty (count-if-not #'zerop (aref table k))))
-          (when (zerop empty)
-            (setf (aref table k) nil))
-          #+nil
-          (format t "~3D: ~D: ~A~%" k empty (aref table k))))
-      (let ((stage2 (loop for v across table
-                          when v
-                            sum (length v))))
-        (format t "stage1 entries:  ~D~%" (length table))
-        (format t "stage2 entries:  ~D (length ~D)~%"
-                stage2 (ash 1 stage2-size))
-        (format t "total         :  ~D~%" (+ (length table) stage2)))
-      table)))
+        ;; Compute mapping from upper case to lower case.  The offset
+        ;; is stored in the high 16 bits ofthe stage2 table.
+        ;;
+        ;; Only consider characters that have a lower case letter and
+        ;; whose upper case version returns the original letter.
+        (when (and (/= i (lisp::unicode-lower i))
+		   (= i (lisp::unicode-upper (lisp::unicode-lower i))))
+	  (let ((delta (ldb (byte 16 0) (- i (lisp::unicode-lower i)))))
+	    (setf (aref (aref table stage1) stage2) (ash delta 16))))))
+    ;; Find each stage2 table that is all zeroes and replace it with
+    ;; NIL.
+    (dotimes (k (length table))
+      (let ((empty (count-if-not #'zerop (aref table k))))
+        (when (zerop empty)
+          (setf (aref table k) nil))
+        #+nil
+        (format t "~3D: ~D: ~A~%" k empty (aref table k))))
+    table))
 
+;; Given a case-mapping table TABLE, print some information about the
+;; size of the tables.  This includes the number of empty and
+;; non-empty stage2 tables.  Also print out how many total non-NIL
+;; entries are needed.  This is proportional to the total amount of
+;; memory needed to store all the tables.
+(defun print-table-stats (table stage2-size)
+  (let ((stage1-size (length table))
+        (stage2 (loop for v across table
+                      when v
+                        sum (length v)))
+        (empty (count-if #'null table)))
+    (format t "stage2-size ~D~%" stage2-size)
+    (format t "  stage1 entries:  ~D: " stage1-size)
+    (format t "  ~D non-empty ~D empty~%" (- stage1-size empty) empty)
+    (format t "  stage2 entries:  ~D (length ~D)~%"
+            stage2 (ash 1 stage2-size))
+    (format t "  total         :  ~D~%" (+ (length table) stage2))
+    (+ (length table) stage2)))
+
+(defun find-optimum-size ()
+  (let ((results
+          (first
+           (sort (loop for stage2-size from 1 to 15
+                       collect (list stage2-size
+                                     (print-table-stats
+                                      (compute-case-table stage2-size)
+                                      stage2-size)))
+                 #'<
+                 :key #'second))))
+    (format t "Optimum table size:  stage2-size ~D, space ~D~%"
+            (first results)
+            (second results))))
+
+;; Neatly print the K'th stage2 table TABLE to STREAM.  Each table is
+;; named "stage2_k".
 (defun print-table (k table stream)
-  (format stream "const uint32_t stage2_~D [~D] = {~%" k (length table))
+  (format stream "~%const uint32_t stage2_~D[~D] = {~%" k (length table))
+  ;; Neatly wrap the entries.
   (pprint-logical-block (stream nil :prefix "    ")
     (dotimes (n (length table))
       (unless (zerop n)
@@ -49,10 +102,20 @@
       (format stream "0x~8,'0x" (aref table n))))
   (format stream "~%};~%"))
 
-(defun dump-case-table (pathname table)
+;; Print the case table TABLE to a file named by PATHNAME.
+(defun dump-case-table (pathname table stage2-size)
   (with-open-file (stream pathname :direction :output :if-exists :supersede)
+    (format stream 
+            "~
+/*
+ * DO NOT EDIT.
+ *
+ * This was generated by (BUILD-CASE-TABLE ~D) in
+ * src/tools/create-case-table.c.
+ */~2%"
+stage2-size)
     (format stream "#include <stdint.h>~%")
-    (format stream "#include <stddef.h>~2%")
+    (format stream "#include <stddef.h>~%")
     ;; First dump each stage2 table
     (loop for k from 0
           for s2 across table
@@ -68,4 +131,9 @@
             do (format stream "    &stage2_~D,~%" k)
           else
             do (format stream "    NULL,~%"))
-    (format stream "};~%")))
+    (format stream "};~%")
+    (format t "Wrote ~S~%" (namestring stream))))
+
+(defun build-case-table (&key (stage2-size 6) (pathname "./src/lisp/case-table.c"))
+  (let ((table (compute-case-table stage2-size)))
+    (dump-case-table pathname table stage2-size)))
