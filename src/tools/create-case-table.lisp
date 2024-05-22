@@ -27,37 +27,44 @@
     (dotimes (i char-code-limit)
       (let ((stage1 (ldb (byte (- 16 stage2-size) stage2-size) i))
 	    (stage2 (ldb (byte stage2-size 0) i)))
-        ;; Compute mapping from lower case to upper case which is
-        ;; stored in the low 16 bits of the stage2 table.
-        ;;
-        ;; Only consider characters that have an upper case letter and
-        ;; whose lowercase version returns the original letter.
         (let ((upper (lisp::unicode-upper i))
               (lower (lisp::unicode-lower i))
               (entry 0))
           (declare (type (unsigned-byte 32) entry))
+
+          (assert (< upper char-code-limit))
+          (assert (< lower char-code-limit))
+          
+          ;; Compute mapping from lower case to upper case which is
+          ;; stored in the low 16 bits of the stage2 table.
+          ;;
+          ;; Only consider characters that have an upper case letter and
+          ;; whose lowercase version returns the original letter.
           (when (and (/= i upper)
 		     (= i (lisp::unicode-lower upper)))
 	    (setf entry upper))
-          ;; Compute mapping from upper case to lower case.  The offset
-          ;; is stored in the high 16 bits ofthe stage2 table.
+          ;; Compute mapping from upper case to lower case which is
+          ;; stored in the high 16 bits ofthe stage2 table.
           ;;
           ;; Only consider characters that have a lower case letter and
           ;; whose upper case version returns the original letter.
           (when (and (/= i lower)
 		     (= i (lisp::unicode-upper lower)))
-            (setf entry (logior entry (ash lower 16))))
+            (setf entry (ash lower 16)))
 
+          ;; Note: the entry can only contain a lower case code or an
+          ;; upper case code, not both because we a character is
+          ;; either lower case or upper case and not both at the same
+          ;; time.
 	  (setf (aref (aref table stage1) stage2)
                 entry))))
+
     ;; Find each stage2 table that is all zeroes and replace it with
     ;; NIL.
     (dotimes (k (length table))
       (let ((empty (count-if-not #'zerop (aref table k))))
         (when (zerop empty)
-          (setf (aref table k) nil))
-        #+nil
-        (format t "~3D: ~D: ~A~%" k empty (aref table k))))
+          (setf (aref table k) nil))))
     table))
 
 ;; Given a case-mapping table TABLE, print some information about the
