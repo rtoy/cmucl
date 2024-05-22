@@ -78,7 +78,7 @@
 
 (defun case-table-entry (code)
   (declare (type (integer 0 (#.char-code-limit)) code)
-           (optimize (speed 3)))
+           (optimize (speed 3) (safety 0)))
   (let* ((index1 (ldb (byte (- 16 +stage2-size+) +stage2-size+)
                       code))
          (index2 (ldb (byte +stage2-size+ 0)
@@ -96,17 +96,19 @@
 (defun case-table-lower-case (code)
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3)))
-  (let ((entry (case-table-entry code)))
-    (ldb (byte 16 0)
-         (- code (ldb +lower-case-entry+ entry)))))
+  (let ((lower-case (ldb +lower-case-entry+ (case-table-entry code))))
+    (if (zerop lower-case)
+        code
+        lower-case)))
 
 (declaim (inline case-table-upper-case))
 (defun case-table-upper-case (code)
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3)))
-  (let ((entry (case-table-entry code)))
-    (ldb (byte 16 0)
-         (- code (ldb +upper-case-entry+ entry)))))
+  (let ((upper-case (ldb +upper-case-entry+ (case-table-entry code))))
+    (if (zerop upper-case)
+        code
+        upper-case)))
 
 (macrolet ((frob (char-names-list)
 	     (collect ((results))
