@@ -67,16 +67,26 @@
   "A character code strictly larger than this is handled using Unicode
   rules.")
 
+;; Table of mappings for upper case and lower case letters.  See
+;; src/lisp/case-table.c.
 (alien:def-alien-variable "case_table" 
     (alien:array (alien:* (alien:array c-call:unsigned-int 64)) 1024))
 
+;; Each entry in the case table consists of the code for either an
+;; upper case or lower case character code.
 (defconstant +upper-case-entry+ (byte 16 0))
 (defconstant +lower-case-entry+ (byte 16 16))
-(defconstant +stage2-size+ 6)
+
+(defconstant +stage2-size+ 6
+  "Number of bits used for the index of the second stage table of the
+  case mapping table.")
 
 (declaim (inline case-table-entry))
 
 (defun case-table-entry (code)
+  "For the character code, CODE, return 0 or the 32-bit value from the
+  case table.  A value of 0 means there was no case mapping (neither
+  upper nor lower case)."
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3) (safety 0)))
   (let* ((index1 (ldb (byte (- 16 +stage2-size+) +stage2-size+)
@@ -84,16 +94,14 @@
          (index2 (ldb (byte +stage2-size+ 0)
                       code))
          (stage2-sap (alien:alien-sap (alien:deref case-table index1))))
-    #+nil
-    (progn
-      (format t "index1,2 = ~D ~D~%" index1 index2)
-      (format t "stage2-sap = ~A~%" stage2-sap))
     (if (zerop (sys:sap-int stage2-sap))
         0
         (sys:sap-ref-32 stage2-sap (* 4 index2)))))
 
 (declaim (inline case-table-lower-case))
 (defun case-table-lower-case (code)
+  "Compute the lower-case character code for the given character CODE.
+  If no lower-case code exists, just return CODE."
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3)))
   (let ((lower-case (ldb +lower-case-entry+ (case-table-entry code))))
@@ -103,6 +111,8 @@
 
 (declaim (inline case-table-upper-case))
 (defun case-table-upper-case (code)
+  "Compute the upper-case character code for the given character CODE.
+  If no upper-case code exists, just return CODE."
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3)))
   (let ((upper-case (ldb +upper-case-entry+ (case-table-entry code))))

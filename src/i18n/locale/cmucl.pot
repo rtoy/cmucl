@@ -5451,6 +5451,31 @@ msgstr ""
 
 #: src/code/char.lisp
 msgid ""
+"Number of bits used for the index of the second stage table of the\n"
+"  case mapping table."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"For the character code, CODE, return 0 or the 32-bit value from the\n"
+"  case table.  A value of 0 means there was no case mapping (neither\n"
+"  upper nor lower case)."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"Compute the lower-case character code for the given character CODE.\n"
+"  If no lower-case code exists, just return CODE."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"Compute the upper-case character code for the given character CODE.\n"
+"  If no upper-case code exists, just return CODE."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
 "This is the alist of (character-name . character) for characters with\n"
 "  long names.  The first name in this list for a given character is used\n"
 "  on typeout and is the preferred form for input."
