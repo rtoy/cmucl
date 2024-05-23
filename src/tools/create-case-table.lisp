@@ -42,7 +42,7 @@
           ;; whose lowercase version returns the original letter.
           (when (and (/= i upper)
 		     (= i (lisp::unicode-lower upper)))
-	    (setf entry upper))
+	    (setf entry (ldb (byte 16 0) (- i upper))))
           ;; Compute mapping from upper case to lower case which is
           ;; stored in the high 16 bits ofthe stage2 table.
           ;;
@@ -50,7 +50,8 @@
           ;; whose upper case version returns the original letter.
           (when (and (/= i lower)
 		     (= i (lisp::unicode-upper lower)))
-            (setf entry (ash lower 16)))
+            (setf entry (ash (ldb (byte 16 0) (- i lower))
+                             16)))
 
           ;; Note: the entry can only contain a lower case code or an
           ;; upper case code, not both because we a character is
@@ -102,8 +103,10 @@
 
 ;; Neatly print the K'th stage2 table TABLE to STREAM.  Each table is
 ;; named "stage2_k".
-(defun print-table (k table stream)
-  (format stream "~%const uint32_t stage2_~D[~D] = {~%" k (length table))
+(defun print-table (table-name table stream)
+  (format stream "~%const uint32_t ~A[~D] = {~%"
+          table-name
+          (length table))
   ;; Neatly wrap the entries.
   (pprint-logical-block (stream nil :prefix "    ")
     (dotimes (n (length table))
@@ -129,11 +132,17 @@
 stage2-size)
     (format stream "#include <stdint.h>~%")
     (format stream "#include <stddef.h>~%")
-    ;; First dump each stage2 table
+    ;; First, dump the all-zeroes table
+    (print-table "stage2_zeroes"
+                 (make-array (ash 1 stage2-size) :initial-element 0)
+                 stream)
+    ;; Second, dump each stage2 table
     (loop for k from 0
           for s2 across table
-          when s2
-            do (print-table k s2 stream))
+          if s2
+            do (print-table (format nil "stage2_~D" k)
+                            s2
+                            stream))
     ;; Now dump the stage1 table
     (format stream "~2%const uint32_t (*case_table[~D])[~D] = {~%"
             (length table)
@@ -143,7 +152,7 @@ stage2-size)
           if s2
             do (format stream "    &stage2_~D,~%" k)
           else
-            do (format stream "    NULL,~%"))
+            do (format stream "    &stage2_zeroes,~%"))
     (format stream "};~%")
     (format t "Wrote ~S~%" (namestring stream))))
 
