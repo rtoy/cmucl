@@ -94,9 +94,7 @@
          (index2 (ldb (byte +stage2-size+ 0)
                       code))
          (stage2-sap (alien:alien-sap (alien:deref case-table index1))))
-    (if (zerop (sys:sap-int stage2-sap))
-        0
-        (sys:sap-ref-32 stage2-sap (* 4 index2)))))
+    (sys:sap-ref-32 stage2-sap (* 4 index2))))
 
 (declaim (inline case-table-lower-case))
 (defun case-table-lower-case (code)
@@ -104,10 +102,7 @@
   If no lower-case code exists, just return CODE."
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3)))
-  (let ((lower-case (ldb +lower-case-entry+ (case-table-entry code))))
-    (if (zerop lower-case)
-        code
-        lower-case)))
+  (ldb (byte 16 0) (- code (ldb +lower-case-entry+ (case-table-entry code)))))
 
 (declaim (inline case-table-upper-case))
 (defun case-table-upper-case (code)
@@ -115,10 +110,7 @@
   If no upper-case code exists, just return CODE."
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3)))
-  (let ((upper-case (ldb +upper-case-entry+ (case-table-entry code))))
-    (if (zerop upper-case)
-        code
-        upper-case)))
+  (ldb (byte 16 0) (- code (ldb +upper-case-entry+ (case-table-entry code)))))
 
 (macrolet ((frob (char-names-list)
 	     (collect ((results))
@@ -304,7 +296,7 @@
     (or (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +unicode-lower-limit+)
-	     (not (zerop (ldb +upper-case-entry+ (case-table-entry m))))))))
+             (not (zerop (ldb +upper-case-entry+ (case-table-entry m))))))))
 
 (defun title-case-p (char)
   "The argument must be a character object; title-case-p returns T if the
