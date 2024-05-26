@@ -1128,6 +1128,7 @@
 	    #+alpha "ALPHA"
 	    #+sgi "SGI"
 	    #+ppc "PPC"
+            #+arm "ARM"
             (:nicknames "VM" #+(or pmax sgi) "MIPS")
             (:import-from "LISP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET"
              "%PUT" "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
@@ -1591,7 +1592,8 @@
 	   "FLOAT-NAN-P" "FLOAT-TRAPPING-NAN-P"
 	   "FLOAT-SIGNALING-NAN-P"
 	   "WITH-FLOAT-TRAPS-MASKED"
-	   "WITH-FLOAT-TRAPS-ENABLED")
+	   "WITH-FLOAT-TRAPS-ENABLED"
+           "WITH-FLOAT-ROUNDING-MODE")
   ;; More float extensions
   #+double-double
   (:export "LEAST-POSITIVE-NORMALIZED-DOUBLE-DOUBLE-FLOAT"

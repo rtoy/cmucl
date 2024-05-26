@@ -122,14 +122,18 @@
 		     :offset ,(reg-spec-offset reg))))
 	      regs))
        ,@(decls)
-       (new-assem:assemble (*code-segment* ',name)
-	 ,name
-	 (push (cons ',name ,name) *assembler-routines*)
-	 ,@code
-	 ,@(generate-return-sequence
-	    (or (cadr (assoc :return-style options)) :raw)))
-       (when *compile-print*
-	 (format *error-output* "; ~S assembled~%" ',name)))))
+       (macrolet ((vm::emit-not-implemented ()
+		    `(vm::not-implemented ,',name)))
+	 (new-assem:assemble (*code-segment* ',name)
+	   ,name
+	   (push (cons ',name ,name) *assembler-routines*)
+	   ,@code
+	   (macrolet ((vm::emit-not-implemented ()
+			`(vm::not-implemented generate-return-sequence-raw)))
+	     ,@(generate-return-sequence
+		(or (cadr (assoc :return-style options)) :raw)))))
+	 (when *compile-print*
+	   (format *error-output* "; ~S assembled~%" ',name)))))
 
 (defun arg-or-res-spec (reg)
   `(,(reg-spec-name reg)
@@ -209,7 +213,61 @@
 				    ,(reg-spec-temp res))))
 		     results))))))
 
+;;; Define-Assembly-Routine -- Public
+;;;
+;;;   Parse the code to produce an assembly routine and create a VOP
+;;;   that calls the assembly routine.
 (defmacro define-assembly-routine (name&options vars &rest code)
+  "Define-Assembly-Routine (Name&Options Vars Code*)
+  Define a Lisp assembly routine, and a VOP to that calls the assembly
+  routine, if enabled.  (A VOP is not created if the reader
+  conditional #+assembler precedes the definition of the assembly
+  routine.)
+
+  Name&Options
+    A list giving the name of the assembly routine and options
+    describing the assembly routine options and VOP options.  The
+    format is (Name ({Key Value})*) where Name is the name of the
+    assembly routine.  Options is a list of options:
+
+    Options
+
+      :Cost Cost
+        The cost of the VOP.  This is used in the generated VOP.
+
+      :Policy {:Small | :Fast | :Safe | :Fast-Safe}
+        The policy for the VOP.
+
+      :Translate Name
+        The translation for the VOP.
+
+      :Arg-Types arg-types
+      :Result-Types result-types
+        The template restrictions for the arguments of the VOP and the
+        results of the VOP.
+
+      :Return-Style {:Raw :Full-Call :None}
+ 
+    Vars is a list of the arguments and returned results and
+    temporaries used by the assembly routine.
+
+      :Arg Arg-Name (SC*) SC-Offset
+        Input argument for the assembly routine with the name
+        Arg-Name.  The argument must be one of the SC types.  The register
+        assigned to this argument is given by SC-Offset which must be
+        the offset for the register holding this argument.
+
+      :Res Res-Name SC SC-Offset
+        Result of the assembly routine with the name Res-Name.  The
+        result must be a register of the specified storage class SC.  The
+        Sc-offset is the register used for the result.
+
+      :Temp Temp-Name SC SC-Offset
+        Like :Res, except this names a temporary register that the
+        assembly routine can use.
+
+  Code
+    The code for the assembly routine."
   (multiple-value-bind (name options)
 		       (if (atom name&options)
 			   (values name&options nil)

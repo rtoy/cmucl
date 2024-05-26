@@ -21,7 +21,9 @@
 ;;; Bootstrap the fundamental-stream class.
 (let ((pcl::*pcl-class-boot* 'fundamental-stream))
   (defclass fundamental-stream (standard-object stream)
-    ()
+    ((open-p
+      :initform t
+      :accessor stream-open-p))
     (:documentation "Base class for all CLOS streams")))
 
 ;;; Define the stream classes.

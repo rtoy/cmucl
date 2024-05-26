@@ -38,6 +38,10 @@
 #include "ppc-validate.h"
 #endif
 
+#ifdef __arm__
+#include "arm-validate.h"
+#endif
+
 extern void validate(void);
 extern void validate_stacks(void);
 

@@ -731,7 +731,6 @@
     DONE))
 
 
-;;; note documentation for this function is wrong - rtfm
 (define-vop (signed-byte-32-len)
   (:translate integer-length)
   (:note _N"inline (signed-byte 32) integer-length")
@@ -747,12 +746,30 @@
     (inst not res)
     POS
     (inst bsr res res)
-    (inst jmp :z zero)
+    (inst jmp :z DONE)
     (inst inc res)
     (inst shl res 2)
-    (inst jmp done)
-    ZERO
-    (inst xor res res)
+    DONE))
+
+(define-vop (unsigned-byte-32-len)
+  (:translate integer-length)
+  (:note _N"inline (unsigned-byte 32) integer-length")
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
+  (:generator 30
+    ;; The Intel docs say that BSR leaves the destination register
+    ;; undefined if the source is 0.  However, gcc, LLVM, and MSVC
+    ;; generate code that pretty much says BSR basically moves the
+    ;; source to the destination if the source is 0.
+    (inst bsr res arg)
+    (inst jmp :z DONE)
+    ;; The result of BSR is one too small for what we want, so
+    ;; increment the result.
+    (inst inc res)
+    (inst shl res 2)
     DONE))
 
 (define-vop (unsigned-byte-32-count)
@@ -1686,75 +1703,9 @@
 
 (in-package "VM")
 
+;; The update routine is a Lisp assembly routine with a corresponding
+;; VOP.  This lets the compiler know about the VOP so we can use it.
 #+random-xoroshiro
-(progn
-(defknown xoroshiro-next ((simple-array double-float (2)))
+(defknown kernel::random-xoroshiro-update ((simple-array double-float (2)))
   (values (unsigned-byte 32) (unsigned-byte 32))
   (movable))
-
-(define-vop (xoroshiro-next)
-  (:policy :fast-safe)
-  (:translate xoroshiro-next)
-  (:args (state :scs (descriptor-reg) :to (:result 3)))
-  (:arg-types simple-array-double-float)
-  (:results (r1 :scs (unsigned-reg))
-	    (r0 :scs (unsigned-reg)))
-  (:result-types unsigned-num unsigned-num)
-  (:temporary (:sc double-reg) s0)
-  (:temporary (:sc double-reg) s1)
-  (:temporary (:sc double-reg) t0)
-  (:generator 10
-    ;; s0 = state[0]
-    (inst movsd s0 (make-ea :dword :base state
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 8 0))
-				  vm:other-pointer-type)))
-    ;; s1 = state[1]
-    (inst movsd s1 (make-ea :dword :base state
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 8 1))
-				  vm:other-pointer-type)))
-    ;; Compute result = s0 + s1
-    (inst movapd t0 s0)
-    (inst paddq t0 s1)
-    ;; Save the 64-bit result as two 32-bit results
-    (inst movd r0 t0)
-    (inst psrlq t0 32)
-    (inst movd r1 t0)
-
-    ;; s1 = s1 ^ s0
-    (inst xorpd s1 s0)
-
-    ;; s0 = rotl(s0,55) = s0 << 55 | s0 >> 9
-    (inst movapd t0 s0)
-    (inst psllq s0 55)			; s0 = s0 << 55
-    (inst psrlq t0 9)			; t0 = s0 >> 9
-    (inst orpd s0 t0)			; s0 = rotl(s0, 55)
-
-    (inst movapd t0 s1)
-    (inst xorpd s0 s1)			; s0 = s0 ^ s1
-    (inst psllq t0 14)			; t0 = s1 << 14
-    (inst xorpd s0 t0)			; s0 = s0 ^ t0
-    (inst movsd (make-ea :dword :base state
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 8 0))
-				  vm:other-pointer-type))
-	  s0)
-
-    ;; s1 = rotl(s1, 36) = s1 << 36 | s1 >> 28, using t0 as temp
-    (inst movapd t0 s1)
-    (inst psllq s1 36)
-    (inst psrlq t0 28)
-    (inst orpd s1 t0)
-
-    (inst movsd (make-ea :dword :base state
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 8 1))
-				  vm:other-pointer-type))
-	  s1)))
-)    
-    

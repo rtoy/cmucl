@@ -8,7 +8,13 @@
 
 #include "lisp.h"
 
-#define DPRINTF(t,a) { if (t) fprintf a; }
+#if defined(__GNUC__) || defined(__clang__)
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define UNLIKELY(x) (x)
+#endif
+
+#define DPRINTF(t,a) { if (UNLIKELY(t)) fprintf a; }
 
 #ifdef DARWIN
 #include "Darwin-os.h"

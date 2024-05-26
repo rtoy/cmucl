@@ -753,26 +753,27 @@ os_file_author(const char *path)
      * Keep trying with larger buffers until a maximum is reached.  We
      * assume (1 << 20) is large enough for any OS.
      */
-    while (size <= (1 << 20)) {
-        switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
-          case 0:
-              /* Success, though we might not have a matching entry */
-              result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
-              goto exit;
-          case ERANGE:
-              /* Buffer is too small, double its size and try again */
-              size *= 2;
-              obuffer = (buffer == initial) ? NULL : buffer;
-              if ((buffer = realloc(obuffer, size)) == NULL) {
-                  goto exit;
-              }
-              continue;
-          default:
-              /* All other errors */
-              goto exit;
-        }
+again:
+    switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
+      case 0:
+	  /* Success, though we might not have a matching entry */
+	  result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
+	  break;
+      case ERANGE:
+	  /* Buffer is too small, double its size and try again */
+	  size *= 2;
+	  if (size > (1 << 20)) {
+	      break;
+	  }
+	  if ((buffer = realloc(obuffer, size)) == NULL) {
+	      break;
+	  }
+	  obuffer = buffer;
+	  goto again;
+      default:
+	/* All other errors */
+	break;
     }
-exit:
     free(obuffer);
     
     return result;

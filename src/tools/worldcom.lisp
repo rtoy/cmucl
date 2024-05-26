@@ -106,13 +106,19 @@
   (comf "target:assembly/ppc/arith" :assem t)
   (comf "target:assembly/ppc/alloc" :assem t))
 
+(when (c:backend-featurep :arm)
+  (comf "target:assembly/arm/assem-rtns" :assem t)
+  (comf "target:assembly/arm/array" :assem t)
+  (comf "target:assembly/arm/arith" :assem t)
+  (comf "target:assembly/arm/alloc" :assem t))
+
 
 ;;; these guys can supposedly come in any order, but not really.
 ;;; some are put at the end so macros don't run interpreted and stuff.
 
 (comf "target:code/globals")
 (comf "target:code/kernel")
-(comf "target:code/lispinit")
+(comf "target:code/lispinit" :trace-file t)
 (comf "target:pcl/walk")
 (comf "target:code/fwrappers")
 (comf "target:code/fdefinition")
