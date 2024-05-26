@@ -2363,3 +2363,56 @@
     (inst psllq ztmp 32)		; ztmp = #x80000000|0
     (inst xorps ztmp z)			; ztmp = -xi|xr
     (inst movaps r ztmp)))
+
+(defknown %float-< (double-float double-float)
+  boolean
+  (movable))
+
+(defun %float-< (x y)
+  (declare (double-float x y))
+  (%float-< x y))
+
+#+nil
+(define-vop (float-<)
+  (:args (x :scs (double-reg))
+         (y :scs (double-reg descriptor-reg)))
+  (:arg-types double-float double-float)
+  (:results (r :scs (descriptor-reg)))
+  (:result-types t)
+  (:policy :fast-safe)
+  (:translate %float-<)
+  (:generator 3
+    (sc-case y
+      (double-reg
+       (inst ucomisd x y))
+      (descriptor-reg
+       (inst ucomisd (ea-for-df-desc y))))
+    (inst jmp :p false)
+    (inst jmp :ge false)
+    (load-symbol r t)
+    (inst jmp done)
+    FALSE
+    (load-symbol r nil)
+    DONE
+    ))
+
+(define-vop (float-<)
+  (:args (x :scs (double-reg))
+         (y :scs (double-reg descriptor-reg)))
+  (:arg-types double-float double-float)
+  (:results (r :scs (descriptor-reg)))
+  (:result-types t)
+  (:policy :fast-safe)
+  (:translate %float-<)
+  (:generator 3
+    (load-symbol r nil)
+    (sc-case y
+      (double-reg
+       (inst ucomisd x y))
+      (descriptor-reg
+       (inst ucomisd x (ea-for-df-desc y))))
+    (inst jmp :p done)
+    (inst jmp :ge done)
+    (load-symbol r t)
+    DONE
+    ))

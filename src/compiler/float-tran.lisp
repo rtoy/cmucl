@@ -593,6 +593,10 @@
   (frob >)
   (frob =))
 
+#+x86
+(deftransform < ((x y) (double-float double-float) * :when :both)
+  `(vm::%float-< x y))
+
 ;; Convert (/ x n) to (* x (/ n)) when x is a float and n is a power
 ;; of two, because (/ n) can be reprsented exactly.
 (deftransform / ((x y) (float float) * :when :both)
