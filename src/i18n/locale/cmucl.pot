@@ -21701,9 +21701,3 @@ msgid ""
 "Unicode replacement character."
 msgstr ""
 
-transform <=
-transform >=
-transform <=
-transform >=
-transform >=
-transform <=

@@ -3569,8 +3569,10 @@
 ;;; compiler can statically determine (>= X Y) using type information.
 #+(and x86)
 (defun ir1-transform->= (x y first second inverse)
-  ;; If the leaves are the same, the (>= X Y) is true.
-  (if (same-leaf-ref-p x y)
+  ;; If the leaves are the same, the (>= X Y) is true, provided that
+  ;; neither x nor y is a float.  This happens when x or y is NaN.
+  (if (and (same-leaf-ref-p x y)
+           (not (csubtypep (continuation-type x) (specifier-type 'float))))
       't
       (multiple-value-bind (definitely-true definitely-false)
 	  (ir1-transform->=-helper x y)
