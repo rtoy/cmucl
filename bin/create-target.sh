@@ -83,7 +83,7 @@ case $uname_s in
 		hp700*) motif_variant=hpux_cc ;;
 		pmax_mach) motif_variant=pmax_mach ;;
 		sgi*) motif_variant=irix ;;
-		x86_linux|arm_linux|linux*) motif_variant=x86 ;;
+		x86_linux*|arm_linux|linux*) motif_variant=x86 ;;
 	    esac
 	}
 	[ -f src/motif/server/Config.$motif_variant ] || quit "No such motif-variant could be found: Config.$motif_variant"
