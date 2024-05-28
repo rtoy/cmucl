@@ -31,20 +31,24 @@ done
 # Shift out the options
 shift $[$OPTIND - 1]
 
+# Branch to use for tests
+#
+# Use branch cmucl-expected-failures in general since this branch
+# generally has the list of expected failures.  This is the branch to
+# use on cmucl master in general.
+BRANCH=cmucl-expected-failures
+
 set -x
 if [ -d ../ansi-test ]; then
     # We already have clone; make sure it's clean by stashing any
-    # changes.  Then pull any updates.
-    (cd ../ansi-test; git stash; git pull --rebase)
+    # changes.  Then pull any updates for the desired branch.
+    (cd ../ansi-test; git stash; git checkout $BRANCH; git pull --rebase)
 else    
     (cd ../; git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git)
 fi
 
 cd ../ansi-test
-# Use branch cmucl-expected-failures in general since this branch
-# generally has the list of expected failures.  This is the branch to
-# use on cmucl master in general.
-git checkout cmucl-expected-failures
+git checkout $BRANCH
 
 make LISP="$LISP batch -noinit -nositeinit"
 # There should be no unexpected successes or failures; check these separately
