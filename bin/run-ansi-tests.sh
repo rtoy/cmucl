@@ -41,7 +41,10 @@ else
 fi
 
 cd ../ansi-test
-git checkout issue-288-new-failures
+# Use branch cmucl-expected-failures in general since this branch
+# generally has the list of expected failures.  This is the branch to
+# use on cmucl master in general.
+git checkout cmucl-expected-failures
 
 make LISP="$LISP batch -noinit -nositeinit"
 # There should be no unexpected successes or failures; check these separately
