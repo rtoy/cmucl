@@ -3335,7 +3335,7 @@
 	 (= (lisp::equal-char-code a)
 	    (lisp::equal-char-code b)))))
 
-(deftransform char-upcase ((x) (character))
+(deftransform char-upcase ((x) (base-char))
   "open code"
   #-(and unicode (not unicode-bootstrap))
   '(if (lower-case-p x)
@@ -3345,10 +3345,10 @@
   '(let ((m (char-code x)))
     (cond ((< 96 m 123) (code-char (- m 32)))
           ((> m lisp::+unicode-lower-limit+)
-           (code-char (lisp::case-table-upper-case m)))
+           (code-char (lisp::case-mapping-upper-case m)))
 	   (t x))))
 
-(deftransform char-downcase ((x) (character))
+(deftransform char-downcase ((x) (base-char))
   "open code"
   #-(and unicode (not unicode-bootstrap))
   '(if (upper-case-p x)
@@ -3358,7 +3358,7 @@
   '(let ((m (char-code x)))
     (cond ((< 64 m 91) (code-char (+ m 32)))
           ((> m lisp::+unicode-lower-limit+)
-           (code-char (lisp::case-table-lower-case m)))
+           (code-char (lisp::case-mapping-lower-case m)))
 	  (t x))))
 
 

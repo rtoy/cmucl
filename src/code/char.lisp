@@ -68,8 +68,8 @@
   rules.")
 
 ;; Table of mappings for upper case and lower case letters.  See
-;; src/lisp/case-table.c.
-(alien:def-alien-variable "case_table" 
+;; src/lisp/case-mapping.c.
+(alien:def-alien-variable "case_mapping" 
     (alien:array (alien:* (alien:array c-call:unsigned-int 64)) 1024))
 
 ;; Each entry in the case table consists of the code for either an
@@ -81,9 +81,9 @@
   "Number of bits used for the index of the second stage table of the
   case mapping table.")
 
-(declaim (inline case-table-entry))
+(declaim (inline case-mapping-entry))
 
-(defun case-table-entry (code)
+(defun case-mapping-entry (code)
   "For the character code, CODE, return 0 or the 32-bit value from the
   case table.  A value of 0 means there was no case mapping (neither
   upper nor lower case)."
@@ -93,24 +93,24 @@
                       code))
          (index2 (ldb (byte +stage2-size+ 0)
                       code))
-         (stage2-sap (alien:alien-sap (alien:deref case-table index1))))
+         (stage2-sap (alien:alien-sap (alien:deref case-mapping index1))))
     (sys:sap-ref-32 stage2-sap (* 4 index2))))
 
-(declaim (inline case-table-lower-case))
-(defun case-table-lower-case (code)
+(declaim (inline case-mapping-lower-case))
+(defun case-mapping-lower-case (code)
   "Compute the lower-case character code for the given character CODE.
   If no lower-case code exists, just return CODE."
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3)))
-  (ldb (byte 16 0) (- code (ldb +lower-case-entry+ (case-table-entry code)))))
+  (ldb (byte 16 0) (- code (ldb +lower-case-entry+ (case-mapping-entry code)))))
 
-(declaim (inline case-table-upper-case))
-(defun case-table-upper-case (code)
+(declaim (inline case-mapping-upper-case))
+(defun case-mapping-upper-case (code)
   "Compute the upper-case character code for the given character CODE.
   If no upper-case code exists, just return CODE."
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3)))
-  (ldb (byte 16 0) (- code (ldb +upper-case-entry+ (case-table-entry code)))))
+  (ldb (byte 16 0) (- code (ldb +upper-case-entry+ (case-mapping-entry code)))))
 
 (macrolet ((frob (char-names-list)
 	     (collect ((results))
@@ -285,7 +285,7 @@
     (or (< 64 m 91)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +unicode-lower-limit+)
-             (not (zerop (ldb +lower-case-entry+ (case-table-entry m))))))))
+             (not (zerop (ldb +lower-case-entry+ (case-mapping-entry m))))))))
 
 
 (defun lower-case-p (char)
@@ -296,7 +296,7 @@
     (or (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +unicode-lower-limit+)
-             (not (zerop (ldb +upper-case-entry+ (case-table-entry m))))))))
+             (not (zerop (ldb +upper-case-entry+ (case-mapping-entry m))))))))
 
 (defun title-case-p (char)
   "The argument must be a character object; title-case-p returns T if the
@@ -318,7 +318,7 @@
     (or (< 64 m 91) (< 96 m 123)
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +unicode-lower-limit+)
-             (not (zerop (case-table-entry m)))))))
+             (not (zerop (case-mapping-entry m)))))))
 
 
 (defun digit-char-p (char &optional (radix 10.))
