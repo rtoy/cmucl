@@ -439,6 +439,23 @@ interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
 	    perror("sigaltstack");
 	sa.sa_flags |= SA_ONSTACK;
     }
+#else
+#if defined(__arm__)
+    {
+	stack_t sigstack;
+
+#if defined(SIGNAL_STACK_START)
+	sigstack.ss_sp = (void *) SIGNAL_STACK_START;
+#else
+	sigstack.ss_sp = (void *) altstack;
+#endif
+	sigstack.ss_flags = 0;
+	sigstack.ss_size = SIGNAL_STACK_SIZE;
+	if (sigaltstack(&sigstack, 0) == -1)
+	    perror("sigaltstack");
+	sa.sa_flags |= SA_ONSTACK;
+    }
+#endif /* __arm__ */
 #endif /* RED_ZONE_HIT */
 
     sigaction(signal, &sa, NULL);
