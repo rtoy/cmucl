@@ -3344,7 +3344,7 @@
   #+(and unicode (not unicode-bootstrap))
   '(let ((m (char-code x)))
     (cond ((< 96 m 123) (code-char (- m 32)))
-          ((> m lisp::+unicode-lower-limit+)
+          ((> m lisp::+ascii-limit+)
            (code-char (lisp::case-mapping-upper-case m)))
 	   (t x))))
 
@@ -3357,7 +3357,7 @@
   #+(and unicode (not unicode-bootstrap))
   '(let ((m (char-code x)))
     (cond ((< 64 m 91) (code-char (+ m 32)))
-          ((> m lisp::+unicode-lower-limit+)
+          ((> m lisp::+ascii-limit+)
            (code-char (lisp::case-mapping-lower-case m)))
 	  (t x))))
 
