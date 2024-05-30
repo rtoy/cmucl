@@ -267,10 +267,8 @@ void message_write_color(message_t m,XColor *color,int tag)
 
 void message_write_float(message_t m,void *f,int tag)
 {
-  float *fl = (float *) f;
-  
   message_put_dblword(m,combine_type_and_data(tag,0));
-  message_put_dblword(m,*fl);
+  message_put_dblword(m,*(long *) f);
 }
 
 
@@ -526,8 +524,8 @@ void message_read_color(message_t m,XColor *color,int tag, int red)
 
 void message_read_float(message_t m,float *f,int tag,int data)
 {
-  fprintf(stderr,">>>>> Warning:message_read_float: Not implemented.\n");
-  fflush(stderr);
+  long d = message_get_dblword(m);
+  memcpy(f, &d, sizeof(*f));
 }
 
 
