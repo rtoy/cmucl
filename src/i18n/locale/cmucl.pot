@@ -5446,7 +5446,7 @@ msgstr ""
 #: src/code/char.lisp
 msgid ""
 "A character code strictly larger than this is handled using Unicode\n"
-"  rules."
+"c  rules."
 msgstr ""
 
 #: src/code/char.lisp
@@ -5457,9 +5457,9 @@ msgstr ""
 
 #: src/code/char.lisp
 msgid ""
-"For the character code, CODE, return 0 or the 32-bit value from the\n"
-"  case table.  A value of 0 means there was no case mapping (neither\n"
-"  upper nor lower case)."
+"For the character code, CODE, the 32-bit value from the\n"
+"  case mapping table that indicates the delta between CODE and the\n"
+"  corresponding upper or lower case character for CODE."
 msgstr ""
 
 #: src/code/char.lisp
