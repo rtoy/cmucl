@@ -63,15 +63,15 @@
 (defconstant +ascii-limit+
   127
   "A character code strictly larger than this is handled using Unicode
-  rules.")
+c  rules.")
 
 ;; Table of mappings for upper case and lower case letters.  See
 ;; src/lisp/case-mapping.c.
 (alien:def-alien-variable "case_mapping" 
     (alien:array (alien:* (alien:array c-call:unsigned-int 64)) 1024))
 
-;; Each entry in the case table consists of the code for either an
-;; upper case or lower case character code.
+;; Each entry in the case mapping table consists of the code for
+;; either an upper case or lower case character code.
 (defconstant +upper-case-entry+ (byte 16 0))
 (defconstant +lower-case-entry+ (byte 16 16))
 
@@ -82,9 +82,9 @@
 (declaim (inline case-mapping-entry))
 
 (defun case-mapping-entry (code)
-  "For the character code, CODE, return 0 or the 32-bit value from the
-  case table.  A value of 0 means there was no case mapping (neither
-  upper nor lower case)."
+  "For the character code, CODE, the 32-bit value from the
+  case mapping table that indicates the delta between CODE and the
+  corresponding upper or lower case character for CODE."
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3) (safety 0)))
   (let* ((index1 (ldb (byte (- 16 +stage2-size+) +stage2-size+)
