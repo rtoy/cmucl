@@ -640,11 +640,11 @@
 	  (declare (fixnum index new-index))
 	  (multiple-value-bind (code wide) (codepoint string index)
 	    (when wide (incf index))
-	    ;; Handle ASCII specially because this is called early in
-	    ;; initialization, before unidata is available.
-	    (cond ((< 96 code 123) (decf code 32))
-		  #+unicode
-		  ((> code 127) (setq code (unicode-upper code))))
+            ;; Use char-upcase if it's not a surrogate pair so that
+            ;; we're always consist.
+            (if wide
+                (setq code (unicode-upper code))
+                (setf code (char-code (char-upcase (code-char code)))))
 	    ;;@@ WARNING: this may, in theory, need to extend newstring
 	    ;;  but that never actually occurs as of Unicode 5.1.0,
 	    ;;  so I'm just going to ignore it for now...
@@ -682,10 +682,11 @@
 	  (declare (fixnum index new-index))
 	  (multiple-value-bind (code wide) (codepoint string index)
 	    (when wide (incf index))
-	    ;; Handle ASCII specially because this is called early in
-	    ;; initialization, before unidata is available.
-	    (cond ((< 64 code 91) (incf code 32))
-		  ((> code 127) (setq code (unicode-lower code))))
+            ;; Use char-downcase if it's not a surrogate pair so that
+            ;; we're always consist.
+            (if wide
+                (setq code (unicode-lower code))
+                (setq code (char-code (char-downcase (code-char code)))))
 	    ;;@@ WARNING: this may, in theory, need to extend newstring
 	    ;;  but that never actually occurs as of Unicode 5.1.0,
 	    ;;  so I'm just going to ignore it for now...
@@ -753,12 +754,9 @@
 	  ((= index (the fixnum end)))
 	(declare (fixnum index))
 	(multiple-value-bind (code wide) (codepoint string index)
-	  (declare (ignore wide))
-	  ;; Handle ASCII specially because this is called early in
-	  ;; initialization, before unidata is available.
-	  (cond ((< 96 code 123) (decf code 32))
-		#+unicode
-		((> code 127) (setq code (unicode-upper code))))
+          (if wide
+              (setq code (unicode-upper code))
+              (setf code (char-code (char-upcase (code-char code)))))
 	  ;;@@ WARNING: this may, in theory, need to extend string
 	  ;;      (which, obviously, we can't do here.  Unless
 	  ;;       STRING is adjustable, maybe)
@@ -780,10 +778,9 @@
 	  ((= index (the fixnum end)))
 	(declare (fixnum index))
 	(multiple-value-bind (code wide) (codepoint string index)
-	  (declare (ignore wide))
-	  (cond ((< 64 code 91) (incf code 32))
-		#+unicode
-		((> code 127) (setq code (unicode-lower code))))
+          (if wide
+              (setq code (unicode-lower code))
+              (setf code (char-code (char-downcase (code-char code)))))
 	  ;;@@ WARNING: this may, in theory, need to extend string
 	  ;;      (which, obviously, we can't do here.  Unless
 	  ;;       STRING is adjustable, maybe)
