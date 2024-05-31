@@ -94,7 +94,7 @@
          (index2 (ldb (byte +stage2-size+ 0)
                       code))
          (stage2-offset (alien:deref case-mapping index1)))
-    (alien:deref stage2 (+ (* stage2-offset index2)))))
+    (alien:deref stage2 (+ stage2-offset index2))))
 
 (declaim (inline case-mapping-lower-case))
 (defun case-mapping-lower-case (code)

@@ -5446,7 +5446,7 @@ msgstr ""
 #: src/code/char.lisp
 msgid ""
 "A character code strictly larger than this is handled using Unicode\n"
-"c  rules."
+"  rules."
 msgstr ""
 
 #: src/code/char.lisp
