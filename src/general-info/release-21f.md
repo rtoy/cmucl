@@ -77,6 +77,9 @@ public domain.
     * ~~#298~~ Add `with-float-rounding-mode` macro
     * ~~#299~~ Enable xoroshiro assembly routine
     * ~~#314~~ tanh incorrect for large args
+    * ~~#316~~ Support roundtrip character casing
+    * ~~#320~~ Motif variant not defaulted for `x86_linux_clang` config
+    * ~~#321~~ Rename Motif Config.x86 to Config.linux
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
