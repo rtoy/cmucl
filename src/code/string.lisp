@@ -706,7 +706,7 @@
 		 (setq newword t))
 		(newword
 		 ;;char is first case-modifiable after non-case-modifiable
-		 (setq char (char-titlecase char))
+		 (setq char (char-upcase char))
 		 (setq newword ()))
 		;;char is case-modifiable, but not first
 		(t (setq char (char-downcase char))))

@@ -525,6 +525,48 @@
 			    :end next)))
 	  (write-string string result :start end :end offset-slen))))))
 
+(defun string-capitalize-simple (string &key (start 0) end)
+  _N"Given a string, returns a copy of the string with the first
+  character of each ``word'' converted to upper-case, and remaining
+  chars in the word converted to lower case. A ``word'' is defined
+  to be a string of case-modifiable characters delimited by
+  non-case-modifiable chars."
+  (declare (fixnum start))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
+    (declare (fixnum slen))
+    (with-one-string string start end offset
+      (let ((offset-slen (+ slen offset))
+	    (newstring (make-string slen)))
+	(declare (fixnum offset-slen))
+	(do ((index offset (1+ index))
+	     (new-index 0 (1+ new-index)))
+	    ((= index start))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	(do ((index start (1+ index))
+	     (new-index (- start offset) (1+ new-index))
+	     (newword t)
+	     (char ()))
+	    ((= index (the fixnum end)))
+	  (declare (fixnum index new-index))
+	  (setq char (schar string index))
+	  (cond ((not (alphanumericp char))
+		 (setq newword t))
+		(newword
+		 ;;char is first case-modifiable after non-case-modifiable
+		 (setq char (char-titlecase char))
+		 (setq newword ()))
+		;;char is case-modifiable, but not first
+		(t (setq char (char-downcase char))))
+	  (setf (schar newstring new-index) char))
+	(do ((index end (1+ index))
+	     (new-index (- (the fixnum end) offset) (1+ new-index)))
+	    ((= index offset-slen))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	newstring))))
+
 (defun string-capitalize-full (string &key (start 0) end (casing :full))
   "Capitalize String using the Common Lisp word-break algorithm to find
   the words in String.  The beginning is capitalized depending on the

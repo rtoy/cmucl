@@ -58,3 +58,36 @@
            when (char/= actual (char-downcase expected))
              collect (list (char-downcase expected)
                            (char-code actual))))))
+
+(define-test string-capitalize
+    (:tag :issues)
+  (let* ((s (string-capitalize
+             ;; #\Latin_Small_Letter_Dz and #\Latin_Small_Letter_Lj
+             ;; #have Unicode titlecase characters that differ from
+             ;; CHAR-UPCASE.  This tests that STRING-CAPITALIZE use
+             ;; CHAR-UPCASE to produce the capitalization.
+             (coerce
+              '(#\Latin_Small_Letter_Dz
+                #\a #\b
+                #\space
+                #\Latin_Small_Letter_Lj
+                #\A #\B)
+              'string)))
+         (expected
+           ;; Manually convert the test string by calling CHAR-UPCASE
+           ;; or CHAR-DOWNCASE (or IDENTITY) to get the desired
+           ;; capitalized string.
+           (map 'list
+                #'(lambda (c f)
+                    (funcall f c))
+                s
+                (list #'char-upcase
+                      #'char-downcase
+                      #'char-downcase
+                      #'identity
+                      #'char-upcase
+                      #'char-downcase
+                      #'char-downcase))))
+    (assert-equal
+     (map 'list #'char-name expected)
+     (map 'list #'char-name s))))
