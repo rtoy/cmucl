@@ -641,7 +641,7 @@
   (if unicode-word-break
       (string-capitalize-unicode string :start start :end end :casing casing)
       (if (eq casing :simple)
-	  (cl:string-capitalize string :start start :end end)
+	  (cl:string-capitalize-simple string :start start :end end)
 	  (string-capitalize-full string :start start :end end :casing casing))))
 
 
