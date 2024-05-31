@@ -59,3 +59,35 @@
            when (char/= actual (char-downcase expected))
              collect (list (char-downcase expected)
                            (char-code actual))))))
+
+(define-test string-capitalize
+    (:tag :issues)
+  (let* ((s
+           ;; This string contains a couple of characters where
+           ;; Unicode has a titlecase version of the character.  We
+           ;; want to make sure we use char-upcase to capitalize the
+           ;; string instead of lisp::char-titlecse
+           (coerce
+             '(#\Latin_Small_Letter_Dz
+               #\a #\b
+               #\space
+               #\Latin_Small_Letter_Lj
+               #\A #\B)
+             'string))
+         (expected
+           ;; Manually convert S to a capitalized string using
+           ;; char-upcase/downcase.
+           (map 'string
+                #'(lambda (ch f)
+                    (funcall f ch))
+                s
+                (list #'char-upcase
+                      #'char-downcase
+                      #'char-downcase
+                      #'char-downcase
+                      #'char-upcase
+                      #'char-downcase
+                      #'char-downcase))))
+    (assert-equal
+     (map 'list #'char-name expected)
+     (map 'list #'char-name (string-capitalize s)))))

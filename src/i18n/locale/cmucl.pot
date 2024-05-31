@@ -3892,7 +3892,7 @@ msgid ""
 "  upper case alphabetic characters converted to lowercase."
 msgstr ""
 
-#: src/code/string.lisp
+#: src/code/unicode.lisp src/code/string.lisp
 msgid ""
 "Given a string, returns a copy of the string with the first\n"
 "  character of each ``word'' converted to upper-case, and remaining\n"
