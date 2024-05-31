@@ -804,6 +804,7 @@
 	  (setf (schar newstring new-index) (schar string index)))
 	newstring))))
 
+#+nil
 (defun nstring-upcase (string &key (start 0) end)
   "Given a string, returns that string with all lower case alphabetic
   characters converted to uppercase."
@@ -828,6 +829,20 @@
 	      (setf (schar string (incf index)) lo))))))
     save-header))
 
+(defun nstring-upcase (string &key (start 0) end)
+  "Given a string, returns that string with all lower case alphabetic
+  characters converted to uppercase."
+  (declare (fixnum start))
+  (let ((save-header string))
+    (with-one-string string start end offset
+      (do ((index start (1+ index)))
+	  ((= index (the fixnum end)))
+	(declare (fixnum index))
+        (setf (schar string index)
+              (char-upcase (schar string index))))
+    save-header)))
+
+#+nil
 (defun nstring-downcase (string &key (start 0) end)
   "Given a string, returns that string with all upper case alphabetic
   characters converted to lowercase."
@@ -850,6 +865,19 @@
 	    (setf (schar string index) hi)
 	    (when lo
 	      (setf (schar string (incf index)) lo))))))
+    save-header))
+
+(defun nstring-downcase (string &key (start 0) end)
+  "Given a string, returns that string with all upper case alphabetic
+  characters converted to lowercase."
+  (declare (fixnum start))
+  (let ((save-header string))
+    (with-one-string string start end offset
+      (do ((index start (1+ index)))
+	  ((= index (the fixnum end)))
+	(declare (fixnum index))
+        (setf (schar string index)
+              (char-downcase (schar string index)))))
     save-header))
 
 (defun nstring-capitalize (string &key (start 0) end)
