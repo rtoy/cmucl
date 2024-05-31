@@ -8,11 +8,10 @@
 (defun make-test-string ()
   ;; Create a string consisting of all the code units EXCEPT for the
   ;; surrogates because string casing handles that differently.
-  (coerce
-   (loop for code from 0 to #xffff
-         unless (lisp::surrogatep code)
-         collect (code-char code))
-   'string))
+  (let ((s (make-string char-code-limit)))
+    (dotimes (k char-code-limit)
+      (setf (aref s k) (code-char k)))
+    s))
 
 (define-test string-upcase
     (:tag :issues)
