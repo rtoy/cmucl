@@ -17,6 +17,49 @@
 (in-package "UNICODE")
 (intl:textdomain "cmucl")
 
+(defun string-upcase-simple (string &key (start 0) end)
+  _N"Given a string, returns a new string that is a copy of it with all
+  lower case alphabetic characters converted to uppercase."
+  (declare (fixnum start))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
+    (declare (fixnum slen))
+    (lisp::with-one-string string start end offset
+      (let ((offset-slen (+ slen offset))
+	    (newstring (make-string slen)))
+	(declare (fixnum offset-slen))
+	(do ((index offset (1+ index))
+	     (new-index 0 (1+ new-index)))
+	    ((= index start))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	(do ((index start (1+ index))
+	     (new-index (- start offset) (1+ new-index)))
+	    ((= index (the fixnum end)))
+	  (declare (fixnum index new-index))
+	  (multiple-value-bind (code wide) (codepoint string index)
+	    (when wide (incf index))
+            ;; Use char-upcase if it's not a surrogate pair so that
+            ;; we're always consist.
+            (if wide
+                (setq code (unicode-upper code))
+                (setf code (char-code (char-upcase (code-char code)))))
+	    ;;@@ WARNING: this may, in theory, need to extend newstring
+	    ;;  but that never actually occurs as of Unicode 5.1.0,
+	    ;;  so I'm just going to ignore it for now...
+	    (multiple-value-bind (hi lo) (surrogates code)
+	      (setf (schar newstring new-index) hi)
+	      (when lo
+		(setf (schar newstring (incf new-index)) lo)))))
+	;;@@ WARNING: see above
+	(do ((index end (1+ index))
+	     (new-index (- (the fixnum end) offset) (1+ new-index)))
+	    ((= index offset-slen))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	newstring))))
+
+
 ;; An example where this differs from cl:string-upcase differ:
 ;; #\Latin_Small_Letter_Sharp_S
 (defun string-upcase-full (string &key (start 0) end)
@@ -59,9 +102,50 @@
   respectively."
   (declare (fixnum start))
   (if (eq casing :simple)
-      (cl:string-upcase string :start start :end end)
+      (string-upcase-simple string :start start :end end)
       (string-upcase-full string :start start :end end)))
 
+(defun string-downcase-simpl (string &key (start 0) end)
+  _N"Given a string, returns a new string that is a copy of it with all
+  upper case alphabetic characters converted to lowercase."
+  (declare (fixnum start))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
+    (declare (fixnum slen))
+    (lisp::with-one-string string start end offset
+      (let ((offset-slen (+ slen offset))
+	    (newstring (make-string slen)))
+	(declare (fixnum offset-slen))
+	(do ((index offset (1+ index))
+	     (new-index 0 (1+ new-index)))
+	    ((= index start))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	(do ((index start (1+ index))
+	     (new-index (- start offset) (1+ new-index)))
+	    ((= index (the fixnum end)))
+	  (declare (fixnum index new-index))
+	  (multiple-value-bind (code wide) (codepoint string index)
+	    (when wide (incf index))
+            ;; Use char-downcase if it's not a surrogate pair so that
+            ;; we're always consist.
+            (if wide
+                (setq code (unicode-lower code))
+                (setq code (char-code (char-downcase (code-char code)))))
+	    ;;@@ WARNING: this may, in theory, need to extend newstring
+	    ;;  but that never actually occurs as of Unicode 5.1.0,
+	    ;;  so I'm just going to ignore it for now...
+	    (multiple-value-bind (hi lo) (surrogates code)
+	      (setf (schar newstring new-index) hi)
+	      (when lo
+		(setf (schar newstring (incf new-index)) lo)))))
+	;;@@ WARNING: see above
+	(do ((index end (1+ index))
+	     (new-index (- (the fixnum end) offset) (1+ new-index)))
+	    ((= index offset-slen))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	newstring))))
 
 ;; An example this differs from cl:string-downcase:
 ;; #\Latin_Capital_Letter_I_With_Dot_Above.
@@ -106,7 +190,7 @@
 
   (declare (fixnum start))
   (if (eq casing :simple)
-      (cl:string-downcase string :start start :end end)
+      (string-downcase-simple string :start start :end end)
       (string-downcase-full string :start start :end end)))
 
 

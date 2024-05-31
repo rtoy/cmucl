@@ -618,6 +618,7 @@
 	(setf (schar string i) fill-char))
       (make-string count)))
 
+#+nil
 (defun string-upcase (string &key (start 0) end)
   _N"Given a string, returns a new string that is a copy of it with all
   lower case alphabetic characters converted to uppercase."
@@ -660,6 +661,36 @@
 	  (setf (schar newstring new-index) (schar string index)))
 	newstring))))
 
+(defun string-upcase (string &key (start 0) end)
+  _N"Given a string, returns a new string that is a copy of it with all
+  lower case alphabetic characters converted to uppercase."
+  (declare (fixnum start))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
+    (declare (fixnum slen))
+    (with-one-string string start end offset
+      (let ((offset-slen (+ slen offset))
+	    (newstring (make-string slen)))
+	(declare (fixnum offset-slen))
+	(do ((index offset (1+ index))
+	     (new-index 0 (1+ new-index)))
+	    ((= index start))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	(do ((index start (1+ index))
+	     (new-index (- start offset) (1+ new-index)))
+	    ((= index (the fixnum end)))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index)
+                (char-upcase (schar string index))))
+        (do ((index end (1+ index))
+	     (new-index (- (the fixnum end) offset) (1+ new-index)))
+	    ((= index offset-slen))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+        newstring))))
+
+#+nil
 (defun string-downcase (string &key (start 0) end)
   _N"Given a string, returns a new string that is a copy of it with all
   upper case alphabetic characters converted to lowercase."
@@ -695,6 +726,35 @@
 	      (when lo
 		(setf (schar newstring (incf new-index)) lo)))))
 	;;@@ WARNING: see above
+	(do ((index end (1+ index))
+	     (new-index (- (the fixnum end) offset) (1+ new-index)))
+	    ((= index offset-slen))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	newstring))))
+
+(defun string-downcase (string &key (start 0) end)
+  _N"Given a string, returns a new string that is a copy of it with all
+  upper case alphabetic characters converted to lowercase."
+  (declare (fixnum start))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
+    (declare (fixnum slen))
+    (with-one-string string start end offset
+      (let ((offset-slen (+ slen offset))
+	    (newstring (make-string slen)))
+	(declare (fixnum offset-slen))
+	(do ((index offset (1+ index))
+	     (new-index 0 (1+ new-index)))
+	    ((= index start))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	(do ((index start (1+ index))
+	     (new-index (- start offset) (1+ new-index)))
+	    ((= index (the fixnum end)))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index)
+                (char-downcase (schar string index))))
 	(do ((index end (1+ index))
 	     (new-index (- (the fixnum end) offset) (1+ new-index)))
 	    ((= index offset-slen))
