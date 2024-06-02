@@ -676,6 +676,49 @@
 	  (setf (schar newstring new-index) (schar string index)))
 	newstring))))
 
+#+nil
+(defun string-capitalize (string &key (start 0) end)
+  _N"Given a string, returns a copy of the string with the first
+  character of each ``word'' converted to upper-case, and remaining
+  chars in the word converted to lower case. A ``word'' is defined
+  to be a string of case-modifiable characters delimited by
+  non-case-modifiable chars."
+  (declare (fixnum start))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
+    (declare (fixnum slen))
+    (with-one-string string start end offset
+      (let ((offset-slen (+ slen offset))
+	    (newstring (make-string slen)))
+	(declare (fixnum offset-slen))
+	(do ((index offset (1+ index))
+	     (new-index 0 (1+ new-index)))
+	    ((= index start))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	(do ((index start (1+ index))
+	     (new-index (- start offset) (1+ new-index))
+	     (newword t)
+	     (char ()))
+	    ((= index (the fixnum end)))
+	  (declare (fixnum index new-index))
+	  (setq char (schar string index))
+	  (cond ((not (alphanumericp char))
+		 (setq newword t))
+		(newword
+		 ;;char is first case-modifiable after non-case-modifiable
+		 (setq char (char-upcase char))
+		 (setq newword ()))
+		;;char is case-modifiable, but not first
+		(t (setq char (char-downcase char))))
+	  (setf (schar newstring new-index) char))
+	(do ((index end (1+ index))
+	     (new-index (- (the fixnum end) offset) (1+ new-index)))
+	    ((= index offset-slen))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	newstring))))
+
 (defun string-capitalize (string &key (start 0) end)
   _N"Given a string, returns a copy of the string with the first
   character of each ``word'' converted to upper-case, and remaining
@@ -719,7 +762,7 @@
 	newstring))))
 
 (defun nstring-upcase (string &key (start 0) end)
-  "Given a string, returns that string with all lower case alphabetic
+  _N"Given a string, returns that string with all lower case alphabetic
   characters converted to uppercase."
   (declare (fixnum start))
   (let ((save-header string))
@@ -732,7 +775,7 @@
     save-header)))
 
 (defun nstring-downcase (string &key (start 0) end)
-  "Given a string, returns that string with all upper case alphabetic
+  _N"Given a string, returns that string with all upper case alphabetic
   characters converted to lowercase."
   (declare (fixnum start))
   (let ((save-header string))
@@ -744,6 +787,7 @@
               (char-downcase (schar string index)))))
     save-header))
 
+#+nil
 (defun nstring-capitalize (string &key (start 0) end)
   "Given a string, returns that string with the first
   character of each ``word'' converted to upper-case, and remaining
@@ -764,6 +808,31 @@
 	      (newword
 	       ;;char is first case-modifiable after non-case-modifiable
 	       (setf (schar string index) (char-titlecase char))
+	       (setq newword ()))
+	      (t
+	       (setf (schar string index) (char-downcase char))))))
+    save-header))
+
+(defun nstring-capitalize (string &key (start 0) end)
+  _N"Given a string, returns that string with the first
+  character of each ``word'' converted to upper-case, and remaining
+  chars in the word converted to lower case. A ``word'' is defined
+  to be a string of case-modifiable characters delimited by
+  non-case-modifiable chars."
+  (declare (fixnum start))
+  (let ((save-header string))
+    (with-one-string string start end offset
+      (do ((index start (1+ index))
+	   (newword t)
+	   (char ()))
+	  ((= index (the fixnum end)))
+	(declare (fixnum index))
+	(setq char (schar string index))
+	(cond ((not (alphanumericp char))
+	       (setq newword t))
+	      (newword
+	       ;;char is first case-modifiable after non-case-modifiable
+	       (setf (schar string index) (char-upcase char))
 	       (setq newword ()))
 	      (t
 	       (setf (schar string index) (char-downcase char))))))
