@@ -21,7 +21,7 @@
   _N"Given a string, returns a new string that is a copy of it with all
   lower case alphabetic characters converted to uppercase."
   (declare (fixnum start))
-  (let* ((string (if (stringp string) string (string string)))
+  (let* ((string (string string))
 	 (slen (length string)))
     (declare (fixnum slen))
     (lisp::with-one-string string start end offset
@@ -66,8 +66,8 @@
   _N"Given a string, returns a new string that is a copy of it with
   all lower case alphabetic characters converted to uppercase using
   full case conversion."
-  (declare (fixnum start)) (let* ((string (if
-  (stringp string) string (string string)))
+  (declare (fixnum start))
+  (let* ((string (string string))
 	 (slen (length string)))
     (declare (fixnum slen))
     (with-output-to-string (s)
@@ -100,10 +100,13 @@
   all lower case alphabetic characters converted to uppercase.  Casing
   is :simple or :full for simple or full case conversion,
   respectively."
-  (declare (fixnum start))
-  (if (eq casing :simple)
-      (string-upcase-simple string :start start :end end)
-      (string-upcase-full string :start start :end end)))
+  (declare (fixnum start)
+           (type (member :simple :full) casing))
+  (ecase casing
+    (:simple
+     (string-upcase-simple string :start start :end end))
+    (:full
+     (string-upcase-full string :start start :end end))))
 
 (defun string-downcase-simple (string &key (start 0) end)
   _N"Given a string, returns a new string that is a copy of it with all
@@ -188,10 +191,13 @@
   uppercase alphabetic characters converted to lowercase.  Casing is
   :simple or :full for simple or full case conversion, respectively."
 
-  (declare (fixnum start))
-  (if (eq casing :simple)
-      (string-downcase-simple string :start start :end end)
-      (string-downcase-full string :start start :end end)))
+  (declare (fixnum start)
+           (type (member :simple :full) casing))
+  (ecase casing
+    (:simple
+     (string-downcase-simple string :start start :end end))
+    (:full
+     (string-downcase-full string :start start :end end))))
 
 
 ;;;
@@ -637,12 +643,14 @@
   delimited by non-case-modifiable chars.  "
 
   (declare (fixnum start)
-	   (type (member :simple :full :title) casing))
+	   (type (member :simple-title :simple :full :title) casing))
   (if unicode-word-break
       (string-capitalize-unicode string :start start :end end :casing casing)
-      (if (eq casing :simple)
-	  (string-capitalize-simple string :start start :end end)
-	  (string-capitalize-full string :start start :end end :casing casing))))
+      (ecase casing
+        (:simple-title
+	 (string-capitalize-simple string :start start :end end))
+        ((:simple :full :title)
+	 (string-capitalize-full string :start start :end end :casing casing)))))
 
 
 (defun decompose-hangul-syllable (cp stream)
