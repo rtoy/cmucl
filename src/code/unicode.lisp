@@ -398,6 +398,30 @@
 	       (declare (ignore c))
 	       (lookup (+ i (if (eql widep 1) 2 1)) (left-context i))))))))
 
+(defun char-titlecase (char)
+  "Returns CHAR converted to title-case if that is possible."
+  (declare (character char))
+  #-(and unicode (not unicode-bootstrap))
+  (if (lower-case-p char)
+      (code-char (- (char-code char) 32))
+      char)
+  #+(and unicode (not unicode-bootstrap))
+  (let ((m (char-code char)))
+    (cond ((> m +ascii-limit+) (code-char (unicode-title m)))
+	  ((< (char-code #\`) m (char-code #\{))
+           (code-char (- m 32)))
+	  (t char))))
+
+(defun title-case-p (char)
+  "The argument must be a character object; title-case-p returns T if the
+  argument is a title-case character, NIL otherwise."
+  (declare (character char))
+  (let ((m (char-code char)))
+    (or (< 64 m 91)
+	#+(and unicode (not unicode-bootstrap))
+	(and (> m +ascii-limit+)
+	     (= (unicode-category m) +unicode-category-title+)))))
+
 (defun string-capitalize-unicode (string &key (start 0) end (casing :simple))
   "Capitalize String using the Unicode word-break algorithm to find
   the words in String.  The beginning is capitalized depending on the
