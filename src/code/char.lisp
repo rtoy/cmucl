@@ -424,7 +424,7 @@
 	 #-(and unicode (not unicode-bootstrap))
 	 ch
 	 #+(and unicode (not unicode-bootstrap))
-	 (if (> ch +ascii-limit+) (unicode-lower ch) ch))))
+	 (if (> ch +ascii-limit+) (case-mapping-lower-case ch) ch))))
 
 
 (defun char-equal (character &rest more-characters)
