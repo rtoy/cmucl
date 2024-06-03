@@ -3343,7 +3343,7 @@
        x)
   #+(and unicode (not unicode-bootstrap))
   '(let ((m (char-code x)))
-    (cond ((< (char-code #\a) m (char-code #\{))
+    (cond ((< (char-code #\`) m (char-code #\{))
            (code-char (logxor m #x20)))
           ((> m lisp::+ascii-limit+)
            (code-char (lisp::case-mapping-upper-case m)))
