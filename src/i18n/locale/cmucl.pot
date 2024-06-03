@@ -3880,13 +3880,13 @@ msgid ""
 "  a new string Count long filled with the fill character."
 msgstr ""
 
-#: src/code/string.lisp
+#: src/code/unicode.lisp src/code/string.lisp
 msgid ""
 "Given a string, returns a new string that is a copy of it with all\n"
 "  lower case alphabetic characters converted to uppercase."
 msgstr ""
 
-#: src/code/string.lisp
+#: src/code/unicode.lisp src/code/string.lisp
 msgid ""
 "Given a string, returns a new string that is a copy of it with all\n"
 "  upper case alphabetic characters converted to lowercase."

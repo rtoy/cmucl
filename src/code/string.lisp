@@ -638,27 +638,14 @@
 	     (new-index (- start offset) (1+ new-index)))
 	    ((= index (the fixnum end)))
 	  (declare (fixnum index new-index))
-	  (multiple-value-bind (code wide) (codepoint string index)
-	    (when wide (incf index))
-            ;; Use char-upcase if it's not a surrogate pair so that
-            ;; we're always consist.
-            (if wide
-                (setq code (unicode-upper code))
-                (setf code (char-code (char-upcase (code-char code)))))
-	    ;;@@ WARNING: this may, in theory, need to extend newstring
-	    ;;  but that never actually occurs as of Unicode 5.1.0,
-	    ;;  so I'm just going to ignore it for now...
-	    (multiple-value-bind (hi lo) (surrogates code)
-	      (setf (schar newstring new-index) hi)
-	      (when lo
-		(setf (schar newstring (incf new-index)) lo)))))
-	;;@@ WARNING: see above
-	(do ((index end (1+ index))
+	  (setf (schar newstring new-index)
+                (char-upcase (schar string index))))
+        (do ((index end (1+ index))
 	     (new-index (- (the fixnum end) offset) (1+ new-index)))
 	    ((= index offset-slen))
 	  (declare (fixnum index new-index))
 	  (setf (schar newstring new-index) (schar string index)))
-	newstring))))
+        newstring))))
 
 (defun string-downcase (string &key (start 0) end)
   _N"Given a string, returns a new string that is a copy of it with all
@@ -680,64 +667,8 @@
 	     (new-index (- start offset) (1+ new-index)))
 	    ((= index (the fixnum end)))
 	  (declare (fixnum index new-index))
-	  (multiple-value-bind (code wide) (codepoint string index)
-	    (when wide (incf index))
-            ;; Use char-downcase if it's not a surrogate pair so that
-            ;; we're always consist.
-            (if wide
-                (setq code (unicode-lower code))
-                (setq code (char-code (char-downcase (code-char code)))))
-	    ;;@@ WARNING: this may, in theory, need to extend newstring
-	    ;;  but that never actually occurs as of Unicode 5.1.0,
-	    ;;  so I'm just going to ignore it for now...
-	    (multiple-value-bind (hi lo) (surrogates code)
-	      (setf (schar newstring new-index) hi)
-	      (when lo
-		(setf (schar newstring (incf new-index)) lo)))))
-	;;@@ WARNING: see above
-	(do ((index end (1+ index))
-	     (new-index (- (the fixnum end) offset) (1+ new-index)))
-	    ((= index offset-slen))
-	  (declare (fixnum index new-index))
-	  (setf (schar newstring new-index) (schar string index)))
-	newstring))))
-
-#+nil
-(defun string-capitalize (string &key (start 0) end)
-  _N"Given a string, returns a copy of the string with the first
-  character of each ``word'' converted to upper-case, and remaining
-  chars in the word converted to lower case. A ``word'' is defined
-  to be a string of case-modifiable characters delimited by
-  non-case-modifiable chars."
-  (declare (fixnum start))
-  (let* ((string (if (stringp string) string (string string)))
-	 (slen (length string)))
-    (declare (fixnum slen))
-    (with-one-string string start end offset
-      (let ((offset-slen (+ slen offset))
-	    (newstring (make-string slen)))
-	(declare (fixnum offset-slen))
-	(do ((index offset (1+ index))
-	     (new-index 0 (1+ new-index)))
-	    ((= index start))
-	  (declare (fixnum index new-index))
-	  (setf (schar newstring new-index) (schar string index)))
-	(do ((index start (1+ index))
-	     (new-index (- start offset) (1+ new-index))
-	     (newword t)
-	     (char ()))
-	    ((= index (the fixnum end)))
-	  (declare (fixnum index new-index))
-	  (setq char (schar string index))
-	  (cond ((not (alphanumericp char))
-		 (setq newword t))
-		(newword
-		 ;;char is first case-modifiable after non-case-modifiable
-		 (setq char (char-titlecase char))
-		 (setq newword ()))
-		;;char is case-modifiable, but not first
-		(t (setq char (char-downcase char))))
-	  (setf (schar newstring new-index) char))
+	  (setf (schar newstring new-index)
+                (char-downcase (schar string index))))
 	(do ((index end (1+ index))
 	     (new-index (- (the fixnum end) offset) (1+ new-index)))
 	    ((= index offset-slen))
@@ -796,20 +727,9 @@
       (do ((index start (1+ index)))
 	  ((= index (the fixnum end)))
 	(declare (fixnum index))
-	(multiple-value-bind (code wide) (codepoint string index)
-          (if wide
-              (setq code (unicode-upper code))
-              (setf code (char-code (char-upcase (code-char code)))))
-	  ;;@@ WARNING: this may, in theory, need to extend string
-	  ;;      (which, obviously, we can't do here.  Unless
-	  ;;       STRING is adjustable, maybe)
-	  ;;  but that never actually occurs as of Unicode 5.1.0,
-	  ;;  so I'm just going to ignore it for now...
-	  (multiple-value-bind (hi lo) (surrogates code)
-	    (setf (schar string index) hi)
-	    (when lo
-	      (setf (schar string (incf index)) lo))))))
-    save-header))
+        (setf (schar string index)
+              (char-upcase (schar string index))))
+    save-header)))
 
 (defun nstring-downcase (string &key (start 0) end)
   _N"Given a string, returns that string with all upper case alphabetic
@@ -820,45 +740,8 @@
       (do ((index start (1+ index)))
 	  ((= index (the fixnum end)))
 	(declare (fixnum index))
-	(multiple-value-bind (code wide) (codepoint string index)
-          (if wide
-              (setq code (unicode-lower code))
-              (setf code (char-code (char-downcase (code-char code)))))
-	  ;;@@ WARNING: this may, in theory, need to extend string
-	  ;;      (which, obviously, we can't do here.  Unless
-	  ;;       STRING is adjustable, maybe)
-	  ;;  but that never actually occurs as of Unicode 5.1.0,
-	  ;;  so I'm just going to ignore it for now...
-	  (multiple-value-bind (hi lo) (surrogates code)
-	    (setf (schar string index) hi)
-	    (when lo
-	      (setf (schar string (incf index)) lo))))))
-    save-header))
-
-#+nil
-(defun nstring-capitalize (string &key (start 0) end)
-  "Given a string, returns that string with the first
-  character of each ``word'' converted to upper-case, and remaining
-  chars in the word converted to lower case. A ``word'' is defined
-  to be a string of case-modifiable characters delimited by
-  non-case-modifiable chars."
-  (declare (fixnum start))
-  (let ((save-header string))
-    (with-one-string string start end offset
-      (do ((index start (1+ index))
-	   (newword t)
-	   (char ()))
-	  ((= index (the fixnum end)))
-	(declare (fixnum index))
-	(setq char (schar string index))
-	(cond ((not (alphanumericp char))
-	       (setq newword t))
-	      (newword
-	       ;;char is first case-modifiable after non-case-modifiable
-	       (setf (schar string index) (char-titlecase char))
-	       (setq newword ()))
-	      (t
-	       (setf (schar string index) (char-downcase char))))))
+        (setf (schar string index)
+              (char-downcase (schar string index)))))
     save-header))
 
 (defun nstring-capitalize (string &key (start 0) end)
