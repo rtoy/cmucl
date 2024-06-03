@@ -258,7 +258,7 @@
   (declare (character char))
   (and (typep char 'base-char)
        (let ((m (char-code (the base-char char))))
-	 (or (< 31 m 127)
+	 (or (<= (char-code #\space ) m (char-code #\~))
 	     #+(and unicode (not unicode-bootstrap))
 	     (and (> m +ascii-limit+)
 		  (>= (unicode-category m) +unicode-category-graphic+))))))
@@ -269,7 +269,8 @@
   argument is an alphabetic character; otherwise NIL."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91) (< 96 m 123)
+    (or (<= (char-code #\A) m (char-code #\Z))
+        (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
 	     (<= +unicode-category-letter+ (unicode-category m)
@@ -281,7 +282,7 @@
   argument is an upper-case character, NIL otherwise."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91)
+    (or (<= (char-code #\A) m (char-code #\Z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
              (not (zerop (ldb +lower-case-entry+ (case-mapping-entry m))))))))
@@ -292,7 +293,7 @@
   argument is a lower-case character, NIL otherwise."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 96 m 123)
+    (or (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
              (not (zerop (ldb +upper-case-entry+ (case-mapping-entry m))))))))
@@ -303,7 +304,8 @@
   both upper and lower case.  For ASCII, this is the same as Alpha-char-p."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91) (< 96 m 123)
+    (or (<= (char-code #\A) m (char-code #\Z))
+        (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
              (not (zerop (case-mapping-entry m)))))))
@@ -335,7 +337,9 @@
   (declare (character char))
   (let ((m (char-code char)))
     ;; Shortcut for ASCII digits and upper and lower case ASCII letters
-    (or (< 47 m 58) (< 64 m 91) (< 96 m 123)
+    (or (<= (char-code #\0) m (char-code #\9))
+        (<= (char-code #\A) m (char-code #\Z))
+        (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
 	     (<= +unicode-category-letter+ (unicode-category m)
