@@ -105,7 +105,7 @@
       (string-upcase-simple string :start start :end end)
       (string-upcase-full string :start start :end end)))
 
-(defun string-downcase-simpl (string &key (start 0) end)
+(defun string-downcase-simple (string &key (start 0) end)
   _N"Given a string, returns a new string that is a copy of it with all
   upper case alphabetic characters converted to lowercase."
   (declare (fixnum start))
