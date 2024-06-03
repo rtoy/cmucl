@@ -419,7 +419,7 @@
 (defmacro equal-char-code (character)
   `(let ((ch (char-code ,character)))
      ;; Handle ASCII separately for bootstrapping and for unidata missing.
-     (if (< 64 ch 91)
+     (if (< (char-code #\@) ch (char-code #\[))
 	 (+ ch 32)
 	 #-(and unicode (not unicode-bootstrap))
 	 ch
@@ -514,7 +514,8 @@
   #+(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
     (cond ((> m +ascii-limit+) (code-char (unicode-title m)))
-	  ((< 96 m 123) (code-char (- m 32)))
+	  ((< (char-code #\`) m (char-code #\{))
+           (code-char (- m 32)))
 	  (t char))))
 
 (defun char-downcase (char)
