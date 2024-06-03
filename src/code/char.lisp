@@ -418,14 +418,14 @@
 
 (defmacro equal-char-code (character)
   `(let ((ch (char-code ,character)))
-     ;; Handle ASCII separately for bootstrapping and for unidata missing.
-     (if (< (char-code #\@) ch (char-code #\[))
-	 (+ ch 32)
-	 #-(and unicode (not unicode-bootstrap))
-	 ch
-	 #+(and unicode (not unicode-bootstrap))
-	 (if (> ch +ascii-limit+) (case-mapping-lower-case ch) ch))))
-
+     ;; Handle ASCII separately for bootstrapping.
+     (cond ((<= (char-code #\A) ch (char-code #\Z))
+            (logxor ch #x20))
+	   #+(and unicode (not unicode-bootstrap))
+           ((> ch +ascii-limit+)
+            (case-mapping-lower-case ch))
+           (t
+            ch))))
 
 (defun char-equal (character &rest more-characters)
   "Returns T if all of its arguments are the same character.
