@@ -63,12 +63,15 @@
 (defconstant +ascii-limit+
   127
   "A character code strictly larger than this is handled using Unicode
-c  rules.")
+  rules.")
 
 ;; Table of mappings for upper case and lower case letters.  See
 ;; src/lisp/case-mapping.c.
 (alien:def-alien-variable "case_mapping" 
-    (alien:array (alien:* (alien:array c-call:unsigned-int 64)) 1024))
+    (alien:array c-call:unsigned-short 1024))
+
+(alien:def-alien-variable "stage2"
+    (alien:array c-call:unsigned-int nil))
 
 ;; Each entry in the case mapping table consists of the code for
 ;; either an upper case or lower case character code.
@@ -80,7 +83,6 @@ c  rules.")
   case mapping table.")
 
 (declaim (inline case-mapping-entry))
-
 (defun case-mapping-entry (code)
   "For the character code, CODE, the 32-bit value from the
   case mapping table that indicates the delta between CODE and the
@@ -91,8 +93,8 @@ c  rules.")
                       code))
          (index2 (ldb (byte +stage2-size+ 0)
                       code))
-         (stage2-sap (alien:alien-sap (alien:deref case-mapping index1))))
-    (sys:sap-ref-32 stage2-sap (* 4 index2))))
+         (stage2-offset (alien:deref case-mapping index1)))
+    (alien:deref stage2 (+ stage2-offset index2))))
 
 (declaim (inline case-mapping-lower-case))
 (defun case-mapping-lower-case (code)
