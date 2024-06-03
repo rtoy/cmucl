@@ -8,11 +8,10 @@
 (defun make-test-string ()
   ;; Create a string consisting of all the code units EXCEPT for the
   ;; surrogates because string casing handles that differently.
-  (coerce
-   (loop for code from 0 to #xffff
-         unless (lisp::surrogatep code)
-         collect (code-char code))
-   'string))
+  (let ((s (make-string char-code-limit)))
+    (dotimes (k char-code-limit)
+      (setf (aref s k) (code-char k)))
+    s))
 
 (define-test string-upcase
     (:tag :issues)
@@ -62,32 +61,33 @@
 
 (define-test string-capitalize
     (:tag :issues)
-  (let* ((s
-           ;; This string contains a couple of characters where
-           ;; Unicode has a titlecase version of the character.  We
-           ;; want to make sure we use char-upcase to capitalize the
-           ;; string instead of lisp::char-titlecse
-           (coerce
-             '(#\Latin_Small_Letter_Dz
-               #\a #\b
-               #\space
-               #\Latin_Small_Letter_Lj
-               #\A #\B)
-             'string))
+  (let* ((s (string-capitalize
+             ;; #\Latin_Small_Letter_Dz and #\Latin_Small_Letter_Lj
+             ;; #have Unicode titlecase characters that differ from
+             ;; CHAR-UPCASE.  This tests that STRING-CAPITALIZE use
+             ;; CHAR-UPCASE to produce the capitalization.
+             (coerce
+              '(#\Latin_Small_Letter_Dz
+                #\a #\b
+                #\space
+                #\Latin_Small_Letter_Lj
+                #\A #\B)
+              'string)))
          (expected
-           ;; Manually convert S to a capitalized string using
-           ;; char-upcase/downcase.
-           (map 'string
-                #'(lambda (ch f)
-                    (funcall f ch))
+           ;; Manually convert the test string by calling CHAR-UPCASE
+           ;; or CHAR-DOWNCASE (or IDENTITY) to get the desired
+           ;; capitalized string.
+           (map 'list
+                #'(lambda (c f)
+                    (funcall f c))
                 s
                 (list #'char-upcase
                       #'char-downcase
                       #'char-downcase
-                      #'char-downcase
+                      #'identity
                       #'char-upcase
                       #'char-downcase
                       #'char-downcase))))
     (assert-equal
      (map 'list #'char-name expected)
-     (map 'list #'char-name (string-capitalize s)))))
+     (map 'list #'char-name s))))

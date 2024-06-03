@@ -17,14 +17,57 @@
 (in-package "UNICODE")
 (intl:textdomain "cmucl")
 
+(defun string-upcase-simple (string &key (start 0) end)
+  _N"Given a string, returns a new string that is a copy of it with all
+  lower case alphabetic characters converted to uppercase."
+  (declare (fixnum start))
+  (let* ((string (string string))
+	 (slen (length string)))
+    (declare (fixnum slen))
+    (lisp::with-one-string string start end offset
+      (let ((offset-slen (+ slen offset))
+	    (newstring (make-string slen)))
+	(declare (fixnum offset-slen))
+	(do ((index offset (1+ index))
+	     (new-index 0 (1+ new-index)))
+	    ((= index start))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	(do ((index start (1+ index))
+	     (new-index (- start offset) (1+ new-index)))
+	    ((= index (the fixnum end)))
+	  (declare (fixnum index new-index))
+	  (multiple-value-bind (code wide) (codepoint string index)
+	    (when wide (incf index))
+            ;; Use char-upcase if it's not a surrogate pair so that
+            ;; we're always consist.
+            (if wide
+                (setq code (unicode-upper code))
+                (setf code (char-code (char-upcase (code-char code)))))
+	    ;;@@ WARNING: this may, in theory, need to extend newstring
+	    ;;  but that never actually occurs as of Unicode 5.1.0,
+	    ;;  so I'm just going to ignore it for now...
+	    (multiple-value-bind (hi lo) (surrogates code)
+	      (setf (schar newstring new-index) hi)
+	      (when lo
+		(setf (schar newstring (incf new-index)) lo)))))
+	;;@@ WARNING: see above
+	(do ((index end (1+ index))
+	     (new-index (- (the fixnum end) offset) (1+ new-index)))
+	    ((= index offset-slen))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	newstring))))
+
+
 ;; An example where this differs from cl:string-upcase differ:
 ;; #\Latin_Small_Letter_Sharp_S
 (defun string-upcase-full (string &key (start 0) end)
   _N"Given a string, returns a new string that is a copy of it with
   all lower case alphabetic characters converted to uppercase using
   full case conversion."
-  (declare (fixnum start)) (let* ((string (if
-  (stringp string) string (string string)))
+  (declare (fixnum start))
+  (let* ((string (string string))
 	 (slen (length string)))
     (declare (fixnum slen))
     (with-output-to-string (s)
@@ -57,11 +100,55 @@
   all lower case alphabetic characters converted to uppercase.  Casing
   is :simple or :full for simple or full case conversion,
   respectively."
-  (declare (fixnum start))
-  (if (eq casing :simple)
-      (cl:string-upcase string :start start :end end)
-      (string-upcase-full string :start start :end end)))
+  (declare (fixnum start)
+           (type (member :simple :full) casing))
+  (ecase casing
+    (:simple
+     (string-upcase-simple string :start start :end end))
+    (:full
+     (string-upcase-full string :start start :end end))))
 
+(defun string-downcase-simple (string &key (start 0) end)
+  _N"Given a string, returns a new string that is a copy of it with all
+  upper case alphabetic characters converted to lowercase."
+  (declare (fixnum start))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
+    (declare (fixnum slen))
+    (lisp::with-one-string string start end offset
+      (let ((offset-slen (+ slen offset))
+	    (newstring (make-string slen)))
+	(declare (fixnum offset-slen))
+	(do ((index offset (1+ index))
+	     (new-index 0 (1+ new-index)))
+	    ((= index start))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	(do ((index start (1+ index))
+	     (new-index (- start offset) (1+ new-index)))
+	    ((= index (the fixnum end)))
+	  (declare (fixnum index new-index))
+	  (multiple-value-bind (code wide) (codepoint string index)
+	    (when wide (incf index))
+            ;; Use char-downcase if it's not a surrogate pair so that
+            ;; we're always consist.
+            (if wide
+                (setq code (unicode-lower code))
+                (setq code (char-code (char-downcase (code-char code)))))
+	    ;;@@ WARNING: this may, in theory, need to extend newstring
+	    ;;  but that never actually occurs as of Unicode 5.1.0,
+	    ;;  so I'm just going to ignore it for now...
+	    (multiple-value-bind (hi lo) (surrogates code)
+	      (setf (schar newstring new-index) hi)
+	      (when lo
+		(setf (schar newstring (incf new-index)) lo)))))
+	;;@@ WARNING: see above
+	(do ((index end (1+ index))
+	     (new-index (- (the fixnum end) offset) (1+ new-index)))
+	    ((= index offset-slen))
+	  (declare (fixnum index new-index))
+	  (setf (schar newstring new-index) (schar string index)))
+	newstring))))
 
 ;; An example this differs from cl:string-downcase:
 ;; #\Latin_Capital_Letter_I_With_Dot_Above.
@@ -104,10 +191,13 @@
   uppercase alphabetic characters converted to lowercase.  Casing is
   :simple or :full for simple or full case conversion, respectively."
 
-  (declare (fixnum start))
-  (if (eq casing :simple)
-      (cl:string-downcase string :start start :end end)
-      (string-downcase-full string :start start :end end)))
+  (declare (fixnum start)
+           (type (member :simple :full) casing))
+  (ecase casing
+    (:simple
+     (string-downcase-simple string :start start :end end))
+    (:full
+     (string-downcase-full string :start start :end end))))
 
 
 ;;;
@@ -553,12 +643,14 @@
   delimited by non-case-modifiable chars.  "
 
   (declare (fixnum start)
-	   (type (member :simple :full :title) casing))
+	   (type (member :simple-title :simple :full :title) casing))
   (if unicode-word-break
       (string-capitalize-unicode string :start start :end end :casing casing)
-      (if (eq casing :simple)
-	  (string-capitalize-simple string :start start :end end)
-	  (string-capitalize-full string :start start :end end :casing casing))))
+      (ecase casing
+        (:simple-title
+	 (string-capitalize-simple string :start start :end end))
+        ((:simple :full :title)
+	 (string-capitalize-full string :start start :end end :casing casing)))))
 
 
 (defun decompose-hangul-syllable (cp stream)
