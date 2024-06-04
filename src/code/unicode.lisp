@@ -401,15 +401,11 @@
 (defun char-titlecase (char)
   "Returns CHAR converted to title-case if that is possible."
   (declare (character char))
-  #-(and unicode (not unicode-bootstrap))
-  (if (lower-case-p char)
-      (code-char (- (char-code char) 32))
-      char)
-  #+(and unicode (not unicode-bootstrap))
   (let ((m (char-code char)))
-    (cond ((> m +ascii-limit+) (code-char (unicode-title m)))
-	  ((< (char-code #\`) m (char-code #\{))
-           (code-char (- m 32)))
+    (cond ((<= (char-code #\a) m (char-code #\z))
+           (code-char (logxor m #x20)))
+          #+(and unicode (not unicode-bootstrap))
+	  ((> m +ascii-limit+) (code-char (unicode-title m)))
 	  (t char))))
 
 (defun title-case-p (char)
@@ -417,7 +413,7 @@
   argument is a title-case character, NIL otherwise."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91)
+    (or (<= (code-char #\A) m (code-char #\Z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
 	     (= (unicode-category m) +unicode-category-title+)))))
