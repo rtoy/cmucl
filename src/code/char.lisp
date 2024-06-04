@@ -31,7 +31,6 @@
 	  alphanumericp char= char/= char< char> char<= char>= char-equal
 	  char-not-equal char-lessp char-greaterp char-not-greaterp
 	  char-not-lessp character char-code code-char char-upcase
-	  char-titlecase title-case-p
 	  char-downcase digit-char char-int char-name name-char
 	  codepoint-limit codepoint))
 
@@ -259,7 +258,7 @@
   (declare (character char))
   (and (typep char 'base-char)
        (let ((m (char-code (the base-char char))))
-	 (or (< 31 m 127)
+	 (or (<= (char-code #\space ) m (char-code #\~))
 	     #+(and unicode (not unicode-bootstrap))
 	     (and (> m +ascii-limit+)
 		  (>= (unicode-category m) +unicode-category-graphic+))))))
@@ -270,7 +269,8 @@
   argument is an alphabetic character; otherwise NIL."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91) (< 96 m 123)
+    (or (<= (char-code #\A) m (char-code #\Z))
+        (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
 	     (<= +unicode-category-letter+ (unicode-category m)
@@ -282,7 +282,7 @@
   argument is an upper-case character, NIL otherwise."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91)
+    (or (<= (char-code #\A) m (char-code #\Z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
              (not (zerop (ldb +lower-case-entry+ (case-mapping-entry m))))))))
@@ -293,21 +293,10 @@
   argument is a lower-case character, NIL otherwise."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 96 m 123)
+    (or (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
              (not (zerop (ldb +upper-case-entry+ (case-mapping-entry m))))))))
-
-(defun title-case-p (char)
-  "The argument must be a character object; title-case-p returns T if the
-  argument is a title-case character, NIL otherwise."
-  (declare (character char))
-  (let ((m (char-code char)))
-    (or (< 64 m 91)
-	#+(and unicode (not unicode-bootstrap))
-	(and (> m +ascii-limit+)
-	     (= (unicode-category m) +unicode-category-title+)))))
-
 
 (defun both-case-p (char)
   "The argument must be a character object.  Both-case-p returns T if the
@@ -315,7 +304,8 @@
   both upper and lower case.  For ASCII, this is the same as Alpha-char-p."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91) (< 96 m 123)
+    (or (<= (char-code #\A) m (char-code #\Z))
+        (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
              (not (zerop (case-mapping-entry m)))))))
@@ -347,7 +337,9 @@
   (declare (character char))
   (let ((m (char-code char)))
     ;; Shortcut for ASCII digits and upper and lower case ASCII letters
-    (or (< 47 m 58) (< 64 m 91) (< 96 m 123)
+    (or (<= (char-code #\0) m (char-code #\9))
+        (<= (char-code #\A) m (char-code #\Z))
+        (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
 	     (<= +unicode-category-letter+ (unicode-category m)
@@ -418,14 +410,14 @@
 
 (defmacro equal-char-code (character)
   `(let ((ch (char-code ,character)))
-     ;; Handle ASCII separately for bootstrapping and for unidata missing.
-     (if (< 64 ch 91)
-	 (+ ch 32)
-	 #-(and unicode (not unicode-bootstrap))
-	 ch
-	 #+(and unicode (not unicode-bootstrap))
-	 (if (> ch +ascii-limit+) (unicode-lower ch) ch))))
-
+     ;; Handle ASCII separately for bootstrapping.
+     (cond ((<= (char-code #\A) ch (char-code #\Z))
+            (logxor ch #x20))
+	   #+(and unicode (not unicode-bootstrap))
+           ((> ch +ascii-limit+)
+            (case-mapping-lower-case ch))
+           (t
+            ch))))
 
 (defun char-equal (character &rest more-characters)
   "Returns T if all of its arguments are the same character.
@@ -503,19 +495,6 @@
   "Returns CHAR converted to upper-case if that is possible."
   (declare (character char))
   (char-upcase char))
-
-(defun char-titlecase (char)
-  "Returns CHAR converted to title-case if that is possible."
-  (declare (character char))
-  #-(and unicode (not unicode-bootstrap))
-  (if (lower-case-p char)
-      (code-char (- (char-code char) 32))
-      char)
-  #+(and unicode (not unicode-bootstrap))
-  (let ((m (char-code char)))
-    (cond ((> m +ascii-limit+) (code-char (unicode-title m)))
-	  ((< 96 m 123) (code-char (- m 32)))
-	  (t char))))
 
 (defun char-downcase (char)
   "Returns CHAR converted to lower-case if that is possible."
