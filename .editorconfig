@@ -1,0 +1,11 @@
+# http://editorconfig.org
+
+root = true
+
+[*]
+indent_style = tab
+insert_final_newline = true
+tab_width = 8
+
+[*.{c,h}]
+indent_size = 4
