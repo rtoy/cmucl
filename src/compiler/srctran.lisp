@@ -3343,8 +3343,10 @@
        x)
   #+(and unicode (not unicode-bootstrap))
   '(let ((m (char-code x)))
-     (cond ((> m 127) (code-char (lisp::unicode-upper m)))
-	   ((< 96 m 123) (code-char (- m 32)))
+    (cond ((<= (char-code #\a) m (char-code #\z))
+           (code-char (logxor m #x20)))
+          ((> m lisp::+ascii-limit+)
+           (code-char (lisp::case-mapping-upper-case m)))
 	   (t x))))
 
 (deftransform char-downcase ((x) (base-char))
@@ -3355,9 +3357,11 @@
        x)
   #+(and unicode (not unicode-bootstrap))
   '(let ((m (char-code x)))
-     (cond ((> m 127) (code-char (lisp::unicode-lower m)))
-	   ((< 64 m 91) (code-char (+ m 32)))
-	   (t x))))
+    (cond ((<= (char-code #\A) m (char-code #\Z))
+           (code-char (logxor m #x20)))
+          ((> m lisp::+ascii-limit+)
+           (code-char (lisp::case-mapping-lower-case m)))
+	  (t x))))
 
 
 ;;;; Equality predicate transforms:

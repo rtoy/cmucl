@@ -30,7 +30,6 @@ public domain.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
-    *
     * ~~#154~~ piglatin translation does not work anymore
     * ~~#171~~ Readably print `(make-pathname :name :unspecfic)`
     * ~~#180~~ Move `get-page-size` to C
@@ -76,7 +75,12 @@ public domain.
     * ~~#297~~ Pprint `new-assem:assemble` with less indentation.
     * ~~#298~~ Add `with-float-rounding-mode` macro
     * ~~#299~~ Enable xoroshiro assembly routine
+    * ~~#312~~ Compiler error building motif server on Fedora 40
     * ~~#314~~ tanh incorrect for large args
+    * ~~#316~~ Support roundtrip character casing
+    * ~~#320~~ Motif variant not defaulted for `x86_linux_clang` config
+    * ~~#321~~ Rename Motif Config.x86 to Config.linux
+    * ~~#323~~ Make string casing functions compliant
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

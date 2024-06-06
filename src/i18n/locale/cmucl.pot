@@ -3880,19 +3880,19 @@ msgid ""
 "  a new string Count long filled with the fill character."
 msgstr ""
 
-#: src/code/string.lisp
+#: src/code/unicode.lisp src/code/string.lisp
 msgid ""
 "Given a string, returns a new string that is a copy of it with all\n"
 "  lower case alphabetic characters converted to uppercase."
 msgstr ""
 
-#: src/code/string.lisp
+#: src/code/unicode.lisp src/code/string.lisp
 msgid ""
 "Given a string, returns a new string that is a copy of it with all\n"
 "  upper case alphabetic characters converted to lowercase."
 msgstr ""
 
-#: src/code/string.lisp
+#: src/code/unicode.lisp src/code/string.lisp
 msgid ""
 "Given a string, returns a copy of the string with the first\n"
 "  character of each ``word'' converted to upper-case, and remaining\n"
@@ -5441,6 +5441,37 @@ msgstr ""
 
 #: src/code/char.lisp
 msgid "The upper exclusive bound on the value of a Unicode codepoint"
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"A character code strictly larger than this is handled using Unicode\n"
+"  rules."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"Number of bits used for the index of the second stage table of the\n"
+"  case mapping table."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"For the character code, CODE, the 32-bit value from the\n"
+"  case mapping table that indicates the delta between CODE and the\n"
+"  corresponding upper or lower case character for CODE."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"Compute the lower-case character code for the given character CODE.\n"
+"  If no lower-case code exists, just return CODE."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"Compute the upper-case character code for the given character CODE.\n"
+"  If no upper-case code exists, just return CODE."
 msgstr ""
 
 #: src/code/char.lisp
