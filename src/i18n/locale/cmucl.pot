@@ -5565,12 +5565,6 @@ msgstr ""
 
 #: src/code/char.lisp
 msgid ""
-"The argument must be a character object; title-case-p returns T if the\n"
-"  argument is a title-case character, NIL otherwise."
-msgstr ""
-
-#: src/code/char.lisp
-msgid ""
 "The argument must be a character object.  Both-case-p returns T if the\n"
 "  argument is an alphabetic character and if the character exists in\n"
 "  both upper and lower case.  For ASCII, this is the same as Alpha-char-p."
@@ -5655,10 +5649,6 @@ msgstr ""
 
 #: src/code/char.lisp
 msgid "Returns CHAR converted to upper-case if that is possible."
-msgstr ""
-
-#: src/code/char.lisp
-msgid "Returns CHAR converted to title-case if that is possible."
 msgstr ""
 
 #: src/code/char.lisp
@@ -15342,6 +15332,16 @@ msgid ""
 "  character extends to the end of S.  If the index is negative or\n"
 "  valid index into S, the returned value will be strictly greater than\n"
 "  the index."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid "Returns CHAR converted to title-case if that is possible."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"The argument must be a character object; title-case-p returns T if the\n"
+"  argument is a title-case character, NIL otherwise."
 msgstr ""
 
 #: src/code/unicode.lisp
