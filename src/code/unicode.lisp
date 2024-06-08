@@ -495,7 +495,8 @@
     (cond ((<= (char-code #\a) m (char-code #\z))
            (code-char (logxor m #x20)))
           #+(and unicode (not unicode-bootstrap))
-	  ((> m +ascii-limit+) (code-char (unicode-title m)))
+	  ((> m lisp::+ascii-limit+)
+           (code-char (unicode-title m)))
 	  (t char))))
 
 (defun title-case-p (char)
@@ -503,9 +504,9 @@
   argument is a title-case character, NIL otherwise."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (<= (code-char #\A) m (code-char #\Z))
+    (or (<= (char-code #\A) m (char-code #\Z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m +ascii-limit+)
+	(and (> m lisp::+ascii-limit+)
 	     (= (unicode-category m) +unicode-category-title+)))))
 
 (defun string-capitalize-unicode (string &key (start 0) end (casing :simple))
