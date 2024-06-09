@@ -496,7 +496,7 @@
            (code-char (logxor m #x20)))
           #+(and unicode (not unicode-bootstrap))
 	  ((> m lisp::+ascii-limit+)
-           (code-char (unicode-title m)))
+           (code-char (lisp::unicode-title m)))
 	  (t char))))
 
 (defun title-case-p (char)
@@ -562,7 +562,7 @@
   (let* ((string (if (stringp string) string (string string)))
 	 (slen (length string)))
     (declare (fixnum slen))
-    (with-one-string string start end offset
+    (lisp::with-one-string string start end offset
       (let ((offset-slen (+ slen offset))
 	    (newstring (make-string slen)))
 	(declare (fixnum offset-slen))
