@@ -36,7 +36,7 @@ shift $[$OPTIND - 1]
 # Use branch cmucl-expected-failures in general since this branch
 # generally has the list of expected failures.  This is the branch to
 # use on cmucl master in general.
-BRANCH=issue-316-support-roundtrip-char-casing
+BRANCH=cmucl-expected-failures
 
 set -x
 if [ -d ../ansi-test ]; then
