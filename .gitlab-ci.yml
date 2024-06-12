@@ -103,7 +103,7 @@ linux:benchmark:
 osx:install:
   stage: install
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - snapshot/
@@ -115,7 +115,7 @@ osx:install:
 osx:build:
   stage: build
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - dist/
@@ -140,7 +140,7 @@ osx:build:
 osx:test:
   stage: test
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - ansi-test/test.out
@@ -156,7 +156,7 @@ osx:test:
 osx:ansi-test:
   stage: ansi-test
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - ansi-test/test.out
@@ -173,7 +173,7 @@ osx:ansi-test:
 osx:benchmark:
   stage: benchmark
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - benchmarks/cl-bench/results
