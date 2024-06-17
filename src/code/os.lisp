@@ -29,7 +29,7 @@
 			  (alien:extern-alien "os_get_page_size"
 					      (function c-call:long)))))
     (when (minusp maybe-page-size)
-      (error (intl:gettext "get-page-size failed: ~A") (get-unix-error-msg err)))
+      (error (intl:gettext "get-page-size failed: ~A") (unix:get-unix-error-msg)))
     maybe-page-size))
 
 
