@@ -111,6 +111,8 @@ osx:install:
     - /opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
+    - echo PATH = $PATH
+    - type -all gitlab-runner
 
 osx:build:
   stage: build
