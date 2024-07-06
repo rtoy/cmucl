@@ -112,8 +112,8 @@ osx:install:
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
     - echo PATH = $PATH
-    - type -all gitlab-runner
     - ls -F /usr/local/bin
+    - type -all gitlab-runner
 
 osx:build:
   stage: build
