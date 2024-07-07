@@ -103,7 +103,7 @@ linux:benchmark:
 osx:install:
   stage: install
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - snapshot/
@@ -111,11 +111,14 @@ osx:install:
     - /opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
+    - echo PATH = $PATH
+    - ls -F /usr/local/bin
+    - type -all gitlab-runner
 
 osx:build:
   stage: build
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - dist/
@@ -140,7 +143,7 @@ osx:build:
 osx:test:
   stage: test
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - ansi-test/test.out
@@ -156,7 +159,7 @@ osx:test:
 osx:ansi-test:
   stage: ansi-test
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - ansi-test/test.out
@@ -173,7 +176,7 @@ osx:ansi-test:
 osx:benchmark:
   stage: benchmark
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - benchmarks/cl-bench/results
