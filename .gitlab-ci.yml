@@ -191,3 +191,16 @@ osx:benchmark:
     - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
     - ../../snapshot/bin/lisp -load report
+
+# From https://github.com/tcort/markdown-link-check
+# Checks links on the wiki pages whenever any wiki markdown pages change. 
+linkchecker:
+  stage: test
+  image:
+    name: ghcr.io/tcort/markdown-link-check:3.11.2
+    entrypoint: ["/bin/sh", "-c"]
+  script:
+    - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
+  rules:
+    - changes:
+      - "**/*.md"
