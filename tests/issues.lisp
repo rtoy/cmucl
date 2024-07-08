@@ -1111,10 +1111,10 @@
   ;; "unknown.lisp" should be a file that doesn't exist.  Verify that
   ;; if :IF-DOES-NOT-EXIST is non-NIL we signal an error from LOAD.
   ;; The first case is the old default value of :ERROR.
-  (assert-errors 'file-error
+  (assert-error 'file-error
                  (load "unknown.lisp" :if-does-not-exist :error))
   ;; :IF-DOES-NOT-EXIST is a generalized BOOLEAN, so non-NIL will
   ;; signal an error too.
-  (assert-errors 'file-error
+  (assert-error 'file-error
                  (load "unknown.lisp" :if-does-not-exist t))
-  (assert-faluse (load "unknown.lisp" :if-does-not-exist nil)))
+  (assert-false (load "unknown.lisp" :if-does-not-exist nil)))
