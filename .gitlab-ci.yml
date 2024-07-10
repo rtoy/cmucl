@@ -5,12 +5,12 @@ variables:
 
 
 stages:
+  - link-check
   - install
   - build
   - test
   - ansi-test
   - benchmark
-  - link-check
 
 cache:
 
@@ -205,5 +205,4 @@ linkchecker:
     - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
     # Clone the wiki pages and check the links there.
     - git clone https://gitlab.common-lisp.net/cmucl/cmucl.wiki.git
-    - cd cmucl.wiki
-    - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
+    - find cmucl.wiki -name \*.md -print0 | xargs -0 -n1 markdown-link-check
