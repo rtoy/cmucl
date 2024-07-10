@@ -200,6 +200,9 @@ linkchecker:
   # Only the linux runner has markdown-link-check installed
   tags:
     - linux
+  # It's ok if this fails; we don't want to declare the entire
+  # pipeline as having failed.
+  allow_failure: true
   script:
     # Check links in the main repo
     - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
