@@ -10,6 +10,7 @@ stages:
   - test
   - ansi-test
   - benchmark
+  - link-check
 
 cache:
 
@@ -193,24 +194,16 @@ osx:benchmark:
     - ../../snapshot/bin/lisp -load report
 
 # From https://github.com/tcort/markdown-link-check
-linkchecker:
-  stage: test
-  image:
-    name: ghcr.io/tcort/markdown-link-check:3.11.2
-    entrypoint: ["/bin/sh", "-c"]
-  script:
-    - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
-  rules:
-    - changes:
-      - "**/*.md"
-
 # Checks links on the wiki pages whenever any wiki markdown pages change. 
-wikilinkchecker:
-  stage: test
+linkchecker:
+  stage: link-check
   image:
     name: ghcr.io/tcort/markdown-link-check:3.11.2
     entrypoint: ["/bin/sh", "-c"]
   script:
+    # Check links in the main repo
+    - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
+    # Clone the wiki pages and check the links there.
     - git clone https://gitlab.common-lisp.net/cmucl/cmucl.wiki.git
     - cd cmucl.wiki
     - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
