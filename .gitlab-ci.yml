@@ -197,9 +197,9 @@ osx:benchmark:
 # Checks links on the wiki pages whenever any wiki markdown pages change. 
 linkchecker:
   stage: link-check
-  image:
-    name: ghcr.io/tcort/markdown-link-check:3.11.2
-    entrypoint: ["/bin/sh", "-c"]
+  # Only the linux runner has markdown-link-check installed
+  tags:
+    - linux
   script:
     # Check links in the main repo
     - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
