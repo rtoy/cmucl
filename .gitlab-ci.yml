@@ -211,6 +211,6 @@ wikilinkchecker:
     name: ghcr.io/tcort/markdown-link-check:3.11.2
     entrypoint: ["/bin/sh", "-c"]
   script:
-    - git clone https://gitlab.common-lisp.net/cmucl.wiki.git
+    - git clone https://gitlab.common-lisp.net/cmucl/cmucl.wiki.git
     - cd cmucl.wiki
     - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
