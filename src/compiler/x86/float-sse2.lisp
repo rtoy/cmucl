@@ -773,10 +773,11 @@
 			(inst ,opinst x (,ea y)))
 		       (,stack-sc
 			(inst ,opinst x (,ea-stack y)))))
-		    ((and ,commutative (location= y r))
-		     ;; y = r and the operation is commutative, so just
-		     ;; do the operation with r and x.
-		     (inst ,opinst y x))
+		    ,@(when commutative
+                        `(((location= y r)
+		           ;; y = r and the operation is commutative, so just
+		           ;; do the operation with r and x.
+		           (inst ,opinst y x))))
 		    ((not (location= r y))
 		     ;; x, y, and r are three different regs.  So just
 		     ;; move r to x and do the operation on r.
@@ -1994,8 +1995,9 @@
        `(cond
 	 ((location= x r)
 	  (inst ,opinst x y))
-	 ((and ,commutative (location= y r))
-	  (inst ,opinst y x))
+	 ,@(when commutative
+             `(((location= y r)
+	        (inst ,opinst y x))))
 	 ((not (location= r y))
 	  (inst ,movinst r x)
 	  (inst ,opinst r y))
