@@ -25,7 +25,7 @@
      :conservative-float-type
      :complex-fp-vops
      :hash-new
-     :random-mt19937
+     :random-xoroshiro
      :cmu :cmu20 :cmu20b		; Version features
      :double-double			; double-double float support
      :linkage-table
@@ -44,7 +44,8 @@
      :propagate-fun-type :propagate-float-type :constrain-float-type
      :openbsd :freebsd :glibc2 :linux
      :mach-o :darwin
-     :long-float :new-random :small))
+     :long-float :new-random :small
+     :random-mt19937))
 ;;;
 (setf *features* (remove :bsd *features*))
 ;; Set up the linkage space stuff appropriately for x86-solaris.
