@@ -59,11 +59,6 @@
 (deftype codepoint ()
   `(integer 0 (,codepoint-limit)))
 
-(defconstant +ascii-limit+
-  127
-  "A character code strictly larger than this is handled using Unicode
-  rules.")
-
 ;; Table of mappings for upper case and lower case letters.  See
 ;; src/lisp/case-mapping.c.
 (alien:def-alien-variable "case_mapping" 
@@ -260,7 +255,7 @@
        (let ((m (char-code (the base-char char))))
 	 (or (<= (char-code #\space ) m (char-code #\~))
 	     #+(and unicode (not unicode-bootstrap))
-	     (and (> m +ascii-limit+)
+	     (and (> m c::+ascii-limit+)
 		  (>= (unicode-category m) +unicode-category-graphic+))))))
 
 
@@ -272,7 +267,7 @@
     (or (<= (char-code #\A) m (char-code #\Z))
         (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m +ascii-limit+)
+	(and (> m c::+ascii-limit+)
 	     (<= +unicode-category-letter+ (unicode-category m)
 		 (+ +unicode-category-letter+ #x0F))))))
 
@@ -284,7 +279,7 @@
   (let ((m (char-code char)))
     (or (<= (char-code #\A) m (char-code #\Z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m +ascii-limit+)
+	(and (> m c::+ascii-limit+)
              (not (zerop (ldb +lower-case-entry+ (case-mapping-entry m))))))))
 
 
@@ -295,7 +290,7 @@
   (let ((m (char-code char)))
     (or (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m +ascii-limit+)
+	(and (> m c::+ascii-limit+)
              (not (zerop (ldb +upper-case-entry+ (case-mapping-entry m))))))))
 
 (defun both-case-p (char)
@@ -307,7 +302,7 @@
     (or (<= (char-code #\A) m (char-code #\Z))
         (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m +ascii-limit+)
+	(and (> m c::+ascii-limit+)
              (not (zerop (case-mapping-entry m)))))))
 
 
@@ -341,7 +336,7 @@
         (<= (char-code #\A) m (char-code #\Z))
         (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m +ascii-limit+)
+	(and (> m c::+ascii-limit+)
 	     (<= +unicode-category-letter+ (unicode-category m)
 		 (+ +unicode-category-letter+ #x0F))))))
 
@@ -414,7 +409,7 @@
      (cond ((<= (char-code #\A) ch (char-code #\Z))
             (logxor ch #x20))
 	   #+(and unicode (not unicode-bootstrap))
-           ((> ch +ascii-limit+)
+           ((> ch c::+ascii-limit+)
             (case-mapping-lower-case ch))
            (t
             ch))))

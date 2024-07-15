@@ -21,6 +21,11 @@
 (in-package "C")
 (intl:textdomain "cmucl")
 
+(defconstant +ascii-limit+
+  127
+  "A character code strictly larger than this is handled using Unicode
+  rules.")
+
 ;;; Source transform for Not, Null  --  Internal
 ;;;
 ;;;    Convert into an IF so that IF optimizations will eliminate redundant
@@ -3345,7 +3350,7 @@
   '(let ((m (char-code x)))
     (cond ((<= (char-code #\a) m (char-code #\z))
            (code-char (logxor m #x20)))
-          ((> m lisp::+ascii-limit+)
+          ((> m +ascii-limit+)
            (code-char (lisp::case-mapping-upper-case m)))
 	   (t x))))
 
@@ -3359,7 +3364,7 @@
   '(let ((m (char-code x)))
     (cond ((<= (char-code #\A) m (char-code #\Z))
            (code-char (logxor m #x20)))
-          ((> m lisp::+ascii-limit+)
+          ((> m +ascii-limit+)
            (code-char (lisp::case-mapping-lower-case m)))
 	  (t x))))
 
