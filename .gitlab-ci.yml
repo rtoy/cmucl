@@ -56,6 +56,12 @@ linux:cross-build:
   stage: build
   tags:
     - linux
+  artifacts:
+    paths:
+      - xdist/
+      - linux-2/*.log
+      - linux-3/*.log
+      - linux-4/*.log
   needs:
     - job: linux:install
       artifacts: true
