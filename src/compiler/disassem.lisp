@@ -3609,7 +3609,12 @@ symbol object that we know about.")
 (defun get-nil-indexed-object (byte-offset)
   "Returns the lisp object located BYTE-OFFSET from NIL."
   (declare (type offset byte-offset))
-  (kernel:make-lisp-obj (+ nil-addr byte-offset)))
+  (values (kernel:make-lisp-obj (+ nil-addr byte-offset))
+          ;; Assume NIL indexed objects only come from the static
+          ;; space, so the byte offset must be in the static space
+          (<= 0 byte-offset
+              (- (* lisp::*static-space-free-pointer* vm:word-bytes)
+                 (lisp::static-space-start)))))
 
 (defun get-code-constant (byte-offset dstate)
   "Returns two values; the lisp-object located at BYTE-OFFSET in the constant
@@ -3787,11 +3792,13 @@ symbol object that we know about.")
   disassembled.  Returns non-NIL iff a note was recorded."
   (declare (type offset nil-byte-offset)
 	   (type disassem-state dstate))
-  (let ((obj (get-nil-indexed-object nil-byte-offset)))
-    (note #'(lambda (stream)
-	      (prin1-quoted-short obj stream))
-	  dstate)
-    t))
+  (multiple-value-bind (obj validp)
+      (get-nil-indexed-object nil-byte-offset)
+    (when validp
+      (note #'(lambda (stream)
+	        (prin1-quoted-short obj stream))
+	    dstate))
+    validp))
 
 (defun maybe-note-assembler-routine (address note-address-p dstate)
   "If ADDRESS is the address of a primitive assembler routine or
