@@ -63,7 +63,13 @@ linux:cross-build:
       - linux-3/*.log
       - linux-4/*.log
   needs:
-    - job: linux:install
+
+    # Normally need the linux:install stage to get the compiler to
+    # use.  But for #337, we need the normal build from linux:build to
+    # do the cross-compile.  Once the snapshot is made, we can use
+    # linux:install instead.
+    - job: linux:build
+    #- job: linux:install
       artifacts: true
   script:
     - bin/create-target.sh xtarget
