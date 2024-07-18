@@ -495,7 +495,7 @@
     (cond ((<= (char-code #\a) m (char-code #\z))
            (code-char (logxor m #x20)))
           #+(and unicode (not unicode-bootstrap))
-	  ((> m c::+ascii-limit+)
+	  ((> m lisp::+ascii-limit+)
            (code-char (lisp::unicode-title m)))
 	  (t char))))
 
@@ -506,7 +506,7 @@
   (let ((m (char-code char)))
     (or (<= (char-code #\A) m (char-code #\Z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m c::+ascii-limit+)
+	(and (> m lisp::+ascii-limit+)
 	     (= (unicode-category m) +unicode-category-title+)))))
 
 (defun string-capitalize-unicode (string &key (start 0) end (casing :simple))

@@ -5445,6 +5445,12 @@ msgstr ""
 
 #: src/code/char.lisp
 msgid ""
+"A character code strictly larger than this is handled using Unicode\n"
+"  rules."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
 "Number of bits used for the index of the second stage table of the\n"
 "  case mapping table."
 msgstr ""
@@ -19147,12 +19153,6 @@ msgstr ""
 
 #: src/compiler/saptran.lisp
 msgid "FOREIGN-SYMBOL-ADDRESS flavor ~S is not :CODE or :DATA"
-msgstr ""
-
-#: src/compiler/srctran.lisp
-msgid ""
-"A character code strictly larger than this is handled using Unicode\n"
-"  rules."
 msgstr ""
 
 #: src/compiler/srctran.lisp
