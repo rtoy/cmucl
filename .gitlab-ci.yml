@@ -75,8 +75,8 @@ linux:cross-build:
     - bin/create-target.sh xtarget
     - bin/create-target.sh xcross
     - bin/cross-build-world.sh -crl xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp dist/bin/lisp
-    - bin/build.sh $bootstrap -R -C "" -o xtarget/lisp/lisp
-    - bin/make-dist.sh -V `git describe --dirty` -I xdist linux-4
+    - bin/build.sh -b xlinux $bootstrap -R -C "" -o xtarget/lisp/lisp
+    - bin/make-dist.sh -V `git describe --dirty` -I xdist xlinux-4
 
 linux:test:
   stage: test
