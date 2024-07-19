@@ -3313,8 +3313,8 @@
   #+(and unicode (not unicode-bootstrap))
   '(let* ((ac (char-code a))
 	  (bc (char-code b)))
-     (if (and (<= ac #x7f)
-	      (<= bc #x7f))
+     (if (and (<= ac +ascii-limit+)
+	      (<= bc +ascii-limit+))
 	 ;; ASCII
 	 (let ((sum (logxor ac bc)))
 	   (or (zerop sum)
