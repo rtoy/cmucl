@@ -60,8 +60,17 @@ globals_init(void)
     foreign_function_call_active = 1;
 
     /* Initialize the current lisp state. */
-#if !(defined(i386) || defined(__x86_64))
+#if !(defined(i386) || defined(__x86_64) || defined(__arm__))
     current_control_stack_pointer = control_stack;
+#elif defined(__arm__)
+    /*
+     * On ARM, we want the Lisp control stack to grow down.
+     * control_stack_end points at the top of the control stack on
+     * ARM, which is just past the end of the control stack space, and
+     * this isn't writable.  Back up a word so that the control stack
+     * pointer points inside the control stack space.
+     */
+    current_control_stack_pointer = control_stack_end - 1;
 #else
     current_control_stack_pointer = control_stack_end;
 #endif

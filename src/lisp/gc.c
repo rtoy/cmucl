@@ -35,13 +35,17 @@ static void scavenge_newspace(void);
 static void scavenge_interrupt_contexts(void);
 static void scan_weak_pointers(void);
 
-#define gc_abort() lose("GC invariant lost!  File \"%s\", line %d\n", \
-			__FILE__, __LINE__)
-
+#define gc_abort() \
+  do { \
+      lose("GC invariant lost!  File \"%s\", line %d\n", __FILE__, __LINE__); \
+      abort(); \
+  } while (0)
+  
 #if DEBUG
-#define gc_assert(ex) do { \
-	if (!(ex)) gc_abort(); \
-} while (0)
+#define gc_assert(ex) \
+  do { \
+      if (!(ex)) gc_abort(); \
+  } while (0)
 #else
 #define gc_assert(ex)
 #endif
@@ -206,7 +210,7 @@ collect_garbage(void)
     /* Set up from space and new space pointers. */
 
     from_space = current_dynamic_space;
-#ifndef ibmrt
+#ifndef ALLOCATION_POINTER
     from_space_free_pointer = current_dynamic_space_free_pointer;
 #else
     from_space_free_pointer = (lispobj *) SymbolValue(ALLOCATION_POINTER);
@@ -246,7 +250,7 @@ collect_garbage(void)
 #endif
     scavenge(control_stack, control_stack_size);
 
-#ifndef ibmrt
+#if !defined(BINDING_STACK_POINTER)
     binding_stack_size = current_binding_stack_pointer - binding_stack;
 #else
     binding_stack_size =
@@ -294,7 +298,7 @@ collect_garbage(void)
 	    (os_vm_size_t) dynamic_space_size);
 
     current_dynamic_space = new_space;
-#ifndef ibmrt
+#ifndef ALLOCATION_POINTER
     current_dynamic_space_free_pointer = new_space_free_pointer;
 #else
     SetSymbolValue(ALLOCATION_POINTER, (lispobj) new_space_free_pointer);
@@ -556,14 +560,17 @@ print_garbage(lispobj * from_space, lispobj * from_space_free_pointer)
 		  header = *pointer;
 		  type = TypeOf(header);
 		  nwords = (sizetab[type]) (pointer);
+              default:
+                  gc_abort();
+                  break;
 	    }
 	} else {
 	    type = TypeOf(object);
 	    nwords = (sizetab[type]) (start);
 	    total_words_not_copied += nwords;
-	    printf("%4d words not copied at 0x%08x; ",
+	    printf("%4d words not copied at 0x%08lx; ",
 		   nwords, (unsigned long) start);
-	    printf("Header word is 0x%08x\n", (unsigned long) object);
+	    printf("Header word is 0x%08lx\n", (unsigned long) object);
 	}
 	start += nwords;
     }
@@ -817,7 +824,7 @@ scav_return_pc_header(lispobj * where, lispobj object)
 {
     fprintf(stderr, "GC lossage.  Should not be scavenging a ");
     fprintf(stderr, "Return PC Header.\n");
-    fprintf(stderr, "where = 0x%08x, object = 0x%08x",
+    fprintf(stderr, "where = 0x%08lx, object = 0x%08lx\n",
 	    (unsigned long) where, (unsigned long) object);
     lose(NULL);
     return 0;
@@ -866,7 +873,7 @@ scav_function_header(lispobj * where, lispobj object)
 {
     fprintf(stderr, "GC lossage.  Should not be scavenging a ");
     fprintf(stderr, "Function Header.\n");
-    fprintf(stderr, "where = 0x%08x, object = 0x%08x",
+    fprintf(stderr, "where = 0x%08lx, object = 0x%08lx\n",
 	    (unsigned long) where, (unsigned long) object);
     lose(NULL);
     return 0;
@@ -1954,7 +1961,7 @@ scan_weak_pointers(void)
 static int
 scav_lose(lispobj * where, lispobj object)
 {
-    fprintf(stderr, "GC lossage.  No scavenge function for object 0x%08x\n",
+    fprintf(stderr, "GC lossage.  No scavenge function for object 0x%08lx\n",
 	    (unsigned long) object);
     lose(NULL);
     return 0;
@@ -1963,7 +1970,7 @@ scav_lose(lispobj * where, lispobj object)
 static lispobj
 trans_lose(lispobj object)
 {
-    fprintf(stderr, "GC lossage.  No transport function for object 0x%08x\n",
+    fprintf(stderr, "GC lossage.  No transport function for object 0x%08lx\n",
 	    (unsigned long) object);
     lose(NULL);
     return NIL;
@@ -1972,9 +1979,9 @@ trans_lose(lispobj object)
 static int
 size_lose(lispobj * where)
 {
-    fprintf(stderr, "Size lossage.  No size function for object at 0x%08x\n",
+    fprintf(stderr, "Size lossage.  No size function for object at 0x%08lx\n",
 	    (unsigned long) where);
-    fprintf(stderr, "First word of object: 0x%08x\n", (unsigned long) *where);
+    fprintf(stderr, "First word of object: 0x%08lx\n", (unsigned long) *where);
     return 1;
 }
 
@@ -2309,11 +2316,14 @@ gc_init(void)
 void
 set_auto_gc_trigger(os_vm_size_t dynamic_usage)
 {
+#ifdef ALLOCATION_POINTER
+#define current_dynamic_space_free_pointer SymbolValue(ALLOCATION_POINTER)
+#endif
+
     os_vm_address_t addr = (os_vm_address_t) current_dynamic_space +
-
 	dynamic_usage;
-    long length =
 
+    long length =
 	dynamic_space_size + (os_vm_address_t) current_dynamic_space - addr;
 
     if (addr < (os_vm_address_t) current_dynamic_space_free_pointer) {
@@ -2323,6 +2333,7 @@ set_auto_gc_trigger(os_vm_size_t dynamic_usage)
 		(os_vm_address_t) current_dynamic_space_free_pointer
 		- (os_vm_address_t) current_dynamic_space);
 	return;
+#undef current_dynamic_space_free_pointer
     } else if (length < 0) {
 	fprintf(stderr,
 		"set_auto_gc_trigger: tried to set gc trigger too high! (%d)\n",
@@ -2345,7 +2356,6 @@ set_auto_gc_trigger(os_vm_size_t dynamic_usage)
     fprintf(stderr, "current_auto_gc_trigger set to %p\n",
 	    current_auto_gc_trigger);
 #endif
-
 }
 
 void

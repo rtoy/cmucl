@@ -52,6 +52,32 @@ linux:build:
     # describe return something that make-dist.sh doesn't like.
     - bin/make-dist.sh -V `git describe --dirty` -I dist linux-4
 
+linux:cross-build:
+  stage: build
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - xdist/
+      - linux-2/*.log
+      - linux-3/*.log
+      - linux-4/*.log
+  needs:
+
+    # Normally need the linux:install stage to get the compiler to
+    # use.  But for #337, we need the normal build from linux:build to
+    # do the cross-compile.  Once the snapshot is made, we can use
+    # linux:install instead.
+    - job: linux:build
+    #- job: linux:install
+      artifacts: true
+  script:
+    - bin/create-target.sh xtarget
+    - bin/create-target.sh xcross
+    - bin/cross-build-world.sh -crl xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp dist/bin/lisp
+    - bin/build.sh -b xlinux $bootstrap -R -C "" -o xtarget/lisp/lisp
+    - bin/make-dist.sh -V `git describe --dirty` -I xdist xlinux-4
+
 linux:test:
   stage: test
   tags:
@@ -66,6 +92,21 @@ linux:test:
       artifacts: true
   script:
     - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
+linux:cross-test:
+  stage: test
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - ansi-test/test.out
+      - cross-test.log
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: linux:cross-build
+      artifacts: true
+  script:
+    - bin/run-unit-tests.sh -l xdist/bin/lisp 2>&1 | tee cross-test.log
 
 linux:ansi-test:
   stage: ansi-test
@@ -103,7 +144,7 @@ linux:benchmark:
 osx:install:
   stage: install
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - snapshot/
@@ -111,11 +152,14 @@ osx:install:
     - /opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
+    - echo PATH = $PATH
+    - ls -F /usr/local/bin
+    - type -all gitlab-runner
 
 osx:build:
   stage: build
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - dist/
@@ -140,7 +184,7 @@ osx:build:
 osx:test:
   stage: test
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - ansi-test/test.out
@@ -156,7 +200,7 @@ osx:test:
 osx:ansi-test:
   stage: ansi-test
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - ansi-test/test.out
@@ -173,7 +217,7 @@ osx:ansi-test:
 osx:benchmark:
   stage: benchmark
   tags:
-    - osx
+    - macos-virtualbox
   artifacts:
     paths:
       - benchmarks/cl-bench/results

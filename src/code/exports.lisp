@@ -1067,7 +1067,8 @@
    "CHAR-TITLECASE" "TITLE-CASE-P"
    "GLYPH" "SGLYPH"
    "STRING-TO-NFC"
-   "CODEPOINT-LIMIT" "CODEPOINT")
+   "CODEPOINT-LIMIT" "CODEPOINT"
+   "+ASCII-LIMIT+")
   ;; Unicode
   (:export "STRING-TO-NFC" "STRING-TO-NFD"
 	   "STRING-TO-NFKC" "STRING-TO-NFKD"
@@ -1128,6 +1129,7 @@
 	    #+alpha "ALPHA"
 	    #+sgi "SGI"
 	    #+ppc "PPC"
+            #+arm "ARM"
             (:nicknames "VM" #+(or pmax sgi) "MIPS")
             (:import-from "LISP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET"
              "%PUT" "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
@@ -1857,7 +1859,8 @@
 		"%SP-STRING-COMPARE"
 		"%SVSET" "%TYPEP" "SHORT-FLOAT-P"
 		"STRING/=*" "STRING<*" "STRING<=*" "STRING=*"
-		"STRING>*" "STRING>=*")
+		"STRING>*" "STRING>=*"
+                "+ASCII-LIMIT+")
   (:import-from "SYSTEM" "FOREIGN-SYMBOL-ADDRESS" "FOREIGN-SYMBOL-CODE-ADDRESS"
 		"FOREIGN-SYMBOL-DATA-ADDRESS")
   (:import-from "EXTENSIONS"

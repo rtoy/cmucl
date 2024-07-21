@@ -192,3 +192,19 @@
 			      computed-breaks)))
 		     (assert-equalp b
 				    (do-test s)))))))))
+
+(define-test unicode.case-extend
+  "Test that Unicode never produces an upper or lower case character
+  outside the BMP for a character in the BMP"
+  (:tag :unicode)
+  ;; For each character code (that isn't a surrogate), find the
+  ;; corresponding Unicode upper and lowe case character.  Verify that
+  ;; this character is in the BMP.
+  (loop for code from 0 below char-code-limit
+        unless (lisp::surrogatep code)
+          do
+             (assert-true (< (lisp::unicode-upper code) char-code-limit)
+                          code (lisp::unicode-upper code))
+             (assert-true (< (lisp::unicode-lower code) char-code-limit)
+                          code (lisp::unicode-upper code))))
+             
