@@ -164,9 +164,8 @@ default_cmucllib(const char *argv0arg)
     if (argv0_dir[0] == '/') {
 	cwd = malloc(strlen(argv0_dir) + 2);
         check_ptr(cwd, "No space to duplicate argv0");
-        
-	strcpy(cwd, argv0_dir);
-	strcat(cwd, "/");
+
+        sprintf(cwd, "%s/", argv0_dir);
 	if (debug_lisp_search) {
 	    fprintf(stderr, "absolute path, argv[0] = %s\n", cwd);
 	}
