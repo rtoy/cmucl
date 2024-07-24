@@ -62,6 +62,8 @@ linux:cross-build:
       - linux-2/*.log
       - linux-3/*.log
       - linux-4/*.log
+      # The lisp directory is needed for the static analyzer job.
+      - linux-4/lisp
   needs:
 
     # Normally need the linux:install stage to get the compiler to
