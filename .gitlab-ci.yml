@@ -238,7 +238,7 @@ osx:benchmark:
 linux:static-analyzer:
   stage: build
   rules:
-    - if: $CI_PIPELINE_SOURCE = "schedule"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
     - when: manual
   tags:
     - linux
