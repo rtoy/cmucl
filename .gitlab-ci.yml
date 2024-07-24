@@ -232,3 +232,18 @@ osx:benchmark:
     - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
     - ../../snapshot/bin/lisp -load report
+
+linux:static-analyzer
+  stage: build
+  when: manual
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - analyzer.log
+  needs:
+    - job: linux:build
+      artifacts: true
+  script:
+    - make -C linux-4/lisp clean
+    - make -C linux-4/lisp CFLAGS=-fanalyzer 2>&1 | tee analyzer.log
