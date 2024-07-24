@@ -252,5 +252,9 @@ linux:static-analyzer:
     - job: linux:build
       artifacts: true
   script:
+    # Analysis can generate huge amounts of output.  For now just save
+    # the results to the log file instead of also having it go to the
+    # console.  If someday there's less or no output, we can consider
+    # having the logs go to the console too.
     - make -C linux-4/lisp clean
-    - make -C linux-4/lisp CFLAGS=-fanalyzer 2>&1 | tee analyzer.log
+    - make -C linux-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 
