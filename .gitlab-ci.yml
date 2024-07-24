@@ -46,8 +46,10 @@ linux:build:
     #- bin/create-target.sh xtarget x86_linux_clang
     #- bin/create-target.sh xcross x86_linux_clang
     #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
-    # Regular build using the cross-compiled result or snapshot
-    - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o snapshot/bin/lisp
+    # Regular build using the cross-compiled result or snapshot.  The
+    # analyzer job requires gcc, so make sure we build with gcc here
+    # instead of clang. 
+    - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     # Use -V to specify the version in case some tag makes git
     # describe return something that make-dist.sh doesn't like.
