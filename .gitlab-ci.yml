@@ -233,7 +233,7 @@ osx:benchmark:
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
     - ../../snapshot/bin/lisp -load report
 
-linux:static-analyzer
+linux:static-analyzer:
   stage: build
   when: manual
   tags:
