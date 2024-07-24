@@ -789,6 +789,8 @@ main(int argc, const char *argv[], const char *envp[])
         }
     }
 
+    check_ptr(cmucllib, "cmucllib must not be NULL");
+
     /* Only look for a core file if we're not using a built-in image. */
     if (builtin_image_flag == 0) {
 	/*
