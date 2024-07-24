@@ -236,15 +236,11 @@ osx:benchmark:
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
     - ../../snapshot/bin/lisp -load report
 
-# Optional job that runs the static analyzer.  Either manually start
-# it or let it run automatically when scheduled pipelines run.
-# It needs the files from the linux-4 directory built in the
-# linux:build job.
+# Optional job that runs the static analyzer.  It needs the files from
+# the linux-4 directory built in the linux:build job.
 linux:static-analyzer:
   stage: analyze
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-    - when: manual
+  when: manual
   tags:
     - linux
   artifacts:
