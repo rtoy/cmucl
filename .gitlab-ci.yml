@@ -10,6 +10,7 @@ stages:
   - test
   - ansi-test
   - benchmark
+  - analyze
 
 cache:
 
@@ -236,7 +237,7 @@ osx:benchmark:
     - ../../snapshot/bin/lisp -load report
 
 linux:static-analyzer:
-  stage: build
+  stage: analyze
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - when: manual
