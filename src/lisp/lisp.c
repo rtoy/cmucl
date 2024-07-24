@@ -442,16 +442,24 @@ fpu_mode_t fpu_mode = SSE2;
 static const char*
 locate_core(const char* cmucllib, const char* core, const char* default_core)
 {
+    char* searched_core = NULL;
+    
     if (core == NULL) {
         if (getenv("CMUCLCORE") == NULL) {
-            core = search_core(cmucllib, default_core);
+            searched_core = search_core(cmucllib, default_core);
+            core = searched_core;
         } else {
             core = getenv("CMUCLCORE");
         }
     }
 
-    if (core && access(core, R_OK) != 0) {
-      return NULL;
+    if (core) {
+        if (access(core, R_OK) != 0) {
+            if (searched_core) {
+                free(searched_core);
+            }
+            return NULL;
+        }
     }
     
     return core;
