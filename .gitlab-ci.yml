@@ -37,7 +37,7 @@ linux:build:
       - dist/
       - linux-2/*.log
       - linux-3/*.log
-      - linux-4/*.log
+      - linux-4/
   needs:
     - job: linux:install
       artifacts: true
