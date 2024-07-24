@@ -451,7 +451,7 @@ locate_core(const char* cmucllib, const char* core, const char* default_core)
     }
 
     if (core && access(core, R_OK) != 0) {
-      core = NULL;
+      return NULL;
     }
     
     return core;
