@@ -45,7 +45,7 @@
 
 
 static void
-check_ptr(const void* ptr, const char* msg)
+check_ptr(const void *ptr, const char *msg)
 {
     if (ptr == NULL) {
         perror(msg);
