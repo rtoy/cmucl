@@ -758,15 +758,13 @@ main(int argc, const char *argv[], const char *envp[])
      * neither are set, set cmucllib to our default search path.
      */
     if (lib != NULL) {
-	cmucllib = strdup(lib);
-        check_ptr(cmucllib, "No space for strdup(lib)");
+	cmucllib = lib;
     } else {
 	char *libvar;
 
 	libvar = getenv("CMUCLLIB");
 	if (libvar != NULL) {
-	    cmucllib = strdup(libvar);
-            check_ptr(cmucllib, "No space for strdup(libvar)");
+	    cmucllib = libvar;
 	} else {
 	    /*
              * The following doesn't make sense for executables.  They
