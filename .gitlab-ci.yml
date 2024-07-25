@@ -10,6 +10,7 @@ stages:
   - test
   - ansi-test
   - benchmark
+  - analyze
 
 cache:
 
@@ -36,7 +37,7 @@ linux:build:
       - dist/
       - linux-2/*.log
       - linux-3/*.log
-      - linux-4/*.log
+      - linux-4/
   needs:
     - job: linux:install
       artifacts: true
@@ -45,8 +46,10 @@ linux:build:
     #- bin/create-target.sh xtarget x86_linux_clang
     #- bin/create-target.sh xcross x86_linux_clang
     #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
-    # Regular build using the cross-compiled result or snapshot
-    - bin/build.sh $bootstrap -R -C "x86_linux_clang" -o snapshot/bin/lisp
+    # Regular build using the cross-compiled result or snapshot.  The
+    # analyzer job requires gcc, so make sure we build with gcc here
+    # instead of clang. 
+    - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     # Use -V to specify the version in case some tag makes git
     # describe return something that make-dist.sh doesn't like.
@@ -62,6 +65,8 @@ linux:cross-build:
       - linux-2/*.log
       - linux-3/*.log
       - linux-4/*.log
+      # The lisp directory is needed for the static analyzer job.
+      - linux-4/lisp
   needs:
 
     # Normally need the linux:install stage to get the compiler to
@@ -232,3 +237,24 @@ osx:benchmark:
     - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
     - ../../snapshot/bin/lisp -load report
+
+# Optional job that runs the static analyzer.  It needs the files from
+# the linux-4 directory built in the linux:build job.
+linux:static-analyzer:
+  stage: analyze
+  when: manual
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - analyzer.log
+  needs:
+    - job: linux:build
+      artifacts: true
+  script:
+    # Analysis can generate huge amounts of output.  For now just save
+    # the results to the log file instead of also having it go to the
+    # console.  If someday there's less or no output, we can consider
+    # having the logs go to the console too.
+    - make -C linux-4/lisp clean
+    - make -C linux-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 
