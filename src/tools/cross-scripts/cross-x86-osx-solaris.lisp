@@ -26,7 +26,7 @@
      :complex-fp-vops
      :hash-new
      :random-mt19937
-     :cmu :cmu20 :cmu20b		; Version features
+     :cmu :cmu21 :cmu21e		; Version features
      :double-double			; double-double float support
      :linkage-table
 
