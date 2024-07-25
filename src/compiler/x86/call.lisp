@@ -49,6 +49,8 @@
 ;;; No problems.
 ;#+nil
 (def-vm-support-routine make-return-pc-passing-location (standard)
+  ;; Should be IGNORE, not IGNORABLE; We're just silencing a compiler
+  ;; note.
   (declare (ignorable standard))
   (make-wired-tn (primitive-type-or-lose 'system-area-pointer *backend*)
 		 sap-stack-sc-number return-pc-save-offset))
@@ -77,6 +79,8 @@
 ;;; No problems
 ;#+nil
 (def-vm-support-routine make-old-fp-passing-location (standard)
+  ;; Should be IGNORE, not IGNORABLE; We're just silencing a compiler
+  ;; note.
   (declare (ignorable standard))
   (make-wired-tn *fixnum-primitive-type* control-stack-sc-number
 		 ocfp-save-offset))
