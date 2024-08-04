@@ -19,6 +19,7 @@ linux:install:
   stage: install
   tags:
     - linux
+    - opensuse
   artifacts:
     paths:
       - snapshot/
@@ -32,6 +33,7 @@ linux:build:
   stage: build
   tags:
     - linux
+    - opensuse
   artifacts:
     paths:
       - dist/
