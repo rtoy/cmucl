@@ -259,43 +259,43 @@ linux:static-analyzer:
     - make -C linux-4/lisp clean
     - make -C linux-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 
 
-#opensuse:install:
-#  stage: install
-#  tags:
-#    - opensus
-#  artifacts:
-#    paths:
-#      - snapshot/
-#  script:
-#    - wget -nv $download_url/cmucl-$version-linux.tar.bz2
-#    - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
-#    - mkdir snapshot
-#    - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
-#
-#opensuse:build:
-#  stage: build
-#  tags:
-#    - opensuse
-#  artifacts:
-#    paths:
-#      - dist/
-#      - linux-2/*.log
-#      - linux-3/*.log
-#      - linux-4/
-#  needs:
-#    - job: linux:install
-#      artifacts: true
-#  script:
-#    # Do cross compile first
-#    #- bin/create-target.sh xtarget x86_linux_clang
-#    #- bin/create-target.sh xcross x86_linux_clang
-#    #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
-#    # Regular build using the cross-compiled result or snapshot.  The
-#    # analyzer job requires gcc, so make sure we build with gcc here
-#    # instead of clang. 
-#    - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
-#    # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
-#    # Use -V to specify the version in case some tag makes git
-#    # describe return something that make-dist.sh doesn't like.
-#    - bin/make-dist.sh -V `git describe --dirty` -I dist linux-4
+opensuse:install:
+  stage: install
+  tags:
+    - opensuse
+  artifacts:
+    paths:
+      - snapshot/
+  script:
+    - wget -nv $download_url/cmucl-$version-linux.tar.bz2
+    - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
+    - mkdir snapshot
+    - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
+
+opensuse:build:
+  stage: build
+  tags:
+    - opensuse
+  artifacts:
+    paths:
+      - dist/
+      - linux-2/*.log
+      - linux-3/*.log
+      - linux-4/
+  needs:
+    - job: linux:opensuse
+      artifacts: true
+  script:
+    # Do cross compile first
+    #- bin/create-target.sh xtarget x86_linux_clang
+    #- bin/create-target.sh xcross x86_linux_clang
+    #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
+    # Regular build using the cross-compiled result or snapshot.  The
+    # analyzer job requires gcc, so make sure we build with gcc here
+    # instead of clang. 
+    - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
+    # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
+    # Use -V to specify the version in case some tag makes git
+    # describe return something that make-dist.sh doesn't like.
+    - bin/make-dist.sh -V `git describe --dirty` -I dist linux-4
 
