@@ -283,7 +283,7 @@ opensuse:build:
       - linux-3/*.log
       - linux-4/
   needs:
-    - job: linux:opensuse
+    - job: opensuse:install
       artifacts: true
   script:
     # Do cross compile first
