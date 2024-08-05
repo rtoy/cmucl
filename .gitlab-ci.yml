@@ -154,12 +154,12 @@ osx:install:
     paths:
       - snapshot/
   script:
-    - /opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
-    - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
     - echo PATH = $PATH
     - ls -F /usr/local/bin
     - type -all gitlab-runner
+    - /opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
+    - mkdir snapshot
+    - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
 
 osx:build:
   stage: build
