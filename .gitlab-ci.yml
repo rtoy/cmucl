@@ -299,3 +299,32 @@ opensuse:build:
     # describe return something that make-dist.sh doesn't like.
     - bin/make-dist.sh -V `git describe --dirty` -I dist linux-4
 
+opensuse:test:
+  stage: test
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - ansi-test/test.out
+      - test.log
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: opensuse:build
+      artifacts: true
+  script:
+    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
+opensuse:ansi-test:
+  stage: ansi-test
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - ansi-test/test.out
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: opensuse:build
+      artifacts: true
+  script:
+    - bin/run-ansi-tests.sh -l dist/bin/lisp
+
