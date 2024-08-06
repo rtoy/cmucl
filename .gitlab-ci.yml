@@ -154,12 +154,12 @@ osx:install:
     paths:
       - snapshot/
   script:
-    - /opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
-    - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
     - echo PATH = $PATH
     - ls -F /usr/local/bin
     - type -all gitlab-runner
+    - /opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
+    - mkdir snapshot
+    - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
 
 osx:build:
   stage: build
@@ -258,3 +258,73 @@ linux:static-analyzer:
     # having the logs go to the console too.
     - make -C linux-4/lisp clean
     - make -C linux-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 
+
+opensuse:install:
+  stage: install
+  tags:
+    - opensuse
+  artifacts:
+    paths:
+      - snapshot/
+  script:
+    - wget -nv $download_url/cmucl-$version-linux.tar.bz2
+    - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
+    - mkdir snapshot
+    - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
+
+opensuse:build:
+  stage: build
+  tags:
+    - opensuse
+  artifacts:
+    paths:
+      - dist/
+      - linux-2/*.log
+      - linux-3/*.log
+      - linux-4/
+  needs:
+    - job: opensuse:install
+      artifacts: true
+  script:
+    # Do cross compile first
+    #- bin/create-target.sh xtarget x86_linux_clang
+    #- bin/create-target.sh xcross x86_linux_clang
+    #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
+    # Regular build using the cross-compiled result or snapshot.  The
+    # analyzer job requires gcc, so make sure we build with gcc here
+    # instead of clang. 
+    - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
+    # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
+    # Use -V to specify the version in case some tag makes git
+    # describe return something that make-dist.sh doesn't like.
+    - bin/make-dist.sh -V `git describe --dirty` -I dist linux-4
+
+opensuse:test:
+  stage: test
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - ansi-test/test.out
+      - test.log
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: opensuse:build
+      artifacts: true
+  script:
+    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
+opensuse:ansi-test:
+  stage: ansi-test
+  tags:
+    - linux
+  artifacts:
+    paths:
+      - ansi-test/test.out
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: opensuse:build
+      artifacts: true
+  script:
+    - bin/run-ansi-tests.sh -l dist/bin/lisp
+
