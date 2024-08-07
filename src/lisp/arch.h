@@ -76,4 +76,8 @@ extern void restore_fpu_state(void*);
 #if defined(sparc)
 #include "sparc-arch.h"
 #endif
+
+#if defined(__arm__)
+#include "arm-arch.h"
+#endif
 #endif /* __ARCH_H__ */
