@@ -5,7 +5,7 @@
 
 */
 
-#ifndef __ARM_ARCH_H
+#ifndef ARM_ARCH_H
 /*
  * Set to non-zero to enable debug prints for debugging the sigill and
  * sigtrap handlers and for debugging breakpoints.
