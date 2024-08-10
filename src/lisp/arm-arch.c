@@ -18,6 +18,13 @@
 #include "breakpoint.h"
 #include "interr.h"
 
+/*
+ * Set to positive value to enabled debug prints related to the sigill
+ * and sigtrap handlers.  Also enables prints related to handling of
+ * breakpoints.
+ */
+unsigned int debug_handlers = 0;
+
 char *
 arch_init(fpu_mode_t mode)
 {

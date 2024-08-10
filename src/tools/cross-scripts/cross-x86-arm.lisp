@@ -16,7 +16,7 @@
      :relative-package-names		; Relative package names from Allegro
      :conservative-float-type
      :hash-new
-     :random-mt19937			; MT-19937 generator
+     :random-xoroshiro
      :modular-arith			; Modular arithmetic
      :double-double			; Double-double float support
      :unicode
@@ -52,6 +52,7 @@
      :complex-fp-vops
      :alien-callback
      :linkage-table
+     :random-mt19937
      ))
 
 ;; Temporarily use large values so that error messages in the logs
