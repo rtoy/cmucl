@@ -1118,3 +1118,11 @@
   (assert-error 'file-error
                  (load "unknown.lisp" :if-does-not-exist t))
   (assert-false (load "unknown.lisp" :if-does-not-exist nil)))
+
+(define-test issue.339.646-external-format
+    (:tag :issues)
+  ;; Just verify that the external format :646 exists and is the same
+  ;; as :iso646-us.
+  (assert-true (stream::find-external-format :646 nil))
+  (assert-true (eq (stream::find-external-format :646 nil)
+		   (stream::find-external-format :iso646-us nil))))
