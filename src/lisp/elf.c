@@ -11,11 +11,11 @@
  $Id: elf.c,v 1.32 2010/12/23 03:20:27 rtoy Exp $
 */
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -319,59 +319,65 @@ write_space_object(const char *dir, int id, os_vm_address_t start, os_vm_address
     return ret;
 }
 
+#ifdef UNICODE
+#define LISPCHAR unsigned short
+#else
+#define LISPCHAR char
+#endif
+
+static LISPCHAR *
+tokenize(LISPCHAR *str, LISPCHAR **end)
+{
+    LISPCHAR *ptr;
+
+    ptr = str;
+again:
+    while (*ptr != '\0' && *ptr != ':')
+	ptr++;
+    if (str == ptr && *ptr == ':') {
+	str = ++ptr;
+	goto again;
+    }
+    *end = ptr;
+    return str;
+}
+
 int
 obj_run_linker(long init_func_address, char *file)
 {
     lispobj libstring = SymbolValue(CMUCL_LIB);     /* Get library: */
     struct vector *vec = (struct vector *)PTR(libstring);
-    char *paths;
-    char command[FILENAME_MAX + 1];
-    char command_line[FILENAME_MAX + FILENAME_MAX + 10];
-    char *strptr;
-    struct stat st;
+    char command[PATH_MAX];
+    char command_line[PATH_MAX * 2 + 10];
+    LISPCHAR *strptr, *end = (LISPCHAR *)vec->data;
     int ret;
     extern int debug_lisp_search;
-#ifndef UNICODE
-    paths = strdup((char *)vec->data);
-    if (paths == NULL) {
-	perror("strdup");
-	return -1;
-    }
-#else
-    /*
-     * What should we do here with 16-bit characters?  For now we just
-     * take the low 8-bits.
-     */
-    paths = malloc(vec->length);
-    if (paths == NULL) {
-	perror("malloc");
-	return -1;
-    } else {
-        int k;
-        unsigned short *data;
-        data = (unsigned short*) vec->data;
-        
-        for (k = 0; k < vec->length; ++k) {
-            paths[k] = data[k] & 0xff;
-        }
-    }
-#endif
-    strptr = strtok(paths, ":");
 
     if (debug_lisp_search) {
         printf("Searching for linker.sh script\n");
     }
 
-    while(strptr != NULL) {
-        
-	sprintf(command, "%s/%s", strptr, LINKER_SCRIPT);
+    while ((strptr = tokenize(end, &end)) != end) {
+	ptrdiff_t len = end - strptr;
+	ptrdiff_t i;
+
+	if (len + strlen("/" LINKER_SCRIPT) > PATH_MAX)
+	    continue;
+
+	/*
+	 * What should we do here with 16-bit characters?  For now we just
+	 * take the low 8-bits.
+	 */
+	for (i = 0; i < len; i++)
+	    command[i] = strptr[i] & 0xFF;
+	command[i] = '\0';
+	strcat(command, "/" LINKER_SCRIPT);
 
         if (debug_lisp_search) {
             printf("  %s\n", command);
         }
         
-	if (stat(command, &st) == 0) {
-	    free(paths);
+	if (access(command, F_OK) == 0) {
 	    printf("\t[%s: linking %s... \n", command, file);
 	    fflush(stdout);
 #if defined(__linux__) || defined(__FreeBSD__) || defined(SOLARIS) || defined(__NetBSD__)
@@ -394,15 +400,14 @@ obj_run_linker(long init_func_address, char *file)
 	    }
 	    return ret;
 	}
-	strptr = strtok(NULL, ":");
     }
 
     fprintf(stderr,
 	    "Can't find %s script in CMUCL library directory list.\n", LINKER_SCRIPT);
-    free(paths);
     return -1;
 }
 
+#undef LISPCHAR
 
 /* Read the ELF header from a file descriptor and stuff it into a
 	 structure.	 Make sure it is really an elf header etc. */
