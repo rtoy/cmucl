@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _DARWIN_OS_H_
-#define _DARWIN_OS_H_
+#ifndef DARWIN_OS_H
+#define DARWIN_OS_H
 
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -42,4 +42,4 @@ void restore_fpu(ucontext_t *);
 
 #define PROTECTION_VIOLATION_SIGNAL SIGBUS
 
-#endif /* _DARWIN_OS_H_ */
+#endif /* DARWIN_OS_H */

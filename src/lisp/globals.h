@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _GLOBALS_H_
-#define _GLOBALS_H_
+#ifndef GLOBALS_H
+#define GLOBALS_H
 
 #ifndef LANGUAGE_ASSEMBLY
 
@@ -101,4 +101,4 @@ EXTERN(foreign_function_call_active, 4)
     EXTERN(current_flags_register, 4)
 #endif
 #endif /* LANGUAGE_ASSEMBLY */
-#endif /* _GLOBALS_H_ */
+#endif /* GLOBALS_H */

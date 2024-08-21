@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _MACH_OS_H_
-#define _MACH_OS_H_
+#ifndef MACH_OS_H
+#define MACH_OS_H
 
 #include <mach.h>
 
@@ -21,4 +21,4 @@ typedef vm_prot_t os_vm_prot_t;
 
 #define OS_VM_DEFAULT_PAGESIZE	4096
 
-#endif /* _MACH_OS_H_ */
+#endif /* MACH_OS_H */

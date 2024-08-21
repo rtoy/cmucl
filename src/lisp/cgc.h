@@ -4,10 +4,10 @@
  *
  */
 
-#ifndef _CGC_H_
-#define _CGC_H_
+#ifndef CGC_H
+#define CGC_H
 
 void *cgc_alloc(int);
 void cgc_free_heap(void);
 
-#endif /* _CGC_H_ */
+#endif /* CGC_H */

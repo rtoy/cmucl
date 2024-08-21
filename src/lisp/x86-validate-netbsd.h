@@ -5,8 +5,8 @@
  *
  */
 
-#ifndef _X86_VALIDATE_NETBSD_H_
-#define _X86_VALIDATE_NETBSD_H_
+#ifndef X86_VALIDATE_NETBSD_H
+#define X86_VALIDATE_NETBSD_H
 
 /*
  * Also look in compiler/x86/parms.lisp for some of the parameters.

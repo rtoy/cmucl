@@ -5,8 +5,8 @@
 
 */
 
-#ifndef __ARCH_H__
-#define __ARCH_H__
+#ifndef ARCH_H
+#define ARCH_H
 
 #include "os.h"
 #include "signal.h"
@@ -80,4 +80,4 @@ extern void restore_fpu_state(void*);
 #if defined(__arm__)
 #include "arm-arch.h"
 #endif
-#endif /* __ARCH_H__ */
+#endif /* ARCH_H */

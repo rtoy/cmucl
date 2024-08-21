@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _NETBSD_OS_H_
-#define _NETBSD_OS_H_
+#ifndef NETBSD_OS_H
+#define NETBSD_OS_H
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -41,4 +41,4 @@ void restore_fpu(ucontext_t *);
 
 #define PROTECTION_VIOLATION_SIGNAL SIGSEGV
 
-#endif /* _NETBSD_OS_H_ */
+#endif /* NETBSD_OS_H */
