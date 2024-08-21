@@ -548,6 +548,7 @@
 	   "TTY-TANDEM"
 	   "TTY-XCASE"
 	   "UNIX-TIMES"
+	   "UNIX-DUP2"
 	   "UTSNAME"
 	   "WRITEGRP"
 	   "WRITEOTH"
