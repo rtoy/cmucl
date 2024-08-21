@@ -10,8 +10,8 @@
  *
  */
 
-#ifndef _GENCGC_H_
-#define _GENCGC_H_
+#ifndef GENCGC_H
+#define GENCGC_H
 
 void gc_free_heap(void);
 int gc_write_barrier(void *);
@@ -203,4 +203,4 @@ void gc_alloc_update_page_tables(int unboxed,
 
 extern char *alloc(int);
 
-#endif /* _GENCGC_H_ */
+#endif /* GENCGC_H */

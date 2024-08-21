@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _SPARC_VALIDATE_H_
-#define _SPARC_VALIDATE_H_
+#ifndef SPARC_VALIDATE_H
+#define SPARC_VALIDATE_H
 
 /*
  * Address map:
@@ -130,4 +130,4 @@
 #define DYNAMIC_SPACE_SIZE      (0x40000000 - SPARSE_BLOCK_SIZE)	/* 1GB - 32 KB max */
 #endif
 
-#endif /* _SPARC_VALIDATE_H_ */
+#endif /* SPARC_VALIDATE_H */

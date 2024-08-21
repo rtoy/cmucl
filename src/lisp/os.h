@@ -3,8 +3,8 @@
  *
  */
 
-#ifndef _OS_H_
-#define _OS_H_
+#ifndef OS_H
+#define OS_H
 
 #include "lisp.h"
 
@@ -122,4 +122,4 @@ unsigned int os_sigcontext_fpu_modes(ucontext_t *);
 
 char* convert_lisp_string(char* c_string, void* lisp_string, int len);
 
-#endif /* _OS_H_ */
+#endif /* OS_H */

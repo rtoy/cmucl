@@ -5,11 +5,11 @@
 
 */
 
-#ifndef _SAVE_H_
-#define _SAVE_H_
+#ifndef SAVE_H
+#define SAVE_H
 
 #include "core.h"
 
 extern boolean save(char *filename, lispobj initfun, int sse2_mode);
 
-#endif /* _SAVE_H_ */
+#endif /* SAVE_H */
