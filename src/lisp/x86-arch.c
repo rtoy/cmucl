@@ -345,12 +345,12 @@ sigill_handler(HANDLER_ARGS)
     os_context_t* os_context = (os_context_t *) context;
 
     DPRINTF(debug_handlers,
-            (stderr,"sigill: fp=%lx sp=%lx pc=%lx { %x, %x, %x, %x, %x }\n",
+            (stderr,"sigill: fp=%lx sp=%lx pc=%lx { %02x, %02x, %02x, %02x, %02x }\n",
              SC_REG(context, reg_FP),
              SC_REG(context, reg_SP),
              SC_PC(context),
              *((unsigned char*)SC_PC(context) + 0), /* 0x0F */
-             *((unsigned char*)SC_PC(context) + 1), /* 0x0B */
+             *((unsigned char*)SC_PC(context) + 1), /* 0xB9 */
              *((unsigned char*)SC_PC(context) + 2),
              *((unsigned char*)SC_PC(context) + 3),
              *((unsigned char*)SC_PC(context) + 4)));
@@ -374,7 +374,7 @@ sigill_handler(HANDLER_ARGS)
      */
 
     DPRINTF(debug_handlers,
-            (stderr, "pc %x\n",  *(unsigned short *)SC_PC(context)));
+            (stderr, "  *pc %04x\n",  *(unsigned short *)SC_PC(context)));
 
     /*
      * If the trapping instruction is UD1, assume it's a Lisp trap
@@ -389,11 +389,11 @@ sigill_handler(HANDLER_ARGS)
        */
       trap = *(((char *)SC_PC(context)) + 2) & 0x3f;
 
-      DPRINTF(debug_handlers, (stderr, "code = %x\n", trap));
+      DPRINTF(debug_handlers, (stderr, "  ud1 trap code = %x\n", trap));
 
       switch (trap) {
       case trap_PendingInterrupt:
-        DPRINTF(debug_handlers, (stderr, "<trap Pending Interrupt.>\n"));
+        DPRINTF(debug_handlers, (stderr, "  <trap Pending Interrupt.>\n"));
         arch_skip_instruction(os_context);
         interrupt_handle_pending(os_context);
         break;
@@ -414,7 +414,7 @@ sigill_handler(HANDLER_ARGS)
 
       case trap_Error:
       case trap_Cerror:
-        DPRINTF(debug_handlers, (stderr, "<trap Error %x>\n", CODE(code)));
+        DPRINTF(debug_handlers, (stderr, "  <trap Error %x>\n", CODE(code)));
         interrupt_internal_error(signal, code, os_context, CODE(code) == trap_Cerror);
         break;
 
