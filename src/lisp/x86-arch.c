@@ -35,7 +35,7 @@ static const unsigned char ud1[] = {0x0f, 0xb9};
  * the 3rd byte of the UD1 instruction that represents the mod r/m
  * byte.
  */
-#define UD1_CODE(byte) ((byte) & 0x3f)
+#define UD1_CODE(modrm) ((modrm) & 0x3f)
 
 /*
  * Set to positive value to enabled debug prints related to the sigill
@@ -394,7 +394,7 @@ sigill_handler(HANDLER_ARGS)
        * number is placed in the low 6-bits of the 3rd byte of the
        * instruction.
        */
-      trap = UD1_CODE(*(((char *)SC_PC(context)) + 2));
+      trap = UD1_CODE(*(((char *)SC_PC(context)) + sizeof(ud1)));
 
       DPRINTF(debug_handlers, (stderr, "code = %x\n", trap));
 
