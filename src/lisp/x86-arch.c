@@ -194,7 +194,7 @@ arch_skip_instruction(os_context_t * context)
 	  break;
 
       default:
-	  fprintf(stderr, "[arch_skip_inst invalid code %d\n]\n", code);
+	  fprintf(stderr, "[arch_skip_inst invalid code 0x%x\n]\n", code);
 	  break;
     }
 
