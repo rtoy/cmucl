@@ -59,7 +59,8 @@ def_arch_os () {
 	    sun*)
 		ARCH=sparc ;;
 	    i*)
-		ARCH=x86 ;;
+		ARCH=x86
+		GTAR=gtar ;;
 	  esac
 	  uname_r=`uname -r`
 	  case $uname_r in
