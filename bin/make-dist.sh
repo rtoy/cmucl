@@ -12,10 +12,12 @@
 # $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.20 2011/04/11 16:34:49 rtoy Exp $
 
 usage() {
-    echo "make-dist.sh: [-hbg] [-G group] [-O owner] [-I destdir] [-M mandir] [-A arch] [-V version] [-o OS] dir"
+    echo "make-dist.sh: [-hbg] [-C compress] [-G group] [-O owner] [-I destdir] [-M mandir] [-A arch] [-V version] [-o OS] dir"
     echo "  -h           This help"
     echo "  -b           Use bzip2 compression"
     echo "  -g           Use gzip compression"
+    echo "  -C compress  Compression method to use for the tar archives.  Must be one of"
+    echo "                 bzip2, xz, or gzip.  The default depends on the OS"
     echo "  -G group     Group to use"
     echo "  -O owner     Owner to use"
     echo "  -I destdir   Install directly to given directory instead of creating a tarball"
@@ -52,6 +54,7 @@ usage() {
     exit 1
 }
 
+export GTAR
 def_arch_os () {
     case `uname -s` in
       SunOS)
@@ -144,17 +147,19 @@ fi
 # Verify that the -C option is valid
 if [ -n "$COMPRESS_ARG" ]; then
     case $COMPRESS_ARG in
-	-j) COMPRESS=-j
+	bzip2)
+	    COMPRESS=-j
 	    COMPRESS_EXT=bz2
 	    COMPRESS_NAME=bzip2
 	    ;;
-	-J) # Defaults work
+	xz) # Defaults work
 	    ;;
-	-z) COMPRESS=-z
+	gzip)
+	    COMPRESS=-z
 	    COMPRESS_EXT=gz
 	    COMPRESS_NAME=gzip
 	    ;;
-	*) echo '-C option "'$COMPRESS_ARG'" must be on of -j, -J or -z'
+	*) echo '-C option "'$COMPRESS_ARG'" must be one of bzip2, xz or gzip'
 	   exit 1
 	   ;;
     esac
