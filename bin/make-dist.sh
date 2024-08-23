@@ -109,9 +109,17 @@ if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
     DEFAULT_VERSION="${GIT_HASH}"
 fi
 
-while getopts "G:O:I:M:bghSA:o:V:?" arg
+# Default compression is -J (xz).  These variables are passed to the
+# other scripts via the environmen, so export them.
+COMPRESS=-J
+COMPRESS_EXT=xz
+COMPRESS_NAME=xz
+export COMPRESS COMPRESS_EXT COMPRESS_NAME
+
+while getopts "C:G:O:I:M:bghSA:o:V:?" arg
 do
     case $arg in
+	C) COMPRESS_ARG=$OPTARG ;;
 	G) GROUP=$OPTARG ;;
 	O) OWNER=$OPTARG ;;
         I) INSTALL_DIR=$OPTARG ;;
@@ -131,6 +139,25 @@ shift `expr $OPTIND - 1`
 # Directory is required; exit if not given
 if [ $# -lt 1 ]; then
     usage
+fi
+
+# Verify that the -C option is valid
+if [ -n "$COMPRESS_ARG" ]; then
+    case $COMPRESS_ARG in
+	-j) COMPRESS=-j
+	    COMPRESS_EXT=bz2
+	    COMPRESS_NAME=bzip2
+	    ;;
+	-J) # Defaults work
+	    ;;
+	-z) COMPRESS=-z
+	    COMPRESS_EXT=gz
+	    COMPRESS_NAME=gzip
+	    ;;
+	*) echo '-C option "'$COMPRESS_ARG'" must be on of -j, -J or -z'
+	   exit 1
+	   ;;
+    esac
 fi
 
 if [ -z "$VERSION" ]; then
@@ -184,7 +211,7 @@ $ROOT/make-main-dist.sh $OPTIONS ${MANDIR} $TARGET $VERSION $ARCH $OS || exit 1
 $ROOT/make-extra-dist.sh $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
 
 if [ X"$MAKE_SRC_DIST" = "Xyes" ]; then
-    # If tar is not GNU tar, set the environment variable GTAR to
+    # If tar is not GNU tar, set the environment variable GTAR toy
     # point to GNU tar.
     OPTIONS="${INSTALL_DIR:+ -I ${INSTALL_DIR}} $ENABLE_GZIP $ENABLE_BZIP"
     $ROOT/make-src-dist.sh $OPTIONS -t ${GTAR:-tar} $VERSION

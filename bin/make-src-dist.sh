@@ -50,8 +50,8 @@ fi
 
 GTAR_OPTIONS="--exclude=.git --exclude='*.pot.~*~'"
 if [ -z "$INSTALL_DIR" ]; then
-    echo "  Compressing with $ZIP"
-    ${GTAR:-tar} ${GTAR_OPTIONS} -cf - bin src tests | ${ZIP} > cmucl-src-$VERSION.tar.$ZIPEXT
+    # echo "  Compressing with $ZIP"
+    ${GTAR:-tar} ${GTAR_OPTIONS} ${COMPRESS} -cf cmucl-src-$VERSION.tar.$COMPRESS_EXT bin src tests
 else
     # Install in the specified directory
     ${GTAR:-tar} ${GTAR_OPTIONS} -cf - bin src tests | (cd $INSTALL_DIR; ${GTAR:-tar} xf -)

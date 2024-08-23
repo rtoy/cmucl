@@ -178,16 +178,7 @@ fi
 if [ -z "$INSTALL_DIR" ]; then
     sync ; sleep 1 ; sync ; sleep 1 ; sync
     echo Tarring main components
-    if [ -n "$ENABLE_GZIP" ]; then
-	echo "  Compressing with gzip"
-	( cd $DESTDIR >/dev/null ; tar cf - . ) | \
-	  gzip -c > cmucl-$VERSION-$ARCH-$OS.tar.gz
-    fi
-    if [ -n "$ENABLE_BZIP" ]; then
-	echo "  Compressing with bzip"
-	( cd $DESTDIR >/dev/null ; tar cf - . ) | \
-	  bzip2 > cmucl-$VERSION-$ARCH-$OS.tar.bz2
-    fi
+    ${GTAR:-tar} -C $DESTDIR $COMPRESS -cf cmucl-$VERSION-$ARCH-$OS.tar.$COMPRESS_EXT .
 
     echo Cleaning $DESTDIR
     [ -d $DESTDIR ] && rm -rf $DESTDIR
