@@ -198,8 +198,11 @@ fi
 echo cmucl-$VERSION-$ARCH-$OS
 ROOT=`dirname $0`
 
-OPTIONS="-t ${GTAR:-tar} ${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}} ${INSTALL_DIR:+ -I ${INSTALL_DIR}}"
+GTAR_OPTS="-t ${GTAR:-gtar}"
+EXTRA_OPTS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}}"
+INSTALL_OPTS="${INSTALL_DIR:+ -I ${INSTALL_DIR}}"
 MANDIR="${MANDIR:+ -M ${MANDIR}}"
+OPTIONS="${GTAR_OPTS} ${EXTRA_OPTS} ${INSTALL_OPTS} ${MANDIR}"
 
 set -x
 echo Creating distribution for $ARCH $OS
@@ -207,6 +210,5 @@ $ROOT/make-main-dist.sh $OPTIONS ${MANDIR} $TARGET $VERSION $ARCH $OS || exit 1
 $ROOT/make-extra-dist.sh $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
 
 if [ X"$MAKE_SRC_DIST" = "Xyes" ]; then
-    OPTIONS="${INSTALL_DIR:+ -I ${INSTALL_DIR}}"
-    $ROOT/make-src-dist.sh $OPTIONS -t ${GTAR:-tar} $VERSION
+    $ROOT/make-src-dist.sh ${GTAR_OPTS} ${INSTALL_OPTS} $VERSION
 fi
