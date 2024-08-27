@@ -1,15 +1,15 @@
 #!/bin/sh
 
 usage() {
-    echo "make-src-dist.sh: [-bgh] [-t gnutar] [-I destdir] version"
+    echo "make-src-dist.sh: [-bgh] [-t gnutar] [-I destdir] [version]"
     echo "  -h           This help"
-    echo "  -b           Use bzip2 compression"
-    echo "  -g           Use gzip compression"
     echo "  -t tar       Name/path to GNU tar"
     echo "  -I destdir   Install directly to given directory instead of creating a tarball"
+    echo "   version     The version.  Defaults to the current date"
     echo ""
-    echo 'Create a tar ball of the cmucl sources.  The tarball is named '
-    echo 'cmucl-src-$version.tar.bz2  (or gz if using gzip compression)'
+    echo "This is generally called by make-dist.sh and not normally invoked by the user"
+    echo ""
+    echo "Create a tar ball of the cmucl sources."
 }
 
 while getopts "bgh?t:I:" arg
