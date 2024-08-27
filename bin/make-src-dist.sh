@@ -1,8 +1,9 @@
 #!/bin/sh
 
 usage() {
-    echo "make-src-dist.sh: [-bgh] [-t gnutar] [-I destdir] [version]"
+    echo "make-src-dist.sh: [-h?] [-t gnutar] [-I destdir] [version]"
     echo "  -h           This help"
+    echo "  -?           This help"
     echo "  -t tar       Name/path to GNU tar"
     echo "  -I destdir   Install directly to given directory instead of creating a tarball"
     echo "   version     The version.  Defaults to the current date"
@@ -12,11 +13,9 @@ usage() {
     echo "Create a tar ball of the cmucl sources."
 }
 
-while getopts "bgh?t:I:" arg
+while getopts "h?t:I:" arg
 do
     case $arg in
-	b) ENABLE_BZIP=-b ;;
-	g) ENABLE_GZIP=-g  ;;
         t) GTAR=$OPTARG ;;
         I) INSTALL_DIR=$OPTARG ;;
 	h | \?) usage; exit 1 ;;
@@ -39,15 +38,6 @@ else
 fi
 
 echo Creating source distribution
-if [ -n "$ENABLE_GZIP" ]; then
-    ZIP="gzip -c"
-    ZIPEXT="gz"
-fi
-if [ -n "$ENABLE_BZIP" ]; then
-    ZIP="bzip2"
-    ZIPEXT="bz2"
-fi
-
 GTAR_OPTIONS="--exclude=.git --exclude='*.pot.~*~'"
 if [ -z "$INSTALL_DIR" ]; then
     # echo "  Compressing with $ZIP"
