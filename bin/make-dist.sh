@@ -12,10 +12,8 @@
 # $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.20 2011/04/11 16:34:49 rtoy Exp $
 
 usage() {
-    echo "make-dist.sh: [-hbg] [-C compress] [-G group] [-O owner] [-I destdir] [-M mandir] [-A arch] [-V version] [-o OS] dir"
+    echo "make-dist.sh: [-h] [-C compress] [-G group] [-O owner] [-I destdir] [-M mandir] [-A arch] [-V version] [-o OS] dir"
     echo "  -h           This help"
-    echo "  -b           Use bzip2 compression"
-    echo "  -g           Use gzip compression"
     echo "  -C compress  Compression method to use for the tar archives.  Must be one of"
     echo "                 bzip2, xz, or gzip.  The default depends on the OS"
     echo "  -G group     Group to use"
@@ -126,8 +124,6 @@ do
 	O) OWNER=$OPTARG ;;
         I) INSTALL_DIR=$OPTARG ;;
         M) MANDIR=$OPTARG ;;
-	b) ENABLE_BZIP=-b ;;
-	g) ENABLE_GZIP=-g  ;;
         S) MAKE_SRC_DIST=yes ;;
         A) ARCH=$OPTARG ;;
         o) OS=$OPTARG ;;
@@ -202,11 +198,6 @@ fi
 echo cmucl-$VERSION-$ARCH-$OS
 ROOT=`dirname $0`
 
-# If no compression options given, default to bzip
-if [ -z "$ENABLE_GZIP" -a -z "$ENABLE_BZIP" ]; then
-    ENABLE_BZIP="-b"
-fi
-
 OPTIONS="-t ${GTAR:-tar} ${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}} ${INSTALL_DIR:+ -I ${INSTALL_DIR}}"
 MANDIR="${MANDIR:+ -M ${MANDIR}}"
 
@@ -216,8 +207,6 @@ $ROOT/make-main-dist.sh $OPTIONS ${MANDIR} $TARGET $VERSION $ARCH $OS || exit 1
 $ROOT/make-extra-dist.sh $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
 
 if [ X"$MAKE_SRC_DIST" = "Xyes" ]; then
-    # If tar is not GNU tar, set the environment variable GTAR toy
-    # point to GNU tar.
-    OPTIONS="${INSTALL_DIR:+ -I ${INSTALL_DIR}} $ENABLE_GZIP $ENABLE_BZIP"
+    OPTIONS="${INSTALL_DIR:+ -I ${INSTALL_DIR}}"
     $ROOT/make-src-dist.sh $OPTIONS -t ${GTAR:-tar} $VERSION
 fi

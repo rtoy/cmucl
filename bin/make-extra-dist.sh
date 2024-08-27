@@ -2,14 +2,12 @@
 
 GTAR=tar
 set -x
-while getopts "G:O:I:t:bgh?" arg
+while getopts "G:O:I:t:h?" arg
 do
     case $arg in
 	G) GROUP="-g $OPTARG" ;;
 	O) OWNER="-o $OPTARG" ;;
         I) INSTALL_DIR=$OPTARG ;;
-	b) ENABLE_BZIP=-b ;;
-	g) ENABLE_GZIP=-g  ;;
 	t) GTAR=$OPTARG ;;
 	h | \?) usage; exit 1 ;;
     esac
