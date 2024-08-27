@@ -1,11 +1,14 @@
 #!/bin/sh
 
 usage() {
-    echo "make-main-dist.sh [-h?] [-t tar]  [-I destdir] [-G group] [-O owner] [-M mandir]"
+    echo "make-main-dist.sh  -C option -E ext [-h?] [-t tar][-I destdir] [-G group] [-O owner] [-M mandir]"
     echo "        target-directory version arch os"
     echo "  -h           This help"
     echo "  -?           This help"
     echo "  -t tar       Tar program to use"
+    echo "  -C option    Tar option for compressing the tarball; required."
+    echo "  -E ext       Extension to use for the tarball.  Must be consistent with"
+    echo "                 -C option.  Required."
     echo "  -I destdir   Install directly to given directory instead of creating a tarball"
     echo "  -G group     Group to use"
     echo "  -O owner     Owner to use"
@@ -21,9 +24,11 @@ usage() {
 }
     
 GTAR=tar
-while getopts "G:O:I:M:t:h?" arg
+while getopts "C:E:G:O:I:M:t:h?" arg
 do
     case $arg in
+	C) COMPRESS=$OPTARG ;;
+	E) COMPRESS_EXT=$OPTARG ;;
 	G) GROUP="-g $OPTARG" ;;
 	O) OWNER="-o $OPTARG" ;;
         I) INSTALL_DIR=$OPTARG ;;

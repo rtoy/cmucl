@@ -1,10 +1,13 @@
 #!/bin/sh
 
 usage() {
-    echo "make-src-dist.sh: [-h?] [-t gnutar] [-I destdir] [version]"
+    echo "make-src-dist.sh: -C option -E ext [-h?] [-t gnutar] [-I destdir] [version]"
     echo "  -h           This help"
     echo "  -?           This help"
     echo "  -t tar       Name/path to GNU tar"
+    echo "  -C option    Tar option for compressing the tarball; required."
+    echo "  -E ext       Extension to use for the tarball.  Must be consistent with"
+    echo "                 -C option.  Required."
     echo "  -I destdir   Install directly to given directory instead of creating a tarball"
     echo "   version     The version.  Defaults to the current date"
     echo ""
@@ -16,6 +19,8 @@ usage() {
 while getopts "h?t:I:" arg
 do
     case $arg in
+	C) COMPRESS=$OPTARG ;;
+	E) COMPRESS_EXT=$OPTARG ;;
         t) GTAR=$OPTARG ;;
         I) INSTALL_DIR=$OPTARG ;;
 	h | \?) usage; exit 1 ;;
