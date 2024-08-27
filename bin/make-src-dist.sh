@@ -16,7 +16,7 @@ usage() {
     echo "Create a tar ball of the cmucl sources."
 }
 
-while getopts "h?t:I:" arg
+while getopts "C:E:h?t:I:" arg
 do
     case $arg in
 	C) COMPRESS=$OPTARG ;;
@@ -28,6 +28,17 @@ do
 done
 
 shift `expr $OPTIND - 1`
+
+# -C and -E options are required
+if [ -z "$COMPRESS" ]; then
+    echo "-C option is required"
+    exit 2
+fi
+
+if [ -z "$COMPRESS_EXT" ]; then
+    echo "-E option is required"
+    exit 2
+fi
 
 # If no version is given, default to today's date
 if [ -n "$1" ]; then

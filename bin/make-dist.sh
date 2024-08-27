@@ -114,7 +114,6 @@ fi
 COMPRESS=-J
 COMPRESS_EXT=xz
 COMPRESS_NAME=xz
-export COMPRESS COMPRESS_EXT COMPRESS_NAME
 
 while getopts "C:G:O:I:M:hSA:o:V:?" arg
 do
@@ -210,5 +209,5 @@ $ROOT/make-main-dist.sh -C $COMPRESS -E $COMPRESS_EXT $OPTIONS ${MANDIR} $TARGET
 $ROOT/make-extra-dist.sh -C $COMPRESS -E $COMPRESS_EXT $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
 
 if [ X"$MAKE_SRC_DIST" = "Xyes" ]; then
-    $ROOT/make-src-dist.sh ${GTAR_OPTS} ${INSTALL_OPTS} $VERSION
+    $ROOT/make-src-dist.sh -C $COMPRESS -E $COMPRESS_EXT ${GTAR_OPTS} ${INSTALL_OPTS} $VERSION
 fi

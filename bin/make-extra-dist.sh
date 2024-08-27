@@ -36,6 +36,17 @@ done
 
 shift `expr $OPTIND - 1`
 
+# -C and -E options are required
+if [ -z "$COMPRESS" ]; then
+    echo "-C option is required"
+    exit 2
+fi
+
+if [ -z "$COMPRESS_EXT" ]; then
+    echo "-E option is required"
+    exit 2
+fi
+
 if [ "$1" = "" -o "$2" = "" -o "$3" = "" -o "$4" = "" ]
 then
     usage
