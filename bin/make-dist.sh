@@ -116,7 +116,7 @@ COMPRESS_EXT=xz
 COMPRESS_NAME=xz
 export COMPRESS COMPRESS_EXT COMPRESS_NAME
 
-while getopts "C:G:O:I:M:bghSA:o:V:?" arg
+while getopts "C:G:O:I:M:hSA:o:V:?" arg
 do
     case $arg in
 	C) COMPRESS_ARG=$OPTARG ;;
