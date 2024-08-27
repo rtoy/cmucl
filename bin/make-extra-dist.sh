@@ -1,5 +1,20 @@
 #!/bin/sh
 
+usage() {
+    echo "make-extra-dist.sh [-t tar] [-I destdir] [-G group] [-O owner]"
+    echo "  -h           This help"
+    echo "  -?           This help"
+    echo "  -t tar       Tar program to use"
+    echo "  -I destdir   Install directly to given directory instead of creating a tarball"
+    echo "  -G group     Group to use"
+    echo "  -O owner     Owner to use"
+    echo ""
+    echo "Create a tarball of the extra components for cmucl.  This includes things like "
+    echo "CLX; Hemlock; CLM; and the contrib library not already included in the main"
+    echo "distribution; locale messages."
+    exit 1
+}
+
 GTAR=tar
 set -x
 while getopts "G:O:I:t:h?" arg
@@ -17,8 +32,7 @@ shift `expr $OPTIND - 1`
 
 if [ "$1" = "" -o "$2" = "" -o "$3" = "" -o "$4" = "" ]
 then
-	echo "Usage: $0 target-directory version arch os"
-	exit 1
+    usage
 fi
 
 if [ ! -d "$1" ]

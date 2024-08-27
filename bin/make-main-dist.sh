@@ -1,5 +1,23 @@
 #!/bin/sh
 
+usage() {
+    echo "make-main-dist.sh [-h?] [-t tar]  [-I destdir] [-G group] [-O owner] [-M mandir]"
+    echo "        target-directory version arch os"
+    echo "  -h           This help"
+    echo "  -?           This help"
+    echo "  -t tar       Tar program to use"
+    echo "  -I destdir   Install directly to given directory instead of creating a tarball"
+    echo "  -G group     Group to use"
+    echo "  -O owner     Owner to use"
+    echo "  -M mandir    Install manpages in this subdirectory.  Default is man/man1"
+    echo ""
+    echo "Create a tarball consisting of the main components needed to distribute"
+    echo "a binary installation of cmucl.  This includes the C executable and support"
+    echo "libraries; the subsystems like Gray streams, and simple streams; external"
+    echo "formats; manpages and READMEs."
+    exit 1
+}
+    
 GTAR=tar
 set -x
 while getopts "G:O:I:M:t:h?" arg
@@ -18,8 +36,7 @@ shift `expr $OPTIND - 1`
 
 if [ "$1" = "" -o "$2" = "" -o "$3" = "" -o "$4" = "" ]
 then
-	echo "Usage: $0 target-directory version arch os"
-	exit 1
+    usage
 fi
 
 if [ ! -d "$1" ]
