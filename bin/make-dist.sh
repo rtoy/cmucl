@@ -54,7 +54,6 @@ usage() {
     exit 1
 }
 
-export GTAR
 def_arch_os () {
     case `uname -s` in
       SunOS)
@@ -208,9 +207,10 @@ if [ -z "$ENABLE_GZIP" -a -z "$ENABLE_BZIP" ]; then
     ENABLE_BZIP="-b"
 fi
 
-OPTIONS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}} ${INSTALL_DIR:+ -I ${INSTALL_DIR}} $ENABLE_GZIP $ENABLE_BZIP"
+OPTIONS="-t ${GTAR:-tar} ${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}} ${INSTALL_DIR:+ -I ${INSTALL_DIR}}"
 MANDIR="${MANDIR:+ -M ${MANDIR}}"
 
+set -x
 echo Creating distribution for $ARCH $OS
 $ROOT/make-main-dist.sh $OPTIONS ${MANDIR} $TARGET $VERSION $ARCH $OS || exit 1
 $ROOT/make-extra-dist.sh $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2

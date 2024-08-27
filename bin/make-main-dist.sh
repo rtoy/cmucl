@@ -1,7 +1,8 @@
 #!/bin/sh
 
-# set -x
-while getopts "G:O:I:M:bgh?" arg
+GTAR=tar
+set -x
+while getopts "G:O:I:M:t:bgh?" arg
 do
     case $arg in
 	G) GROUP="-g $OPTARG" ;;
@@ -10,6 +11,7 @@ do
         M) MANDIR=$OPTARG ;;
 	b) ENABLE_BZIP=-b ;;
 	g) ENABLE_GZIP=-g  ;;
+	t) GTAR=$OPTARG ;;
 	h | \?) usage; exit 1 ;;
     esac
 done
@@ -178,7 +180,7 @@ fi
 if [ -z "$INSTALL_DIR" ]; then
     sync ; sleep 1 ; sync ; sleep 1 ; sync
     echo Tarring main components
-    ${GTAR:-tar} -C $DESTDIR $COMPRESS -cf cmucl-$VERSION-$ARCH-$OS.tar.$COMPRESS_EXT .
+    $GTAR -C $DESTDIR $COMPRESS -cf cmucl-$VERSION-$ARCH-$OS.tar.$COMPRESS_EXT .
 
     echo Cleaning $DESTDIR
     [ -d $DESTDIR ] && rm -rf $DESTDIR
