@@ -29,12 +29,6 @@ done
 
 shift `expr $OPTIND - 1`
 
-# If no compression given, default to gzip (on the assumption that
-# that is available everywhere.)
-if [ -z "$ENABLE_BZIP" -a -z "$ENABLE_GZIP" ]; then
-    ENABLE_GZIP=-b
-fi
-
 # If no version is given, default to today's date
 if [ -n "$1" ]; then
     VERSION=$1
