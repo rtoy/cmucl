@@ -9,14 +9,15 @@ usage() {
     echo "  -G group     Group to use"
     echo "  -O owner     Owner to use"
     echo ""
+    echo "This is generally called by make-dist.sh and not normally invoked by the user"
+    echo ""
     echo "Create a tarball of the extra components for cmucl.  This includes things like "
-    echo "CLX; Hemlock; CLM; and the contrib library not already included in the main"
+    echo "CLX; Hemlock; CLM; contrib library not already included in the main"
     echo "distribution; locale messages."
     exit 1
 }
 
 GTAR=tar
-set -x
 while getopts "G:O:I:t:h?" arg
 do
     case $arg in

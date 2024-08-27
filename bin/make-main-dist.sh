@@ -11,15 +11,16 @@ usage() {
     echo "  -O owner     Owner to use"
     echo "  -M mandir    Install manpages in this subdirectory.  Default is man/man1"
     echo ""
+    echo "This is generally called by make-dist.sh and not normally invoked by the user"
+    echo ""
     echo "Create a tarball consisting of the main components needed to distribute"
     echo "a binary installation of cmucl.  This includes the C executable and support"
     echo "libraries; the subsystems like Gray streams, and simple streams; external"
-    echo "formats; manpages and READMEs."
+    echo "formats; contribs like asdf and defsystem; manpages and READMEs."
     exit 1
 }
     
 GTAR=tar
-set -x
 while getopts "G:O:I:M:t:h?" arg
 do
     case $arg in
