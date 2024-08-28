@@ -126,7 +126,7 @@
     new-mode)
   )
 
-#+(and sse2 darwin)
+#+(and sse2 (or solaris darwin))
 (progn
   (defun floating-point-modes ()
     ;; Get just the SSE2 mode bits.
