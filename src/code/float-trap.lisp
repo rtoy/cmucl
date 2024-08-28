@@ -313,6 +313,7 @@
 ;;;
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
+#-(and solaris x86)
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal)
 	   (type system-area-pointer scp))
@@ -432,6 +433,97 @@
 	    ;; state in the signal handler is unchanged and it seems we
 	    ;; don't need to reset it any way when we throw out.
 	    ))))))
+
+#+(and solaris x86)
+(progn
+  ;; See /usr/include/sys/machsig.h
+  ;;
+  ;; There are 2 constants for integer division by zero and integer
+  ;; overflow that we aren't using.
+  (defconstant +fpe-fltdiv+ 3
+    "Signal code for FP divide by zero")
+  (defconstant +fpe-fltovf+ 4
+    "Signal code for FP overflow")
+  (defconstant +fpe-fltund+ 5
+    "Signal code for FP underflow")
+  (defconstant +fpe-fltres+ 6
+    "Signal code for FP inexact result")
+  (defconstant +fpe-fltinv+ 7
+    "Signal code for FP invalid operation")
+  ;; Not sure what this means.
+  (defconstant +fpe-fltsub+ 8
+    "Signal code for subscript out of range")
+  (defconstant +fpe-fltden+ 9
+    "Signal code for FP denormalize"))
+
+#+(and solaris x86)
+(defun sigfpe-handler (signal code scp)
+  (declare (ignore signal)
+	   (type system-area-pointer scp))
+  (let* ((modes (sigcontext-floating-point-modes
+		 (alien:sap-alien scp (* unix:sigcontext))))
+	 (traps (logand (ldb float-exceptions-byte modes)
+			(ldb float-traps-byte modes))))
+
+    
+    (multiple-value-bind (fop operands)
+	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
+	  (if (fboundp sym)
+	      (funcall sym (alien:sap-alien scp (* unix:sigcontext)) modes)
+	      (values nil nil)))
+      ;; Don't let throws get away without resetting the
+      ;; floating-point modes back to the original values which we get
+      ;; from the sigcontext.  Because we can throw, we never return
+      ;; from the signal handler so the sigcontext is never restored.
+      ;; This means we need to restore the fpu state ourselves.
+      (unwind-protect
+	   (case code
+	     (+fpe-fltdiv+
+	      (error 'division-by-zero
+		     :operation fop
+		     :operands operands))
+	     (+fpe-fltovf+
+	      (error 'floating-point-overflow
+		     :operation fop
+		     :operands operands))
+	     (+fpe-fltund+
+	      (error 'floating-point-underflow
+		     :operation fop
+		     :operands operands))
+	     (+fpe-fltres+
+	      (error 'floating-point-inexact
+		     :operation fop
+		     :operands operands))
+	     (+fpe-fltinv+
+	      (error 'floating-point-invalid-operation
+		     :operation fop
+		     :operands operands))
+	     (+fpe-fltden+
+	      (error 'floating-point-denormal-operand
+		     :operation fop
+		     :operands operands))
+	     (t
+	      (error _"SIGFPE code ~D not handled" code)))
+	;; Cleanup
+	(let* ((new-modes modes)
+	       (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
+					 traps)))
+	  #+sse2
+	  (progn
+	    ;; Clear out the status for any enabled traps.  With SSE2, if
+	    ;; the current exception is enabled, the next FP instruction
+	    ;; will cause the exception to be signaled again.  Hence, we
+	    ;; need to clear out the exceptions that we are handling here.
+	    (setf (ldb float-exceptions-byte new-modes) new-exceptions)
+	    #+nil
+	    (progn
+	      (format *debug-io* "sigcontext modes: #x~4x (~A)~%"
+		      modes (decode-floating-point-modes modes))
+	      (format *debug-io* "current modes:    #x~4x (~A)~%"
+		      (vm:floating-point-modes) (get-floating-point-modes))
+	      (format *debug-io* "new  modes: #x~x (~A)~%"
+		      new-modes (decode-floating-point-modes new-modes)))
+	    (setf (vm:floating-point-modes) new-modes)))))))
 
 (macrolet
     ((with-float-traps (name merge-traps docstring)
