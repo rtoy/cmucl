@@ -477,28 +477,28 @@
       ;; from the signal handler so the sigcontext is never restored.
       ;; This means we need to restore the fpu state ourselves.
       (unwind-protect
-	   (case code
-	     (+fpe-fltdiv+
+	   (cond 
+	     ((= code +fpe-fltdiv+)
 	      (error 'division-by-zero
 		     :operation fop
 		     :operands operands))
-	     (+fpe-fltovf+
+	     ((= code +fpe-fltovf+)
 	      (error 'floating-point-overflow
 		     :operation fop
 		     :operands operands))
-	     (+fpe-fltund+
+	     ((= code +fpe-fltund+)
 	      (error 'floating-point-underflow
 		     :operation fop
 		     :operands operands))
-	     (+fpe-fltres+
+	     ((= code +fpe-fltres+)
 	      (error 'floating-point-inexact
 		     :operation fop
 		     :operands operands))
-	     (+fpe-fltinv+
+	     ((= code +fpe-fltinv+)
 	      (error 'floating-point-invalid-operation
 		     :operation fop
 		     :operands operands))
-	     (+fpe-fltden+
+	     ((= code +fpe-fltden+)
 	      (error 'floating-point-denormal-operand
 		     :operation fop
 		     :operands operands))
@@ -515,7 +515,7 @@
 	    ;; will cause the exception to be signaled again.  Hence, we
 	    ;; need to clear out the exceptions that we are handling here.
 	    (setf (ldb float-exceptions-byte new-modes) new-exceptions)
-	    #+nil
+	    ;;#+nil
 	    (progn
 	      (format *debug-io* "sigcontext modes: #x~4x (~A)~%"
 		      modes (decode-floating-point-modes modes))
