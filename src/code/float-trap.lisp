@@ -92,7 +92,7 @@
     (setf (x87-floating-point-modes) x87-modes)))
   )
 
-#+(and sse2 (not (or solaris darwin)))
+#+(and sse2 (not darwin))
 (progn
   (defun floating-point-modes ()
     ;; Combine the modes from the FPU and SSE2 units.  Since the sse
@@ -126,9 +126,6 @@
     new-mode)
   )
 
-;; For Darwin and Solaris/x86, only diddle the SSE2 mode bits.  Darwin
-;; doesn't use x87.  Not sure about Solaris/x86, but this works better
-;; than mixing the x87 and sse2 mode bits.
 #+(and sse2 (or solaris darwin))
 (progn
   (defun floating-point-modes ()
@@ -459,9 +456,6 @@
   (defconstant +fpe-fltden+ 9
     "Signal code for FP denormalize"))
 
-;; SIGFPE handler for Solaris/x86.  For this OS, the CODE contains the
-;; information about what caused the SIGFPE signal, so use that to
-;; determine the reason for the SIGFPE.
 #+(and solaris x86)
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal)
@@ -521,7 +515,7 @@
 	    ;; will cause the exception to be signaled again.  Hence, we
 	    ;; need to clear out the exceptions that we are handling here.
 	    (setf (ldb float-exceptions-byte new-modes) new-exceptions)
-	    #+nil
+	    ;;#+nil
 	    (progn
 	      (format *debug-io* "sigcontext modes: #x~4x (~A)~%"
 		      modes (decode-floating-point-modes modes))
