@@ -461,11 +461,7 @@
   (declare (ignore signal)
 	   (type system-area-pointer scp))
   (let* ((modes (sigcontext-floating-point-modes
-		 (alien:sap-alien scp (* unix:sigcontext))))
-	 (traps (logand (ldb float-exceptions-byte modes)
-			(ldb float-traps-byte modes))))
-
-    
+		 (alien:sap-alien scp (* unix:sigcontext)))))
     (multiple-value-bind (fop operands)
 	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
 	  (if (fboundp sym)
@@ -505,7 +501,9 @@
 	     (t
 	      (error _"SIGFPE code ~D not handled" code)))
 	;; Cleanup
-	(let* ((new-modes modes)
+	(let* ((traps (logand (ldb float-exceptions-byte modes)
+			(ldb float-traps-byte modes)))
+	       (new-modes modes)
 	       (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
 					 traps)))
 	  #+sse2
