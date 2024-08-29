@@ -500,48 +500,32 @@
 			:operands operands)
 		 (error _"SIGFPE code ~D not handled" code)))
 	;; Cleanup
+	;;
+	;; Clear out the status for any enabled traps.  If we don't
+	;; then when we return, the exception gets signaled again.
 	(let* ((trap-bit (third (assoc code +fpe-code-info-alist+)))
-	       (new-x87-modes (vm::x87-floating-point-modes))
-	       (new-sse2-modes (vm::sse2-floating-point-modes)))
-	  (format t "Trap bit: ~D~%" trap-bit)
-	  (format t "Current modes:      ~16,'0b~%" (vm::floating-point-modes))
-	  (format t "Current x87 modes:  ~16,'0b~%" new-x87-modes)
-	  (format t "Current sse2 modes: ~16,'0b~%" new-sse2-modes)
-	  (format t "Setting sse2 modes to: ~16,'0b~%"
-		  (logandc2 (ldb float-exceptions-byte new-sse2-modes)
-			    trap-bit))
-	  (ignore-errors
-	    (setf (vm::sse2-floating-point-modes)
-		  (dpb (logandc2 (ldb float-exceptions-byte new-sse2-modes)
-				 trap-bit)
-		       float-exceptions-byte new-sse2-modes)))
-	  (format t "Setting x87 modes to:  ~16,'0b~%"
-		  (logandc2 (ldb float-exceptions-byte new-x87-modes)
-			    trap-bit))
-	  (ignore-errors
-	    (setf (vm::x87-floating-point-modes)
-		(dpb (logandc2 (ldb float-exceptions-byte new-x87-modes)
+	       (current-x87-modes (vm::x87-floating-point-modes))
+	       (current-sse2-modes (vm::sse2-floating-point-modes))
+	       (new-x87-modes
+		(dpb (logandc2 (ldb float-exceptions-byte current-sse2-modes)
 			       trap-bit)
-		     float-exceptions-byte new-x87-modes)))
+		     float-exceptions-byte current-sse2-modes))
+	       (new-sse2-modes
+		(dpb (logandc2 (ldb float-exceptions-byte current-x87-modes)
+			       trap-bit)
+		     float-exceptions-byte current-x87-modes)))
+	  (format t "Trap bit: ~D~%" trap-bit)
+	  (format t "Current modes:         ~32,'0b~%" (vm::floating-point-modes))
+	  (format t "Current x87 modes:     ~32,'0b~%" current-x87-modes)
+	  (format t "Current sse2 modes:    ~32,'0b~%" current-sse2-modes)
+	  (format t "Setting sse2 modes to: ~32,'0b~%" new-x87-modes)
+	  (format t "Setting x87 modes to:  ~32,'0b~%" new-sse2-modes)
+	  (ignore-errors
+	    (setf (vm::sse2-floating-point-modes) new-sse2-modes)
+	    (setf (vm::x87-floating-point-modes) new-x87-modes))
 
-	  (format t "new x87 modes:      ~16,'0b~%" (vm::x87-floating-point-modes))
-	  (format t "new sse2 modes:     ~16,'0b~%" (vm::sse2-floating-point-modes))
-	  #+nil
-	  (progn
-	    ;; Clear out the status for any enabled traps.  With SSE2, if
-	    ;; the current exception is enabled, the next FP instruction
-	    ;; will cause the exception to be signaled again.  Hence, we
-	    ;; need to clear out the exceptions that we are handling here.
-	    (setf (ldb float-exceptions-byte new-modes) new-exceptions)
-	    ;;#+nil
-	    (progn
-	      (format *debug-io* "sigcontext modes: #x~4x (~A)~%"
-		      modes (decode-floating-point-modes modes))
-	      (format *debug-io* "current modes:    #x~4x (~A)~%"
-		      (vm:floating-point-modes) (get-floating-point-modes))
-	      (format *debug-io* "new  modes: #x~x (~A)~%"
-		      new-modes (decode-floating-point-modes new-modes)))
-	    (setf (vm:floating-point-modes) new-modes)))))))
+	  (format t "new x87 modes:         ~32,'0b~%" (vm::x87-floating-point-modes))
+	  (format t "new sse2 modes:        ~32,'0b~%" (vm::sse2-floating-point-modes)))))))
 
 (macrolet
     ((with-float-traps (name merge-traps docstring)
