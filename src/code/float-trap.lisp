@@ -450,11 +450,15 @@
     "Signal code for FP inexact result")
   (defconstant +fpe-fltinv+ 7
     "Signal code for FP invalid operation")
-  ;; Not sure what this means.
+  ;; On FreeBSD (and maybe other OSes), this happens when the x86
+  ;; BOUND instruction detects an index out of bounds.  Linux
+  ;; apparently generates a SIGSEGV instead.  See
+  ;; https://stackoverflow.com/questions/27051428/what-is-a-fpe-fltsub-subscript-out-of-range-signal
   (defconstant +fpe-fltsub+ 8
     "Signal code for subscript out of range")
   (defconstant +fpe-fltden+ 9
     "Signal code for FP denormalize")
+  ;; We only include the values that FP operations can trap on. 
   (defconstant +fpe-code-info-alist+
     (list (cons +fpe-fltdiv+
 		(list 'division-by-zero float-divide-by-zero-trap-bit ))
@@ -489,6 +493,7 @@
       ;; This means we need to restore the fpu state ourselves.
       (unwind-protect
 	   (let ((fpe-info (second (assoc code +fpe-code-info-alist+))))
+	     (format t "fpe code = ~D~%" code)
 	     (if fpe-info
 		 (error fpe-info
 			:operation fop
@@ -505,15 +510,19 @@
 	  (format t "Setting sse2 modes to: ~16,'0b~%"
 		  (logandc2 (ldb float-exceptions-byte new-sse2-modes)
 			    trap-bit))
-	  (setf (vm::sse2-floating-point-modes)
-		(logandc2 (ldb float-exceptions-byte new-sse2-modes)
-			  trap-bit))
+	  (ignore-errors
+	    (setf (vm::sse2-floating-point-modes)
+		  (dpb (logandc2 (ldb float-exceptions-byte new-sse2-modes)
+				 trap-bit)
+		       float-exceptions-byte new-sse2-modes)))
 	  (format t "Setting x87 modes to:  ~16,'0b~%"
 		  (logandc2 (ldb float-exceptions-byte new-x87-modes)
 			    trap-bit))
-	  (setf (vm::x87-floating-point-modes)
-		(logandc2 (ldb float-exceptions-byte new-x87-modes)
-			  trap-bit))
+	  (ignore-errors
+	    (setf (vm::x87-floating-point-modes)
+		(dpb (logandc2 (ldb float-exceptions-byte new-x87-modes)
+			       trap-bit)
+		     float-exceptions-byte new-x87-modes)))
 
 	  (format t "new x87 modes:      ~16,'0b~%" (vm::x87-floating-point-modes))
 	  (format t "new sse2 modes:     ~16,'0b~%" (vm::sse2-floating-point-modes))
