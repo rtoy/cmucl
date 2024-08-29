@@ -637,6 +637,45 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     return modes;
 }
 
+unsigned int
+os_set_sigcontext_fpu_modes(ucontext_t *scp, uint32_t modes)
+{
+    unsigned short cw, sw;
+    fpregset_t *fpr;
+    unsigned int state;
+        
+    fpr = &scp->uc_mcontext.fpregs;
+
+    cw = modes & 0x3f;
+    sw = (modes >> 7) &0x3f;
+
+    DPRINTF(1, (stderr, "modes = 0x%08x\n", modes));
+    DPRINTF(1, (stderr, "cw = 0x%04x\n", cw));
+    DPRINTF(1, (stderr, "sw = 0x%04x\n", sw));
+
+    fpr->fp_reg_set.fpchip_state.state[0] = cw;
+    fpr->fp_reg_set.fpchip_state.state[1] = sw;
+    
+#ifdef FEATURE_SSE2
+    /*
+     * Add in the SSE2 part, if we're running the sse2 core.
+     */
+    if (fpu_mode == SSE2) {
+	unsigned long mxcsr = modes & 0xffff;
+
+        DPRINTF(1, (stderr, "SSE2 modes = %08lx\n", mxcsr));
+        fpr->fp_reg_set.fpchip_state.mxcsr = mxcsr;
+
+	modes |= mxcsr;
+    }
+#endif
+
+    modes ^= (0x3f << 7);
+    return modes;
+}
+
+
+
 boolean
 os_support_sse2()
 {

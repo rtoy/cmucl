@@ -481,6 +481,7 @@
 	   (type system-area-pointer scp))
   (let* ((modes (sigcontext-floating-point-modes
 		 (alien:sap-alien scp (* unix:sigcontext)))))
+    (format t "Current modes:         ~32,'0b~%" modes)
     (multiple-value-bind (fop operands)
 	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
 	  (if (fboundp sym)
@@ -503,6 +504,7 @@
 	;;
 	;; Clear out the status for any enabled traps.  If we don't
 	;; then when we return, the exception gets signaled again.
+	#+nil
 	(let* ((trap-bit (third (assoc code +fpe-code-info-alist+)))
 	       (current-x87-modes (vm::x87-floating-point-modes))
 	       (current-sse2-modes (vm::sse2-floating-point-modes))
@@ -525,7 +527,16 @@
 	    (setf (vm::x87-floating-point-modes) new-x87-modes))
 
 	  (format t "new x87 modes:         ~32,'0b~%" (vm::x87-floating-point-modes))
-	  (format t "new sse2 modes:        ~32,'0b~%" (vm::sse2-floating-point-modes)))))))
+	  (format t "new sse2 modes:        ~32,'0b~%" (vm::sse2-floating-point-modes)))
+	(let* ((trap-bit (third (assoc code +fpe-code-info-alist+)))
+	       (new-modes
+		(dpb (logandc2 (ldb float-exceptions-byte modes)
+			       trap-bit)
+		     float-exceptions-byte modes)))
+	  (format t "New modes:             ~32,'0b~%" new-modes)
+	  (setf (sigcontext-floating-point-modes)
+		(alien:sap-alien scp (* unix:sigcontext))
+		new-modes))))))
 
 (macrolet
     ((with-float-traps (name merge-traps docstring)
