@@ -454,7 +454,22 @@
   (defconstant +fpe-fltsub+ 8
     "Signal code for subscript out of range")
   (defconstant +fpe-fltden+ 9
-    "Signal code for FP denormalize"))
+    "Signal code for FP denormalize")
+  (defconstant +fpe-code-info-alist+
+    (list (cons +fpe-fltdiv+
+		(list 'division-by-zero float-divide-by-zero-trap-bit ))
+	  (cons +fpe-fltovf+
+		(list 'floating-point-overflow float-overflow-trap-bit))
+	  (cons +fpe-fltund+
+		(list 'floating-point-underflow float-underflow-trap-bit))
+	  (cons +fpe-fltres+
+		(list 'floating-point-inexact float-inexact-trap-bit))
+	  (cons +fpe-fltinv+
+		(list 'floating-point-invalid-operation float-invalid-trap-bit))
+	  (cons +fpe-fltden+
+		(list 'floating-point-denormal-operand float-denormal-trap-bit)))
+    "Alist mapping the FPE code to a list of the corresponding floating
+    point error type and the correstrap bit value"))
 
 #+(and solaris x86)
 (defun sigfpe-handler (signal code scp)
@@ -473,40 +488,36 @@
       ;; from the signal handler so the sigcontext is never restored.
       ;; This means we need to restore the fpu state ourselves.
       (unwind-protect
-	   (cond 
-	     ((= code +fpe-fltdiv+)
-	      (error 'division-by-zero
-		     :operation fop
-		     :operands operands))
-	     ((= code +fpe-fltovf+)
-	      (error 'floating-point-overflow
-		     :operation fop
-		     :operands operands))
-	     ((= code +fpe-fltund+)
-	      (error 'floating-point-underflow
-		     :operation fop
-		     :operands operands))
-	     ((= code +fpe-fltres+)
-	      (error 'floating-point-inexact
-		     :operation fop
-		     :operands operands))
-	     ((= code +fpe-fltinv+)
-	      (error 'floating-point-invalid-operation
-		     :operation fop
-		     :operands operands))
-	     ((= code +fpe-fltden+)
-	      (error 'floating-point-denormal-operand
-		     :operation fop
-		     :operands operands))
-	     (t
-	      (error _"SIGFPE code ~D not handled" code)))
+	   (let ((fpe-info (second (assoc code +fpe-code-info-alist+))))
+	     (if fpe-info
+		 (error fpe-info
+			:operation fop
+			:operands operands)
+		 (error _"SIGFPE code ~D not handled" code)))
 	;; Cleanup
-	(let* ((traps (logand (ldb float-exceptions-byte modes)
-			(ldb float-traps-byte modes)))
-	       (new-modes modes)
-	       (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
-					 traps)))
-	  #+sse2
+	(let* ((trap-bit (third (assoc code +fpe-code-info-alist+)))
+	       (new-x87-modes (vm::x87-floating-point-modes))
+	       (new-sse2-modes (vm::sse2-floating-point-modes)))
+	  (format t "Trap bit: ~D~%" trap-bit)
+	  (format t "Current modes:      ~16,'0b~%" (vm::floating-point-modes))
+	  (format t "Current x87 modes:  ~16,'0b~%" new-x87-modes)
+	  (format t "Current sse2 modes: ~16,'0b~%" new-sse2-modes)
+	  (format t "Setting sse2 modes to: ~16,'0b~%"
+		  (logandc2 (ldb float-exceptions-byte new-sse2-modes)
+			    trap-bit))
+	  (setf (vm::sse2-floating-point-modes)
+		(logandc2 (ldb float-exceptions-byte new-sse2-modes)
+			  trap-bit))
+	  (format t "Setting x87 modes to:  ~16,'0b~%"
+		  (logandc2 (ldb float-exceptions-byte new-x87-modes)
+			    trap-bit))
+	  (setf (vm::x87-floating-point-modes)
+		(logandc2 (ldb float-exceptions-byte new-x87-modes)
+			  trap-bit))
+
+	  (format t "new x87 modes:      ~16,'0b~%" (vm::x87-floating-point-modes))
+	  (format t "new sse2 modes:     ~16,'0b~%" (vm::sse2-floating-point-modes))
+	  #+nil
 	  (progn
 	    ;; Clear out the status for any enabled traps.  With SSE2, if
 	    ;; the current exception is enabled, the next FP instruction
