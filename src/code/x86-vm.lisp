@@ -378,6 +378,41 @@
 
 (defsetf sigcontext-floating-point-modes %set-sigcontext-floating-point-modes)
 
+#+solaris
+(progn
+(defun sigcontext-floating-point-modes-x87 (scp)
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (let ((fn (extern-alien "os_sigcontext_x87_modes"
+			  (function (integer 32)
+				    (* unix:sigcontext)))))
+    (alien-funcall fn scp)))
+
+(defun %set-sigcontext-floating-point-modes-x87 (scp new-modes)
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (let ((fn (extern-alien "os_set_sigcontext_x87_modes"
+			  (function c-call:void
+				    (* unix:sigcontext)
+				    c-call:unsigned-int))))
+    (alien-funcall fn scp new-modes)
+    new-modes))
+  
+(defun sigcontext-floating-point-modes-sse2 (scp)
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (let ((fn (extern-alien "os_sigcontext_sse2_modes"
+			  (function (integer 32)
+				    (* unix:sigcontext)))))
+    (alien-funcall fn scp)))
+
+(defun %set-sigcontext-floating-point-modes-sse2 (scp new-modes)
+  (declare (type (alien (* unix:sigcontext)) scp))
+  (let ((fn (extern-alien "os_set_sigcontext_sse2_modes"
+			  (function c-call:void
+				    (* unix:sigcontext)
+				    c-call:unsigned-int))))
+    (alien-funcall fn scp new-modes)
+    new-modes))
+)
+
 
 ;;; EXTERN-ALIEN-NAME -- interface.
 ;;;

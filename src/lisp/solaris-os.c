@@ -615,9 +615,9 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 
     modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
 
-    DPRINTF(0, (stderr, "cw = 0x%04x\n", cw));
-    DPRINTF(0, (stderr, "sw = 0x%04x\n", sw));
-    DPRINTF(0, (stderr, "modes = 0x%08x\n", modes));
+    DPRINTF(0, (stderr, "os_sigcontext_fpu cw = 0x%04x\n", cw));
+    DPRINTF(0, (stderr, "os_sigcontext_fpu sw = 0x%04x\n", sw));
+    DPRINTF(0, (stderr, "os_sigcontext_fpu modes = 0x%08x\n", modes));
     
 #ifdef FEATURE_SSE2
     /*
@@ -627,7 +627,7 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 	unsigned long mxcsr;
 
         mxcsr = fpr->fp_reg_set.fpchip_state.mxcsr;
-        DPRINTF(0, (stderr, "SSE2 modes = %08lx\n", mxcsr));
+        DPRINTF(0, (stderr, "os_sigcontext_fpu SSE2 modes = %08lx\n", mxcsr));
 
 	modes |= mxcsr;
     }
@@ -636,6 +636,65 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     modes ^= (0x3f << 7);
     return modes;
 }
+
+unsigned int
+os_sigcontext_x87_modes(ucontext_t *scp)
+{
+    unsigned short cw, sw;
+    fpregset_t *fpr;
+    fpr = &scp->uc_mcontext.fpregs;
+
+    cw = fpr->fp_reg_set.fpchip_state.state[0] & 0xffff;
+    sw = fpr->fp_reg_set.fpchip_state.state[1] & 0xffff;
+
+    DPRINTF(1, (stderr, "os_sigcontext_x87 cw, sw = #x%04x #x%04x\n", cw, sw));
+
+    return (cw << 16) | sw;
+}
+
+void
+os_set_sigcontext_x87_modes(ucontext_t *scp, unsigned int modes)
+{
+    unsigned short cw, sw;
+    fpregset_t *fpr;
+    fpr = &scp->uc_mcontext.fpregs;
+
+    sw = modes & 0xffff;
+    cw = (modes >> 16) & 0xffff;
+    
+    fpr->fp_reg_set.fpchip_state.state[0] = cw;
+    fpr->fp_reg_set.fpchip_state.state[1] = sw;
+
+    DPRINTF(1, (stderr, "os_set_sigcontext_x87 modes = #x%08x\n", modes));
+    DPRINTF(1, (stderr, "os_set_sigcontext_x87 cw, sw = #x%04x #x%04x\n", cw, sw));
+}
+
+
+#ifdef FEATURE_SSE2
+unsigned int
+os_sigcontext_sse2_modes(ucontext_t *scp)
+{
+    unsigned long mxcsr;
+    fpregset_t *fpr;
+
+    fpr = &scp->uc_mcontext.fpregs;
+    mxcsr = fpr->fp_reg_set.fpchip_state.mxcsr;
+    DPRINTF(1, (stderr, "os_sigcontext_sse2 mxcsr = #x%08lx\n", mxcsr));
+
+    return mxcsr;
+}
+
+void
+os_set_sigcontext_sse2_modes(ucontext_t *scp, unsigned int modes)
+{
+    fpregset_t *fpr;
+    fpr = &scp->uc_mcontext.fpregs;
+
+    fpr->fp_reg_set.fpchip_state.mxcsr = modes;
+
+    DPRINTF(1, (stderr, "os_set_sigcontext_sse2 mxcsr = #x%08x\n", modes));
+}
+#endif
 
 unsigned int
 os_set_sigcontext_fpu_modes(ucontext_t *scp, uint32_t modes)
