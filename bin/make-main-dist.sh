@@ -1,25 +1,27 @@
 #!/bin/sh
 
 usage() {
-    echo "make-main-dist.sh  -C option -E ext [-h?] [-t tar][-I destdir] [-G group] [-O owner] [-M mandir]"
-    echo "        target-directory version arch os"
-    echo "  -h           This help"
-    echo "  -?           This help"
-    echo "  -t tar       Tar program to use"
-    echo "  -C option    Tar option for compressing the tarball; required."
-    echo "  -E ext       Extension to use for the tarball.  Must be consistent with"
-    echo "                 -C option.  Required."
-    echo "  -I destdir   Install directly to given directory instead of creating a tarball"
-    echo "  -G group     Group to use"
-    echo "  -O owner     Owner to use"
-    echo "  -M mandir    Install manpages in this subdirectory.  Default is man/man1"
-    echo ""
-    echo "This is generally called by make-dist.sh and not normally invoked by the user"
-    echo ""
-    echo "Create a tarball consisting of the main components needed to distribute"
-    echo "a binary installation of cmucl.  This includes the C executable and support"
-    echo "libraries; the subsystems like Gray streams, and simple streams; external"
-    echo "formats; contribs like asdf and defsystem; manpages and READMEs."
+    cat <<EOF
+`basename $0`  -C option -E ext [-h?] [-t tar][-I destdir] [-G group] [-O owner] [-M mandir]
+        target-directory version arch os
+  -h           This help
+  -?           This help
+  -t tar       Tar program to use
+  -C option    Tar option for compressing the tarball; required.
+  -E ext       Extension to use for the tarball.  Must be consistent with
+                 -C option.  Required.
+  -I destdir   Install directly to given directory instead of creating a tarball
+  -G group     Group to use
+  -O owner     Owner to use
+  -M mandir    Install manpages in this subdirectory.  Default is man/man1
+
+This is generally called by make-dist.sh and not normally invoked by the user
+
+Create a tarball consisting of the main components needed to distribute
+a binary installation of cmucl.  This includes the C executable and support
+libraries; the subsystems like Gray streams, and simple streams; external
+formats; contribs like asdf and defsystem; manpages and READMEs."
+EOF
     exit 1
 }
     

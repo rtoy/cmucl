@@ -1,22 +1,24 @@
 #!/bin/sh
 
 usage() {
-    echo "make-extra-dist.sh -C option -E ext [-t tar] [-I destdir] [-G group] [-O owner]"
-    echo "  -h           This help"
-    echo "  -?           This help"
-    echo "  -t tar       Tar program to use"
-    echo "  -C option    Tar option for compressing the tarball; required."
-    echo "  -E ext       Extension to use for the tarball.  Must be consistent with"
-    echo "                 -C option.  Required."
-    echo "  -I destdir   Install directly to given directory instead of creating a tarball"
-    echo "  -G group     Group to use"
-    echo "  -O owner     Owner to use"
-    echo ""
-    echo "This is generally called by make-dist.sh and not normally invoked by the user"
-    echo ""
-    echo "Create a tarball of the extra components for cmucl.  This includes things like "
-    echo "CLX; Hemlock; CLM; contrib library not already included in the main"
-    echo "distribution; locale messages."
+    cat <<EOF
+`basename $0` -C option -E ext [-t tar] [-I destdir] [-G group] [-O owner]
+  -h           This help
+  -?           This help
+  -t tar       Tar program to use
+  -C option    Tar option for compressing the tarball; required.
+  -E ext       Extension to use for the tarball.  Must be consistent with
+                 -C option.  Required.
+  -I destdir   Install directly to given directory instead of creating a tarball
+  -G group     Group to use
+  -O owner     Owner to use
+
+This is generally called by make-dist.sh and not normally invoked by the user
+
+Create a tarball of the extra components for cmucl.  This includes things like 
+CLX; Hemlock; CLM; contrib library not already included in the main
+distribution; locale messages.
+EOF
     exit 1
 }
 

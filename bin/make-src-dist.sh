@@ -1,20 +1,25 @@
 #!/bin/sh
 
 usage() {
-    echo "make-src-dist.sh: -C option -E ext [-h?] [-t gnutar] [-I destdir] [version]"
-    echo "  -h           This help"
-    echo "  -?           This help"
-    echo "  -t tar       Name/path to GNU tar"
-    echo "  -C option    Tar option for compressing the tarball; required."
-    echo "  -E ext       Extension to use for the tarball.  Must be consistent with"
-    echo "                 -C option.  Required."
-    echo "  -I destdir   Install directly to given directory instead of creating a tarball"
-    echo "   version     The version.  Defaults to the current date"
-    echo ""
-    echo "This is generally called by make-dist.sh and not normally invoked by the user"
-    echo ""
-    echo "Create a tar ball of the cmucl sources."
+    cat <<EOF
+`basename $0` -C option -E ext [-h?] [-t gnutar] [-I destdir] [version]
+  -h           This help
+  -?           This help
+  -t tar       Name/path to GNU tar
+  -C option    Tar option for compressing the tarball; required.
+  -E ext       Extension to use for the tarball.  Must be consistent with
+                 -C option.  Required.
+  -I destdir   Install directly to given directory instead of creating a tarball
+   version     The version.  Defaults to the current date
+
+This is generally called by make-dist.sh and not normally invoked by the user
+
+Create a tar ball of the cmucl sources."
+EOF
+    exit 1
 }
+
+GTAR=tar
 
 while getopts "C:E:h?t:I:" arg
 do
@@ -51,8 +56,8 @@ echo Creating source distribution
 GTAR_OPTIONS="--exclude=.git --exclude='*.pot.~*~'"
 if [ -z "$INSTALL_DIR" ]; then
     # echo "  Compressing with $ZIP"
-    ${GTAR:-tar} ${GTAR_OPTIONS} ${COMPRESS} -cf cmucl-src-$VERSION.tar.$COMPRESS_EXT bin src tests
+    ${GTAR} ${GTAR_OPTIONS} ${COMPRESS} -cf cmucl-src-$VERSION.tar.$COMPRESS_EXT bin src tests
 else
     # Install in the specified directory
-    ${GTAR:-tar} ${GTAR_OPTIONS} -cf - bin src tests | (cd $INSTALL_DIR; ${GTAR:-tar} xf -)
+    ${GTAR} ${GTAR_OPTIONS} -cf - bin src tests | (cd $INSTALL_DIR; ${GTAR:-tar} xf -)
 fi
