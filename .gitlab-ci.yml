@@ -107,8 +107,8 @@ linux:exec-test:
       artifacts: true
   script:
     # Create an executable and test it by printing the version.
-    - dist/bin/lisp -eval '(save-lisp "foo" :executable t)'
-    - ./foo --version
+    - dist/bin/lisp -eval '(save-lisp "saved-lisp-executable" :executable t)'
+    - ./saved-lisp-executable --version
 
 linux:cross-test:
   stage: test
@@ -223,8 +223,8 @@ osx:exec-test:
       artifacts: true
   script:
     # Create an executable and test it by printing the version.
-    - dist/bin/lisp -eval '(save-lisp "foo" :executable t)'
-    - ./foo --version
+    - dist/bin/lisp -eval '(save-lisp "saved-lisp-executable" :executable t)'
+    - ./saved-lisp-executable --version
   
 osx:ansi-test:
   stage: ansi-test
