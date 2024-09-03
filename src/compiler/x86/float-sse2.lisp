@@ -1380,7 +1380,7 @@
   float-modes)
 
 ;; Extract the control and status words from the FPU.  The low 16 bits
-;; contain the control word, and the high 16 bits contain the status.
+;; contain the status word, and the high 16 bits contain the control.
 (define-vop (x87-floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
@@ -1402,7 +1402,7 @@
    (inst rol res 16)))
 
 ;; Set the control and status words from the FPU.  The low 16 bits
-;; contain the control word, and the high 16 bits contain the status.
+;; contain the status word, and the high 16 bits contain the control.
 (define-vop (x87-set-floating-point-modes)
   (:args (new-modes :scs (unsigned-reg) :to :result :target res))
   (:results (res :scs (unsigned-reg)))
