@@ -1396,8 +1396,10 @@
    (inst byte #x66)			; operand size prefix
    (inst or sw-reg cw-stack)
    (inst xor sw-reg #x3f)		; invert exception mask
-    (move res sw-reg)
-    (inst rol res 16)))
+   (move res sw-reg)
+   ;; Put status word in the low 16 bits and the control word in the
+   ;; high 16 bits.
+   (inst rol res 16)))
 
 ;; Set the control and status words from the FPU.  The low 16 bits
 ;; contain the control word, and the high 16 bits contain the status.
@@ -1414,6 +1416,8 @@
   (:temporary (:sc unsigned-reg) new)
   (:generator 6
    (move new new-modes)
+   ;; Put the status word in the high 16 bits and the control word in
+   ;; the low 16 bits.
    (inst rol new 16)
    (inst mov cw-stack new)
    (inst xor cw-stack #x3f)  ; invert exception mask
