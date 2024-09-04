@@ -102,9 +102,11 @@
     ;; FPU and only use the SSE2 rounding control bits.
     (let* ((x87-modes (vm::x87-floating-point-modes))
 	   (sse-modes (vm::sse2-floating-point-modes))
+	   (x87-exceptions (logand #x3f x87-modes))
+	   (x87-enables (logand #x3f (ash x87-modes -16)))
 	   (final-mode (logior sse-modes
-			       (ash (logand #x3f x87-modes) 7) ; control
-			       (logand #x3f (ash x87-modes -16)))))
+			       x87-exceptions
+			       (ash x87-enables 7))))
 
       final-mode))
   (defun (setf floating-point-modes) (new-mode)
@@ -112,15 +114,17 @@
     ;; Set the floating point modes for both X87 and SSE2.  This
     ;; include the rounding control bits.
     (let* ((rc (ldb float-rounding-mode new-mode))
+	   (new-exceptions (logand #x3f new-mode))
+	   (new-enables (logand #x3f (ash new-mode -7)))
 	   (x87-modes
-	    (logior (ash (logand #x3f new-mode) 16)
+	    (logior new-exceptions
 		    (ash rc 10)
-		    (logand #x3f (ash new-mode -7))
+		    (ash new-enables 16)
 		    ;; Set precision control to be 64-bit, always.  We
 		    ;; don't use the x87 registers with sse2, so this
 		    ;; is ok and would be the correct setting if we
 		    ;; ever support long-floats.
-		    (ash 3 8))))
+		    (ash 3 (+ 8 16)))))
       (setf (vm::sse2-floating-point-modes) (ldb (byte 24 0) new-mode))
       (setf (vm::x87-floating-point-modes) (ldb (byte 24 0) x87-modes)))
     new-mode)
