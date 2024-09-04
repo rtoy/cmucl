@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "os.h"
 #include "core.h"
