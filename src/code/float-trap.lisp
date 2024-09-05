@@ -483,15 +483,20 @@
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal)
 	   (type system-area-pointer scp))
+  (format t "***Enter Handler***~%")
   (let* ((modes (sigcontext-floating-point-modes
-		 (alien:sap-alien scp (* unix:sigcontext)))))
+		 (alien:sap-alien scp (* unix:sigcontext))))
+	 (sigcontext-x87-modes (sigcontext-floating-point-modes-x87
+				(alien:sap-alien scp (* unix:sigcontext))))
+	 (sigcontext-sse2-modes (sigcontext-floating-point-modes-sse2
+				 (alien:sap-alien scp (* unix:sigcontext))))
+	 (current-x87-modes (vm::x87-floating-point-modes))
+	 (current-sse2-modes (vm::sse2-floating-point-modes)))
     (format t "Current modes:         ~32,'0b~%" modes)
-    (format t "sigcontext x87:        ~32,'0b~%"
-	    (sigcontext-floating-point-modes-x87
-	     (alien:sap-alien scp (* unix:sigcontext))))
-    (format t "sigcontext sse2:       ~32,'0b~%"
-	    (sigcontext-floating-point-modes-sse2
-	     (alien:sap-alien scp (* unix:sigcontext))))
+    (format t "Current HW x87 modes:  ~32,'0b~%" current-x87-modes)
+    (format t "Current HW sse2 modes: ~32,'0b~%" current-sse2-modes)
+    (format t "sigcontext x87:        ~32,'0b~%" sigcontext-x87-modes)
+    (format t "sigcontext sse2:       ~32,'0b~%" sigcontext-sse2-modes)
 
     (multiple-value-bind (fop operands)
 	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
@@ -515,38 +520,47 @@
 	;;
 	;; Clear out the status for any enabled traps.  If we don't
 	;; then when we return, the exception gets signaled again.
-	#+nil
+	;;#+nil
 	(let* ((trap-bit (third (assoc code +fpe-code-info-alist+)))
-	       (current-x87-modes (vm::x87-floating-point-modes))
-	       (current-sse2-modes (vm::sse2-floating-point-modes))
 	       (new-x87-modes
-		(dpb (logandc2 (ldb float-exceptions-byte current-sse2-modes)
-			       trap-bit)
-		     float-exceptions-byte current-sse2-modes))
+		(logandc2 current-x87-modes trap-bit))
 	       (new-sse2-modes
-		(dpb (logandc2 (ldb float-exceptions-byte current-x87-modes)
-			       trap-bit)
-		     float-exceptions-byte current-x87-modes)))
+		(logandc2 current-sse2-modes trap-bit)))
+	  (format t "***Cleanup***~%")
 	  (format t "Trap bit: ~D~%" trap-bit)
 	  (format t "Current modes:         ~32,'0b~%" (vm::floating-point-modes))
-	  (format t "Current x87 modes:     ~32,'0b~%" current-x87-modes)
-	  (format t "Current sse2 modes:    ~32,'0b~%" current-sse2-modes)
-	  (format t "Setting sse2 modes to: ~32,'0b~%" new-x87-modes)
-	  (format t "Setting x87 modes to:  ~32,'0b~%" new-sse2-modes)
+	  (format t "Current HW x87 modes:  ~32,'0b~%" current-x87-modes)
+	  (format t "Current HW sse2 modes: ~32,'0b~%" current-sse2-modes)
+	  (format t "New x87 modes:         ~32,'0b~%" new-x87-modes)
+	  (format t "New sse2 modes:        ~32,'0b~%" new-sse2-modes)
 	  (ignore-errors
-	    (setf (vm::sse2-floating-point-modes) new-sse2-modes)
-	    (setf (vm::x87-floating-point-modes) new-x87-modes))
+	   (format t "Setting new sse2 modes~%")
+	   (let ((new-context (logandc2 sigcontext-sse2-modes trap-bit)))
+	     (format t "New sse2 sigcontext:   ~32,'0b~%" new-context)
+	     (setf (vm::sse2-floating-point-modes) new-sse2-modes)
+	     (%set-sigcontext-floating-point-modes-sse2
+	      (alien:sap-alien scp (* unix:sigcontext))
+	      new-context)))
+	  (ignore-errors
+	    (format t "Setting new x87 modes~%")
+	    (let ((new-context (logandc2 sigcontext-x87-modes trap-bit)))
+	      (format t "New x87 sigcontext:    ~32,'0b~%" new-context)
+	      (setf (vm::x87-floating-point-modes) new-x87-modes)
+	      (%set-sigcontext-floating-point-modes-x87
+	       (alien:sap-alien scp (* unix:sigcontext))
+	       new-context)))
 
 	  (format t "new x87 modes:         ~32,'0b~%" (vm::x87-floating-point-modes))
 	  (format t "new sse2 modes:        ~32,'0b~%" (vm::sse2-floating-point-modes)))
+	#+nil
 	(let* ((trap-bit (third (assoc code +fpe-code-info-alist+)))
 	       (x87-modes (sigcontext-floating-point-modes-x87
 			   (alien:sap-alien scp (* unix:sigcontext))))
 	       (sse2-modes (sigcontext-floating-point-modes-sse2
 			    (alien:sap-alien scp (* unix:sigcontext)))))
 	  (format t "Trap bit: ~D~%" trap-bit)
-	  (format t "New sigcontext x87:    ~32,'0b~%" (logandc2 x87-modes trap-bit))
-	  (format t "New sigcontext sse2:   ~32,'0b~%" (logandc2 sse2-modes trap-bit))
+	  (format t "New sigcontext x87:     ~32,'0b~%" (logandc2 x87-modes trap-bit))
+	  (format t "New sigcontext sse2:    ~32,'0b~%" (logandc2 sse2-modes trap-bit))
 	  (%set-sigcontext-floating-point-modes-x87
 	   (alien:sap-alien scp (* unix:sigcontext))
 	   (logandc2 x87-modes trap-bit))
