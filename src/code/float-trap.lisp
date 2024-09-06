@@ -632,6 +632,8 @@
   accrued exceptions are cleared at the start of the body to support
   their testing within, and restored on exit."))
 
+;; Solaris/x86 needs to handle the x87 and sse2 mode bits separately
+;; instead of using a merged from from FLOATING-POINT-MODES.
 #+(and solaris x86)
 (macrolet
     ((with-float-traps (name merge-traps docstring)
@@ -646,22 +648,22 @@
 	 `(progn
 	    (defmacro ,macro-name (traps &body body)
 	      ,docstring
-	      (let* ((sse2-trap-mask (dpb (lognot (float-trap-mask traps))
-					  float-traps-byte #xffffffff))
-		     ;; The x87 trap masks are ordered the same as
-		     ;; sse2 trap masks, but are located in a
-		     ;; different part of the word.
-		     (x87-trap-mask (dpb (lognot (ash (float-trap-mask traps) 16))
-					  float-traps-byte #xffffffff))
-		     (exception-mask (dpb (lognot (vm::float-trap-mask traps))
-					  float-sticky-bits #xffffffff))
-		     (orig-modes-x87 (gensym "ORIG-MODES-X87-"))
-		     (orig-modes-sse2 (gensym "ORIG-MODES-SSE2-")))
+	      (let ((sse2-trap-mask (dpb (lognot (float-trap-mask traps))
+					 float-traps-byte #xffffffff))
+		    ;; The x87 trap masks are ordered the same as
+		    ;; sse2 trap masks, but are located in a
+		    ;; different part of the word.
+		    (x87-trap-mask (dpb (lognot (ash (float-trap-mask traps) 16))
+					float-traps-byte #xffffffff))
+		    ;; The exception bits (sticky bits) are located in
+		    ;; the same place for both x87 and sse2 modes so
+		    ;; we can use just one exception mask for both.
+		    (exception-mask (dpb (lognot (vm::float-trap-mask traps))
+					 float-sticky-bits #xffffffff))
+		    (orig-modes-x87 (gensym "ORIG-MODES-X87-"))
+		    (orig-modes-sse2 (gensym "ORIG-MODES-SSE2-")))
 		`(let ((,orig-modes-x87 (x87-floating-point-modes))
 		       (,orig-modes-sse2 (sse2-floating-point-modes)))
-		   (format t "In W-F-T:~%")
-		   (format t "  orig x87 modes:  ~32,'0b~%" ,orig-modes-x87)
-		   (format t "  orig sse2 modes: ~32,'0b~%" ,orig-modes-sse2)
 		   (unwind-protect
 			(progn
 			  (setf (x87-floating-point-modes)
@@ -672,8 +674,6 @@
 				(ldb (byte 32 0)
 				     (logand (,',merge-traps ,orig-modes-sse2 ,sse2-trap-mask)
 					     ,exception-mask)))
-			  (format t "  masked x87 modes:  ~32,'0b~%" (x87-floating-point-modes))
-			  (format t "  masked sse2 modes:   ~32,'0b~%" (sse2-floating-point-modes))
 			  ,@body)
 		     ;; Restore the modes exactly as they were.
 		     (setf (x87-floating-point-modes) ,orig-modes-x87)
