@@ -568,6 +568,7 @@
 	   (alien:sap-alien scp (* unix:sigcontext))
 	   (logandc2 sse2-modes trap-bit)))))))
 
+#-(and solaris x86)
 (macrolet
     ((with-float-traps (name merge-traps docstring)
        ;; Define macros to enable or disable floating-point
@@ -612,6 +613,71 @@
 			  ,@body)
 		     ;; Restore the modes exactly as they were.
 		     (setf (floating-point-modes) ,orig-modes)))))))))
+
+  ;; WITH-FLOAT-TRAPS-MASKED  --  Public
+  (with-float-traps masked logand
+    _N"Execute BODY with the floating point exceptions listed in TRAPS
+  masked (disabled).  TRAPS should be a list of possible exceptions
+  which includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
+  :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective
+  accrued exceptions are cleared at the start of the body to support
+  their testing within, and restored on exit.")
+
+  ;; WITH-FLOAT-TRAPS-ENABLED --  Public
+  (with-float-traps enabled logorc2
+    _N"Execute BODY with the floating point exceptions listed in TRAPS
+  enabled.  TRAPS should be a list of possible exceptions which
+  includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
+  :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective
+  accrued exceptions are cleared at the start of the body to support
+  their testing within, and restored on exit."))
+
+#+(and solaris x86)
+(macrolet
+    ((with-float-traps (name merge-traps docstring)
+       ;; Define macros to enable or disable floating-point
+       ;; exceptions.  Masked exceptions and enabled exceptions only
+       ;; differ whether we AND in the bits or OR them, respectively.
+       ;; MERGE-TRAPS is the logical operation to merge the traps with
+       ;; the current floating-point mode.  Thus, use  and MERGE-EXCEPTIONS is the
+       ;; logical operation to merge the exceptions (sticky bits) with
+       ;; the current mode.
+       (let ((macro-name (symbolicate "WITH-FLOAT-TRAPS-" name)))
+	 `(progn
+	    (defmacro ,macro-name (traps &body body)
+	      ,docstring
+	      (let* ((sse2-trap-mask (dpb (lognot (float-trap-mask traps))
+					  float-traps-byte #xffffffff))
+		     ;; The x87 trap masks are ordered the same as
+		     ;; sse2 trap masks, but are located in a
+		     ;; different part of the word.
+		     (x87-trap-mask (dpb (lognot (ash (float-trap-mask traps) 16))
+					  float-traps-byte #xffffffff))
+		     (exception-mask (dpb (lognot (vm::float-trap-mask traps))
+					  float-sticky-bits #xffffffff))
+		     (orig-modes-x87 (gensym "ORIG-MODES-X87-"))
+		     (orig-modes-sse2 (gensym "ORIG-MODES-SSE2-")))
+		`(let ((,orig-modes-x87 (x87-floating-point-modes))
+		       (,orig-modes-sse2 (sse2-floating-point-modes)))
+		   (format t "In W-F-T:~%")
+		   (format t "  orig x87 modes:  ~32,'0b~%" ,orig-modes-x87)
+		   (format t "  orig sse2 modes: ~32,'0b~%" ,orig-modes-sse2)
+		   (unwind-protect
+			(progn
+			  (setf (x87-floating-point-modes)
+				(ldb (byte 32 0)
+				     (logand (,',merge-traps ,orig-modes-x87 ,x87-trap-mask)
+					     ,exception-mask)))
+			  (setf (sse2-floating-point-modes)
+				(ldb (byte 32 0)
+				     (logand (,',merge-traps ,orig-modes-sse2 ,sse2-trap-mask)
+					     ,exception-mask)))
+			  (format t "  masked x87 modes:  ~32,'0b~%" (x87-floating-point-modes))
+			  (format t "  masked sse2 modes:   ~32,'0b~%" (sse2-floating-point-modes))
+			  ,@body)
+		     ;; Restore the modes exactly as they were.
+		     (setf (x87-floating-point-modes) ,orig-modes-x87)
+		     (setf (sse2-floating-point-modes) ,orig-modes-sse2)))))))))
 
   ;; WITH-FLOAT-TRAPS-MASKED  --  Public
   (with-float-traps masked logand
