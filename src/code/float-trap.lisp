@@ -483,15 +483,17 @@
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal)
 	   (type system-area-pointer scp))
+  #+nil
   (format t "***Enter Handler***~%")
   (let* ((modes (sigcontext-floating-point-modes
 		 (alien:sap-alien scp (* unix:sigcontext))))
 	 (current-x87-modes (vm::x87-floating-point-modes))
 	 (current-sse2-modes (vm::sse2-floating-point-modes)))
+    #+nil
     (progn
-    (format t "Current modes:         ~32,'0b~%" modes)
-    (format t "Current HW x87 modes:  ~32,'0b~%" current-x87-modes)
-    (format t "Current HW sse2 modes: ~32,'0b~%" current-sse2-modes)
+      (format t "Current modes:         ~32,'0b~%" modes)
+      (format t "Current HW x87 modes:  ~32,'0b~%" current-x87-modes)
+      (format t "Current HW sse2 modes: ~32,'0b~%" current-sse2-modes))
 
     (multiple-value-bind (fop operands)
 	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
@@ -505,6 +507,7 @@
       ;; This means we need to restore the fpu state ourselves.
       (unwind-protect
 	   (let ((fpe-info (second (assoc code +fpe-code-info-alist+))))
+	     #+nil
 	     (format t "fpe code = ~D~%" code)
 	     (if fpe-info
 		 (error fpe-info
@@ -520,20 +523,25 @@
 		(logandc2 current-x87-modes trap-bit))
 	       (new-sse2-modes
 		(logandc2 current-sse2-modes trap-bit)))
-	  (format t "***Cleanup***~%")
-	  (format t "Trap bit: ~D~%" trap-bit)
-	  (format t "Current modes:         ~32,'0b~%" (vm::floating-point-modes))
-	  (format t "Current HW x87 modes:  ~32,'0b~%" current-x87-modes)
-	  (format t "Current HW sse2 modes: ~32,'0b~%" current-sse2-modes)
-	  (format t "New x87 modes:         ~32,'0b~%" new-x87-modes)
-	  (format t "New sse2 modes:        ~32,'0b~%" new-sse2-modes)
+	  #+nil
+	  (progn
+	    (format t "***Cleanup***~%")
+	    (format t "Trap bit: ~D~%" trap-bit)
+	    (format t "Current modes:         ~32,'0b~%" (vm::floating-point-modes))
+	    (format t "Current HW x87 modes:  ~32,'0b~%" current-x87-modes)
+	    (format t "Current HW sse2 modes: ~32,'0b~%" current-sse2-modes)
+	    (format t "New x87 modes:         ~32,'0b~%" new-x87-modes)
+	    (format t "New sse2 modes:        ~32,'0b~%" new-sse2-modes))
+	  #+nli
 	  (format t "Setting new sse2 modes~%")
 	  (setf (vm::sse2-floating-point-modes) new-sse2-modes)
+	  #+nil
 	  (format t "Setting new x87 modes~%")
 	  (setf (vm::x87-floating-point-modes) new-x87-modes)
-
-	  (format t "new x87 modes:         ~32,'0b~%" (vm::x87-floating-point-modes))
-	  (format t "new sse2 modes:        ~32,'0b~%" (vm::sse2-floating-point-modes))))))))
+	  #+nil
+	  (progn
+	    (format t "new x87 modes:         ~32,'0b~%" (vm::x87-floating-point-modes))
+	    (format t "new sse2 modes:        ~32,'0b~%" (vm::sse2-floating-point-modes))))))))
 
 #-(and solaris x86)
 (macrolet
