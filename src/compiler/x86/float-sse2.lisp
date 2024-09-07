@@ -1265,7 +1265,8 @@
 
 ;;;; Float mode hackery:
 
-(deftype float-modes () '(unsigned-byte 24))
+(deftype x87-float-modes () '(unsigned-byte 32))
+(deftype sse2-float-modes () '(unsigned-byte 16))
 
 ;; For the record, here is the format of the MXCSR register.
 ;;
@@ -1288,8 +1289,8 @@
 ;;  0         invalid operation flag
 ;;
 ;; See below for rounding control
-(defknown sse2-floating-point-modes () float-modes (flushable))
-(defknown ((setf sse2-floating-point-modes)) (float-modes) float-modes)
+(defknown sse2-floating-point-modes () sse2-float-modes (flushable))
+(defknown ((setf sse2-floating-point-modes)) (sse2-float-modes) sse2-float-modes)
 
 ;; Returns exactly the mxcsr register, except the masks are flipped
 ;; because we want exception enable flags, not masks.
@@ -1375,9 +1376,9 @@
 ;; 10   double precision (53 bits)
 ;; 11   double extended precision (64 bits)
 
-(defknown x87-floating-point-modes () float-modes (flushable))
-(defknown ((setf x87-floating-point-modes)) (float-modes)
-  float-modes)
+(defknown x87-floating-point-modes () x87-float-modes (flushable))
+(defknown ((setf x87-floating-point-modes)) (x87-float-modes)
+  x87-float-modes)
 
 ;; Extract the control and status words from the FPU.  The low 16 bits
 ;; contain the status word, and the high 16 bits contain the control.
