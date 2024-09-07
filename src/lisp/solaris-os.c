@@ -647,7 +647,7 @@ os_sigcontext_x87_modes(ucontext_t *scp)
     cw = fpr->fp_reg_set.fpchip_state.state[0] & 0xffff;
     sw = fpr->fp_reg_set.fpchip_state.state[1] & 0xffff;
 
-    DPRINTF(1, (stderr, "os_sigcontext_x87 cw, sw = #x%04x #x%04x\n", cw, sw));
+    DPRINTF(0, (stderr, "os_sigcontext_x87 cw, sw = #x%04x #x%04x\n", cw, sw));
 
     return (cw << 16) | sw;
 }
@@ -661,12 +661,12 @@ os_set_sigcontext_x87_modes(ucontext_t *scp, unsigned int modes)
 
     sw = modes & 0xffff;
     cw = (modes >> 16) & 0xffff;
-    
+
     fpr->fp_reg_set.fpchip_state.state[0] = cw;
     fpr->fp_reg_set.fpchip_state.state[1] = sw;
 
-    DPRINTF(1, (stderr, "os_set_sigcontext_x87 modes = #x%08x\n", modes));
-    DPRINTF(1, (stderr, "os_set_sigcontext_x87 cw, sw = #x%04x #x%04x\n", cw, sw));
+    DPRINTF(0, (stderr, "os_set_sigcontext_x87 modes = #x%08x\n", modes));
+    DPRINTF(0, (stderr, "os_set_sigcontext_x87 cw, sw = #x%04x #x%04x\n", cw, sw));
 }
 
 
@@ -679,7 +679,7 @@ os_sigcontext_sse2_modes(ucontext_t *scp)
 
     fpr = &scp->uc_mcontext.fpregs;
     mxcsr = fpr->fp_reg_set.fpchip_state.mxcsr;
-    DPRINTF(1, (stderr, "os_sigcontext_sse2 mxcsr = #x%08lx\n", mxcsr));
+    DPRINTF(0, (stderr, "os_sigcontext_sse2 mxcsr = #x%08lx\n", mxcsr));
 
     return mxcsr;
 }
@@ -692,7 +692,7 @@ os_set_sigcontext_sse2_modes(ucontext_t *scp, unsigned int modes)
 
     fpr->fp_reg_set.fpchip_state.mxcsr = modes;
 
-    DPRINTF(1, (stderr, "os_set_sigcontext_sse2 mxcsr = #x%08x\n", modes));
+    DPRINTF(0, (stderr, "os_set_sigcontext_sse2 mxcsr = #x%08x\n", modes));
 }
 #endif
 
@@ -702,19 +702,19 @@ os_set_sigcontext_fpu_modes(ucontext_t *scp, uint32_t modes)
     unsigned short cw, sw;
     fpregset_t *fpr;
     unsigned int state;
-        
+
     fpr = &scp->uc_mcontext.fpregs;
 
     cw = modes & 0x3f;
     sw = (modes >> 7) &0x3f;
 
-    DPRINTF(1, (stderr, "modes = 0x%08x\n", modes));
-    DPRINTF(1, (stderr, "cw = 0x%04x\n", cw));
-    DPRINTF(1, (stderr, "sw = 0x%04x\n", sw));
+    DPRINTF(0, (stderr, "modes = 0x%08x\n", modes));
+    DPRINTF(0, (stderr, "cw = 0x%04x\n", cw));
+    DPRINTF(0, (stderr, "sw = 0x%04x\n", sw));
 
     fpr->fp_reg_set.fpchip_state.state[0] = cw;
     fpr->fp_reg_set.fpchip_state.state[1] = sw;
-    
+
 #ifdef FEATURE_SSE2
     /*
      * Add in the SSE2 part, if we're running the sse2 core.
@@ -722,7 +722,7 @@ os_set_sigcontext_fpu_modes(ucontext_t *scp, uint32_t modes)
     if (fpu_mode == SSE2) {
 	unsigned long mxcsr = modes & 0xffff;
 
-        DPRINTF(1, (stderr, "SSE2 modes = %08lx\n", mxcsr));
+        DPRINTF(0, (stderr, "SSE2 modes = %08lx\n", mxcsr));
         fpr->fp_reg_set.fpchip_state.mxcsr = mxcsr;
 
 	modes |= mxcsr;
