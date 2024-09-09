@@ -1398,7 +1398,8 @@
    (inst xor sw-reg #x3f)		; invert exception mask
    (move res sw-reg)
    ;; Put status word in the low 16 bits and the control word in the
-   ;; high 16 bits.
+   ;; high 16 bits.  This is to match the SSE2 mxcsr register that has
+   ;; the status bits (sticky bits) in lowest part of the word.
    (inst rol res 16)))
 
 ;; Set the control and status words from the FPU.  The low 16 bits
