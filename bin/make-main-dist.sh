@@ -1,25 +1,61 @@
 #!/bin/sh
 
-# set -x
-while getopts "G:O:I:M:bgh?" arg
+usage() {
+    cat <<EOF
+`basename $0`  -C option -E ext [-h?] [-t tar][-I destdir] [-G group] [-O owner] [-M mandir]
+        target-directory version arch os
+  -h           This help
+  -?           This help
+  -t tar       Tar program to use
+  -C option    Tar option for compressing the tarball; required.
+  -E ext       Extension to use for the tarball.  Must be consistent with
+                 -C option.  Required.
+  -I destdir   Install directly to given directory instead of creating a tarball
+  -G group     Group to use
+  -O owner     Owner to use
+  -M mandir    Install manpages in this subdirectory.  Default is man/man1
+
+This is generally called by make-dist.sh and not normally invoked by the user
+
+Create a tarball consisting of the main components needed to distribute
+a binary installation of cmucl.  This includes the C executable and support
+libraries; the subsystems like Gray streams, and simple streams; external
+formats; contribs like asdf and defsystem; manpages and READMEs."
+EOF
+    exit 1
+}
+    
+GTAR=tar
+while getopts "C:E:G:O:I:M:t:h?" arg
 do
     case $arg in
+	C) COMPRESS=$OPTARG ;;
+	E) COMPRESS_EXT=$OPTARG ;;
 	G) GROUP="-g $OPTARG" ;;
 	O) OWNER="-o $OPTARG" ;;
         I) INSTALL_DIR=$OPTARG ;;
         M) MANDIR=$OPTARG ;;
-	b) ENABLE_BZIP=-b ;;
-	g) ENABLE_GZIP=-g  ;;
+	t) GTAR=$OPTARG ;;
 	h | \?) usage; exit 1 ;;
     esac
 done
 
 shift `expr $OPTIND - 1`
 
+# -C and -E options are required
+if [ -z "$COMPRESS" ]; then
+    echo "-C option is required"
+    exit 2
+fi
+
+if [ -z "$COMPRESS_EXT" ]; then
+    echo "-E option is required"
+    exit 2
+fi
+
 if [ "$1" = "" -o "$2" = "" -o "$3" = "" -o "$4" = "" ]
 then
-	echo "Usage: $0 target-directory version arch os"
-	exit 1
+    usage
 fi
 
 if [ ! -d "$1" ]
@@ -178,16 +214,7 @@ fi
 if [ -z "$INSTALL_DIR" ]; then
     sync ; sleep 1 ; sync ; sleep 1 ; sync
     echo Tarring main components
-    if [ -n "$ENABLE_GZIP" ]; then
-	echo "  Compressing with gzip"
-	( cd $DESTDIR >/dev/null ; tar cf - . ) | \
-	  gzip -c > cmucl-$VERSION-$ARCH-$OS.tar.gz
-    fi
-    if [ -n "$ENABLE_BZIP" ]; then
-	echo "  Compressing with bzip"
-	( cd $DESTDIR >/dev/null ; tar cf - . ) | \
-	  bzip2 > cmucl-$VERSION-$ARCH-$OS.tar.bz2
-    fi
+    $GTAR -C $DESTDIR $COMPRESS -cf cmucl-$VERSION-$ARCH-$OS.tar.$COMPRESS_EXT .
 
     echo Cleaning $DESTDIR
     [ -d $DESTDIR ] && rm -rf $DESTDIR
