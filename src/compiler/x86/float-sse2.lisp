@@ -1380,7 +1380,7 @@
   float-modes)
 
 ;; Extract the control and status words from the FPU.  The low 16 bits
-;; contain the control word, and the high 16 bits contain the status.
+;; contain the status word, and the high 16 bits contain the control.
 (define-vop (x87-floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
@@ -1396,12 +1396,16 @@
    (inst byte #x66)			; operand size prefix
    (inst or sw-reg cw-stack)
    (inst xor sw-reg #x3f)		; invert exception mask
-   (move res sw-reg)))
+   (move res sw-reg)
+   ;; Put status word in the low 16 bits and the control word in the
+   ;; high 16 bits.  This is to match the SSE2 mxcsr register that has
+   ;; the status bits (sticky bits) in lowest part of the word.
+   (inst rol res 16)))
 
 ;; Set the control and status words from the FPU.  The low 16 bits
-;; contain the control word, and the high 16 bits contain the status.
+;; contain the status word, and the high 16 bits contain the control.
 (define-vop (x87-set-floating-point-modes)
-  (:args (new :scs (unsigned-reg) :to :result :target res))
+  (:args (new-modes :scs (unsigned-reg) :to :result :target res))
   (:results (res :scs (unsigned-reg)))
   (:arg-types unsigned-num)
   (:result-types unsigned-num)
@@ -1410,7 +1414,12 @@
   (:temporary (:sc unsigned-stack) cw-stack)
   (:temporary (:sc byte-reg :offset al-offset) sw-reg)
   (:temporary (:sc unsigned-reg :offset ecx-offset) old)
+  (:temporary (:sc unsigned-reg) new)
   (:generator 6
+   (move new new-modes)
+   ;; Put the status word in the high 16 bits and the control word in
+   ;; the low 16 bits.
+   (inst rol new 16)
    (inst mov cw-stack new)
    (inst xor cw-stack #x3f)  ; invert exception mask
    (inst fnstsw)
@@ -1425,7 +1434,7 @@
    (inst fldenv (make-ea :dword :base esp-tn))
    (inst add esp-tn 28)
    DONE
-   (move res new)))
+   (move res new-modes)))
 
 
 (defun sse2-floating-point-modes ()
