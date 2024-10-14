@@ -183,9 +183,9 @@ osx:build:
       - darwin-2/*.log
       - darwin-3/*.log
       - darwin-4/*.log
-  needs:
-    - #job: osx:install
-      artifacts: true
+#  needs:
+#    - job: osx:install
+#      artifacts: true
   script:
     # Do cross compile first
     #- bin/create-target.sh xtarget x86_darwin
