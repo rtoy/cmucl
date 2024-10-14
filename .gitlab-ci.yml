@@ -184,7 +184,7 @@ osx:build:
       - darwin-3/*.log
       - darwin-4/*.log
   needs:
-    - job: osx:install
+    - #job: osx:install
       artifacts: true
   script:
     # Do cross compile first
