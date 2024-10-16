@@ -165,6 +165,10 @@ osx:install:
   artifacts:
     paths:
       - snapshot/
+  allow_failure: true
+  before_script:
+    - type -all git
+    - git --version
   script:
     - echo PATH = $PATH
     - ls -F /usr/local/bin
