@@ -347,7 +347,8 @@
 	       (when (and site-init
 			  (not (and process-command-line
 				    (find-switch "nositeinit"))))
-		 (load site-init :if-does-not-exist nil :verbose nil))
+		 (or (load site-init :if-does-not-exist nil :verbose t)
+		     (load "library:default-site-init" :if-does-not-exist nil :verbose t)))
 	       (when (and process-command-line (find-switch "edit"))
 		 (setf *editor-lisp-p* t))
 	       (when (and load-init-file
@@ -443,7 +444,13 @@
 
 (setf (getf *herald-items* :bugs)
       `(,#'(lambda (stream)
-	     (write-string (intl:gettext "See <http://www.cmucl.org/> for support information.") stream))
+	     (write-string (intl:gettext "Please report issues to ")
+			   stream)
+	     (write-string (intl:gettext "https://gitlab.common-lisp.net/cmucl/cmucl/-/issues")
+			   stream))
+	 terpri
+	 ,#'(lambda (stream)
+	      (write-string (intl:gettext "See <http://www.cmucl.org/> for support information.") stream))
 	terpri
 	,#'(lambda (stream)
 	     (write-string (intl:gettext "Loaded subsystems:") stream))))

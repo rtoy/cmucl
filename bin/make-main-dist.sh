@@ -148,7 +148,7 @@ install ${GROUP} ${OWNER} -m 0755 src/tools/load-foreign.csh src/tools/config \
 	$DESTDIR/lib/cmucl/lib/
 install ${GROUP} ${OWNER} -m 0644 src/tools/config.lisp \
 	$DESTDIR/lib/cmucl/lib/
-install ${GROUP} ${OWNER} -m 0644 src/code/generic-site.lisp \
+install ${GROUP} ${OWNER} -m 0644 src/code/default-site-init.lisp \
 	$DESTDIR/lib/cmucl/lib/
 install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.nm $TARGET/lisp/lisp.map \
 	$TARGET/lisp/internals.h $TARGET/lisp/internals.inc $DESTDIR/lib/cmucl/
