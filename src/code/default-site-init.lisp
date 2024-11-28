@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/code/generic-site.lisp $")
+  "$Header: src/code/default-site-init.lisp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,16 +39,6 @@
 ;;;
 ;;; If your sources are located somewhere else, change this
 ;;; accordingly.
-#+nil
-(setf (search-list "target:")
-      (list
-       (namestring
-	(make-pathname
-	 :directory (pathname-directory
-		     (merge-pathnames (make-pathname
-				       :directory '(:relative :up :up
-						    :up "src"))
-				      (pathname lisp::*cmucl-core-path*)))))))
 (setf (search-list "target:")
       '("library:../src/"))
 
