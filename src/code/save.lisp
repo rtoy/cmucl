@@ -236,7 +236,8 @@
 
   :site-init
       If true, then the name of the site init file to load.  The default is
-  library:site-init.  No error if this does not exist.
+  library:site-init if it exists.  If not, library:default-site-init
+  is used if it exists.  No error if these files do not exist.
 
   :print-herald
       If true (the default), print out the lisp system herald when starting.
