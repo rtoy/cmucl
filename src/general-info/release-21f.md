@@ -87,6 +87,7 @@ public domain.
     * ~~#330~~ Fix typos in unicode.lisp
     * ~~#333~~ `load` doesn't accept generalized boolean for
       `:if-does-not-exist` arg
+    * ~~#361~~ Add herald item to mention where to report issues
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
