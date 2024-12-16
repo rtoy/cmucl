@@ -449,6 +449,7 @@
 			   stream)
 	     (write-string (intl:gettext "https://gitlab.common-lisp.net/cmucl/cmucl/-/issues")
 			   stream))
+	terpri
 	,#'(lambda (stream)
 	     (write-string (intl:gettext "See <http://www.cmucl.org/> for support information.") stream))
 	terpri
