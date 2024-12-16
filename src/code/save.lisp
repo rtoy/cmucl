@@ -348,7 +348,8 @@
 	       (when (and site-init
 			  (not (and process-command-line
 				    (find-switch "nositeinit"))))
-		 (load site-init :if-does-not-exist nil :verbose nil))
+		 (or (load site-init :if-does-not-exist nil :verbose nil)
+		     (load "library:default-site-init" :if-does-not-exist nil :verbose nil)))
 	       (when (and process-command-line (find-switch "edit"))
 		 (setf *editor-lisp-p* t))
 	       (when (and load-init-file
