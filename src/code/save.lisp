@@ -444,13 +444,7 @@
 
 (setf (getf *herald-items* :bugs)
       `(,#'(lambda (stream)
-	     (write-string (intl:gettext "Please report issues to ")
-			   stream)
-	     (write-string (intl:gettext "https://gitlab.common-lisp.net/cmucl/cmucl/-/issues")
-			   stream))
-	 terpri
-	 ,#'(lambda (stream)
-	      (write-string (intl:gettext "See <http://www.cmucl.org/> for support information.") stream))
+	     (write-string (intl:gettext "See <http://www.cmucl.org/> for support information.") stream))
 	terpri
 	,#'(lambda (stream)
 	     (write-string (intl:gettext "Loaded subsystems:") stream))))
