@@ -93,8 +93,6 @@ static char *cmucllib_search_list[] = {
     "./.",
     "./../lib/cmucl/lib",
     "./../lib",
-    "/usr/local/lib/cmucl/lib",
-    "/usr/lib/cmucl",
     NULL
 };
 
