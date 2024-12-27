@@ -6898,15 +6898,7 @@ msgid " on "
 msgstr ""
 
 #: src/code/save.lisp
-msgid "Please report issues to "
-msgstr ""
-
-#: src/code/save.lisp
-msgid "https://gitlab.common-lisp.net/cmucl/cmucl/-/issues"
-msgstr ""
-
-#: src/code/save.lisp
-msgid "See <http://www.cmucl.org/> for support information."
+msgid "Please visit https://cmucl.org/bugs to report bugs and ask questions."
 msgstr ""
 
 #: src/code/save.lisp
