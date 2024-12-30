@@ -1,0 +1,46 @@
+#@ cmucl-os
+
+# SOME DESCRIPTIVE TITLE
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI +ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/code/os.lisp
+msgid "Return the system page size"
+msgstr ""
+
+#: src/code/os.lisp
+msgid "get-page-size failed: ~A"
+msgstr ""
+
+#: src/code/os.lisp
+msgid ""
+"Get system information consisting of the user time (in usec), the\n"
+"  system time (in usec) and the number of major page faults."
+msgstr ""
+
+#: src/code/os.lisp
+msgid "Unix system call getrusage failed: ~A."
+msgstr ""
+
+#: src/code/os.lisp
+msgid ""
+"Get the user home directory for user named NAME.  If NAME is the empty\n"
+"  string, the home directory of the current user is returned.\n"
+"\n"
+"  Two values are returned: the pathname of the home directory and a\n"
+"  status code.  If the home directory does not exist NIL is returned.\n"
+"  The status is 0 if no errors occurred.  Otherwise a non-zero value\n"
+"  is returned. Examining errno may give information about what failed."
+msgstr ""
+

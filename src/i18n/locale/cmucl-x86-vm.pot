@@ -144,6 +144,10 @@ msgstr ""
 msgid "Class not yet defined: ~S"
 msgstr ""
 
+#: src/compiler/x86/insts.lisp
+msgid "Sign extend the N-bit number X"
+msgstr ""
+
 #: src/compiler/x86/macros.lisp
 msgid "Move SRC into DST unless they are location=."
 msgstr ""
@@ -290,6 +294,10 @@ msgstr ""
 
 #: src/compiler/x86/arith.lisp
 msgid "inline (signed-byte 32) integer-length"
+msgstr ""
+
+#: src/compiler/x86/arith.lisp
+msgid "inline (unsigned-byte 32) integer-length"
 msgstr ""
 
 #: src/compiler/x86/arith.lisp

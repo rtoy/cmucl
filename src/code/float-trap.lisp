@@ -27,7 +27,8 @@
 	  decode-floating-point-modes
 	  encode-floating-point-modes
 	  with-float-traps-masked
-	  with-float-traps-enabled))
+	  with-float-traps-enabled
+          with-float-rounding-mode))
 (in-package "VM")
 
 (eval-when (compile load eval)
@@ -101,9 +102,11 @@
     ;; FPU and only use the SSE2 rounding control bits.
     (let* ((x87-modes (vm::x87-floating-point-modes))
 	   (sse-modes (vm::sse2-floating-point-modes))
+	   (x87-exceptions (logand #x3f x87-modes))
+	   (x87-enables (logand #x3f (ash x87-modes -16)))
 	   (final-mode (logior sse-modes
-			       (ash (logand #x3f x87-modes) 7) ; control
-			       (logand #x3f (ash x87-modes -16)))))
+			       x87-exceptions
+			       (ash x87-enables 7))))
 
       final-mode))
   (defun (setf floating-point-modes) (new-mode)
@@ -111,15 +114,17 @@
     ;; Set the floating point modes for both X87 and SSE2.  This
     ;; include the rounding control bits.
     (let* ((rc (ldb float-rounding-mode new-mode))
+	   (new-exceptions (logand #x3f new-mode))
+	   (new-enables (logand #x3f (ash new-mode -7)))
 	   (x87-modes
-	    (logior (ash (logand #x3f new-mode) 16)
+	    (logior new-exceptions
 		    (ash rc 10)
-		    (logand #x3f (ash new-mode -7))
+		    (ash new-enables 16)
 		    ;; Set precision control to be 64-bit, always.  We
 		    ;; don't use the x87 registers with sse2, so this
 		    ;; is ok and would be the correct setting if we
 		    ;; ever support long-floats.
-		    (ash 3 8))))
+		    (ash 3 (+ 8 16)))))
       (setf (vm::sse2-floating-point-modes) (ldb (byte 24 0) new-mode))
       (setf (vm::x87-floating-point-modes) (ldb (byte 24 0) x87-modes)))
     new-mode)
@@ -495,3 +500,34 @@
   accrued exceptions are cleared at the start of the body to support
   their testing within, and restored on exit."))
 
+(defmacro with-float-rounding-mode ((rounding-mode) &body body)
+  _N"Execute BODY with the floating-point rounding mode set to
+  ROUNDING-MODE.  ROUNDING-MODE must be a one:
+
+   :NEAREST
+       the default mode of round to nearest even.
+   :ZERO
+       round numbers down towards zero.  Positive numbers round down
+       and negative numbers round up.
+   :POSITIVE-INFINITY
+       round numbers up towards positive infinity.
+   :NEGATIVE-INFINITY
+       round numbers down towards negative infinity.
+
+  These are the same as the possible values for the rounding mode in
+  SET-FLOATING-POINT-MODES.
+
+  Only the rounding mode is restored on exit; other floating-point
+  modes are not modified."
+  (let ((old-mode (gensym "OLD-MODE-"))
+        (new-mode (gensym "NEW-MODE-")))
+  `(let ((,old-mode (ldb float-rounding-mode (floating-point-modes)))
+         (,new-mode (cdr (assoc ,rounding-mode rounding-mode-alist))))
+     (unwind-protect
+          (progn
+            (setf (floating-point-modes)
+                  (dpb ,new-mode float-rounding-mode (floating-point-modes)))
+            ,@body)
+       ;; Restore just the rounding mode to the original value.
+       (setf (floating-point-modes)
+             (dpb ,old-mode float-rounding-mode (floating-point-modes)))))))

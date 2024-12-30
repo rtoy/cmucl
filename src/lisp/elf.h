@@ -11,7 +11,7 @@
  */
 #if !defined(_ELF_H_INCLUDED_)
 
-#define _ELF_H_INCLUDED_
+#define ELF_H_INCLUDED
 
 /*
  * Script to use for linking everything to make an executable.

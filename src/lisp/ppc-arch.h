@@ -4,8 +4,8 @@
  been placed in the public domain.
 
 */
-#ifndef __PPC_ARCH_H
-#define __PPC_ARCH_H
+#ifndef PPC_ARCH_H
+#define PPC_ARCH_H
 
 /*
  * Define macro to allocate a local array of the appropriate size

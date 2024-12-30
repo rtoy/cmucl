@@ -93,8 +93,6 @@ static char *cmucllib_search_list[] = {
     "./.",
     "./../lib/cmucl/lib",
     "./../lib",
-    "/usr/local/lib/cmucl/lib",
-    "/usr/lib/cmucl",
     NULL
 };
 
@@ -814,7 +812,7 @@ main(int argc, const char *argv[], const char *envp[])
 	extern int image_dynamic_space_size;
 	long allocation_pointer =
 	    (long) dynamic_0_space + (int) image_dynamic_space_size;
-#if defined(i386) || defined(__x86_64)
+#if defined(ALLOCATION_POINTER) && !defined(ibmrt)
 	SetSymbolValue(ALLOCATION_POINTER, (lispobj) allocation_pointer);
 #else
 	current_dynamic_space_free_pointer = (lispobj *) allocation_pointer;

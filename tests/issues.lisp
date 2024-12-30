@@ -18,8 +18,10 @@
   (declare (ignore arg))
   form)
 
-(defparameter *test-path*
-  (merge-pathnames (make-pathname :name :unspecific :type :unspecific
+(defparameter *tmp-dir*
+  (merge-pathnames (make-pathname :directory '(:relative "tmp")
+				  :name :unspecific
+				  :type :unspecific
                                   :version :unspecific)
                    *load-truename*)
   "Directory for temporary test files.")
@@ -258,6 +260,13 @@
 	(assert-equal (map 'list #'char-code out-string)
 		      (map 'list #'char-code expected))))))
 
+(define-test issue.25c-setup
+    (:tag :issues)
+  ;; Get the external format before running the test issue.25c.  See
+  ;; issue #161
+  ;; (https://gitlab.common-lisp.net/cmucl/cmucl/-/issues/161).
+  (assert-true (stream::find-external-format :utf16-be)))
+
 (define-test issue.25c
     (:tag :issues)
   ;; Modified test to verify that each octet read from run-program is
@@ -409,9 +418,12 @@
 ;; running a pipeline with linux, but otherwise enable it.  The
 ;; pipeline defines the envvar GITLAB_CI so check for that.
 ;;
+;; This also fails on Darwin CI now.  Let's just disable the test if
+;; running on CI.
+;;
 ;; It would be better if lisp-unit had a way of marking tests as known
 ;; failures, but it doesn't.
-#+#.(cl:if (cl:and (ext:featurep :linux) (unix:unix-getenv "GITLAB_CI")) '(or) '(and))
+#+#.(cl:if (cl:and (unix:unix-getenv "GITLAB_CI")) '(or) '(and))
 (define-test issue.41.1
     (:tag :issues)
   (issue-41-tester unix:sigstop))
@@ -682,10 +694,7 @@
   ;; work and not return NIL.
   (assert-true (file-author "."))
   (assert-true (file-author "bin/build.sh"))
-  (let ((unix::*filename-encoding* :utf-8))
-    ;; Set filename encoding to utf-8 so that we can encode the
-    ;; filename properly.
-    (assert-true
+  (assert-true
    (file-author
     (merge-pathnames 
      (concatenate 'string
@@ -696,7 +705,7 @@
 		  '(#\Hangul_Syllable_An #\Hangul_Syllable_Nyeong #\Hangul_Syllable_Ha
 		    #\Hangul_Syllable_Sib #\Hangul_Syllable_Ni #\Hangul_Syllable_Gga)
 		  ".txt")
-     *test-path*)))))
+     *test-path*))))
 
 (define-test issue.135
     (:tag :issues)
@@ -727,7 +736,23 @@
 
 (define-test issue.139-default-external-format
     (:tag :issues)
-  (assert-eq :utf-8 stream:*default-external-format*))
+  (assert-eq :utf-8 stream:*default-external-format*)
+  ;; Find the alias for :locale, and verify it exists and verify that
+  ;; the system streams have that format.
+  (let ((locale-format (gethash :locale stream::*external-format-aliases*)))
+    (assert locale-format)
+    (assert-eq locale-format (stream-external-format sys:*stdin*))
+    (assert-eq locale-format (stream-external-format sys:*stdout*))
+    (assert-eq locale-format (stream-external-format sys:*stderr*))
+    ;; sys:*tty* can either be an fd-stream or a two-way-stream.
+    (etypecase sys:*tty*
+      (system:fd-stream
+       (assert-eq locale-format (stream-external-format sys:*tty*)))
+      (two-way-stream
+       (assert-eq locale-format
+		  (stream-external-format (two-way-stream-input-stream sys:*tty*)))
+       (assert-eq locale-format
+		  (stream-external-format (two-way-stream-output-stream sys:*tty*)))))))
 
 (define-test issue.139-default-external-format-read-file
     (:tag :issues)
@@ -772,3 +797,359 @@
       (assert-equal (map 'list #'char-name string)
 		    (map 'list #'char-name (read-line s))))))
   
+(define-test issue.139-locale-external-format
+    (:tag :issues)
+  ;; Just verify that :locale format exists
+  (assert-true (stream::find-external-format :locale nil)))
+
+;;; Test stream-external-format for various types of streams.
+
+(define-test issue.140.two-way-stream
+    (:tag :issues)
+  (ensure-directories-exist *tmp-dir*)
+  (with-open-file (in (merge-pathnames "issues.lisp" cmucl-test-runner::*load-path*)
+		      :direction :input
+		      :external-format :utf-8)
+    (with-open-file (out (merge-pathnames "output.tst" *tmp-dir*)
+			 :direction :output
+			 :external-format :utf-8
+			 :if-exists :supersede)
+      (let ((two-way-stream (make-two-way-stream in out)))
+	(assert-error 'type-error
+		      (stream-external-format two-way-stream))))))
+
+;; Test synonym-stream returns the format of the underlying stream.
+(define-test issue.140.synonym-stream
+    (:tag :issues)
+  (with-open-file (s (merge-pathnames "issues.lisp" cmucl-test-runner::*load-path*)
+		     :direction :input
+		     :external-format :iso8859-1)
+    (let ((syn (make-synonym-stream '*syn-stream*)))
+      (setf syn s)
+      (assert-equal :iso8859-1 (stream-external-format syn)))))
+
+(define-test issue.140.broadcast-stream
+    (:tag :issues)
+  ;; Create 3 output streams.  The exact external formats aren't
+  ;; really important here as long as they're different for each file
+  ;; so we can tell if we got the right answer.
+  (with-open-file (s1 (merge-pathnames "broad-1" *tmp-dir*)
+		      :direction :output
+		      :if-exists :supersede
+		      :external-format :latin1)
+    (with-open-file (s2 (merge-pathnames "broad-2" *tmp-dir*)
+			:direction :output
+			:if-exists :supersede
+			:external-format :utf-8)
+      (with-open-file (s3 (merge-pathnames "broad-3" *tmp-dir*)
+			  :direction :output
+			  :if-exists :supersede
+			  :external-format :utf-16)
+	;; The format must be the value from the last stream.
+	(assert-equal :utf-16
+		      (stream-external-format
+		       (make-broadcast-stream s1 s2 s3)))))))
+
+(define-test issue.150
+    (:tag :issues)
+  (let ((ext:*gc-verbose* nil)
+	(*compile-print* nil))
+    (assert-true (stream::find-external-format :euckr))
+    (assert-true (stream::find-external-format :cp949))))
+
+(define-test issue.154
+    (:tag :issues)
+  (let ((old-locale intl::*locale*)
+	(locale "en_US.UTF-8@piglatin")
+	(piglatin-text "Ethay izesay ofway away eamstray inway-ufferbay."))
+    (unwind-protect
+	 (progn
+	   (assert-equal locale (intl:setlocale "en_US.UTF-8@piglatin"))
+	   (print (intl::find-domain "cmucl" intl::*locale*))
+	   (assert-equal piglatin-text (intl:dgettext "cmucl" "The size of a stream in-buffer."))
+	   )
+      (intl:setlocale old-locale))))
+
+(define-test issue.158
+    (:tag :issues)
+  (let* ((name (string #\Hangul_Syllable_Gyek))
+	 (path (make-pathname :directory (list :relative name)
+			      :name name
+			      :type name)))
+    ;; Enable this when we implement normalization for Darwin
+    #+(and nil darwin)
+    (let ((expected '(4352 4456 4543)))
+      ;; Tests that on Darwin the Hangul pathname has been normalized
+      ;; correctly.  We fill in the directory, name, and type components
+      ;; with the same thing since it shouldn't really matter.
+      ;;
+      ;; The expected value is the conjoining jamo for the character
+      ;; #\Hangul_Syllable_Gyek.
+      (assert-equal (map 'list #'char-code (second (pathname-directory path)))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-name path))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-type path))
+		    expected))
+    #-darwin
+    (let ((expected (list (char-code #\Hangul_Syllable_Gyek))))
+      ;; For other OSes, just assume that the pathname is unchanged.
+      (assert-equal (map 'list #'char-code (second (pathname-directory path)))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-name path))
+		    expected)
+      (assert-equal (map 'list #'char-code (pathname-type path))
+		    expected))))
+
+(define-test issue.158.dir
+    (:tag :issues)
+  (flet ((get-file ()
+	   ;; This assumes that there is only one file in resources/darwin
+	   (let ((files (directory (merge-pathnames "resources/darwin/*.txt" *test-path*))))
+	     (assert-equal (length files) 1)
+	     (first files))))
+    (let ((f (get-file))
+	  (expected-name "안녕하십니까"))
+      #+darwin
+      (assert-equal (pathname-name f)
+		    (unicode::decompose-hangul expected-name))
+      #-darwin
+      (assert-equal (pathname-name f) expected-name))))
+    
+
+
+(define-test issue.166
+    (:tag :issues)
+  ;; While this tests for the correct return value, the problem was
+  ;; that the compiler was miscompiling the function below and causing
+  ;; an error when the function run.
+  (let ((f (compile nil #'(lambda ()
+			    (nth-value 1 (integer-decode-float least-positive-double-float))))))
+    (assert-equal -1126 (funcall f))))
+
+
+
+(define-test issue.167.single
+    (:tag :issues)
+  (let ((df-min-expo (nth-value 1 (decode-float least-positive-single-float)))
+	(df-max-expo (nth-value 1 (decode-float most-positive-single-float))))
+    ;; Verify that the min exponent for kernel:single-float-exponent
+    ;; is the actual min exponent from decode-float.
+    (assert-true (typep df-min-expo 'kernel:single-float-exponent))
+    (assert-true (typep (1+ df-min-expo) 'kernel:single-float-exponent))
+    (assert-false (typep (1- df-min-expo) 'kernel:single-float-exponent))
+
+    ;; Verify that the max exponent for kernel:single-float-exponent
+    ;; is the actual max exponent from decode-float.
+    (assert-true (typep df-max-expo 'kernel:single-float-exponent))
+    (assert-true (typep (1- df-max-expo) 'kernel:single-float-exponent))
+    (assert-false (typep (1+ df-max-expo) 'kernel:single-float-exponent)))
+
+  ;; Same as for decode-float, but for integer-decode-float.
+  (let ((idf-min-expo (nth-value 1 (integer-decode-float least-positive-single-float)))
+	(idf-max-expo (nth-value 1 (integer-decode-float most-positive-single-float))))
+    (assert-true (typep idf-min-expo 'kernel:single-float-int-exponent))
+    (assert-true (typep (1+ idf-min-expo) 'kernel:single-float-int-exponent))
+    (assert-false (typep (1- idf-min-expo) 'kernel:single-float-int-exponent))
+
+    (assert-true (typep idf-max-expo 'kernel:single-float-int-exponent))
+    (assert-true (typep (1- idf-max-expo) 'kernel:single-float-int-exponent))
+    (assert-false (typep (1+ idf-max-expo) 'kernel:single-float-int-exponent))))
+
+(define-test issue.167.double
+    (:tag :issues)
+  (let ((df-min-expo (nth-value 1 (decode-float least-positive-double-float)))
+	(df-max-expo (nth-value 1 (decode-float most-positive-double-float))))
+    ;; Verify that the min exponent for kernel:double-float-exponent
+    ;; is the actual min exponent from decode-float.
+    (assert-true (typep df-min-expo 'kernel:double-float-exponent))
+    (assert-true (typep (1+ df-min-expo) 'kernel:double-float-exponent))
+    (assert-false (typep (1- df-min-expo) 'kernel:double-float-exponent))
+
+    ;; Verify that the max exponent for kernel:double-float-exponent
+    ;; is the actual max exponent from decode-float.
+    (assert-true (typep df-max-expo 'kernel:double-float-exponent))
+    (assert-true (typep (1- df-max-expo) 'kernel:double-float-exponent))
+    (assert-false (typep (1+ df-max-expo) 'kernel:double-float-exponent)))
+
+  ;; Same as for decode-float, but for integer-decode-float.
+  (let ((idf-min-expo (nth-value 1 (integer-decode-float least-positive-double-float)))
+	(idf-max-expo (nth-value 1 (integer-decode-float most-positive-double-float))))
+    (assert-true (typep idf-min-expo 'kernel:double-float-int-exponent))
+    (assert-true (typep (1+ idf-min-expo) 'kernel:double-float-int-exponent))
+    (assert-false (typep (1- idf-min-expo) 'kernel:double-float-int-exponent))
+
+    (assert-true (typep idf-max-expo 'kernel:double-float-int-exponent))
+    (assert-true (typep (1- idf-max-expo) 'kernel:double-float-int-exponent))
+    (assert-false (typep (1+ idf-max-expo) 'kernel:double-float-int-exponent))))
+
+(define-test issue.192.device
+  (assert-true (equal (make-pathname :device :unspecific)
+		      (make-pathname :device nil)))
+  (assert-true (equal (make-pathname :device nil)
+		      (make-pathname :device :unspecific))))
+
+(define-test issue.192.name
+  (assert-true (equal (make-pathname :name :unspecific)
+		      (make-pathname :name nil)))
+  (assert-true (equal (make-pathname :name nil)
+		      (make-pathname :name :unspecific))))
+
+(define-test issue.192.type
+  (assert-true (equal (make-pathname :type :unspecific)
+		      (make-pathname :type nil)))
+  (assert-true (equal (make-pathname :type nil)
+		      (make-pathname :type :unspecific))))
+
+(define-test issue.192.version
+  (assert-true (equal (make-pathname :version :newest)
+		      (make-pathname :version nil)))
+  (assert-true (equal (make-pathname :version nil)
+		      (make-pathname :version :newest)))
+  (assert-true (equal (make-pathname :version :unspecific)
+		      (make-pathname :version nil)))
+  (assert-true (equal (make-pathname :version nil)
+		      (make-pathname :version :unspecific)))
+  (assert-true (equal (make-pathname :version :unspecific)
+		      (make-pathname :version :newest)))
+  (assert-true (equal (make-pathname :version :newest)
+		      (make-pathname :version :unspecific)))
+)
+
+(define-test issue.216.enough-namestring-relative-dir
+    (:tag :issues)
+  (let ((pathname #p"foo/bar.lisp"))
+  (dolist (defaults '(#p"/tmp/zot/" #p"/tmp/zot/foo/"))
+    (let ((enough (enough-namestring pathname defaults)))
+      ;; This is the condition from the CLHS entry for enough-namestring
+      (assert-equal (merge-pathnames enough defaults)
+		    (merge-pathnames (parse-namestring pathname nil defaults) defaults))))))
+
+(define-test issue.242-load-foreign
+  ;; load-foreign apparently returns NIL if it succeeds.
+  (assert-true (eql nil (ext:load-foreign (merge-pathnames "test-return.o" *test-path*)))))
+
+(alien:def-alien-variable "test_arg" c-call:int)
+
+(define-test issue.242.test-alien-return-signed-char
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_signed_char"
+				(function c-call:char))))
+	 (sign-extend (n)
+	   (let ((n (ldb (byte 8 0) n)))
+	     (if (> n #x7f)
+		 (- n #x100)
+		 n))))
+    (dolist (x '(99 -99 1023 -1023))
+      (assert-equal (sign-extend x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-signed-short
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_short"
+				(function c-call:short))))
+	 (sign-extend (n)
+	   (let ((n (ldb (byte 16 0) n)))
+	     (if (> n #x7fff)
+		 (- n #x10000)
+		 n))))
+    (dolist (x '(1023 -1023 100000 -100000))
+      (assert-equal (sign-extend x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-signed-int
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_int"
+				(function c-call:int)))))
+    (dolist (x '(1023 -1023 #x7fffffff #x-80000000))
+      (assert-equal x (fun x) x))))
+
+(define-test issue.242.test-alien-return-unsigned-char
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_char"
+				(function c-call:unsigned-char))))
+	 (expected (n)
+	   (ldb (byte 8 0) n)))
+    (dolist (x '(99 -99 1023 -1023))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-unsigned-short
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_short"
+				(function c-call:unsigned-short))))
+	 (expected (n)
+	   (ldb (byte 16 0) n)))
+    (dolist (x '(1023 -1023 100000 -100000))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-unsigned-int
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_unsigned_int"
+				(function c-call:unsigned-int))))
+	 (expected (n)
+	   (ldb (byte 32 0) n)))
+    (dolist (x '(1023 -1023 #x7fffffff #x-80000000))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-bool
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_bool"
+				(function c-call:char))))
+	 (expected (n)
+	   (if (zerop n)
+	       0
+	       1)))
+    (dolist (x '(0 1 1000))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.242.test-alien-return-bool.2
+  (:tag :issues)
+  (flet ((fun (n)
+	   (setf test-arg n)
+	   (alien:alien-funcall
+	    (alien:extern-alien "int_to_bool"
+				(function alien:boolean))))
+	 (expected (n)
+	   (not (zerop n))))
+    (dolist (x '(0 1 1000))
+      (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.333.if-does-not-exist
+    (:tag :issues)
+  ;; "unknown.lisp" should be a file that doesn't exist.  Verify that
+  ;; if :IF-DOES-NOT-EXIST is non-NIL we signal an error from LOAD.
+  ;; The first case is the old default value of :ERROR.
+  (assert-error 'file-error
+                 (load "unknown.lisp" :if-does-not-exist :error))
+  ;; :IF-DOES-NOT-EXIST is a generalized BOOLEAN, so non-NIL will
+  ;; signal an error too.
+  (assert-error 'file-error
+                 (load "unknown.lisp" :if-does-not-exist t))
+  (assert-false (load "unknown.lisp" :if-does-not-exist nil)))
+
+(define-test issue.339.646-external-format
+    (:tag :issues)
+  ;; Just verify that the external format :646 exists and is the same
+  ;; as :iso646-us.
+  (assert-true (stream::find-external-format :646 nil))
+  (assert-true (eq (stream::find-external-format :646 nil)
+		   (stream::find-external-format :iso646-us nil))))

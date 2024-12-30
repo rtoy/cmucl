@@ -51,6 +51,7 @@
   Use (INTL:TEXTDOMAIN \"whatever\") in each source file to set this.")
 (defvar *loaded-domains* (make-hash-table :test 'equal))
 (defvar *locale-aliases* (make-hash-table :test 'equal))
+(setf (gethash "en_US.UTF-8@piglatin" *locale-aliases*) "en@piglatin")
 
 (defstruct domain-entry
   (domain "" :type simple-base-string)
@@ -520,10 +521,7 @@
 
 (defun setlocale (&optional locale)
   (setf *locale* (or locale
-		     (getenv "LANGUAGE")
-		     (getenv "LC_ALL")
-		     (getenv "LC_MESSAGES")
-		     (getenv "LANG")
+		     (unix::unix-get-lc-messages)
 		     *locale*)))
 
 (defmacro textdomain (domain)

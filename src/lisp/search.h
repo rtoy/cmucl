@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _SEARCH_H_
-#define _SEARCH_H_
+#ifndef SEARCH_H
+#define SEARCH_H
 
 extern boolean search_for_type(int type, lispobj ** start, int *count);
 extern boolean search_for_symbol(char *name, lispobj ** start, int *count);

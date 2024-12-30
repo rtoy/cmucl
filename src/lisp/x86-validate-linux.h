@@ -5,8 +5,8 @@
  *
  */
 
-#ifndef _X86_VALIDATE_LINUX_H_
-#define _X86_VALIDATE_LINUX_H_
+#ifndef X86_VALIDATE_LINUX_H
+#define X86_VALIDATE_LINUX_H
 
 /*
  * Also look in compiler/x86/parms.lisp for some of the parameters.
@@ -63,19 +63,10 @@
 #define STATIC_SPACE_START	(SpaceStart_TargetStatic)
 #define STATIC_SPACE_SIZE	(0x0ffff000)	/* 256MB - 1 page */
 
-#ifndef FEATURE_RELOCATABLE_STACKS
-#define BINDING_STACK_START	(0x20000000)
-#endif
 #define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
 
-#ifndef FEATURE_RELOCATABLE_STACKS
-#define CONTROL_STACK_START	0x38000000
-#endif
 #define CONTROL_STACK_SIZE	(0x07fff000 - 8192)
 
-#ifndef FEATURE_RELOCATABLE_STACKS
-#define SIGNAL_STACK_START	CONTROL_STACK_END
-#endif
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)

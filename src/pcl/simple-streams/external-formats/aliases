@@ -177,6 +177,7 @@ iso-ir-6	ascii
 ansi_x3.4-1986	ascii
 iso_646.irv\:1991	ascii
 iso646-us	ascii
+\646		iso646-us
 us-ascii	ascii
 us		ascii
 ibm367		ascii
@@ -223,6 +224,8 @@ windows-cp1252	cp1252
 windows-latin1	cp1252
 ms-ansi		cp1252
 
+euckr		euc-kr
+cp949		euc-kr
 ;; These are not yet implemented
 ;;iso-2022-jp	iso2022-jp
 ;;iso2022jp	iso2022-jp

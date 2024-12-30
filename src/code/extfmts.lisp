@@ -24,7 +24,8 @@
 (defvar *default-external-format*
   :utf-8
   "The default external format to use if no other external format is
-  specified")
+  specified.  This is unaffected by any locale settings or by
+  SET-SYSTEM-EXTERNAL-FORMAT.")
 
 (defvar *external-formats*
   (make-hash-table :test 'equal)
@@ -370,8 +371,10 @@
 		    #() '())))))
 
 (defun load-external-format-aliases ()
+  ;; Set filename encoding to NIL to bypass any encoding; it's not
+  ;; needed to open the aliases file.  NIL means the pathname string is passed as is where only the low 8 bits of the 
   (let ((*package* (find-package "KEYWORD"))
-	(unix::*filename-encoding* :iso8859-1))
+	(unix::*filename-encoding* :null))
     (with-open-file (stm "ext-formats:aliases" :if-does-not-exist nil
 			 :external-format :iso8859-1)
       (when stm
@@ -458,15 +461,18 @@
 	       (format t "~&~A~%"
 		       (intl:gettext (or (ef-documentation ef) "")))))))))
 
+(defconstant +builtin-external-formats+ '(:utf-8 :iso8859-1 :ascii)
+  "List of external formats that are builtin so that they don't need to
+  be loaded on first use.")
+
 (defun %find-external-format (name)
   ;; avoid loading files, etc., early in the boot sequence
-  (when (or (eq name :iso8859-1)
-	    (and (eq name :default) (eq *default-external-format* :iso8859-1)))
+  (when (and (eq name :default)
+	     (eq *default-external-format* :iso8859-1))
+    (setf name :iso8859-1))
+  (when (member name +builtin-external-formats+ :test 'eq)
     (return-from %find-external-format
-      (gethash :iso8859-1 *external-formats*)))
-  (when (eq name :utf-8)
-    (return-from %find-external-format
-      (gethash :utf-8 *external-formats*)))
+      (gethash name *external-formats*)))
 
   (when (zerop (hash-table-count *external-format-aliases*))
     (setf (gethash :latin1 *external-format-aliases*) :iso8859-1)
@@ -486,11 +492,16 @@
       (and (consp name) (find-external-format name))
       (and (with-standard-io-syntax
 	     ;; Use standard IO syntax so that changes by the user
-	     ;; don't mess up compiling the external format.
-	     (let ((*package* (find-package "STREAM"))
-		   (lisp::*enable-package-locked-errors* nil)
-		   (s (open (format nil "ext-formats:~(~A~).lisp" name)
-			    :if-does-not-exist nil :external-format :iso8859-1)))
+	     ;; don't mess up compiling the external format, but we
+	     ;; don't need to print readably.  Also, set filename
+	     ;; encoding to NIL because we don't need any special
+	     ;; encoding to open the format files.
+	     (let* ((*print-readably* nil)
+		    (unix::*filename-encoding* :null)
+		    (*package* (find-package "STREAM"))
+		    (lisp::*enable-package-locked-errors* nil)
+		    (s (open (format nil "ext-formats:~(~A~).lisp" name)
+			     :if-does-not-exist nil :external-format :iso8859-1)))
 	       (when s
 		 (null (nth-value 1 (ext:compile-from-stream s))))))
            (gethash name *external-formats*))))
@@ -1150,7 +1161,7 @@ character and illegal outputs are replaced by a question mark.")
     (unless (find-external-format filenames)
       (error (intl:gettext "Can't find external-format ~S.") filenames))
     (setq filenames (ef-name (find-external-format filenames)))
-    (when (and unix::*filename-encoding*
+    (when (and (not (eq unix::*filename-encoding* :null))
 	       (not (eq unix::*filename-encoding* filenames)))
       (cerror (intl:gettext "Change it anyway.")
 	      (intl:gettext "The external-format for encoding filenames is already set.")))
@@ -1180,6 +1191,8 @@ character and illegal outputs are replaced by a question mark.")
 	 ,(subst (ef-name ef) ef
 		 (function-lambda-expression (aref (ef-cache ef) slot))))))
 
+;;; Builtin external formats.
+
 ;; A safe UTF-8 external format.  Any illegal UTF-8 sequences on input
 ;; are replaced with the Unicode REPLACEMENT CHARACTER (U+FFFD), or
 ;; signals an error as appropriate.
@@ -1295,3 +1308,29 @@ replacement character.")
          ((< ,code #x10000) (utf8 ,code 2))
          ((< ,code #x110000) (utf8 ,code 3))
          (t (error "How did this happen?  Codepoint U+~X is illegal" ,code))))))
+
+(define-external-format :ascii (:size 1 :documentation
+"US ASCII 7-bit encoding.  Illegal input sequences are replaced with
+the Unicode replacment character.  Illegal output characters are
+replaced with a question mark.")
+  ()
+  (octets-to-code (state input unput error c)
+    `(let ((,c ,input))
+       (values (if (< ,c #x80)
+		   ,c
+		   (if ,error
+		       (locally
+			   ;; No warnings about fdefinition
+			   (declare (optimize (ext:inhibit-warnings 3)))
+			 (funcall ,error "Invalid octet #x~4,'0X for ASCII" ,c 1))
+		       +replacement-character-code+))
+	       1)))
+  (code-to-octets (code state output error)
+    `(,output (if (> ,code #x7F)
+		  (if ,error
+		      (locally
+			  ;; No warnings about fdefinition
+			  (declare (optimize (ext:inhibit-warnings 3)))
+			(funcall ,error "Cannot output codepoint #x~X to ASCII stream" ,code))
+		      #x3F)
+		  ,code))))

@@ -7,13 +7,18 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <langinfo.h>
+#include <locale.h>
 #include <math.h>
 #include <netdb.h>
 #include <pwd.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -604,8 +609,8 @@ os_sleep(double seconds)
  * function that works across all OSes.
  */
 int
-os_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-        unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+os_stat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uint64_t *nlink,
+        unsigned int *uid, unsigned int *gid, uint64_t *rdev, int64_t *size,
         int64_t *atime, int64_t *mtime, int64_t *ctime,
         long *blksize, int64_t *blocks)
 {
@@ -657,8 +662,8 @@ os_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_
 }
 
 int
-os_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+os_fstat(int fd, uint64_t *dev, uint64_t *ino, unsigned int *mode, uint64_t *nlink,
+         unsigned int *uid, unsigned int *gid, uint64_t *rdev, int64_t *size,
          int64_t *atime, int64_t *mtime, int64_t *ctime,
          long *blksize, int64_t *blocks)
 {
@@ -689,8 +694,8 @@ os_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *
 }
 
 int
-os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+os_lstat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uint64_t *nlink,
+         unsigned int *uid, unsigned int *gid, uint64_t *rdev, int64_t *size,
          int64_t *atime, int64_t *mtime, int64_t *ctime,
          long *blksize, int64_t *blocks)
 {
@@ -749,27 +754,185 @@ os_file_author(const char *path)
      * Keep trying with larger buffers until a maximum is reached.  We
      * assume (1 << 20) is large enough for any OS.
      */
-    while (size <= (1 << 20)) {
-        switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
-          case 0:
-              /* Success, though we might not have a matching entry */
-              result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
-              goto exit;
-          case ERANGE:
-              /* Buffer is too small, double its size and try again */
-              size *= 2;
-              obuffer = (buffer == initial) ? NULL : buffer;
-              if ((buffer = realloc(obuffer, size)) == NULL) {
-                  goto exit;
-              }
-              continue;
-          default:
-              /* All other errors */
-              goto exit;
-        }
+again:
+    switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
+      case 0:
+	  /* Success, though we might not have a matching entry */
+	  result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
+	  break;
+      case ERANGE:
+	  /* Buffer is too small, double its size and try again */
+	  size *= 2;
+	  if (size > (1 << 20)) {
+	      break;
+	  }
+	  if ((buffer = realloc(obuffer, size)) == NULL) {
+	      break;
+	  }
+	  obuffer = buffer;
+	  goto again;
+      default:
+	/* All other errors */
+	break;
     }
-exit:
     free(obuffer);
     
     return result;
 }
+
+int
+os_setlocale(void)
+{
+    char *result = setlocale(LC_ALL, "");
+
+    /* Return 0 if setlocale suceeded; otherwise -1. */
+    return result != NULL ? 0 : -1;
+}
+
+int
+os_get_lc_messages(char *buf, int len)
+{
+    char *locale = setlocale(LC_MESSAGES, NULL);
+    if (locale) {
+        strncpy(buf, locale, len - 1);
+        buf[len - 1] = '\0';
+    }
+
+    /* Return -1 if setlocale failed. */
+    return locale ? 0 : -1;
+}
+
+char *
+os_get_locale_codeset(void)
+{
+    return nl_langinfo(CODESET);
+}
+
+long
+os_get_page_size(void)
+{
+    errno = 0;
+  
+    return sysconf(_SC_PAGESIZE);
+}
+
+/*
+ * Get system info consisting of the utime (in usec), the stime (in
+ * usec) and the number of major page faults.  The return value is the
+ * return code from getrusage.
+ */
+int
+os_get_system_info(int64_t* utime, int64_t* stime, long* major_fault)
+{
+    struct rusage usage;
+    int rc;
+
+    *utime = 0;
+    *stime = 0;
+    *major_fault = 0;
+    
+    rc = getrusage(RUSAGE_SELF, &usage);
+    if (rc == 0) {
+        *utime = usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec;
+        *stime = usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec;
+        *major_fault = usage.ru_majflt;
+    }
+
+    return rc;
+}
+
+/*
+ * Get the software version.  This is the same as "uname -r", the release.
+ * A pointer to a static string is returned. If uname fails, an empty
+ * string is returned.
+ */
+char*
+os_software_version(void)
+{
+    struct utsname uts;
+    int status;
+
+    /*
+     * Buffer large enough to hold the release.
+     */
+    static char result[sizeof(uts.release)];
+    result[0] = '\0';
+
+    status = uname(&uts);
+    if (status == 0) {
+      strcpy(result, uts.release);
+    }
+    
+    return result;
+}
+
+/*
+ * Return the home directory of the user named NAME.  If the user does
+ * not exist, returns NULL.  Also returns NULL if the home directory
+ * cannot be determined for any reason.  The parameter STATUS is 0 if
+ * getpwnam_r was successful.  Otherwise it is the return value from
+ * getpwnam_r or -1 if we ran out of memory for the buffer.
+ */
+char *
+os_get_user_homedir(const char* name, int *status)
+{
+    int buflen;
+    char *buf = NULL;
+    struct passwd pwd;
+    struct passwd *result;
+
+    buflen = sysconf(_SC_GETPW_R_SIZE_MAX);
+    /*
+     * If sysconf failed, just try some possibly large enough value.
+     */
+    if (buflen == -1) {
+        buflen = 1024;
+    }
+
+    /*
+     * sysconf may return a value that is not large enough, so start
+     * with the given value and keep increasing it until we reach some
+     * upper limit and give up.
+     */
+    while (buflen <= (1 << 20)) {
+        buf = realloc(buf, buflen);
+
+        if (buf == NULL) {
+            *status = -1;
+            return NULL;
+        }
+
+        *status = getpwnam_r(name, &pwd, buf, buflen, &result);
+
+        if (*status == 0) {
+            /*
+             * Success, or entry was not found.  If found, the result
+             * is not NULL.  Return the result or NULL
+             */
+            char* path = result ? strdup(pwd.pw_dir) : NULL;
+            free(buf);
+            return path;
+        }
+
+        /*
+         * Check errno for ERANGE.  If so, the buffer was too small, so grow it.
+         */
+        if (errno == ERANGE) {
+            buflen *= 2;
+        } else {
+            /*
+             * Some other error.  Just return NULL
+             */
+            free(buf);
+            return NULL;
+        }
+    }
+
+    /*
+     * Ran out of space.  Just return NULL and set status to -1.
+     */
+    free(buf);
+    *status = -1;
+    return NULL;
+}
+    

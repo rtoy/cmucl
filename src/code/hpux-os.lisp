@@ -60,15 +60,3 @@
 		  (unix:get-unix-error-msg utime)))
 	  (T
 	   (values utime stime majflt)))))
-
-
-;;; GET-PAGE-SIZE  --  Interface
-;;;
-;;;    Return the system page size.
-;;;
-(defun get-page-size ()
-  (multiple-value-bind (val err)
-		       (unix:unix-getpagesize)
-    (unless val
-      (error "Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
-    val))

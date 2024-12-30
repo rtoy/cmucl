@@ -259,22 +259,39 @@
 ;; the first one is the one that is preferred when printing the
 ;; condition code out.
 (defconstant conditions
-  '((:o . 0)
+  '(
+    ;; OF = 1
+    (:o . 0)
+    ;; OF = 0
     (:no . 1)
+    ;; Unsigned <; CF = 1
     (:b . 2) (:nae . 2) (:c . 2)
-    (:nb . 3) (:ae . 3) (:nc . 3)
+    ;; Unsigned >=; CF = 0
+    (:ae . 3) (:nb . 3) (:nc . 3)
+    ;; Equal; ZF = 1
     (:e . 4) (:eq . 4) (:z . 4)
+    ;; Not equal; ZF = 0
     (:ne . 5) (:nz . 5)
+    ;; Unsigned <=; CF = 1 or ZF = 1
     (:be . 6) (:na . 6)
-    (:nbe . 7) (:a . 7)
+    ;; Unsigned >; CF = 1 and ZF = 0
+    (:a . 7) (:nbe . 7)
+    ;; SF = 1
     (:s . 8)
+    ;; SF = 0
     (:ns . 9)
+    ;; Parity even
     (:p . 10) (:pe . 10)
+    ;; Parity odd
     (:np . 11) (:po . 11)
+    ;; Signed <; SF /= OF
     (:l . 12) (:nge . 12)
-    (:nl . 13) (:ge . 13)
+    ;; Signed >=; SF = OF
+    (:ge . 13) (:nl . 13)
+    ;; Signed <=; ZF = 1 or SF /= OF
     (:le . 14) (:ng . 14)
-    (:nle . 15) (:g . 15)))
+    ;; Signed >; ZF =0 and SF = OF
+    (:g . 15) (:nle . 15)))
 
 (defun conditional-opcode (condition)
   (cdr (assoc condition conditions :test #'eq))))
@@ -492,6 +509,14 @@
       (print-byte-reg value stream dstate)
       (print-mem-access value stream t dstate)))
 
+(defun print-word-reg/mem (value stream dstate)
+  (declare (type (or list reg) value)
+	   (type stream stream)
+	   (type disassem:disassem-state dstate))
+  (if (typep value 'reg)
+      (print-word-reg value stream dstate)
+      (print-mem-access value stream nil dstate)))
+
 (defun print-label (value stream dstate)
   (declare (ignore dstate))
   (princ (if (and (numberp value) (minusp value))
@@ -699,7 +724,11 @@
 (disassem:define-argument-type byte-reg/mem
   :prefilter #'prefilter-reg/mem
   :printer #'print-byte-reg/mem)
-
+(disassem:define-argument-type word-reg/mem
+  ;; Like reg/mem but if the reg/mem field is a register, it's a word
+  ;; register.
+  :prefilter #'prefilter-reg/mem
+  :printer #'print-word-reg/mem)
 ;;;
 ;;; added by jrd
 ;;;
@@ -727,7 +756,12 @@
 			  ;; set by a prefix instruction
 			  (or (disassem:dstate-get-prop dstate 'word-width)
 			      *default-operand-size*)))
-		     (princ (schar (symbol-name word-width) 0) stream)))))
+		     ;; Make sure the print case is honored when
+		     ;; printing out the width.
+		     (princ (ecase word-width
+			      (:word 'w)
+			      (:dword 'd))
+			    stream)))))
 
 
 ;;;; Disassembler instruction formats.
@@ -1237,17 +1271,19 @@
 
 ;;;; Arithmetic
 
+(defun sign-extend (x n)
+  "Sign extend the N-bit number X"
+  (if (logbitp (1- n) x)
+      (logior (ash -1 (1- n)) x)
+      x))
+
 (defun emit-random-arith-inst (name segment dst src opcode
 				    &optional allow-constants)
   (let ((size (matching-operand-size dst src)))
     (maybe-emit-operand-size-prefix segment size)
     (cond
      ((integerp src)
-      (cond ((and (not (eq size :byte)) (<= -128 src 127))
-	     (emit-byte segment #b10000011)
-	     (emit-ea segment dst opcode allow-constants)
-	     (emit-byte segment src))
-	    ((accumulator-p dst)
+      (cond ((accumulator-p dst)
 	     (emit-byte segment
 			(dpb opcode
 			     (byte 3 3)
@@ -1255,6 +1291,10 @@
 				 #b00000100
 				 #b00000101)))
 	     (emit-sized-immediate segment size src))
+	    ((and (not (eq size :byte)) (<= -128 (sign-extend src 32) 127))
+	     (emit-byte segment #b10000011)
+	     (emit-ea segment dst opcode allow-constants)
+	     (emit-byte segment (ldb (byte 8 0) src)))
 	    (t
 	     (emit-byte segment (if (eq size :byte) #b10000000 #b10000001))
 	     (emit-ea segment dst opcode allow-constants)
@@ -1274,12 +1314,24 @@
      (t
       (error "Bogus operands to ~A" name)))))
 
+(defun arith-logical-constant-control (chunk inst stream dstate)
+    (declare (ignore inst stream))
+    (when (= (ldb (byte 8 0) chunk) #b10000011)
+      (let ((imm (sign-extend (ldb (byte 8 16) chunk) 8)))
+	(when (minusp imm)
+	  (disassem:note #'(lambda (stream)
+			     (princ (ldb (byte 32 0) imm) stream))
+			 dstate)))))
+
 (eval-when (compile eval)
-  (defun arith-inst-printer-list (subop)
-    `((accum-imm ((op ,(dpb subop (byte 3 2) #b0000010))))
-      (reg/mem-imm ((op (#b1000000 ,subop))))
+  (defun arith-inst-printer-list (subop &key control)
+    `((accum-imm ((op ,(dpb subop (byte 3 2) #b0000010)))
+		 ,@(when control `(:default :control #',control)))
+      (reg/mem-imm ((op (#b1000000 ,subop)))
+		   ,@(when control `(:default :control #',control)))
       (reg/mem-imm ((op (#b1000001 ,subop))
-		    (imm nil :type signed-imm-byte)))
+		    (imm nil :type signed-imm-byte))
+		   ,@(when control `(:default :control #',control)))
       (reg-reg/mem-dir ((op ,(dpb subop (byte 3 1) #b000000))))))
   )
 
@@ -1585,7 +1637,7 @@
 
 (define-instruction and (segment dst src)
   (:printer-list
-   (arith-inst-printer-list #b100))
+   (arith-inst-printer-list #b100 :control 'arith-logical-constant-control))
   (:emitter
    (emit-random-arith-inst "AND" segment dst src #b100)))
 
@@ -1622,13 +1674,13 @@
 
 (define-instruction or (segment dst src)
   (:printer-list
-   (arith-inst-printer-list #b001))
+   (arith-inst-printer-list #b001 :control 'arith-logical-constant-control))
   (:emitter
    (emit-random-arith-inst "OR" segment dst src #b001)))
 
 (define-instruction xor (segment dst src)
   (:printer-list
-   (arith-inst-printer-list #b110))
+   (arith-inst-printer-list #b110 :control 'arith-logical-constant-control))
   (:emitter
    (emit-random-arith-inst "XOR" segment dst src #b110)))
 
@@ -3438,7 +3490,7 @@
 ;;; We do not support the MMX version of this instruction.
 (define-instruction movd (segment dst src)
   (:printer ext-xmm-reg/mem ((prefix #x66) (op #x6e)))
-  (:printer ext-xmm-reg/mem ((prefix #x66) (op #x7e))
+  (:printer ext-xmm-reg/mem ((prefix #x66) (op #x7e) (reg/mem nil :type 'word-reg/mem))
             '(:name :tab reg/mem ", " reg))
   (:emitter
    (cond ((xmm-register-p dst)

@@ -22,7 +22,7 @@
      :conservative-float-type
      :hash-new
      :random-mt19937
-     :cmu :cmu20 :cmu20a		; Version features
+     :cmu :cmu21 :cmu21e		; Version features
      :double-double			; double-double float support
      )
    ;; Features to remove from current *features* here.  Normally don't

@@ -8,8 +8,8 @@
  * os dependent function.
  */
 
-#ifndef _AMD64_LISPREGS_H_
-#define _AMD64_LISPREGS_H_
+#ifndef AMD64_LISPREGS_H
+#define AMD64_LISPREGS_H
 
 #define NREGS	(16)
 
@@ -55,4 +55,4 @@
 #define SC_REG(sc, n) (*sc_reg(sc,n))
 #define SC_PC(sc) ((sc)->sc_pc)
 
-#endif /* _AMD64_LISPREGS_H_ */
+#endif /* AMD64_LISPREGS_H */

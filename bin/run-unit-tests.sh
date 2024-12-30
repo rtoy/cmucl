@@ -47,9 +47,14 @@ function cleanup {
 
 trap cleanup EXIT
 
+# Compile up the C file that is used for testing alien funcalls to
+# functions that return integer types of different lengths.  We use
+# gcc since clang isn't always available.
+(cd tests; gcc -m32 -O3 -c test-return.c)
+
 if [ $# -eq 0 ]; then
     # No args so run all the tests
-    $LISP -noinit -load tests/run-tests.lisp -eval '(cmucl-test-runner:run-all-tests)'
+    $LISP -nositeinit -noinit -load tests/run-tests.lisp -eval '(cmucl-test-runner:run-all-tests)'
 else
     # Run selected files.  Convert each file name to uppercase and append "-TESTS"
     result=""
@@ -58,6 +63,6 @@ else
 	new=`echo $f | tr '[a-z]' '[A-Z]'`
         result="$result "\"$new-TESTS\"
     done
-    $LISP -noinit -load tests/run-tests.lisp -eval "(progn (cmucl-test-runner:load-test-files) (cmucl-test-runner:run-test $result))"
+    $LISP -nositeinit -noinit -load tests/run-tests.lisp -eval "(progn (cmucl-test-runner:load-test-files) (cmucl-test-runner:run-test $result))"
 fi
 

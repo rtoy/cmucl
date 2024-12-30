@@ -39,6 +39,9 @@
       (file-position stream position)
       (file-position stream)))
 
+(define-gray-stream-method ext:stream-file-length ((stream simple-stream))
+  (file-length stream))
+
 (define-gray-stream-method ext:stream-clear-output ((stream simple-stream))
   (clear-output stream))
 

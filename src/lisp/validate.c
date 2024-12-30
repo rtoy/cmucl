@@ -112,7 +112,7 @@ validate(void)
 }
 
 void
-validate_stacks()
+validate_stacks(void)
 {
     /* Control Stack */
 #ifdef CONTROL_STACK_START

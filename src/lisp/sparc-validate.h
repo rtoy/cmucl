@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _SPARC_VALIDATE_H_
-#define _SPARC_VALIDATE_H_
+#ifndef SPARC_VALIDATE_H
+#define SPARC_VALIDATE_H
 
 /*
  * Address map:
@@ -92,22 +92,12 @@
 #define READ_ONLY_SPACE_START	(SpaceStart_TargetReadOnly)
 #define READ_ONLY_SPACE_SIZE	((2*MB_128) - SPARSE_BLOCK_SIZE)	/* 256 MB - 32 KB, 256 MB max */
 
-#ifndef FEATURE_RELOCATABLE_STACKS
-#define BINDING_STACK_START 	(0x20000000)
-#endif
-
 #define BINDING_STACK_SIZE  	(MB_128 - SPARSE_BLOCK_SIZE)	/* 128 MB - 32 KB, 128 MB max */
 
 #define STATIC_SPACE_START  	(SpaceStart_TargetStatic)
 #define STATIC_SPACE_SIZE   	((2*MB_128) - SPARSE_BLOCK_SIZE)	/* 256 MB - 32 KB, 256 MB max */
 
-#ifndef FEATURE_RELOCATABLE_STACKS
-#define CONTROL_STACK_START 	(0x38000000)
-#endif
 #define CONTROL_STACK_SIZE  	(MB_128 - SPARSE_BLOCK_SIZE)	/* 128 MB - 32 KB, 128 MB max */
-#if 0
-#define CONTROL_STACK_END       (CONTROL_STACK_START + control_stack_size)
-#endif
 
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
@@ -140,4 +130,4 @@
 #define DYNAMIC_SPACE_SIZE      (0x40000000 - SPARSE_BLOCK_SIZE)	/* 1GB - 32 KB max */
 #endif
 
-#endif /* _SPARC_VALIDATE_H_ */
+#endif /* SPARC_VALIDATE_H */

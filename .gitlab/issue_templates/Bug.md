@@ -16,7 +16,7 @@ If applicable, add screenshots to help explain your problem.
 
 ## Desktop (please complete the following information):
  - OS: [e.g. Linux]
- - Version [e.g. 21c]
+ - Version: [e.g. 21e]
 
 ## Additional context
 Add any other context about the problem here.

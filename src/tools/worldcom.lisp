@@ -106,13 +106,19 @@
   (comf "target:assembly/ppc/arith" :assem t)
   (comf "target:assembly/ppc/alloc" :assem t))
 
+(when (c:backend-featurep :arm)
+  (comf "target:assembly/arm/assem-rtns" :assem t)
+  (comf "target:assembly/arm/array" :assem t)
+  (comf "target:assembly/arm/arith" :assem t)
+  (comf "target:assembly/arm/alloc" :assem t))
+
 
 ;;; these guys can supposedly come in any order, but not really.
 ;;; some are put at the end so macros don't run interpreted and stuff.
 
 (comf "target:code/globals")
 (comf "target:code/kernel")
-(comf "target:code/lispinit")
+(comf "target:code/lispinit" :trace-file t)
 (comf "target:pcl/walk")
 (comf "target:code/fwrappers")
 (comf "target:code/fdefinition")
@@ -173,6 +179,7 @@
   (comf "target:code/bsd-os"))
 (when (c:backend-featurep :Linux)
   (comf "target:code/linux-os"))
+(comf "target:code/os")  
 
 (when (c:backend-featurep :pmax)
   (comf "target:code/pmax-vm"))
@@ -211,6 +218,7 @@
 (comf "target:code/unidata")
 (comf "target:code/char")
 (comf "target:code/misc")
+(comf "target:code/misc-doc")
 (comf "target:code/extensions" :byte-compile t)
 (comf "target:code/commandline")
 (comf "target:code/env-access")

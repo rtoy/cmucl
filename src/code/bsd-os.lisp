@@ -48,19 +48,6 @@
 		      #+Darwin "Darwin"
 		      #-(or freebsd NetBSD OpenBSD Darwin) "BSD")
 
-(defvar *software-version* nil "Version string for supporting software")
-
-(defun software-version ()
-  "Returns a string describing version of the supporting software."
-  (unless *software-version*
-    (setf *software-version*
-	  (string-trim '(#\newline)
-		       (with-output-to-string (stream)
-			 (run-program "/usr/bin/uname"
-				      '("-r")
-				      :output stream)))))
-  *software-version*)
-
 
 ;;; OS-Init initializes our operating-system interface.  It sets the values
 ;;; of the global port variables to what they should be and calls the functions
@@ -68,30 +55,3 @@
 
 (defun os-init ()
   (setf *software-version* nil))
-
-;;; GET-SYSTEM-INFO  --  Interface
-;;;
-;;;    Return system time, user time and number of page faults.
-;;;
-(defun get-system-info ()
-  (multiple-value-bind (err? utime stime maxrss ixrss idrss
-			     isrss minflt majflt)
-		       (unix:unix-getrusage unix:rusage_self)
-    (declare (ignore maxrss ixrss idrss isrss minflt))
-    (unless err?
-      (error (intl:gettext "Unix system call getrusage failed: ~A.")
-	     (unix:get-unix-error-msg utime)))
-    
-    (values utime stime majflt)))
-
-
-;;; GET-PAGE-SIZE  --  Interface
-;;;
-;;;    Return the system page size.
-;;;
-(defun get-page-size ()
-  (multiple-value-bind (val err)
-      (unix:unix-getpagesize)
-    (unless val
-      (error (intl:gettext "Getpagesize failed: ~A") (unix:get-unix-error-msg err)))
-    val))

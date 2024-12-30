@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _PARSE_H_
-#define _PARSE_H_
+#ifndef PARSE_H
+#define PARSE_H
 
 
 /* All parse routines take a char ** as their only argument */
@@ -17,4 +17,4 @@ extern lispobj parse_lispobj(char **ptr);
 extern char *parse_addr(char **ptr);
 extern long parse_number(char **ptr);
 
-#endif /* _PARSE_H_ */
+#endif /* PARSE_H */

@@ -10,8 +10,8 @@
 #ifndef TABLES_H
 #define TABLES_H
 
-typedef void (*type_writer)(message_t out,caddr_t src,int type_tag);
-typedef void (*type_reader)(message_t in,caddr_t dest,int type_tag,int data);
+typedef void (*type_writer)(message_t out,void *src,int type_tag);
+typedef void (*type_reader)(message_t in,void *dest,int type_tag,int data);
 
 typedef struct {
   String type;

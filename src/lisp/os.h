@@ -3,12 +3,18 @@
  *
  */
 
-#ifndef _OS_H_
-#define _OS_H_
+#ifndef OS_H
+#define OS_H
 
 #include "lisp.h"
 
-#define DPRINTF(t,a) { if (t) fprintf a; }
+#if defined(__GNUC__) || defined(__clang__)
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define UNLIKELY(x) (x)
+#endif
+
+#define DPRINTF(t,a) { if (UNLIKELY(t)) fprintf a; }
 
 #ifdef DARWIN
 #include "Darwin-os.h"
@@ -116,4 +122,4 @@ unsigned int os_sigcontext_fpu_modes(ucontext_t *);
 
 char* convert_lisp_string(char* c_string, void* lisp_string, int len);
 
-#endif /* _OS_H_ */
+#endif /* OS_H */

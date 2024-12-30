@@ -102,7 +102,9 @@
   "The width of the column in which instruction-names are printed.
   NIL means use the default.  A value of zero gives the effect of not
   aligning the arguments at all.")
-(defvar *note-column* 45
+(defvar *note-column*
+  #-x86 45
+  #+x86 55
   "The column in which end-of-line comments for notes are started.")
 
 (defconstant default-opcode-column-width 6)
@@ -3316,12 +3318,16 @@
 		:format-control (intl:gettext "Can't make a compiled function from ~S")
 		:format-arguments (list name)))))
 
+(defvar *disassemble-print-radix*
+  t
+  "Default value for :radix argument for disassem:disassemble")
+
 (defun disassemble (object &key (stream *standard-output*)
 			     (use-labels t)
 			     (backend c:*native-backend*)
 			     (base 16)
 			     (case :downcase)
-			     (radix *print-radix*))
+			     (radix *disassemble-print-radix*))
   "Disassemble the machine code associated with OBJECT, which can be a
   function, a lambda expression, or a symbol with a function definition.  If
   it is not already compiled, the compiler is called to produce something to
@@ -3336,7 +3342,7 @@
   :Radix
       The disassembler uses the specified base, case, and radix when
       printing the disassembled code.  The default values are 16,
-      :downcase, and *print-radix*, respectively."
+      :downcase, and *disassemble-print-radix*, respectively."
   (declare (type (or function symbol cons) object)
 	   (type (or (member t) stream) stream)
 	   (type (member t nil) use-labels)
@@ -3603,7 +3609,12 @@ symbol object that we know about.")
 (defun get-nil-indexed-object (byte-offset)
   "Returns the lisp object located BYTE-OFFSET from NIL."
   (declare (type offset byte-offset))
-  (kernel:make-lisp-obj (+ nil-addr byte-offset)))
+  (values (kernel:make-lisp-obj (+ nil-addr byte-offset))
+          ;; Assume NIL indexed objects only come from the static
+          ;; space, so the byte offset must be in the static space
+          (<= 0 byte-offset
+              (- (* lisp::*static-space-free-pointer* vm:word-bytes)
+                 (lisp::static-space-start)))))
 
 (defun get-code-constant (byte-offset dstate)
   "Returns two values; the lisp-object located at BYTE-OFFSET in the constant
@@ -3781,11 +3792,13 @@ symbol object that we know about.")
   disassembled.  Returns non-NIL iff a note was recorded."
   (declare (type offset nil-byte-offset)
 	   (type disassem-state dstate))
-  (let ((obj (get-nil-indexed-object nil-byte-offset)))
-    (note #'(lambda (stream)
-	      (prin1-quoted-short obj stream))
-	  dstate)
-    t))
+  (multiple-value-bind (obj validp)
+      (get-nil-indexed-object nil-byte-offset)
+    (when validp
+      (note #'(lambda (stream)
+	        (prin1-quoted-short obj stream))
+	    dstate))
+    validp))
 
 (defun maybe-note-assembler-routine (address note-address-p dstate)
   "If ADDRESS is the address of a primitive assembler routine or

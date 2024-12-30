@@ -773,10 +773,11 @@
 			(inst ,opinst x (,ea y)))
 		       (,stack-sc
 			(inst ,opinst x (,ea-stack y)))))
-		    ((and ,commutative (location= y r))
-		     ;; y = r and the operation is commutative, so just
-		     ;; do the operation with r and x.
-		     (inst ,opinst y x))
+		    ,@(when commutative
+                        `(((location= y r)
+		           ;; y = r and the operation is commutative, so just
+		           ;; do the operation with r and x.
+		           (inst ,opinst y x))))
 		    ((not (location= r y))
 		     ;; x, y, and r are three different regs.  So just
 		     ;; move r to x and do the operation on r.
@@ -901,130 +902,104 @@
 ;;; comiss and comisd can cope with one or other arg in memory: we
 ;;; could (should, indeed) extend these to cope with descriptor args
 ;;; and stack args
+(macrolet
+    ((frob (name sc ptype)
+       `(define-vop (,name float-compare)
+	  (:args (x :scs (,sc))
+		 (y :scs (,sc descriptor-reg)))
+	  (:arg-types ,ptype ,ptype))))
+  (frob single-float-compare single-reg single-float)
+  (frob double-float-compare double-reg double-float))
 
-(define-vop (single-float-compare float-compare)
-  (:args (x :scs (single-reg)) (y :scs (single-reg descriptor-reg)))
-  (:conditional)
-  (:arg-types single-float single-float))
-(define-vop (double-float-compare float-compare)
-  (:args (x :scs (double-reg)) (y :scs (double-reg descriptor-reg)))
-  (:conditional)
-  (:arg-types double-float double-float))
+(macrolet
+    ((frob (size inst)
+       (let ((ea (ecase size
+		   (single
+		    'ea-for-sf-desc)
+		   (double
+		    'ea-for-df-desc)))
+	     (name (symbolicate "=/" size "-FLOAT"))
+	     (sc-type (symbolicate size "-REG"))
+	     (inherit (symbolicate size "-FLOAT-COMPARE")))
+	 `(define-vop (,name ,inherit)
+	    (:translate =)
+	    (:info target not-p)
+	    (:vop-var vop)
+	    (:generator 3
+	      (note-this-location vop :internal-error)
+	      (sc-case y
+		(,sc-type
+		 (inst ,inst x y))
+		(descriptor-reg
+		 (inst ,inst x (,ea y))))
+	      ;; if PF&CF, there was a NaN involved => not equal
+	      ;; otherwise, ZF => equal
+	      (cond (not-p
+		     (inst jmp :p target)
+		     (inst jmp :ne target))
+		    (t
+		     (let ((not-lab (gen-label)))
+		       (inst jmp :p not-lab)
+		       (inst jmp :e target)
+		       (emit-label not-lab)))))))))
+  (frob single ucomiss)
+  (frob double ucomisd))
 
-(define-vop (=/single-float single-float-compare)
-    (:translate =)
-  (:info target not-p)
-  (:vop-var vop)
-  (:generator 3
-    (note-this-location vop :internal-error)
-    (sc-case y
-      (single-reg
-       (inst ucomiss x y))
-      (descriptor-reg
-       (inst ucomiss x (ea-for-sf-desc y))))
-    ;; if PF&CF, there was a NaN involved => not equal
-    ;; otherwise, ZF => equal
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :ne target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :e target)
-             (emit-label not-lab))))))
-
-(define-vop (=/double-float double-float-compare)
-    (:translate =)
-  (:info target not-p)
-  (:vop-var vop)
-  (:generator 3
-    (note-this-location vop :internal-error)
-    (sc-case y
-      (double-reg
-       (inst ucomisd x y))
-      (descriptor-reg
-       (inst ucomisd x (ea-for-df-desc y))))
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :ne target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :e target)
-             (emit-label not-lab))))))
-
-(define-vop (</double-float double-float-compare)
-  (:translate <)
-  (:info target not-p)
-  (:generator 3
-    (sc-case y
-      (double-reg
-       (inst comisd x y))
-      (descriptor-reg
-       (inst comisd x (ea-for-df-desc y))))
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :nc target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :c target)
-             (emit-label not-lab))))))
-
-(define-vop (</single-float single-float-compare)
-  (:translate <)
-  (:info target not-p)
-  (:generator 3
-    (sc-case y
-      (single-reg
-       (inst comiss x y))
-      (descriptor-reg
-       (inst comiss x (ea-for-sf-desc y))))
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :nc target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :c target)
-             (emit-label not-lab))))))
-
-(define-vop (>/double-float double-float-compare)
-  (:translate >)
-  (:info target not-p)
-  (:generator 3
-    (sc-case y
-      (double-reg
-       (inst comisd x y))
-      (descriptor-reg
-       (inst comisd x (ea-for-df-desc y))))
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :na target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :a target)
-             (emit-label not-lab))))))
-
-(define-vop (>/single-float single-float-compare)
-  (:translate >)
-  (:info target not-p)
-  (:generator 3
-    (sc-case y
-      (single-reg
-       (inst comiss x y))
-      (descriptor-reg
-       (inst comiss x (ea-for-sf-desc y))))
-    (cond (not-p
-           (inst jmp :p target)
-           (inst jmp :na target))
-          (t
-           (let ((not-lab (gen-label)))
-             (inst jmp :p not-lab)
-             (inst jmp :a target)
-             (emit-label not-lab))))))
-
+(macrolet
+    ((frob (op size inst)
+       (let ((ea (ecase size
+		   (single
+		    'ea-for-sf-desc)
+		   (double
+		    'ea-for-df-desc)))
+	     (name (symbolicate op "/" size "-FLOAT"))
+	     (sc-type (symbolicate size "-REG"))
+	     (inherit (symbolicate size "-FLOAT-COMPARE"))
+	     (reverse-args-p (eq op '<)))
+	 `(define-vop (,name ,inherit)
+	    ;; The compare instructions take a reg argument for the
+	    ;; first arg and reg or mem argument for the second.  When
+	    ;; inverting the arguments we must also invert which of
+	    ;; the argument can be a mem argument.
+	    (:args (x :scs (,sc-type ,@(when reverse-args-p 'descriptor-reg)))
+		   (y :scs (,sc-type ,@(unless reverse-args-p 'descriptor-reg))))
+	    (:translate ,op)
+	    (:info target not-p)
+	    (:generator 3
+	      ;; Note: x < y is the same as y > x.  We reverse the
+	      ;; args to reduce the number of jump instructions
+	      ;; needed.
+	      ,(if reverse-args-p
+		   `(sc-case x
+		      (,sc-type
+		       (inst ,inst y x))
+		      (descriptor-reg
+		       (inst ,inst y (,ea x))))
+		   `(sc-case y
+		      (,sc-type
+		       (inst ,inst x y))
+		      (descriptor-reg
+		       (inst ,inst x (,ea y)))))
+	      ;; Consider the case of x > y.
+	      ;;
+	      ;; When a NaN occurs, comis sets ZF, PF, and CF = 1.  In
+	      ;; the normal case (not-p false), we want to jump to the
+	      ;; target when x > y.  This happens when CF = 0.  Hence,
+	      ;; we won't jump to the target when there's a NaN, as
+	      ;; desired.
+	      ;;
+	      ;; For the not-p case, we want to jump to target when x
+	      ;; <= y.  This means CF = 1 or ZF = 1.  But NaN sets
+	      ;; these bits too, so we jump to the target for NaN or x
+	      ;; <= y, as desired.
+	      ;;
+	      ;; For the case of x < y, we can use the equivalent y >
+	      ;; x.  Thus if we swap the args, the same logic applies.
+	      (inst jmp (if (not not-p) :a :be) target))))))
+  (frob > single comiss)
+  (frob > double comisd)
+  (frob < single comiss)
+  (frob < double comisd))
 
 
 ;;;; Conversion:
@@ -1405,7 +1380,7 @@
   float-modes)
 
 ;; Extract the control and status words from the FPU.  The low 16 bits
-;; contain the control word, and the high 16 bits contain the status.
+;; contain the status word, and the high 16 bits contain the control.
 (define-vop (x87-floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
@@ -1421,12 +1396,16 @@
    (inst byte #x66)			; operand size prefix
    (inst or sw-reg cw-stack)
    (inst xor sw-reg #x3f)		; invert exception mask
-   (move res sw-reg)))
+   (move res sw-reg)
+   ;; Put status word in the low 16 bits and the control word in the
+   ;; high 16 bits.  This is to match the SSE2 mxcsr register that has
+   ;; the status bits (sticky bits) in lowest part of the word.
+   (inst rol res 16)))
 
 ;; Set the control and status words from the FPU.  The low 16 bits
-;; contain the control word, and the high 16 bits contain the status.
+;; contain the status word, and the high 16 bits contain the control.
 (define-vop (x87-set-floating-point-modes)
-  (:args (new :scs (unsigned-reg) :to :result :target res))
+  (:args (new-modes :scs (unsigned-reg) :to :result :target res))
   (:results (res :scs (unsigned-reg)))
   (:arg-types unsigned-num)
   (:result-types unsigned-num)
@@ -1435,7 +1414,12 @@
   (:temporary (:sc unsigned-stack) cw-stack)
   (:temporary (:sc byte-reg :offset al-offset) sw-reg)
   (:temporary (:sc unsigned-reg :offset ecx-offset) old)
+  (:temporary (:sc unsigned-reg) new)
   (:generator 6
+   (move new new-modes)
+   ;; Put the status word in the high 16 bits and the control word in
+   ;; the low 16 bits.
+   (inst rol new 16)
    (inst mov cw-stack new)
    (inst xor cw-stack #x3f)  ; invert exception mask
    (inst fnstsw)
@@ -1450,7 +1434,7 @@
    (inst fldenv (make-ea :dword :base esp-tn))
    (inst add esp-tn 28)
    DONE
-   (move res new)))
+   (move res new-modes)))
 
 
 (defun sse2-floating-point-modes ()
@@ -2020,8 +2004,9 @@
        `(cond
 	 ((location= x r)
 	  (inst ,opinst x y))
-	 ((and ,commutative (location= y r))
-	  (inst ,opinst y x))
+	 ,@(when commutative
+             `(((location= y r)
+	        (inst ,opinst y x))))
 	 ((not (location= r y))
 	  (inst ,movinst r x)
 	  (inst ,opinst r y))

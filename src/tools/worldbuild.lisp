@@ -67,7 +67,11 @@
 	  "target:assembly/ppc/array.assem"
 	  "target:assembly/ppc/arith.assem"
 	  "target:assembly/ppc/alloc.assem"))
-    
+    ,@(when (c:backend-featurep :arm)
+	'("target:assembly/arm/assem-rtns.assem"
+	  "target:assembly/arm/array.assem"
+	  "target:assembly/arm/arith.assem"
+	  "target:assembly/arm/alloc.assem"))    
     
 
     "target:code/type-boot"
@@ -113,6 +117,7 @@
     "target:code/string"
     "target:code/mipsstrops"
     "target:code/misc"
+    "target:code/misc-doc"
     "target:code/dfixnum"
     ,@(unless (c:backend-featurep :gengc)
 	'("target:code/gc"))
@@ -146,6 +151,7 @@
 	'("target:code/bsd-os"))
     ,@(when (c:backend-featurep :Linux)
 	'("target:code/linux-os"))
+    "target:code/os"
     "target:code/serve-event"
     "target:code/stream"
     "target:code/fd-stream"

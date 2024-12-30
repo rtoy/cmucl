@@ -638,27 +638,14 @@
 	     (new-index (- start offset) (1+ new-index)))
 	    ((= index (the fixnum end)))
 	  (declare (fixnum index new-index))
-	  (multiple-value-bind (code wide) (codepoint string index)
-	    (when wide (incf index))
-	    ;; Handle ASCII specially because this is called early in
-	    ;; initialization, before unidata is available.
-	    (cond ((< 96 code 123) (decf code 32))
-		  #+unicode
-		  ((> code 127) (setq code (unicode-upper code))))
-	    ;;@@ WARNING: this may, in theory, need to extend newstring
-	    ;;  but that never actually occurs as of Unicode 5.1.0,
-	    ;;  so I'm just going to ignore it for now...
-	    (multiple-value-bind (hi lo) (surrogates code)
-	      (setf (schar newstring new-index) hi)
-	      (when lo
-		(setf (schar newstring (incf new-index)) lo)))))
-	;;@@ WARNING: see above
-	(do ((index end (1+ index))
+	  (setf (schar newstring new-index)
+                (char-upcase (schar string index))))
+        (do ((index end (1+ index))
 	     (new-index (- (the fixnum end) offset) (1+ new-index)))
 	    ((= index offset-slen))
 	  (declare (fixnum index new-index))
 	  (setf (schar newstring new-index) (schar string index)))
-	newstring))))
+        newstring))))
 
 (defun string-downcase (string &key (start 0) end)
   _N"Given a string, returns a new string that is a copy of it with all
@@ -680,20 +667,8 @@
 	     (new-index (- start offset) (1+ new-index)))
 	    ((= index (the fixnum end)))
 	  (declare (fixnum index new-index))
-	  (multiple-value-bind (code wide) (codepoint string index)
-	    (when wide (incf index))
-	    ;; Handle ASCII specially because this is called early in
-	    ;; initialization, before unidata is available.
-	    (cond ((< 64 code 91) (incf code 32))
-		  ((> code 127) (setq code (unicode-lower code))))
-	    ;;@@ WARNING: this may, in theory, need to extend newstring
-	    ;;  but that never actually occurs as of Unicode 5.1.0,
-	    ;;  so I'm just going to ignore it for now...
-	    (multiple-value-bind (hi lo) (surrogates code)
-	      (setf (schar newstring new-index) hi)
-	      (when lo
-		(setf (schar newstring (incf new-index)) lo)))))
-	;;@@ WARNING: see above
+	  (setf (schar newstring new-index)
+                (char-downcase (schar string index))))
 	(do ((index end (1+ index))
 	     (new-index (- (the fixnum end) offset) (1+ new-index)))
 	    ((= index offset-slen))
@@ -731,7 +706,7 @@
 		 (setq newword t))
 		(newword
 		 ;;char is first case-modifiable after non-case-modifiable
-		 (setq char (char-titlecase char))
+		 (setq char (char-upcase char))
 		 (setq newword ()))
 		;;char is case-modifiable, but not first
 		(t (setq char (char-downcase char))))
@@ -744,7 +719,7 @@
 	newstring))))
 
 (defun nstring-upcase (string &key (start 0) end)
-  "Given a string, returns that string with all lower case alphabetic
+  _N"Given a string, returns that string with all lower case alphabetic
   characters converted to uppercase."
   (declare (fixnum start))
   (let ((save-header string))
@@ -752,26 +727,12 @@
       (do ((index start (1+ index)))
 	  ((= index (the fixnum end)))
 	(declare (fixnum index))
-	(multiple-value-bind (code wide) (codepoint string index)
-	  (declare (ignore wide))
-	  ;; Handle ASCII specially because this is called early in
-	  ;; initialization, before unidata is available.
-	  (cond ((< 96 code 123) (decf code 32))
-		#+unicode
-		((> code 127) (setq code (unicode-upper code))))
-	  ;;@@ WARNING: this may, in theory, need to extend string
-	  ;;      (which, obviously, we can't do here.  Unless
-	  ;;       STRING is adjustable, maybe)
-	  ;;  but that never actually occurs as of Unicode 5.1.0,
-	  ;;  so I'm just going to ignore it for now...
-	  (multiple-value-bind (hi lo) (surrogates code)
-	    (setf (schar string index) hi)
-	    (when lo
-	      (setf (schar string (incf index)) lo))))))
-    save-header))
+        (setf (schar string index)
+              (char-upcase (schar string index))))
+    save-header)))
 
 (defun nstring-downcase (string &key (start 0) end)
-  "Given a string, returns that string with all upper case alphabetic
+  _N"Given a string, returns that string with all upper case alphabetic
   characters converted to lowercase."
   (declare (fixnum start))
   (let ((save-header string))
@@ -779,24 +740,12 @@
       (do ((index start (1+ index)))
 	  ((= index (the fixnum end)))
 	(declare (fixnum index))
-	(multiple-value-bind (code wide) (codepoint string index)
-	  (declare (ignore wide))
-	  (cond ((< 64 code 91) (incf code 32))
-		#+unicode
-		((> code 127) (setq code (unicode-lower code))))
-	  ;;@@ WARNING: this may, in theory, need to extend string
-	  ;;      (which, obviously, we can't do here.  Unless
-	  ;;       STRING is adjustable, maybe)
-	  ;;  but that never actually occurs as of Unicode 5.1.0,
-	  ;;  so I'm just going to ignore it for now...
-	  (multiple-value-bind (hi lo) (surrogates code)
-	    (setf (schar string index) hi)
-	    (when lo
-	      (setf (schar string (incf index)) lo))))))
+        (setf (schar string index)
+              (char-downcase (schar string index)))))
     save-header))
 
 (defun nstring-capitalize (string &key (start 0) end)
-  "Given a string, returns that string with the first
+  _N"Given a string, returns that string with the first
   character of each ``word'' converted to upper-case, and remaining
   chars in the word converted to lower case. A ``word'' is defined
   to be a string of case-modifiable characters delimited by
@@ -814,7 +763,7 @@
 	       (setq newword t))
 	      (newword
 	       ;;char is first case-modifiable after non-case-modifiable
-	       (setf (schar string index) (char-titlecase char))
+	       (setf (schar string index) (char-upcase char))
 	       (setq newword ()))
 	      (t
 	       (setf (schar string index) (char-downcase char))))))
@@ -1097,7 +1046,10 @@
 
 #+unicode
 (progn
-(defun decompose (string &optional (compatibility t))
+(defun decompose (string &key (compatibility t) (start 0) end darwinp)
+  "Convert STRING to NFD (or NFKD).  If :darwinp is non-NIL, then
+  characters in the ranges U2000-U2FFF, UF900-UFA6A, and U2F800-U2FA1D
+  are not decomposed, as specified for Darwin pathnames."
   (declare (type string string))
   (let ((result (make-string (cond ((< (length string) 40)
 				    (* 5 (length string)))
@@ -1113,8 +1065,13 @@
 		 (declare (type kernel:index i))
 		 (multiple-value-bind (code wide) (codepoint string i)
 		   (when wide (incf i))
-		   (let ((decomp (unicode-decomp code compatibility)))
-		     (if decomp (rec decomp 0 (length decomp)) (out code))))))
+		   (if (and darwinp
+			    (or (<= #x2000 code #x2fff)
+				(<= #xf900 code #xfa6a)
+				(<= #x2f800 code #x2fa1d)))
+		       (out code)
+		       (let ((decomp (unicode-decomp code compatibility)))
+			 (if decomp (rec decomp 0 (length decomp)) (out code)))))))
 	     (out (code)
 	       (multiple-value-bind (hi lo) (surrogates code)
 		 (outch hi)
@@ -1151,7 +1108,7 @@
 					  (schar result (1+ last)))))
 			    (decf last (if wide2 2 1)))
 			   (t (return))))))))
-      (with-string string
+      (with-one-string string start end offset-var
 	(rec string start end))
       (shrink-vector result fillptr))))
 
@@ -1251,12 +1208,12 @@
 (defun string-to-nfd (string)
   _N"Convert String to Unicode Normalization Form D (NFD) using the
   canonical decomposition.  The NFD string is returned"
-  (decompose string nil))
+  (decompose string :compatibility nil))
 
 (defun string-to-nfkd (string)
   _N"Convert String to Unicode Normalization Form KD (NFKD) uisng the
   compatible decomposition form.  The NFKD string is returned."
-  (decompose string t))
+  (decompose string :compatibility t))
 
 (defun string-to-nfc (string)
   _N"Convert String to Unicode Normalization Form C (NFC).  If the

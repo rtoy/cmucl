@@ -25,8 +25,8 @@
      :conservative-float-type
      :complex-fp-vops
      :hash-new
-     :random-mt19937
-     :cmu :cmu20 :cmu20b		; Version features
+     :random-xoroshiro
+     :cmu :cmu21 :cmu21e		; Version features
      :double-double			; double-double float support
      :linkage-table
 
@@ -44,6 +44,7 @@
      :propagate-fun-type :propagate-float-type :constrain-float-type
      :openbsd :freebsd :glibc2 :linux
      :mach-o :darwin
+     :random-mt19937
      :long-float :new-random :small))
 ;;;
 (setf *features* (remove :bsd *features*))

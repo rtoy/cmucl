@@ -236,7 +236,7 @@
   (frob %random-single-float single-float)
   (frob %random-double-float double-float))
 
-#-(or new-random random-mt19937 rand-xoroshiro)
+#-(or new-random random-mt19937 random-xoroshiro)
 (deftransform random ((num &optional state)
 		      ((integer 1 #.random-fixnum-max) &optional *))
   _N"use inline fixnum operations"
@@ -259,7 +259,7 @@
   '(values (truncate (%random-double-float (coerce num 'double-float)
 		      (or state *random-state*)))))
 
-#+(or random-mt19937)
+#+(or random-mt19937 random-xoroshiro)
 (deftransform random ((num &optional state)
 		      ((integer 1 #.(expt 2 32)) &optional *))
   _N"use inline (unsigned-byte 32) operations"
@@ -347,25 +347,25 @@
 ;;;
 
 (deftype single-float-exponent ()
-  `(integer ,(- vm:single-float-normal-exponent-min vm:single-float-bias
-		vm:single-float-digits)
+  `(integer (,(- vm:single-float-normal-exponent-min vm:single-float-bias
+		 vm:single-float-digits))
 	    ,(- vm:single-float-normal-exponent-max vm:single-float-bias)))
 
 (deftype double-float-exponent ()
-  `(integer ,(- vm:double-float-normal-exponent-min vm:double-float-bias
-		vm:double-float-digits)
+  `(integer (,(- vm:double-float-normal-exponent-min vm:double-float-bias
+		 vm:double-float-digits))
 	    ,(- vm:double-float-normal-exponent-max vm:double-float-bias)))
 
 
 (deftype single-float-int-exponent ()
-  `(integer ,(- vm:single-float-normal-exponent-min vm:single-float-bias
-		(* vm:single-float-digits 2))
+  `(integer (,(- vm:single-float-normal-exponent-min vm:single-float-bias
+		 (* vm:single-float-digits 2)))
 	    ,(- vm:single-float-normal-exponent-max vm:single-float-bias
 		vm:single-float-digits)))
 
 (deftype double-float-int-exponent ()
-  `(integer ,(- vm:double-float-normal-exponent-min vm:double-float-bias
-		(* vm:double-float-digits 2))
+  `(integer (,(- vm:double-float-normal-exponent-min vm:double-float-bias
+		 (* vm:double-float-digits 2)))
 	    ,(- vm:double-float-normal-exponent-max vm:double-float-bias
 		vm:double-float-digits)))
 

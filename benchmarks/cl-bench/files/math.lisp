@@ -1,6 +1,6 @@
 ;;; math.lisp -- various numerical operations
 ;;
-;; Time-stamp: <2004-01-05 emarsden>
+;; Time-stamp: <2023-08-12 07:34:28 toy>
 ;;
 ;; some basic mathematical benchmarks
 
@@ -56,7 +56,7 @@
 ;; calculate the "level" of a point in the Mandebrot Set, which is the
 ;; number of iterations taken to escape to "infinity" (points that
 ;; don't escape are included in the Mandelbrot Set). This version is
-;; intended to test performance when programming in naïve math-style. 
+;; intended to test performance when programming in naive math-style. 
 (defun mset-level/complex (c)
   (declare (type complex c))
   (loop :for z = #c(0 0) :then (+ (* z z) c)

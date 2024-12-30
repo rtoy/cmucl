@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _PRINT_H_
-#define _PRINT_H_
+#ifndef PRINT_H
+#define PRINT_H
 
 #include "lisp.h"
 
@@ -16,4 +16,4 @@ extern void print(lispobj obj);
 extern void brief_print(lispobj obj);
 extern void reset_printer(void);
 
-#endif /* _PRINT_H_ */
+#endif /* PRINT_H */

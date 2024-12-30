@@ -290,13 +290,21 @@
   (stream-dispatch stream
     ;; simple-stream
     (stream::%stream-external-format stream)
-    ;; lisp-stream
-    (typecase stream
+    ;; lisp-stream.  For unsupported streams, signal a type error.
+    (etypecase stream
       #+unicode
       (fd-stream (fd-stream-external-format stream))
-      (synonym-stream (stream-external-format
-		       (symbol-value (synonym-stream-symbol stream))))
-      (t :default))
+      (broadcast-stream
+       ;; See http://www.lispworks.com/documentation/HyperSpec/Body/t_broadc.htm
+       (let ((components (broadcast-stream-streams stream)))
+	 (if (null components)
+	     :default
+	     (stream-external-format (car (last components))))))
+      (synonym-stream
+       ;; Not defined by CLHS.  What should happen if
+       ;; (synonym-stream-symbol stream) is unbound?
+       (stream-external-format
+	(symbol-value (synonym-stream-symbol stream)))))
     ;; fundamental-stream
     :default))
 
@@ -389,7 +397,9 @@
     ;; simple-stream
     (stream::%file-length stream)
     ;; lisp-stream
-    (funcall (lisp-stream-misc stream) stream :file-length)))
+    (funcall (lisp-stream-misc stream) stream :file-length)
+    ;; fundamental-stream
+    (stream-file-length stream)))
 
 
 ;;; Input functions:
@@ -596,19 +606,34 @@
 	   :skipped-char-form ()
 	   :eof-detected-form (eof-or-lose stream eof-errorp eof-value))))))
 
-(defun listen (&optional (stream *standard-input*) (width 1))
-  "Returns T if a character is available on the given Stream."
+(defun listen (&optional (stream *standard-input*) (width 1 width-p))
+  _N"Returns T if a character is available on the given Stream.
+  Argument Width is only used by instances of SIMPLE-STREAM. If
+  Stream is a LISP-STREAM or FUNDAMENTAL-STREAM, passing more
+  than one argument is invalid."
   (declare (type streamlike stream))
   (let ((stream (in-synonym-of stream)))
     (stream-dispatch stream
       ;; simple-stream
       (stream::%listen stream width)
       ;; lisp-stream
-      (or (/= (the fixnum (lisp-stream-in-index stream)) in-buffer-length)
-	  ;; Test for t explicitly since misc methods return :eof sometimes.
-	  (eq (funcall (lisp-stream-misc stream) stream :listen) t))
+      (progn
+	(when width-p
+	  (error 'kernel:simple-program-error
+		 :function-name 'listen
+		 :format-control (intl:gettext "Invalid number of arguments: ~S")
+		 :format-arguments (list 2)))
+	(or (/= (the fixnum (lisp-stream-in-index stream)) in-buffer-length)
+            ;; Test for t explicitly since misc methods return :eof sometimes.
+            (eq (funcall (lisp-stream-misc stream) stream :listen) t)))
       ;; fundamental-stream
-      (stream-listen stream))))
+      (progn
+	(when width-p
+	  (error 'kernel:simple-program-error
+		 :function-name 'listen
+		 :format-control (intl:gettext "Invalid number of arguments: ~S")
+		 :format-arguments (list 2)))
+	(stream-listen stream)))))
 
 (defun read-char-no-hang (&optional (stream *standard-input*)
 				    (eof-errorp t) eof-value recursive-p)

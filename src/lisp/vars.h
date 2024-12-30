@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _VARS_H_
-#define _VARS_H_
+#ifndef VARS_H
+#define VARS_H
 
 extern void flush_vars(void);
 extern struct var *lookup_by_name(char *name);
@@ -22,4 +22,4 @@ extern lispobj var_value(struct var *var);
 extern long var_clock(struct var *var);
 extern void var_setclock(struct var *var, long value);
 
-#endif /* _VARS_H_ */
+#endif /* VARS_H */

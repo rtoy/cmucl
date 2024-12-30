@@ -196,141 +196,11 @@
 
 
 
-;(define-binop + 4 add)
+(define-binop + 4 add)
 (define-binop - 4 sub)
 (define-binop logand 2 and)
 (define-binop logior 2 or)
 (define-binop logxor 2 xor)
-
-
-;;; Special handling of add on the x86; can use lea to avoid a
-;;; register load, otherwise it uses add.
-(define-vop (fast-+/fixnum=>fixnum fast-safe-arith-op)
-  (:translate +)
-  (:args (x :scs (any-reg) :target r
-	    :load-if (not (and (sc-is x control-stack)
-			       (sc-is y any-reg)
-			       (sc-is r control-stack)
-			       (location= x r))))
-	 (y :scs (any-reg control-stack)))
-  (:arg-types tagged-num tagged-num)
-  (:results (r :scs (any-reg) :from (:argument 0)
-	       :load-if (not (and (sc-is x control-stack)
-				  (sc-is y any-reg)
-				  (sc-is r control-stack)
-				  (location= x r)))))
-  (:result-types tagged-num)
-  (:note _N"inline fixnum arithmetic")
-  (:generator 2
-    (cond ((and (sc-is x any-reg) (sc-is y any-reg) (sc-is r any-reg)
-		(not (location= x r)))
-	   (inst lea r (make-ea :dword :base x :index y :scale 1)))
-	  (t
-	   (move r x)
-	   (inst add r y)))))
-
-(define-vop (fast-+-c/fixnum=>fixnum fast-safe-arith-op)
-  (:translate +)
-  (:args (x :target r :scs (any-reg control-stack)))
-  (:info y)
-  (:arg-types tagged-num (:constant (signed-byte 30)))
-  (:results (r :scs (any-reg)
-	       :load-if (not (location= x r))))
-  (:result-types tagged-num)
-  (:note _N"inline fixnum arithmetic")
-  (:generator 1
-    (cond ((and (sc-is x any-reg) (sc-is r any-reg) (not (location= x r)))
-	   (inst lea r (make-ea :dword :base x :disp (fixnumize y))))
-	  (t
-	   (move r x)
-	   (inst add r (fixnumize y))))))
-
-(define-vop (fast-+/signed=>signed fast-safe-arith-op)
-  (:translate +)
-  (:args (x :scs (signed-reg) :target r
-	    :load-if (not (and (sc-is x signed-stack)
-			       (sc-is y signed-reg)
-			       (sc-is r signed-stack)
-			       (location= x r))))
-	 (y :scs (signed-reg signed-stack)))
-  (:arg-types signed-num signed-num)
-  (:results (r :scs (signed-reg) :from (:argument 0)
-	       :load-if (not (and (sc-is x signed-stack)
-				  (sc-is y signed-reg)
-				  (location= x r)))))
-  (:result-types signed-num)
-  (:note _N"inline (signed-byte 32) arithmetic")
-  (:generator 5
-    (cond ((and (sc-is x signed-reg) (sc-is y signed-reg) (sc-is r signed-reg)
-		(not (location= x r)))
-	   (inst lea r (make-ea :dword :base x :index y :scale 1)))
-	  (t
-	   (move r x)
-	   (inst add r y)))))
-
-(define-vop (fast-+-c/signed=>signed fast-safe-arith-op)
-  (:translate +)
-  (:args (x :target r :scs (signed-reg signed-stack)))
-  (:info y)
-  (:arg-types signed-num (:constant (signed-byte 32)))
-  (:results (r :scs (signed-reg)
-	       :load-if (not (location= x r))))
-  (:result-types signed-num)
-  (:note _N"inline (signed-byte 32) arithmetic")
-  (:generator 4
-    (cond ((and (sc-is x signed-reg) (sc-is r signed-reg)
-		(not (location= x r)))
-	   (inst lea r (make-ea :dword :base x :disp y)))
-	  (t
-	   (move r x)
-	   (if (= y 1)
-	       (inst inc r)
-	     (inst add r y))))))
-
-(define-vop (fast-+/unsigned=>unsigned fast-safe-arith-op)
-  (:translate +)
-  (:args (x :scs (unsigned-reg) :target r
-	    :load-if (not (and (sc-is x unsigned-stack)
-			       (sc-is y unsigned-reg)
-			       (sc-is r unsigned-stack)
-			       (location= x r))))
-	 (y :scs (unsigned-reg unsigned-stack)))
-  (:arg-types unsigned-num unsigned-num)
-  (:results (r :scs (unsigned-reg) :from (:argument 0)
-	       :load-if (not (and (sc-is x unsigned-stack)
-				  (sc-is y unsigned-reg)
-				  (sc-is r unsigned-stack)
-				  (location= x r)))))
-  (:result-types unsigned-num)
-  (:note _N"inline (unsigned-byte 32) arithmetic")
-  (:generator 5
-    (cond ((and (sc-is x unsigned-reg) (sc-is y unsigned-reg)
-		(sc-is r unsigned-reg) (not (location= x r)))
-	   (inst lea r (make-ea :dword :base x :index y :scale 1)))
-	  (t
-	   (move r x)
-	   (inst add r y)))))
-
-(define-vop (fast-+-c/unsigned=>unsigned fast-safe-arith-op)
-  (:translate +)
-  (:args (x :target r :scs (unsigned-reg unsigned-stack)))
-  (:info y)
-  (:arg-types unsigned-num (:constant (unsigned-byte 32)))
-  (:results (r :scs (unsigned-reg)
-	       :load-if (not (location= x r))))
-  (:result-types unsigned-num)
-  (:note _N"inline (unsigned-byte 32) arithmetic")
-  (:generator 4
-    (cond ((and (sc-is x unsigned-reg)
-		(sc-is r unsigned-reg)
-		(not (location= x r))
-		(valid-displacement-p y))
-	   (inst lea r (make-ea :dword :base x :disp y)))
-	  (t
-	   (move r x)
-	   (if (= y 1)
-	       (inst inc r)
-	       (inst add r y))))))
 
 
 ;;;; Special logand cases: (logand signed unsigned) => unsigned
@@ -641,25 +511,18 @@
   (:result-types tagged-num)
   (:note _N"inline ASH")
   (:generator 2
-    (cond ((and (= amount 1) (not (location= number result)))
-	   (inst lea result (make-ea :dword :index number :scale 2)))
-	  ((and (= amount 2) (not (location= number result)))
-	   (inst lea result (make-ea :dword :index number :scale 4)))
-	  ((and (= amount 3) (not (location= number result)))
-	   (inst lea result (make-ea :dword :index number :scale 8)))
+    (move result number)
+    (cond ((plusp amount)
+	   ;; We don't have to worry about overflow because of the
+	   ;; result type restriction.
+	   (inst shl result amount))
 	  (t
-	   (move result number)
-	   (cond ((plusp amount)
-		  ;; We don't have to worry about overflow because of the
-		  ;; result type restriction.
-		  (inst shl result amount))
-		 (t
-		  ;; If the amount is greater than 31, only shift by 31.  We
-		  ;; have to do this because the shift instructions only look
-		  ;; at the low five bits of the result.
-		  (inst sar result (min 31 (- amount)))
-		  ;; Fixnum correction.
-		  (inst and result #xfffffffc)))))))
+	   ;; If the amount is greater than 31, only shift by 31.  We
+	   ;; have to do this because the shift instructions only look
+	   ;; at the low five bits of the result.
+	   (inst sar result (min 31 (- amount)))
+	   ;; Fixnum correction.
+	   (inst and result #xfffffffc)))))
 
 (define-vop (fast-ash-left/fixnum=>fixnum)
   (:translate ash)
@@ -699,22 +562,15 @@
   (:result-types unsigned-num)
   (:note _N"inline ASH")
   (:generator 3
-    (cond ((and (= amount 1) (not (location= number result)))
-	   (inst lea result (make-ea :dword :index number :scale 2)))
-	  ((and (= amount 2) (not (location= number result)))
-	   (inst lea result (make-ea :dword :index number :scale 4)))
-	  ((and (= amount 3) (not (location= number result)))
-	   (inst lea result (make-ea :dword :index number :scale 8)))
+    (move result number)
+    (cond ((plusp amount)
+	   ;; We don't have to worry about overflow because of the
+	   ;; result type restriction.
+	   (inst shl result amount))
+	  ((< amount -31)
+	   (inst mov result 0))
 	  (t
-	   (move result number)
-	   (cond ((plusp amount)
-		  ;; We don't have to worry about overflow because of the
-		  ;; result type restriction.
-		  (inst shl result amount))
-		 ((< amount -31)
-		  (inst mov result 0))
-		 (t
-		  (inst shr result (- amount))))))))
+	   (inst shr result (- amount))))))
 
 (define-vop (fast-ash-c/signed=>signed)
   (:translate ash)
@@ -732,23 +588,16 @@
   (:result-types signed-num)
   (:note _N"inline ASH")
   (:generator 3
-    (cond ((and (= amount 1) (not (location= number result)))
-	   (inst lea result (make-ea :dword :index number :scale 2)))
-	  ((and (= amount 2) (not (location= number result)))
-	   (inst lea result (make-ea :dword :index number :scale 4)))
-	  ((and (= amount 3) (not (location= number result)))
-	   (inst lea result (make-ea :dword :index number :scale 8)))
+    (move result number)
+    (cond ((plusp amount)
+	   ;; We don't have to worry about overflow because of the
+	   ;; result type restriction.
+	   (inst shl result amount))
 	  (t
-	   (move result number)
-	   (cond ((plusp amount)
-		  ;; We don't have to worry about overflow because of the
-		  ;; result type restriction.
-		  (inst shl result amount))
-		 (t
-		  ;; If the amount is greater than 31, only shift by 31.  We
-		  ;; have to do this because the shift instructions only look
-		  ;; at the low five bits of the result.
-		  (inst sar result (min 31 (- amount)))))))))
+	   ;; If the amount is greater than 31, only shift by 31.  We
+	   ;; have to do this because the shift instructions only look
+	   ;; at the low five bits of the result.
+	   (inst sar result (min 31 (- amount)))))))
 
 (define-vop (fast-ash-c/fixnum=>signed)
   (:translate ash)
@@ -767,23 +616,16 @@
   (:note "inline ASH")
   (:generator 1
     (let ((shift (- amount vm:fixnum-tag-bits)))
-      (cond ((and (= shift 1) (not (location= number result)))
-	     (inst lea result (make-ea :dword :index number :scale 2)))
-	    ((and (= shift 2) (not (location= number result)))
-	     (inst lea result (make-ea :dword :index number :scale 4)))
-	    ((and (= shift 3) (not (location= number result)))
-	     (inst lea result (make-ea :dword :index number :scale 8)))
+      (move result number)
+      (cond ((plusp shift)
+	     ;; We don't have to worry about overflow because of the
+	     ;; result type restriction.
+	     (inst shl result shift))
 	    (t
-	     (move result number)
-	     (cond ((plusp shift)
-		    ;; We don't have to worry about overflow because of the
-		    ;; result type restriction.
-		    (inst shl result shift))
-		   (t
-		    ;; If the shift is greater than 31, only shift by 31.  We
-		    ;; have to do this because the shift instructions only look
-		    ;; at the low five bits of the result.
-		    (inst sar result (min 31 (- shift))))))))))
+	     ;; If the shift is greater than 31, only shift by 31.  We
+	     ;; have to do this because the shift instructions only look
+	     ;; at the low five bits of the result.
+	     (inst sar result (min 31 (- shift))))))))
 
 (define-vop (fast-ash-left/unsigned=>unsigned)
   (:translate ash)
@@ -889,7 +731,6 @@
     DONE))
 
 
-;;; note documentation for this function is wrong - rtfm
 (define-vop (signed-byte-32-len)
   (:translate integer-length)
   (:note _N"inline (signed-byte 32) integer-length")
@@ -905,12 +746,30 @@
     (inst not res)
     POS
     (inst bsr res res)
-    (inst jmp :z zero)
+    (inst jmp :z DONE)
     (inst inc res)
     (inst shl res 2)
-    (inst jmp done)
-    ZERO
-    (inst xor res res)
+    DONE))
+
+(define-vop (unsigned-byte-32-len)
+  (:translate integer-length)
+  (:note _N"inline (unsigned-byte 32) integer-length")
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
+  (:generator 30
+    ;; The Intel docs say that BSR leaves the destination register
+    ;; undefined if the source is 0.  However, gcc, LLVM, and MSVC
+    ;; generate code that pretty much says BSR basically moves the
+    ;; source to the destination if the source is 0.
+    (inst bsr res arg)
+    (inst jmp :z DONE)
+    ;; The result of BSR is one too small for what we want, so
+    ;; increment the result.
+    (inst inc res)
+    (inst shl res 2)
     DONE))
 
 (define-vop (unsigned-byte-32-count)
@@ -1836,75 +1695,9 @@
 
 (in-package "VM")
 
+;; The update routine is a Lisp assembly routine with a corresponding
+;; VOP.  This lets the compiler know about the VOP so we can use it.
 #+random-xoroshiro
-(progn
-(defknown xoroshiro-next ((simple-array double-float (2)))
+(defknown kernel::random-xoroshiro-update ((simple-array double-float (2)))
   (values (unsigned-byte 32) (unsigned-byte 32))
   (movable))
-
-(define-vop (xoroshiro-next)
-  (:policy :fast-safe)
-  (:translate xoroshiro-next)
-  (:args (state :scs (descriptor-reg) :to (:result 3)))
-  (:arg-types simple-array-double-float)
-  (:results (r1 :scs (unsigned-reg))
-	    (r0 :scs (unsigned-reg)))
-  (:result-types unsigned-num unsigned-num)
-  (:temporary (:sc double-reg) s0)
-  (:temporary (:sc double-reg) s1)
-  (:temporary (:sc double-reg) t0)
-  (:generator 10
-    ;; s0 = state[0]
-    (inst movsd s0 (make-ea :dword :base state
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 8 0))
-				  vm:other-pointer-type)))
-    ;; s1 = state[1]
-    (inst movsd s1 (make-ea :dword :base state
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 8 1))
-				  vm:other-pointer-type)))
-    ;; Compute result = s0 + s1
-    (inst movapd t0 s0)
-    (inst paddq t0 s1)
-    ;; Save the 64-bit result as two 32-bit results
-    (inst movd r0 t0)
-    (inst psrlq t0 32)
-    (inst movd r1 t0)
-
-    ;; s1 = s1 ^ s0
-    (inst xorpd s1 s0)
-
-    ;; s0 = rotl(s0,55) = s0 << 55 | s0 >> 9
-    (inst movapd t0 s0)
-    (inst psllq s0 55)			; s0 = s0 << 55
-    (inst psrlq t0 9)			; t0 = s0 >> 9
-    (inst orpd s0 t0)			; s0 = rotl(s0, 55)
-
-    (inst movapd t0 s1)
-    (inst xorpd s0 s1)			; s0 = s0 ^ s1
-    (inst psllq t0 14)			; t0 = s1 << 14
-    (inst xorpd s0 t0)			; s0 = s0 ^ t0
-    (inst movsd (make-ea :dword :base state
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 8 0))
-				  vm:other-pointer-type))
-	  s0)
-
-    ;; s1 = rotl(s1, 36) = s1 << 36 | s1 >> 28, using t0 as temp
-    (inst movapd t0 s1)
-    (inst psllq s1 36)
-    (inst psrlq t0 28)
-    (inst orpd s1 t0)
-
-    (inst movsd (make-ea :dword :base state
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 8 1))
-				  vm:other-pointer-type))
-	  s1)))
-)    
-    
