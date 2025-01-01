@@ -1719,8 +1719,9 @@
 	   "STRING-ENCODE" "STRING-DECODE"
 	   "SET-SYSTEM-EXTERNAL-FORMAT")
   ;; Temporary files/directories
-  "WITH-TEMPORARY-FILE"
-  "WITH-TEMPORARY-DIRECTORY")
+  (:export
+   "WITH-TEMPORARY-FILE"
+   "WITH-TEMPORARY-DIRECTORY"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
