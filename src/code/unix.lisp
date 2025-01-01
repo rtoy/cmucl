@@ -2909,3 +2909,33 @@
   (syscall ("mkstemp" c-call:c-string)
 	   result
 	   (copy-seq template)))
+
+(defun unix-mkdtemp (template)
+  _N"Generate a uniquely named temporary directory from Template,
+  which must have \"XXXXXX\" as the last six characters.  The
+  directory is created with permissions 0700.  The name of the
+  directory is returned."
+  (let* ((new-template (copy-seq template))
+	 (result (alien-funcall
+		  (extern-alien "mkdtemp"
+				(function (* char)
+					  c-call:c-string))
+		  new-template)))
+    (if (zerop (deref result 0))
+	(values nil (unix-errno))
+	(cast result c-call:c-string))))
+
+(defun unix-mkdtemp (template)
+  _N"Generate a uniquely named temporary directory from Template,
+  which must have \"XXXXXX\" as the last six characters.  The
+  directory is created with permissions 0700.  The name of the
+  directory is returned."
+  (let* ((new-template (copy-seq template))
+	 (result (alien-funcall
+		  (extern-alien "mkdtemp"
+				(function (* char)
+					  c-call:c-string))
+		  new-template)))
+    (if (zerop (sap-int (alien-sap result)))
+	(values nil (unix-errno))
+	(cast result c-string))))

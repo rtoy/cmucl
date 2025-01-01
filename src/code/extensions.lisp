@@ -22,7 +22,8 @@
 		read-char-no-edit listen-skip-whitespace concat-pnames
 		iterate once-only collect do-anonymous undefined-value
 		required-argument define-hash-cache defun-cached
-		cache-hash-eq do-hash))
+		cache-hash-eq do-hash
+	  with-temporary-file))
 
 (import 'lisp::whitespace-char-p)
 
@@ -622,7 +623,7 @@
 				  decoding-error
 				  encoding-error)
 			       &parse-body (forms decls))
-  "A temporary file is opened using the Open-args and bound to the
+  _N"A temporary file is opened using the Open-args and bound to the
  variable Var.  The name of the temporary file uses Template-prefix
  for the name.  If the temporary file cannot be opened, the forms are
  not evaluated.  The Forms are executed, and when they terminate,
@@ -639,19 +640,19 @@
 	(template (gensym "TEMPLATE-")))
     
     `(let* ((,template (concatenate 'string
-					,template-prefix
-					"XXXXXX"))
-		(,var (lisp::make-fd-stream (unix::unix-mkstemp ,template)
-					    :auto-close t
-					    :file ,template
-					    :output t
-					    :input t
-					    :element-type ',element-type
-					    :external-format ,external-format
-					    :decoding-error ,decoding-error
-					    :encoding-error ,encoding-error
-					    :buffering ,buffering))
-		(,abortp t))
+				    ,template-prefix
+				    "XXXXXX"))
+	    (,var (lisp::make-fd-stream (unix::unix-mkstemp ,template)
+					:auto-close t
+					:file ,template
+					:output t
+					:input t
+					:element-type ',element-type
+					:external-format ,external-format
+					:decoding-error ,decoding-error
+					:encoding-error ,encoding-error
+					:buffering ,buffering))
+	    (,abortp t))
        ,@decls
        (unwind-protect
 	    (multiple-value-prog1
@@ -659,3 +660,21 @@
 	      (setq ,abortp nil))
 	 (when ,var
 	   (close ,var :abort ,abortp))))))
+
+;; WITH-TEMPORARY-DIRECTORY -- Public
+(defmacro with-temporary-directory ((var template-prefix)
+				    &parse-body (forms decls))
+  _N"Create a temporary directory using Template-prefix as the name of the directory."
+  (let ((template (gensym "TEMPLATE-")))
+    `(let ((,template (concatenate 'string ,template-prefix
+				   "XXXXXX")))
+       ,@decls
+       (let ((,var (unix::unix-mkdtemp ,template)))
+	 (unless ,var
+	   (error "Could not create temporary directory using template ~A"
+		  ,template))
+	 (unwind-protect
+	      (multiple-value-prog1
+		  (progn ,@forms)))
+	 ;; Remove the directory
+	 (unix:unix-rmdir ,var)))))
