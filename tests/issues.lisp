@@ -707,6 +707,33 @@
 		  ".txt")
      *test-path*))))
 
+(define-test issue.135
+    (:tag :issues)
+  (assert-equalp "./" (ext:unix-namestring "."))
+  (unwind-protect
+       (progn
+	 ;; Create a test file in the current directory.
+	 ;; unix-namestring requires files to exist to be able to
+	 ;; return the namestring.
+	 (with-open-file (f1 "foo.txt"
+			     :direction :output
+			     :if-exists :supersede)
+	   (print "foo" f1))
+	 ;; Check unix-namestring and verify that converting the
+	 ;; namestring to a pathname results in the same pathname
+	 ;; object as expected.
+	 (let ((foo (ext:unix-namestring "foo.txt")))
+	   (assert-equalp "foo.txt" foo)
+	   (assert-equalp (make-pathname :name "foo" :type "txt")
+			  (pathname foo)))
+	 (let ((bar (ext:unix-namestring "src/code/filesys.lisp")))
+	   (assert-equalp "./src/code/filesys.lisp" bar)
+	   (assert-equalp (make-pathname :directory '(:relative "src" "code")
+					 :name "filesys"
+					 :type "lisp")
+			  (pathname bar))))
+    (assert-true (delete-file "foo.txt"))))
+
 (define-test issue.139-default-external-format
     (:tag :issues)
   (assert-eq :utf-8 stream:*default-external-format*)
