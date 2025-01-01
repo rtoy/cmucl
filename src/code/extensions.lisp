@@ -614,20 +614,43 @@
   `(lisp::pointer-hash ,x))
 
 ;;; WITH-TEMPORARY-FILE -- Public
-(defmacro with-temporary-file ((var template-prefix &rest open-args) &parse-body (forms decls))
+(defmacro with-temporary-file ((var template-prefix
+				&key 
+				  (element-type 'base-char)
+				  (external-format :default)
+				  (buffering :full)
+				  decoding-error
+				  encoding-error)
+			       &parse-body (forms decls))
   "A temporary file is opened using the Open-args and bound to the
  variable Var.  The name of the temporary file uses Template-prefix
  for the name.  If the temporary file cannot be opened, the forms are
  not evaluated.  The Forms are executed, and when they terminate,
- normally or otherwise, the file is closed and deleted."
+ normally or otherwise, the file is closed.
+
+ Defined keywords:
+  :element-type    - Type of object to read or write.  Default BASE-CHAR
+  :external-format - An external format name
+  :buffering       - Buffering to use for the file.  Must be one of
+                      :NONE, :LINE, :FULL
+  :decoding-error  - How to handle decoding errors.  See OPEN
+  :encoding-error  - How to handle encoding errors.  See OPEN"
   (let ((abortp (gensym))
 	(template (gensym "TEMPLATE-")))
+    
     `(let* ((,template (concatenate 'string
 					,template-prefix
 					"XXXXXX"))
 		(,var (lisp::make-fd-stream (unix::unix-mkstemp ,template)
+					    :auto-close t
 					    :file ,template
-					    ,@open-args))
+					    :output t
+					    :input t
+					    :element-type ',element-type
+					    :external-format ,external-format
+					    :decoding-error ,decoding-error
+					    :encoding-error ,encoding-error
+					    :buffering ,buffering))
 		(,abortp t))
        ,@decls
        (unwind-protect
