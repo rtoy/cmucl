@@ -2900,3 +2900,12 @@
 	    (extern-alien "os_get_locale_codeset"
 			  (function (* char))))
 	c-string))
+
+(defun unix-mkstemp (template)
+  _N"Generates a unique temporary file name from TEMPLATE, creates and
+ opens the file and returns a file stream for the file.
+
+ The last six characters of the template must be \"XXXXXX\"."
+  (syscall ("mkstemp" c-call:c-string)
+	   result
+	   (copy-seq template)))

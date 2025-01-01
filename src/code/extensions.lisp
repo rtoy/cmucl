@@ -612,3 +612,27 @@
   "Return an EQ hash of X.  The value of this hash for any given object can (of
   course) change at arbitary times."
   `(lisp::pointer-hash ,x))
+
+;;; WITH-TEMPORARY-FILE -- Public
+(defmacro with-temporary-file ((var template-prefix &rest open-args) &parse-body (forms decls))
+  "A temporary file is opened using the Open-args and bound to the
+ variable Var.  The name of the temporary file uses Template-prefix
+ for the name.  If the temporary file cannot be opened, the forms are
+ not evaluated.  The Forms are executed, and when they terminate,
+ normally or otherwise, the file is closed and deleted."
+  (let ((abortp (gensym))
+	(template (gensym "TEMPLATE-")))
+    `(let* ((,template (concatenate 'string
+					,template-prefix
+					"XXXXXX"))
+		(,var (lisp::make-fd-stream (unix::unix-mkstemp ,template)
+					    :file ,template
+					    ,@open-args))
+		(,abortp t))
+       ,@decls
+       (unwind-protect
+	    (multiple-value-prog1
+		(progn ,@forms)
+	      (setq ,abortp nil))
+	 (when ,var
+	   (close ,var :abort ,abortp))))))
