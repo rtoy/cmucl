@@ -637,29 +637,34 @@
   :decoding-error  - How to handle decoding errors.  See OPEN
   :encoding-error  - How to handle encoding errors.  See OPEN"
   (let ((abortp (gensym))
-	(template (gensym "TEMPLATE-")))
+	(template (gensym "TEMPLATE-"))
+	(fd (gensym "FD-")))
     
     `(let* ((,template (concatenate 'string
 				    ,template-prefix
 				    "XXXXXX"))
-	    (,var (lisp::make-fd-stream (unix::unix-mkstemp ,template)
-					:auto-close t
-					:file ,template
-					:output t
-					:input t
-					:element-type ',element-type
-					:external-format ,external-format
-					:decoding-error ,decoding-error
-					:encoding-error ,encoding-error
-					:buffering ,buffering))
-	    (,abortp t))
-       ,@decls
-       (unwind-protect
-	    (multiple-value-prog1
-		(progn ,@forms)
-	      (setq ,abortp nil))
-	 (when ,var
-	   (close ,var :abort ,abortp))))))
+	    (,fd (unix::unix-mkstemp ,template)))
+       (unless ,fd
+	 (error "Could not create temporary file using template ~A"
+		,template))
+       (let ((,var (lisp::make-fd-stream (unix::unix-mkstemp ,template)
+					 :auto-close t
+					 :file ,template
+					 :output t
+					 :input t
+					 :element-type ',element-type
+					 :external-format ,external-format
+					 :decoding-error ,decoding-error
+					 :encoding-error ,encoding-error
+					 :buffering ,buffering))
+	     (,abortp t))
+	 ,@decls
+	 (unwind-protect
+	      (multiple-value-prog1
+		  (progn ,@forms)
+		(setq ,abortp nil))
+	   (when ,var
+	     (close ,var :abort ,abortp)))))))
 
 ;; WITH-TEMPORARY-DIRECTORY -- Public
 (defmacro with-temporary-directory ((var template-prefix)
