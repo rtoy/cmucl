@@ -721,7 +721,7 @@
 				   verify-existence follow-links
 				   nil function))
 	  (:relative
-	   (%enumerate-directories "" (cdr directory) pathname
+	   (%enumerate-directories "./" (cdr directory) pathname
 				   verify-existence follow-links
 				   nil function)))
 	(%enumerate-files "" pathname verify-existence function))))
@@ -1110,11 +1110,6 @@ optionally keeping some of the most recent old versions."
 		 :pathname file
 		 :format-control (intl:gettext "~S doesn't exist.")
 		 :format-arguments (list file)))
-	;; unix-namestring converts "." to "".  Convert it back to
-	;; "." so we can stat the current directory.  (Perhaps
-	;; that's a bug in unix-namestring?)
-	(when (zerop (length name))
-	  (setf name "."))
 	(let (author)
 	  (unwind-protect
 	       (progn
