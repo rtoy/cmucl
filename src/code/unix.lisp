@@ -2902,13 +2902,30 @@
 	c-string))
 
 (defun unix-mkstemp (template)
-  _N"Generates a unique temporary file name from TEMPLATE, creates and
- opens the file and returns a file stream for the file.
+  _N"Generates a unique temporary file name from TEMPLATE, and creates
+  and opens the file.  On success, the corresponding file descriptor
+  and name of the file is returned.
 
  The last six characters of the template must be \"XXXXXX\"."
-  (syscall ("mkstemp" c-call:c-string)
-	   result
-	   (copy-seq template)))
+  ;; Hope this buffer is large enough!
+  (let ((octets (%name->file template)))
+    (unless (< (length octets) 8192)
+      (error "Internal buffer is too small for encoded file name of ~D octets"
+	     (length octets)))
+    (with-alien ((buf (array c-call:unsigned-char 8192)))
+      ;; Convert the Lisp string and copy it to the alien buffer, being
+      ;; sure to zero-terminate the buffer.
+      (loop for k from 0
+	    for c across octets
+	    do
+	       (setf (deref buf k) (char-code c))
+	    finally (setf (deref buf k) 0))
+
+      (syscall ("mkstemp" (* c-call:unsigned-char))
+	       (values result
+		       ;; Convert the file name back to a Lisp string.
+		       (%file->name (cast buf c-call:c-string)))
+	       (cast buf (* c-call:unsigned-char))))))
 
 (defun unix-mkdtemp (template)
   _N"Generate a uniquely named temporary directory from Template,
