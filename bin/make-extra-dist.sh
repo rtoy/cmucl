@@ -66,6 +66,8 @@ VERSION=$2
 ARCH=$3
 OS=$4
 
+CMUCLLIBVER="lib/cmucl/$VERSION"
+
 case $ARCH in
 	x86*)		FASL="sse2f" ;;
 	sparc*)		FASL=sparcf ;;
@@ -90,41 +92,41 @@ if [ -z "$INSTALL_DIR" ]; then
 fi
 
 echo Installing extra components
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib
 
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/subsystems
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/subsystems
 
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/contrib
 
 for ext in $FASL
 do
   install ${GROUP} ${OWNER} -m 0644 $TARGET/clx/clx-library.$ext \
-      $DESTDIR/lib/cmucl/lib/subsystems/
+      $DESTDIR/$CMUCLLIBVER/lib/subsystems/
   install ${GROUP} ${OWNER} -m 0644 $TARGET/hemlock/hemlock-library.$ext \
-      $DESTDIR/lib/cmucl/lib/subsystems/
+      $DESTDIR/$CMUCLLIBVER/lib/subsystems/
   install ${GROUP} ${OWNER} -m 0644 $TARGET/interface/clm-library.$ext  \
-      $DESTDIR/lib/cmucl/lib/subsystems/
+      $DESTDIR/$CMUCLLIBVER/lib/subsystems/
 done
 
 # Not sure we really need these, but we'll install them in the
 # ext-formats directory.  (Should they go somewhere else?)
-#install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/ext-formats
+#install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/ext-formats
 #for f in src/i18n/NameAliases.txt src/i18n/UnicodeData.txt
 #do
 #    echo $f
-#    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
+#    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/$CMUCLLIBVER/lib/ext-formats/
 #done
 
-# install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/fonts/
+# install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/fonts/
 # install ${GROUP} ${OWNER} -m 0644 misc/8x13u.snf misc/fonts.dir \
-#	$DESTDIR/lib/cmucl/lib/fonts/
+#	$DESTDIR/$CMUCLLIBVER/lib/fonts/
 install ${GROUP} ${OWNER} -m 0644 src/hemlock/XKeysymDB \
 	src/hemlock/hemlock11.cursor src/hemlock/hemlock11.mask \
 	$TARGET/hemlock/spell-dictionary.bin \
-	$DESTDIR/lib/cmucl/lib/
-install ${GROUP} ${OWNER} -m 0755 src/hemlock/mh-scan $DESTDIR/lib/cmucl/lib/
+	$DESTDIR/$CMUCLLIBVER/lib/
+install ${GROUP} ${OWNER} -m 0755 src/hemlock/mh-scan $DESTDIR/$CMUCLLIBVER/lib/
 install ${GROUP} ${OWNER} -m 0755 $TARGET/motif/server/motifd \
-	$DESTDIR/lib/cmucl/lib/
+	$DESTDIR/$CMUCLLIBVER/lib/
 
 # Install the contrib stuff.  Create the directories and then copy the files.
 #
@@ -132,21 +134,21 @@ install ${GROUP} ${OWNER} -m 0755 $TARGET/motif/server/motifd \
 # these directories.
 for d in `(cd src; find contrib -type d -print | grep -v "asdf\|defsystem")`
 do
-    install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/$d
+    install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/$d
 done
 
 for f in `(cd src/contrib; find . -type f -print | grep -v "asdf\|defsystem\|unix")`
 do
     FILE=`basename $f`
     DIR=`dirname $f`
-    install ${GROUP} ${OWNER} -m 0644 src/contrib/$f $DESTDIR/lib/cmucl/lib/contrib/$DIR
+    install ${GROUP} ${OWNER} -m 0644 src/contrib/$f $DESTDIR/$CMUCLLIBVER/lib/contrib/$DIR
 done
 
 # Install all the locale data.
 
 for d in `(cd src/i18n/; find locale -type d -print)`
 do
-    install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/$d
+    install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/$d
 done
 
 # Install mo files.  Ignore any emacs-style backup files.
@@ -154,7 +156,7 @@ for f in `(cd $TARGET/i18n; find locale -type f -print | grep -v '~.*~\|.*~')`
 do
     FILE=`basename $f`
     DIR=`dirname $f`
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/i18n/$f $DESTDIR/lib/cmucl/lib/$DIR
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/i18n/$f $DESTDIR/$CMUCLLIBVER/lib/$DIR
 done
 
 # Install po files.  (Do we really need to distribute the po files?)
@@ -162,7 +164,7 @@ done
 #do
 #    FILE=`basename $f`
 #    DIR=`dirname $f`
-#    install ${GROUP} ${OWNER} -m 0644 $TARGET/i18n/$f $DESTDIR/lib/cmucl/lib/$DIR
+#    install ${GROUP} ${OWNER} -m 0644 $TARGET/i18n/$f $DESTDIR/$CMUCLLIBVER/lib/$DIR
 #done
 
 if [ -z "$INSTALL_DIR" ]; then

@@ -42,6 +42,10 @@
 #include <time.h>
 #endif
 
+#ifndef CMUCL_VERSION
+#define CMUCL_VERSION "alpha"
+#endif
+
 
 
 /* SIGINT handler that invokes the monitor. */
@@ -90,9 +94,7 @@ alloc_str_list(const char *list[])
 
 /* Default paths for CMUCLLIB */
 static char *cmucllib_search_list[] = {
-    "./.",
-    "./../lib/cmucl/lib",
-    "./../lib",
+    "./../lib/cmucl/" CMUCL_VERSION "/lib",
     NULL
 };
 

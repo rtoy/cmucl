@@ -159,6 +159,7 @@ if [ -n "$COMPRESS_ARG" ]; then
     esac
 fi
 
+set -x
 if [ -z "$VERSION" ]; then
     # If a default version exists, use it. Otherwise this is an
     # error---at least one of these must not be empty.
@@ -190,9 +191,10 @@ fi
 
 TARGET="`echo $1 | sed 's:/*$::'`"
 
-if [ -n "$INSTALL_DIR" ]; then
-    VERSION="today"
-fi
+echo INSTALL_DIR = $INSTALL_DIR
+#if [ -n "$INSTALL_DIR" ]; then
+#    VERSION="today"
+#fi
 
 echo cmucl-$VERSION-$ARCH-$OS
 ROOT=`dirname $0`

@@ -41,6 +41,9 @@ OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 ### Don't look in RCS for the files, because we might not want the latest.
 %: RCS/%,v
 
+GIT_HASH = $(shell git describe --dirty)
+DEFAULT_VERSION = $(subst snapshot-,,${GIT_HASH})
+
 lisp.nm: lisp lisp.a
 	echo 'Map file for lisp version ' `cat version` > ,lisp.nm
 	$(NM) lisp | grep -v " [F] " >> ,lisp.nm
@@ -50,6 +53,11 @@ version.o : version.c version
 	expr 1 + `cat version` > ,version
 	mv ,version version
 	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
+
+lisp.o : lisp.c
+	echo GIT_HASH = ${GIT_HASH}
+	echo DEFAULT_VERSION = ${DEFAULT_VERSION}
+	$(CC) ${CFLAGS} $(CPPFLAGS) -DCMUCL_VERSION="\"${DEFAULT_VERSION}\"" -c $<
 
 lisp: ${OBJS} version.o
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp $^ ${OS_LIBS} -lm

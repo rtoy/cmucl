@@ -49,6 +49,18 @@ GIT_FILE_COMMENT="yes"
 export GIT_FILE_COMMENT
 
 SKIPUTILS=no
+GIT_HASH="`(cd src; git describe --dirty 2>/dev/null || git describe 2>/dev/null)`"
+echo GIT_HASH = ${GIT_HASH}
+
+if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
+    DEFAULT_VERSION=`expr "${GIT_HASH}" : "snapshot-\(.*\)"`
+fi
+
+if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
+    DEFAULT_VERSION="${GIT_HASH}"
+fi
+
+export DEFAULT_VERISON
 
 # If gmake exists, assume it is GNU make and use it.
 if [ -z "$MAKE" ]; then
@@ -144,7 +156,7 @@ buildit ()
 	fi
 	$TOOLDIR/load-world.sh $TARGET "$VERSION" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
 
-	$TARGET/lisp/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
+	$TARGET/lisp/lisp -lib $TARGET/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
 	return 0;
     fi
 }
@@ -221,7 +233,7 @@ buildit
 bootfiles=
 
 TARGET=$BASE-3
-OLDLISP="${BASE}-2/lisp/lisp $OLDLISPFLAGS"
+OLDLISP="${BASE}-2/lisp/lisp -lib ${BASE}-2/lisp $OLDLISPFLAGS"
 ENABLE=$ENABLE3
 
 BUILD=2
@@ -232,7 +244,7 @@ buildit
 
 TARGET=$BASE-4
 CLEAN_FLAGS="-K all"
-OLDLISP="${BASE}-3/lisp/lisp $OLDLISPFLAGS"
+OLDLISP="${BASE}-3/lisp/lisp -lib ${BASE}-2/lisp $OLDLISPFLAGS"
 ENABLE=$ENABLE4
 
 if [ "${BUILD_POT}" = "yes" ]; then

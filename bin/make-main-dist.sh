@@ -72,6 +72,8 @@ VERSION=$2
 ARCH=$3
 OS=$4
 
+CMUCLLIBVER="lib/cmucl/$VERSION"
+
 # Core file to look for.
 CORE=lisp.core
 case $ARCH in
@@ -123,52 +125,52 @@ fi
 # set -x
 echo Installing main components
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/bin
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/subsystems
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/ext-formats
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/subsystems
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/ext-formats
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${DOCDIR}
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${MANDIR}
-install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/
+install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/lisp-$VERSION
 if [ "$EXECUTABLE" = "true" ]
 then
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.a $DESTDIR/lib/cmucl/lib/
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/exec-init.o $DESTDIR/lib/cmucl/lib/
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/exec-final.o $DESTDIR/lib/cmucl/lib/
-    install ${GROUP} ${OWNER} -m 0755 src/tools/linker.sh $DESTDIR/lib/cmucl/lib/
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.a $DESTDIR/$CMUCLLIBVER/lib/
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/exec-init.o $DESTDIR/$CMUCLLIBVER/lib/
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/exec-final.o $DESTDIR/$CMUCLLIBVER/lib/
+    install ${GROUP} ${OWNER} -m 0755 src/tools/linker.sh $DESTDIR/$CMUCLLIBVER/lib/
     if [ -f src/tools/$SCRIPT-cmucl-linker-script ]; then
-	install ${GROUP} ${OWNER} -m 0755 src/tools/$SCRIPT-cmucl-linker-script $DESTDIR/lib/cmucl/lib/
+	install ${GROUP} ${OWNER} -m 0755 src/tools/$SCRIPT-cmucl-linker-script $DESTDIR/$CMUCLLIBVER/lib/
     fi
 fi
 for corefile in $TARGET/lisp/$CORE
 do
-  install ${GROUP} ${OWNER} -m 0644 $corefile $DESTDIR/lib/cmucl/lib/
+  install ${GROUP} ${OWNER} -m 0644 $corefile $DESTDIR/$CMUCLLIBVER/lib/
 done
 install ${GROUP} ${OWNER} -m 0755 src/tools/load-foreign.csh src/tools/config \
-	$DESTDIR/lib/cmucl/lib/
+	$DESTDIR/$CMUCLLIBVER/lib/
 install ${GROUP} ${OWNER} -m 0644 src/tools/config.lisp \
-	$DESTDIR/lib/cmucl/lib/
+	$DESTDIR/$CMUCLLIBVER/lib/
 install ${GROUP} ${OWNER} -m 0644 src/code/default-site-init.lisp \
-	$DESTDIR/lib/cmucl/lib/
+	$DESTDIR/$CMUCLLIBVER/lib/
 install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.nm $TARGET/lisp/lisp.map \
-	$TARGET/lisp/internals.h $TARGET/lisp/internals.inc $DESTDIR/lib/cmucl/
-install ${GROUP} ${OWNER} -m 0755 src/tools/sample-wrapper $DESTDIR/lib/cmucl/
+	$TARGET/lisp/internals.h $TARGET/lisp/internals.inc $DESTDIR/$CMUCLLIBVER/
+install ${GROUP} ${OWNER} -m 0755 src/tools/sample-wrapper $DESTDIR/$CMUCLLIBVER/
 
 for f in gray-streams gray-compat simple-streams iodefs
 do
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.$FASL $DESTDIR/lib/cmucl/lib/subsystems/
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.$FASL $DESTDIR/$CMUCLLIBVER/lib/subsystems/
 done
 
 for f in src/pcl/simple-streams/external-formats/*.lisp src/pcl/simple-streams/external-formats/aliases src/i18n/unidata.bin
 do
-    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
+    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/$CMUCLLIBVER/lib/ext-formats/
 done
 
 # set -x
 # Create the directories for asdf and defsystem
 for f in asdf defsystem asdf/doc
 do
-    install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/$f
+    install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/contrib/$f
 done
 
 case `uname -s` in
@@ -176,28 +178,28 @@ case `uname -s` in
   *) UCONTRIB="unix" ;;
 esac
 
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/unix
-install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/unix/$UCONTRIB.$FASL $DESTDIR/lib/cmucl/lib/contrib/unix
-install ${GROUP} ${OWNER} -m 0644 src/contrib/load-unix.lisp $DESTDIR/lib/cmucl/lib/contrib
-install ${GROUP} ${OWNER} -m 0644 src/contrib/unix/${UCONTRIB}.lisp $DESTDIR/lib/cmucl/lib/contrib/unix
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/contrib/unix
+install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/unix/$UCONTRIB.$FASL $DESTDIR/$CMUCLLIBVER/lib/contrib/unix
+install ${GROUP} ${OWNER} -m 0644 src/contrib/load-unix.lisp $DESTDIR/$CMUCLLIBVER/lib/contrib
+install ${GROUP} ${OWNER} -m 0644 src/contrib/unix/${UCONTRIB}.lisp $DESTDIR/$CMUCLLIBVER/lib/contrib/unix
 
 # Copy the source files for asdf and defsystem
 for f in `(cd src; find contrib/asdf contrib/defsystem -type f -print | grep -v CVS)`
 do
-    install ${GROUP} ${OWNER} -m 0644 src/$f $DESTDIR/lib/cmucl/lib/$f
+    install ${GROUP} ${OWNER} -m 0644 src/$f $DESTDIR/$CMUCLLIBVER/lib/$f
 done
 
 # Install the fasl files for asdf and defsystem
 for f in asdf defsystem
 do
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/lib/cmucl/lib/contrib/$f
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/$CMUCLLIBVER/lib/contrib/$f
 done
 
 # Install the docs for asdf
 for f in src/contrib/asdf/doc/*
 do
     base=`basename $f`
-    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/contrib/asdf/doc/$base
+    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/$CMUCLLIBVER/lib/contrib/asdf/doc/$base
 done
 
 install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
