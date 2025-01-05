@@ -64,15 +64,23 @@ then
 	exit 2
 fi
 
-DESTDIR=${INSTALL_DIR:-release-$$}
-DOCDIR=${DOCDIR:-doc/cmucl}
-MANDIR=${MANDIR:-man/man1}
-TARGET="`echo $1 | sed 's:/*$::'`"
 VERSION=$2
 ARCH=$3
 OS=$4
 
+# Where to install the main library of cmucl files
 CMUCLLIBVER="lib/cmucl/$VERSION"
+
+# Where to install everything
+DESTDIR=${INSTALL_DIR:-release-$$}
+
+# Where to install docs
+DOCDIR=${DOCDIR:-share/cmucl/$VERSION/doc}
+
+# Where to install man pages
+MANDIR=${MANDIR:-share/man/man1}
+
+TARGET="`echo $1 | sed 's:/*$::'`"
 
 # Core file to look for.
 CORE=lisp.core
@@ -132,6 +140,9 @@ install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/ext-formats
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${DOCDIR}
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${MANDIR}
 install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/lisp-$VERSION
+# Install symlink for lisp
+(cd $DESTDIR/bin; ln -s lisp-$VERSION lisp)
+
 if [ "$EXECUTABLE" = "true" ]
 then
     install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.a $DESTDIR/$CMUCLLIBVER/lib/
@@ -203,16 +214,17 @@ do
 done
 
 install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
-	$DESTDIR/${MANDIR}/
+	$DESTDIR/${MANDIR}/cmucl-$VERSION.1
 install ${GROUP} ${OWNER} -m 0644 src/general-info/lisp.1 \
-	$DESTDIR/${MANDIR}/
+	$DESTDIR/${MANDIR}/lisp-$VERSION.1
+set -x
 install ${GROUP} ${OWNER} -m 0644 src/general-info/README $DESTDIR/${DOCDIR}
 if [ -f src/general-info/release-$VERSION.txt ] 
 then
 	install ${GROUP} ${OWNER} -m 0644 src/general-info/release-$VERSION.txt \
 		$DESTDIR/${DOCDIR}
 fi
-
+set +x
 if [ -z "$INSTALL_DIR" ]; then
     sync ; sleep 1 ; sync ; sleep 1 ; sync
     echo Tarring main components
