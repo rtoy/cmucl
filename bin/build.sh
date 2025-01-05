@@ -141,7 +141,9 @@ buildit ()
     if [ "$ENABLE" = "yes" ]; 
     then
 	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
+	set -x
 	time $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
+	set +x
 	if [ "$REBUILD_LISP" = "yes" ]; then
 	    $TOOLDIR/rebuild-lisp.sh $TARGET
 	fi
@@ -152,11 +154,15 @@ buildit ()
 
 	if [ "$BUILD_WORLD2" = "yes" ];
 	then
+	    set -x
 	    $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
+	    set +x
 	fi
 	$TOOLDIR/load-world.sh $TARGET "$VERSION" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
 
+	set -x
 	$TARGET/lisp/lisp -lib $TARGET/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
+	set +x
 	return 0;
     fi
 }
@@ -244,7 +250,7 @@ buildit
 
 TARGET=$BASE-4
 CLEAN_FLAGS="-K all"
-OLDLISP="${BASE}-3/lisp/lisp -lib ${BASE}-2/lisp $OLDLISPFLAGS"
+OLDLISP="${BASE}-3/lisp/lisp -lib ${BASE}-3/lisp $OLDLISPFLAGS"
 ENABLE=$ENABLE4
 
 if [ "${BUILD_POT}" = "yes" ]; then
@@ -262,7 +268,7 @@ buildit
 
 # Asdf and friends are part of the base install, so we need to build
 # them now.
-$TARGET/lisp/lisp -noinit -nositeinit -batch << EOF || exit 3
+$TARGET/lisp/lisp -lib $TARGET/lisp -noinit -nositeinit -batch << EOF || exit 3
 (in-package :cl-user)
 (setf (ext:search-list "target:")
       '("$TARGET/" "src/"))
@@ -282,7 +288,7 @@ EOF
 
 if [ "$SKIPUTILS" = "no" ];
 then
-    OLDLISP="${BASE}-4/lisp/lisp $OLDLISPFLAGS"
+    OLDLISP="${BASE}-4/lisp/lisp -lib ${BASE}-4/lisp $OLDLISPFLAGS"
     time $TOOLDIR/build-utils.sh $TARGET
 fi
 
