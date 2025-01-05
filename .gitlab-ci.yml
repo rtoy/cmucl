@@ -51,9 +51,9 @@ linux:build:
     # instead of clang. 
     - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
-    # Use -V to specify the version in case some tag makes git
+    # If needed use -V to specify the version in case some tag makes git
     # describe return something that make-dist.sh doesn't like.
-    - bin/make-dist.sh -V `git describe --dirty` -I dist linux-4
+    - bin/make-dist.sh -I dist linux-4
 
 linux:cross-build:
   stage: build
