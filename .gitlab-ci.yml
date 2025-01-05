@@ -81,7 +81,7 @@ linux:cross-build:
     - bin/create-target.sh xcross
     - bin/cross-build-world.sh -crl xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp dist/bin/lisp
     - bin/build.sh -b xlinux $bootstrap -R -C "" -o xtarget/lisp/lisp
-    - bin/make-dist.sh -V `git describe --dirty` -I xdist xlinux-4
+    - bin/make-dist.sh -I xdist xlinux-4
 
 linux:test:
   stage: test
@@ -194,9 +194,9 @@ osx:build:
     # Regular build using the cross-compiled result or snapshot.
     # Need /opt/local/bin to get msgmerge and msgfmt programs.
     - PATH=/opt/local/bin:$PATH bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
-    # Use -V to specify the version in case some tag makes git
+    # If needed use -V to specify the version in case some tag makes git
     # describe return something that make-dist.sh doesn't like.
-    - bin/make-dist.sh -V `git describe --dirty` -I dist darwin-4
+    - bin/make-dist.sh -I dist darwin-4
 
 osx:test:
   stage: test
@@ -319,9 +319,9 @@ opensuse:build:
     # instead of clang. 
     - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
-    # Use -V to specify the version in case some tag makes git
+    # If needed use -V to specify the version in case some tag makes git
     # describe return something that make-dist.sh doesn't like.
-    - bin/make-dist.sh -V `git describe --dirty` -I dist linux-4
+    - bin/make-dist.sh -I dist linux-4
 
 opensuse:test:
   stage: test
