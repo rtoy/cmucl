@@ -52,12 +52,18 @@ else
     VERSION="`date '+%Y-%m-%d-%H:%M:%S'`"
 fi
 
+DESTDIR=${INSTALL_DIR:-release-$$}
+
 echo Creating source distribution
+set -x
 GTAR_OPTIONS="--exclude=.git --exclude='*.pot.~*~'"
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/share/cmucl/$VERSION/
+${GTAR} ${GTAR_OPTIONS} -cf - src tests | (cd $DESTDIR/share/cmucl/$VERSION; ${GTAR} xf -)
 if [ -z "$INSTALL_DIR" ]; then
     # echo "  Compressing with $ZIP"
-    ${GTAR} ${GTAR_OPTIONS} ${COMPRESS} -cf cmucl-src-$VERSION.tar.$COMPRESS_EXT bin src tests
+    ls $DESTDIR/share/cmucl/$VERSION/
+    ${GTAR} ${GTAR_OPTIONS} ${COMPRESS} -C $DESTDIR -cf cmucl-src-$VERSION.tar.$COMPRESS_EXT share/cmucl/$VERSION/src
 else
     # Install in the specified directory
-    ${GTAR} ${GTAR_OPTIONS} -cf - bin src tests | (cd $INSTALL_DIR; ${GTAR:-tar} xf -)
+    ${GTAR} ${GTAR_OPTIONS} -cf - src tests | (cd $DESTDIR/share/cmucl/$VERSION; ${GTAR:-tar} xf -)
 fi
