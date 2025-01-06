@@ -49,17 +49,7 @@ GIT_FILE_COMMENT="yes"
 export GIT_FILE_COMMENT
 
 SKIPUTILS=no
-GIT_HASH="`(cd src; git describe --dirty 2>/dev/null || git describe 2>/dev/null)`"
-echo GIT_HASH = ${GIT_HASH}
-
-if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
-    DEFAULT_VERSION=`expr "${GIT_HASH}" : "snapshot-\(.*\)"`
-fi
-
-if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
-    DEFAULT_VERSION="${GIT_HASH}"
-fi
-
+DEFAULT_VERSION="`bin/cmucl-version.sh`"
 export DEFAULT_VERISON
 
 # If gmake exists, assume it is GNU make and use it.

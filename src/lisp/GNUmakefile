@@ -41,8 +41,7 @@ OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 ### Don't look in RCS for the files, because we might not want the latest.
 %: RCS/%,v
 
-GIT_HASH = $(shell git describe --dirty)
-DEFAULT_VERSION = $(subst snapshot-,,${GIT_HASH})
+DEFAULT_VERSION = $(shell ../../bin/cmucl-version.sh)
 
 lisp.nm: lisp lisp.a
 	echo 'Map file for lisp version ' `cat version` > ,lisp.nm

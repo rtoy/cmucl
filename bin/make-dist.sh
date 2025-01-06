@@ -97,17 +97,7 @@ def_arch_os
 # Choose a version based on the git hash as the default version.  We
 # only compute a default if the git hash looks like a snapshot
 # ("snapshot-yyyy-mm") or a release number..
-GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
-
-echo GIT_HASH = ${GIT_HASH}
-
-if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
-    DEFAULT_VERSION=`expr "${GIT_HASH}" : "snapshot-\(.*\)"`
-fi
-
-if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
-    DEFAULT_VERSION="${GIT_HASH}"
-fi
+DEFAULT_VERSION="`bin/cmucl-version.sh`"
 
 # Default compression is -J (xz).  These variables are passed to the
 # other scripts via the environmen, so export them.
