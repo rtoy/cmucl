@@ -2053,9 +2053,7 @@
   _N"Returns a string describing the error number which was returned by a
   UNIX system call."
   (declare (type integer error-number))
-  (if (array-in-bounds-p *unix-errors* error-number)
-      (svref *unix-errors* error-number)
-      (format nil _"Unknown error [~d]" error-number)))
+  (unix::unix-strerror error-number))
 
 
 ;;;; Lisp types used by syscalls.
