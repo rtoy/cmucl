@@ -22,8 +22,7 @@
 		read-char-no-edit listen-skip-whitespace concat-pnames
 		iterate once-only collect do-anonymous undefined-value
 		required-argument define-hash-cache defun-cached
-		cache-hash-eq do-hash
-	  with-temporary-file))
+		cache-hash-eq do-hash))
 
 (import 'lisp::whitespace-char-p)
 
@@ -613,73 +612,3 @@
   "Return an EQ hash of X.  The value of this hash for any given object can (of
   course) change at arbitary times."
   `(lisp::pointer-hash ,x))
-
-;;; WITH-TEMPORARY-FILE -- Public
-(defmacro with-temporary-file ((var template-prefix
-				&key 
-				  (element-type 'base-char)
-				  (external-format :default)
-				  (buffering :full)
-				  decoding-error
-				  encoding-error)
-			       &parse-body (forms decls))
-  _N"A temporary file is opened using the Open-args and bound to the
- variable Var.  The name of the temporary file uses Template-prefix
- for the name.  If the temporary file cannot be opened, the forms are
- not evaluated.  The Forms are executed, and when they terminate,
- normally or otherwise, the file is closed.
-
- Defined keywords:
-  :element-type    - Type of object to read or write.  Default BASE-CHAR
-  :external-format - An external format name
-  :buffering       - Buffering to use for the file.  Must be one of
-                      :NONE, :LINE, :FULL
-  :decoding-error  - How to handle decoding errors.  See OPEN
-  :encoding-error  - How to handle encoding errors.  See OPEN"
-  (let ((abortp (gensym))
-	(template (gensym "TEMPLATE-"))
-	(fd (gensym "FD-")))
-    
-    `(let* ((,template (concatenate 'string
-				    ,template-prefix
-				    "XXXXXX"))
-	    (,fd (unix::unix-mkstemp ,template)))
-       (unless ,fd
-	 (error "Could not create temporary file using template ~A"
-		,template))
-       (let ((,var (lisp::make-fd-stream (unix::unix-mkstemp ,template)
-					 :auto-close t
-					 :file ,template
-					 :output t
-					 :input t
-					 :element-type ',element-type
-					 :external-format ,external-format
-					 :decoding-error ,decoding-error
-					 :encoding-error ,encoding-error
-					 :buffering ,buffering))
-	     (,abortp t))
-	 ,@decls
-	 (unwind-protect
-	      (multiple-value-prog1
-		  (progn ,@forms)
-		(setq ,abortp nil))
-	   (when ,var
-	     (close ,var :abort ,abortp)))))))
-
-;; WITH-TEMPORARY-DIRECTORY -- Public
-(defmacro with-temporary-directory ((var template-prefix)
-				    &parse-body (forms decls))
-  _N"Create a temporary directory using Template-prefix as the name of the directory."
-  (let ((template (gensym "TEMPLATE-")))
-    `(let ((,template (concatenate 'string ,template-prefix
-				   "XXXXXX")))
-       ,@decls
-       (let ((,var (unix::unix-mkdtemp ,template)))
-	 (unless ,var
-	   (error "Could not create temporary directory using template ~A"
-		  ,template))
-	 (unwind-protect
-	      (multiple-value-prog1
-		  (progn ,@forms)))
-	 ;; Remove the directory
-	 (unix:unix-rmdir ,var)))))
