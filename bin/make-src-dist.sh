@@ -58,6 +58,7 @@ echo Creating source distribution
 set -x
 GTAR_OPTIONS="--exclude=.git --exclude='*.pot.~*~'"
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/share/cmucl/$VERSION/
+install ${GROUP} ${OWNER} -m 0755 bin/run-unit-tests.sh $DESTDIR/bin
 ${GTAR} ${GTAR_OPTIONS} -cf - src tests | (cd $DESTDIR/share/cmucl/$VERSION; ${GTAR} xf -)
 if [ -z "$INSTALL_DIR" ]; then
     # echo "  Compressing with $ZIP"
