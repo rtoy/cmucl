@@ -2900,3 +2900,12 @@
 	    (extern-alien "os_get_locale_codeset"
 			  (function (* char))))
 	c-string))
+
+(defun unix-strerror (errno)
+  _N"Returns a string that describes the error code Errno"
+  (cast
+      (alien-funcall
+       (extern-alien "strerror"
+		     (function (* char) int))
+       errno)
+    c-string))
