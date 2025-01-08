@@ -2927,6 +2927,20 @@
 		       (%file->name (cast buf c-call:c-string)))
 	       (cast buf (* c-call:unsigned-char))))))
 
+(defun unix-mkstemp (template)
+  _N"Generates a unique temporary file name from TEMPLATE, and creates
+  and opens the file.  On success, the corresponding file descriptor
+  and name of the file is returned.
+
+ The last six characters of the template must be \"XXXXXX\"."
+  ;; Hope this buffer is large enough!
+  (let ((octets (%name->file template)))
+    (syscall ("mkstemp" c-call:c-string)
+	       (values result
+		       ;; Convert the file name back to a Lisp string.
+		       (%file->name octets))
+	       octets)))
+
 (defun unix-mkdtemp (template)
   _N"Generate a uniquely named temporary directory from Template,
   which must have \"XXXXXX\" as the last six characters.  The
