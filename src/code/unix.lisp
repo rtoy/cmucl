@@ -2873,7 +2873,8 @@
   (int-syscall ("fork")))
 
 (defun unix-setlocale ()
-  _N"Call setlocale(3c) with fixed args.  Returns 0 on success."
+  _N"Set all the categories of the locale from the values of the
+  environment variables using setlocale(LC_ALL, \"\")"
   (alien:alien-funcall
    (alien:extern-alien "os_setlocale"
 		       (function c-call:int))))
