@@ -2926,6 +2926,6 @@
 				(function (* char)
 					  c-call:c-string))
 		  octets)))
-    (if (zerop (sap-int (alien-sap result)))
+    (if (null-alien result)
 	(values nil (unix-errno))
 	(%file->name octets))))
