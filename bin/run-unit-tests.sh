@@ -49,6 +49,13 @@ function cleanup {
 
 trap cleanup EXIT
 
+set -x
+if [ -n "${TESTDIR}" ]; then
+    TESTDIRARG=" :test-directory \"${TESTDIR}/\""
+else
+    TESTDIR="tests/"
+    TESTDIRARG=""
+fi
 # Compile up the C file that is used for testing alien funcalls to
 # functions that return integer types of different lengths.  We use
 # gcc since clang isn't always available.
@@ -56,12 +63,6 @@ trap cleanup EXIT
 
 if [ $# -eq 0 ]; then
     # Test directory arg for run-all-tests if a non-default 
-    if [ -n ${TESTDIR} ]; then
-	TESTDIRARG=" :test-directory \"${TESTDIR}/\""
-    else
-	TESTDIR="tests/"
-	TESTDIRARG=""
-    fi
     # No args so run all the tests
     $LISP -nositeinit -noinit -load $TESTDIR/run-tests.lisp -eval "(cmucl-test-runner:run-all-tests ${TESTDIRARG})"
 else
