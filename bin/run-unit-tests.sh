@@ -49,7 +49,7 @@ function cleanup {
 
 trap cleanup EXIT
 
-set -x
+#set -x
 if [ -n "${TESTDIR}" ]; then
     TESTDIRARG=" :test-directory \"${TESTDIR}/\""
 else

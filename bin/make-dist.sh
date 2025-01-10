@@ -149,7 +149,7 @@ if [ -n "$COMPRESS_ARG" ]; then
     esac
 fi
 
-set -x
+#set -x
 if [ -z "$VERSION" ]; then
     # If a default version exists, use it. Otherwise this is an
     # error---at least one of these must not be empty.

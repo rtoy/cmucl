@@ -54,8 +54,6 @@ version.o : version.c version
 	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
 
 lisp.o : lisp.c
-	echo GIT_HASH = ${GIT_HASH}
-	echo DEFAULT_VERSION = ${DEFAULT_VERSION}
 	$(CC) ${CFLAGS} $(CPPFLAGS) -DCMUCL_VERSION="\"${DEFAULT_VERSION}\"" -c $<
 
 lisp: ${OBJS} version.o

@@ -131,9 +131,9 @@ buildit ()
     if [ "$ENABLE" = "yes" ]; 
     then
 	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
-	set -x
+	#set -x
 	time $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
-	set +x
+	#set +x
 	if [ "$REBUILD_LISP" = "yes" ]; then
 	    $TOOLDIR/rebuild-lisp.sh $TARGET
 	fi
@@ -144,15 +144,15 @@ buildit ()
 
 	if [ "$BUILD_WORLD2" = "yes" ];
 	then
-	    set -x
+	    #set -x
 	    $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
-	    set +x
+	    #set +x
 	fi
 	$TOOLDIR/load-world.sh $TARGET "$VERSION" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
 
-	set -x
+	#set -x
 	$TARGET/lisp/lisp -lib $TARGET/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
-	set +x
+	#set +x
 	return 0;
     fi
 }
