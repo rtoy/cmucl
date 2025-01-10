@@ -1,7 +1,7 @@
 #!/bin/sh 
 
 # Script to determine the cmucl version based on git describe
-GIT_HASH="`(cd src; git describe --dirty 2>/dev/null || git describe 2>/dev/null)`"
+GIT_HASH="`(git describe --dirty 2>/dev/null || git describe 2>/dev/null)`"
 # echo GIT_HASH = ${GIT_HASH}
 
 if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
