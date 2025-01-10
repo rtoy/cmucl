@@ -125,7 +125,8 @@ translations:
 	    rm -f /tmp/$$$$-updated-$$f.po /tmp/$$$$-orig-$$f.po; \
 	  done; done
 
-.PHONY : translations
+# Always build lisp.o so that the embedded version is updated.
+.PHONY : translations lisp.o
 
 # Like translations, but we don't compute the diff.  We just overwrite
 # the po files in the repository so that we can tell if the
