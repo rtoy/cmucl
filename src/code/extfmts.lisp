@@ -19,7 +19,8 @@
 	  string-encode string-decode set-system-external-format
 	  +replacement-character-code+
 	  list-all-external-formats
-	  describe-external-format))
+	  describe-external-format
+	  string-octet-count))
 
 (defvar *default-external-format*
   :utf-8
