@@ -115,7 +115,7 @@ Unicode replacement character.")
   (copy-state (state)
     ;; The state is either NIL or T, so we can just return that.
     `(progn ,state))
-  (code-to-octets (code state output error i c)
+  (octet-count (code state error)
     `(progn
        ;; Should we count the BOM?
        #+nil

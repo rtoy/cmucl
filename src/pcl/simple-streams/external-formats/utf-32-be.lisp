@@ -64,7 +64,7 @@ Unicode replacement character.")
 	      (out ,code)))))
   ()
   ()
-  (code-to-octets (code state error)
+  (octet-count (code state error)
     `(cond ((lisp::surrogatep ,code)
 	    (if ,error
 		(locally

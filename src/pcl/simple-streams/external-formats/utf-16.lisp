@@ -157,7 +157,7 @@ Unicode replacement character.")
   (copy-state (state)
     ;; The state is list. Copy it
 	      `(copy-list ,state))
-  (code-to-octets (code state error)
+  (octet-count (code state error)
     `(progn
        #+nil
        (unless ,state

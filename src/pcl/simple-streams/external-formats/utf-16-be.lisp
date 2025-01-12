@@ -111,7 +111,7 @@ Unicode replacement character.")
     ;; The state is either NIL or a codepoint, so nothing really
     ;; special is needed to copy it.
     `(progn ,state))
-  (code-to-octets (code state error)
+  (octet-count (code state error)
     `(cond ((< ,code #x10000)
 	    2)
 	   ((< ,code #x110000)
