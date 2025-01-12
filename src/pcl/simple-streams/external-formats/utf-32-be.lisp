@@ -75,4 +75,4 @@ Unicode replacement character.")
 		;; Replacement character is 2 octets
 		2))
 	   (t
-	    4)))))
+	    4))))
