@@ -116,11 +116,9 @@ Unicode replacement character.")
     ;; The state is either NIL or T, so we can just return that.
     `(progn ,state))
   (octet-count (code state error)
-    `(progn
-       ;; Should we count the BOM?
-       #+nil
+    `(let ((bom-count 0))
        (unless ,state
-	 (out #xFEFF)
+	 (setf bom-count 4)
 	 (setf ,state t))
        (cond ((lisp::surrogatep ,code)
 	      (if ,error
@@ -130,6 +128,6 @@ Unicode replacement character.")
 		    (funcall ,error "Surrogate code #x~4,'0X is illegal for UTF32 output"
 			     ,code))
 		  ;; Replacement character is 2 octets
-		  2))
+		  (+ 2 bom-count)))
 	     (t
-	      4)))))
+	      (+ 4 bom-count))))))

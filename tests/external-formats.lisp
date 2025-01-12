@@ -36,7 +36,6 @@
     (:tag :octet-count)
   (test-octet-count *test-unicode* :utf-8))
 
-#+nil
 (define-test octet-count.utf-16
     (:tag :octet-count)
   (test-octet-count *test-unicode* :utf-16))
@@ -49,7 +48,6 @@
     (:tag :octet-count)
   (test-octet-count *test-unicode* :utf-16-le))
 
-#+nil
 (define-test octet-count.utf-32
     (:tag :octet-count)
   (test-octet-count *test-unicode* :utf-32))
