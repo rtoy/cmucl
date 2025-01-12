@@ -156,4 +156,18 @@ Unicode replacement character.")
 		    ,c))))))
   (copy-state (state)
     ;; The state is list. Copy it
-    `(copy-list ,state)))
+	      `(copy-list ,state))
+  (code-to-octets (code state error)
+    `(progn
+       #+nil
+       (unless ,state
+	 ;; Output BOM
+	 (output #xFEFF)
+	 (setf ,state t))
+       (cond ((< ,code #x10000)
+	      2)
+	     ((< ,code #x110000)
+	      4)
+	     (t
+	      ;; Replacement character is 2 octets
+	      2)))))
