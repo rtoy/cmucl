@@ -32,6 +32,13 @@
     (:tag :octet-count)
   (test-octet-count *test-iso8859-1* :ascii))
 
+(define-test octet-count.ascii.error
+    (:tag :octet-count)
+  (assert-error 'simple-error
+		(stream::string-octet-count *test-iso8859-1*
+					    :external-format :ascii
+					    :error 'error)))
+
 (define-test octet-count.utf-8
     (:tag :octet-count)
   (test-octet-count *test-unicode* :utf-8))
