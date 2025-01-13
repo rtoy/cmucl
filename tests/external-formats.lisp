@@ -108,5 +108,8 @@
     (:tag :octet-count)
   (test-octet-count *test-iso8859-1* :iso8859-15))
 
-
+(define-test octet-count.mac-roman
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :mac-roman))
+  
 
