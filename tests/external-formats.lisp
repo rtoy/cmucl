@@ -60,7 +60,53 @@
     (:tag :octet-count)
   (test-octet-count *test-unicode* :utf-32-le))
 
+(define-test octet-count.euc-kr
+    (:tag :octet-count)
+  (test-octet-count *test-unicode* :euc-kr))
 
+(define-test octet-count.iso8859-2
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :iso8859-2))
+
+(define-test octet-count.iso8859-3
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :iso8859-3))
+
+(define-test octet-count.iso8859-4
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :iso8859-4))
+
+(define-test octet-count.iso8859-5
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :iso8859-5))
+
+(define-test octet-count.iso8859-6
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :iso8859-6))
+
+(define-test octet-count.iso8859-7
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :iso8859-7))
+
+(define-test octet-count.iso8859-8
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :iso8859-8))
+
+(define-test octet-count.iso8859-10
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :iso8859-10))
+
+(define-test octet-count.iso8859-13
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :iso8859-13))
+
+(define-test octet-count.iso8859-14
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :iso8859-14))
+
+(define-test octet-count.iso8859-15
+    (:tag :octet-count)
+  (test-octet-count *test-iso8859-1* :iso8859-15))
 
 
 
