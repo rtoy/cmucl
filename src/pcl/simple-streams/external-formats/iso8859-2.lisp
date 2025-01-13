@@ -47,4 +47,33 @@ character and illegal outputs are replaced by a question mark.")
 				(declare (optimize (ext:inhibit-warnings 3)))
 			      (funcall ,error "Cannot output codepoint #x~X to ISO8859-2 stream"
 				       ,code))
-			    #x3F)))))))
+			    #x3F))))))
+  ()
+  ()
+  (define-external-format :iso8859-2 (:size 1 :documentation
+"ISO8859-2 is an 8-bit character encoding generally intended for
+Eastern European languages including Bosnian, Croation, Czech, German,
+Hungarian, Polish, Romanian, Serbian Latin, Slovak, Slovene, Upper
+Sorbian, and Lower Sorbian.  
+
+By default, illegal inputs are replaced by the Unicode replacement
+character and illegal outputs are replaced by a question mark.")
+  ((table +iso-8859-2+ :type (simple-array (unsigned-byte 16) (96)))
+   (itable (invert-table table) :type lisp::ntrie16))
+
+  (octets-to-code (state input unput error code)
+    `(let ((,code ,input))
+       (values (if (< ,code 160) ,code (aref ,table (- ,code 160))) 1)))
+  (octet-count (code state error present)
+    `(if (< ,code 160)
+	 1
+	 (let ((,present (get-inverse ,itable ,code)))
+	   (if ,present
+	       1
+	       (if ,error
+		   (locally
+		       ;; No warnings about fdefinition
+		       (declare (optimize (ext:inhibit-warnings 3)))
+		     (funcall ,error "Cannot output codepoint #x~X to ISO8859-2 stream"
+			      ,code))
+		   1)))))))
