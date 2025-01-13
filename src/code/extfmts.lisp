@@ -133,7 +133,8 @@
   (setf (gethash (ef-name ef) *external-formats*) ef))
 
 (declaim (inline ef-octets-to-code ef-code-to-octets ef-flush-state ef-copy-state
-		 ef-cache ef-min-octets ef-max-octets))
+		 ef-cache ef-min-octets ef-max-octets
+		 ef-octet-count))
 
 (defun ef-octets-to-code (ef)
   (efx-octets-to-code (ef-efx ef)))
@@ -176,7 +177,7 @@
 ;;; DEFINE-EXTERNAL-FORMAT  -- Public
 ;;;
 ;;; name (&key base min max size documentation) (&rest slots) octets-to-code
-;;;       code-to-octets flush-state copy-state
+;;;       code-to-octets flush-state copy-state octet-count
 ;;;
 ;;;   Define a new external format.  If base is specified, then an
 ;;;   external format is defined that is based on a previously defined
@@ -237,6 +238,15 @@
 ;;;   Defines a form to copy any state needed by the external format.
 ;;;   This should probably be a deep copy so that if the original
 ;;;   state is modified, the copy is not.
+;;;
+;;; octet-count (code state error &rest vars)
+;;;   Defines a form to determine the number of octets needed to
+;;;   encode the given CODE using the external format.  This is
+;;;   essentially the same as CODE-TO-OCTETS, except the encoding is
+;;;   not saved anywhere.  ERROR is the same as in CODE-TO-OCTETS.
+;;;
+;;;   This should return one value: the number of octets needed to
+;;;   encode the given code.
 ;;;
 ;;; Note: external-formats work on code-points, not
 ;;;   characters, so that the entire 31 bit ISO-10646 range can be
