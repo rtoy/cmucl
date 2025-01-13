@@ -20,9 +20,22 @@
   "Random test string with codepoints below 20000")
 
 
+
 (defmacro test-octet-count (string format)
-  `(assert-equal (length (stream:string-to-octets ,string :external-format ,format))
-		 (stream::string-octet-count ,string :external-format ,format)))
+  "Test that STRING-OCTET-COUNT returns the correct number of octets"
+  ;; We expect STRING-OCTET-COUNT returns the same number of octets
+  ;; that are produced by STRING-TO-OCTETS.
+  `(multiple-value-bind (octets count converted)
+       (stream:string-to-octets ,string :external-format ,format)
+     ;; While we're at it, make sure that the length of the octet
+     ;; buffer matches returned count.  And make sure we converted all
+     ;; the characters in the string.
+     (assert-equal (length octets) count)
+     (assert-equal (length ,string) converted)
+     ;; Finally, make sure that STRING-OCTET-COUNT returns the same
+     ;; number of octets from STRING-TO-OCTETS.
+     (assert-equal (length octets)
+		   (stream::string-octet-count ,string :external-format ,format))))
 
 (define-test octet-count.iso8859-1
     (:tag :octet-count)
