@@ -9,14 +9,14 @@
   (let ((rs (kernel::make-random-object :state (kernel::init-random-state 27182828))))
     (lisp::codepoints-string
      (loop for k from 0 below 1000
-	   collect (random 256))))
+	   collect (random 256 rs))))
   "Random test string with ISO8859-1 characters")
 
 (defparameter *test-unicode*
   (let ((rs (kernel::make-random-object :state (kernel::init-random-state 27182828))))
     (lisp::codepoints-string
      (loop for k from 0 below 1000
-	   collect (random 20000))))
+	   collect (random 20000 rs))))
   "Random test string with codepoints below 20000")
 
 
