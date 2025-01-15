@@ -1165,9 +1165,21 @@ character and illegal outputs are replaced by a question mark.")
   "Compute the number of octets needed to convert String using the
   specified External-format.  The string is bound by Start (defaulting
   to 0) and End (defaulting to the end of the string)."
-  (lisp::with-array-data ((string string) (start start) (end end))
-    (funcall (ef-string-octet-count external-format)
-	     string start end error)))
+  (let ((composing-format-p
+	  ;; Determine is the external format is a composing format
+	  ;; which we determine by seeing that the name of the format
+	  ;; is a cons.  Probably not the best way.
+	  (consp (ef-name (find-external-format external-format)))))
+    ;; We currently don't know how to get just the number of octets
+    ;; when a composing external format is used.  As a workaround, use
+    ;; STRING-TO-OCTETS to find the number of octets.
+    (if composing-format-p
+	 (nth-value 1
+		    (string-to-octets string :start start :end end
+					     :external-format external-format))
+	 (lisp::with-array-data ((string string) (start start) (end end))
+	   (funcall (ef-string-octet-count external-format)
+		    string start end error)))))
 
 (def-ef-macro ef-encode (extfmt lisp::lisp +ef-max+ +ef-en+)
   `(lambda (string start end result error  &aux (ptr 0) (state nil))
