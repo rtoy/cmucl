@@ -1155,15 +1155,18 @@ character and illegal outputs are replaced by a question mark.")
       (values (if stringp string (lisp::shrink-vector string pos)) (- pos s-start) last-octet new-state))))
 
 
-(def-ef-macro ef-octet-count (extfmt lisp::lisp +ef-max+ +ef-oc+)
+(def-ef-macro ef-string-octet-count (extfmt lisp::lisp +ef-max+ +ef-oc+)
   `(lambda (string start end error &aux (total 0) (state nil))
      (dotimes (i (- end start) total)
        (incf total
 	     (octet-count ,extfmt (schar string (+ start i)) state error)))))
 
 (defun string-octet-count (string &key (start 0) end  (external-format :default) error)
+  "Compute the number of octets needed to convert String using the
+  specified External-format.  The string is bound by Start (defaulting
+  to 0) and End (defaulting to the end of the string)."
   (lisp::with-array-data ((string string) (start start) (end end))
-    (funcall (ef-octet-count external-format)
+    (funcall (ef-string-octet-count external-format)
 	     string start end error)))
 
 (def-ef-macro ef-encode (extfmt lisp::lisp +ef-max+ +ef-en+)
