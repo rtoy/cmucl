@@ -2871,7 +2871,10 @@
   (int-syscall ("fork")))
 
 (defun unix-setlocale ()
-  _N"Call setlocale(3c) with fixed args.  Returns 0 on success."
+  _N"Set all the categories of the locale according to the values of
+  the environment variables by calling setlocale(LC_ALL, \"\").
+
+  Returns 0 on success and -1 if setlocale failed."
   (alien:alien-funcall
    (alien:extern-alien "os_setlocale"
 		       (function c-call:int))))
@@ -2898,6 +2901,35 @@
 	    (extern-alien "os_get_locale_codeset"
 			  (function (* char))))
 	c-string))
+
+(defun unix-mkstemp (template)
+  _N"Generates a unique temporary file name from TEMPLATE, and creates
+  and opens the file.  On success, the corresponding file descriptor
+  and name of the file is returned.
+
+ The last six characters of the template must be \"XXXXXX\"."
+  ;; Hope this buffer is large enough!
+  (let ((octets (%name->file template)))
+    (syscall ("mkstemp" c-call:c-string)
+	       (values result
+		       ;; Convert the file name back to a Lisp string.
+		       (%file->name octets))
+	       octets)))
+
+(defun unix-mkdtemp (template)
+  _N"Generate a uniquely named temporary directory from Template,
+  which must have \"XXXXXX\" as the last six characters.  The
+  directory is created with permissions 0700.  The name of the
+  directory is returned."
+  (let* ((octets (%name->file template))
+	 (result (alien-funcall
+		  (extern-alien "mkdtemp"
+				(function (* char)
+					  c-call:c-string))
+		  octets)))
+    (if (null-alien result)
+	(values nil (unix-errno))
+	(%file->name octets))))
 
 (defun unix-strerror (errno)
   _N"Returns a string that describes the error code Errno"
