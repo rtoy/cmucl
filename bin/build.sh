@@ -129,6 +129,8 @@ buildit ()
     if [ "$ENABLE" = "yes" ]; 
     then
 	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
+	# Generate code/unix-errno.lisp
+	$MAKE -C $TARGET/lisp ../code/unix-errno.lisp
 	time $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
 	if [ "$REBUILD_LISP" = "yes" ]; then
 	    $TOOLDIR/rebuild-lisp.sh $TARGET
