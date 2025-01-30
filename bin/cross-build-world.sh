@@ -14,6 +14,8 @@ usage() {
 MAKE=make
 INTERACTIVE=nil
 BREAK=""
+# Set to "yes" if we auto-generate code/unix-errno.lisp.
+GEN_ERRNO=
 
 while getopts "cirlXB:G:" arg
 do
@@ -59,6 +61,16 @@ CROSS="`echo $2 | sed 's:/*$::'`"
 SCRIPT="$3"
 LISP="${4:-lisp}"
 
+case `uname -s` in
+    Darwin)
+	;;
+    SunOS)
+	;;
+    Linux)
+	GEN_ERRNO=yes
+    *) ;;
+esac
+
 if [ -z "$BOOTSTRAP" ]; then
     CROSSBOOT="$TARGET/cross-bootstrap.lisp"
 else
@@ -82,6 +94,11 @@ then
 	# Create a directory tree that mirrors the source directory tree
 	find src -name 'CVS' -prune -o -type d -print | \
 		sed "s:^src:$CROSS:g" | xargs mkdir
+fi
+
+if [ "$GEN_ERRNO" = "yes" ]; then
+    # Generate code/unix-errno.lisp
+    $MAKE -C $TARGET/lisp ../code/unix-errno.lisp
 fi
 
 echo cross boot = $CROSSBOOT
