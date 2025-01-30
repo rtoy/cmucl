@@ -59,6 +59,25 @@ int main(int argc, char **argv)
 
     qsort(err, nerr, sizeof(*err), cmp);
 
+    /*
+     * Print out CMUCL-style file header
+     */
+    puts(";;; -*- Package: UNIX -*-\n\
+;;;\n\
+;;; **********************************************************************\n\
+;;; This code was written as part of the CMU Common Lisp project at\n\
+;;; Carnegie Mellon University, and has been placed in the public domain.\n\
+;;;\n\
+(ext:file-comment\n\
+  \"$Header: src/code/unix-errno.lisp $\")\n\
+;;;\n\
+;;; **********************************************************************\n\
+;;;\n\
+;;; This file contains the values of the UNIX errno values.\n\
+;;;\n							     \
+;;; DO NOT EDIT!  This is auto-generated from create-errno.\n\
+;;;\n");
+
     puts("(in-package \"UNIX\")\n");
     for (i = 0; i < nerr; i++) {
 #if 0
