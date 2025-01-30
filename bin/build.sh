@@ -129,8 +129,10 @@ buildit ()
     if [ "$ENABLE" = "yes" ]; 
     then
 	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
-	# Generate code/unix-errno.lisp
-	$MAKE -C $TARGET/lisp ../code/unix-errno.lisp
+	if [ "$GEN_ERRNO" = "yes" ]; then
+	    # Generate code/unix-errno.lisp
+	    $MAKE -C $TARGET/lisp ../code/unix-errno.lisp
+	fi
 	time $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
 	if [ "$REBUILD_LISP" = "yes" ]; then
 	    $TOOLDIR/rebuild-lisp.sh $TARGET
@@ -154,6 +156,8 @@ buildit ()
 BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
 UPDATE_TRANS=
+# Set to "yes" if we auto-generate code/unix-errno.lisp.
+GEN_ERRNO=
 
 while getopts "123PRGo:b:v:uB:C:Ui:w:O:?" arg
 do
@@ -193,7 +197,9 @@ if [ -z "$BASE" ]; then
 	    sun4*) BASE=sparc ;;
 	    i86pc) BASE=sol-x86 ;;
 	  esac ;;
-      Linux) BASE=linux ;;
+      Linux)
+	  GEN_ERRNO=yes
+	  BASE=linux ;;
       # Add support for FreeBSD and NetBSD?  Otherwise default to just build.
       *) BASE=build ;;
     esac
