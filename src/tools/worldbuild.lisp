@@ -136,6 +136,10 @@
     "target:code/c-call"
     "target:code/sap"
     "target:code/unix"
+    ,@(when (or (c:backend-featurep :linux))
+	;; This is currently only available for some OSes.  Ideally,
+	;; it should be available for all OSes.
+	"target:code/unix-errno")
     ,@(when (c:backend-featurep :mach)
 	'("target:code/mach"
 	  "target:code/mach-os"))
