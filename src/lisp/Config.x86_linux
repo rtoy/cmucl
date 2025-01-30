@@ -14,3 +14,6 @@ OS_LINK_FLAGS = -m32 -rdynamic -Xlinker --export-dynamic -Xlinker -Map -Xlinker 
 OS_LINK_FLAGS += -Wl,-z,noexecstack
 
 EXEC_FINAL_OBJ = exec-final.o
+
+../code/unix-errno.lisp : create-errno
+	./create-errno /usr/include/asm-generic/errno* | uniq > $@

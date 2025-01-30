@@ -66,9 +66,9 @@ endif
 version:
 	echo 0 > version
 
-internals.h internals.inc:
-	@echo "You must run genesis to create internals.h!"
-	@false
+#internals.h internals.inc:
+#	@echo "You must run genesis to create internals.h!"
+#	@false
 
 clean:
 	$(RM) Depends *.o lisp lisp.nm core lisp.a
@@ -139,3 +139,7 @@ translations-update:
 	  done; done
 
 
+# Compile program that creates the unix-error.lisp file.  Actual
+# generation of the file is OS-dependent.
+create-errno : create-errno.c
+	$(CC) -o $@ $^
