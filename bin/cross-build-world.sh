@@ -68,6 +68,7 @@ case `uname -s` in
 	;;
     Linux)
 	GEN_ERRNO=yes
+	;;
     *) ;;
 esac
 
