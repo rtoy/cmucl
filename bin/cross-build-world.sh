@@ -14,8 +14,6 @@ usage() {
 MAKE=make
 INTERACTIVE=nil
 BREAK=""
-# Set to "yes" if we auto-generate code/unix-errno.lisp.
-GEN_ERRNO=
 
 while getopts "cirlXB:G:" arg
 do
@@ -61,15 +59,14 @@ CROSS="`echo $2 | sed 's:/*$::'`"
 SCRIPT="$3"
 LISP="${4:-lisp}"
 
+# Determine if we need to generate unix-errno.lisp
+# Set to "yes" if we auto-generate code/unix-errno.lisp.
+GEN_ERRNO=
 case `uname -s` in
-    Darwin)
-	;;
-    SunOS)
-	;;
+    # Add more cases as we support more OSes
     Linux)
 	GEN_ERRNO=yes
 	;;
-    *) ;;
 esac
 
 if [ -z "$BOOTSTRAP" ]; then
