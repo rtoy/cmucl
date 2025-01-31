@@ -156,8 +156,6 @@ buildit ()
 BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
 UPDATE_TRANS=
-# Set to "yes" if we auto-generate code/unix-errno.lisp.
-GEN_ERRNO=
 
 while getopts "123PRGo:b:v:uB:C:Ui:w:O:?" arg
 do
@@ -198,7 +196,6 @@ if [ -z "$BASE" ]; then
 	    i86pc) BASE=sol-x86 ;;
 	  esac ;;
       Linux)
-	  GEN_ERRNO=yes
 	  BASE=linux ;;
       # Add support for FreeBSD and NetBSD?  Otherwise default to just build.
       *) BASE=build ;;
@@ -206,6 +203,19 @@ if [ -z "$BASE" ]; then
 fi
 
 echo base = $BASE
+
+# Determine if we need to generate unix-errno.lisp
+
+# Set to "yes" if we auto-generate code/unix-errno.lisp.
+GEN_ERRNO=
+
+case `uname -s` in
+    # Add more cases as we support more OSes
+    Linux)
+	GEN_ERRNO=yes
+	;;
+esac
+
 
 bootfiles_dir=$SRCDIR/bootfiles/$version
 if [ -n "$bootfiles" ]; then
