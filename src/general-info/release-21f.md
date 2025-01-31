@@ -113,6 +113,7 @@ public domain.
     * ~~#361~~ Add herald item to mention where to report issues
     * ~~#362~~ Simplify "library:" search-list
     * ~~#364~~ Add interface to `mkdtemp` and `mkstemp`
+    * ~~#367~~ Add stream:string-count-octets to count octets in a string
     * ~~#369~~ Improve docstring for `unix::unix-setlocale`
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
