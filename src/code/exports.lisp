@@ -197,6 +197,8 @@
 	   "NEGATE-BIGNUM" "SUBTRACT-BIGNUM"))
 
 (defpackage "UNIX"
+  #+linux
+  (:import-from "UNIX-ERRNO")
   (:export "UNIX-CURRENT-DIRECTORY"
 	   "UNIX-OPEN"
 	   "UNIX-READ"

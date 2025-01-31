@@ -53,6 +53,8 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (pushnew :no-clm *features*)
 (pushnew :no-hemlock *features*)
 
+#+linux
+(load "target:code/errno-package")
 (load "target:code/exports")
 (load "target:tools/setup" :if-source-newer :load-source)
 (comf "target:tools/setup" :load t)

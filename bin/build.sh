@@ -131,7 +131,11 @@ buildit ()
 	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
 	if [ "$GEN_ERRNO" = "yes" ]; then
 	    # Generate code/unix-errno.lisp
-	    $MAKE -C $TARGET/lisp ../code/unix-errno.lisp
+	    set -x
+	    awk -f get-errno.awk $ERRNO_PATH > $TARGET/code/unix-errno.lisp
+	    awk -f get-errno-exports.awk $ERRNO_PATH > $TARGET/code/errno-package.lisp
+	    set +x
+	    #$MAKE -C $TARGET/lisp ../code/unix-errno.lisp
 	fi
 	time $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
 	if [ "$REBUILD_LISP" = "yes" ]; then
@@ -213,6 +217,7 @@ case `uname -s` in
     # Add more cases as we support more OSes
     Linux)
 	GEN_ERRNO=yes
+	ERRNO_PATH="/usr/include/asm-generic/errno-base.h /usr/include/asm-generic/errno.h"
 	;;
 esac
 

@@ -318,6 +318,8 @@
   (comf "target:code/multi-proc"))
 
 (comf "target:code/setf-funs")
+#+linux
+(comf "target:code/errno-package")
 (comf "target:code/exports" :proceed t)
 
 ;;; Compile basic macros that we assume are already in the compilation
