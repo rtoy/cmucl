@@ -2930,7 +2930,7 @@
 		     ;; Convert the array of octets in BUFFER back to
 		     ;; a Lisp string.
 		     (stream:octets-to-string buffer
-					      :end (1- length)
+					      :end length
 					      :external-format format))
 	     (sys:vector-sap buffer))))
 
@@ -2965,6 +2965,4 @@
       ;; resulting name.  Otherwise, return NIL and the errno.
       (if (null-alien result)
 	  (values nil (unix-errno))
-	  (values (stream:octets-to-string buffer
-					   :end (1- length)
-					   :external-format format))))))
+	  (cast result c-call:c-string)))))
