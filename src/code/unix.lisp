@@ -2907,28 +2907,64 @@
 (defun unix-mkstemp (template)
   _N"Generates a unique temporary file name from TEMPLATE, and creates
   and opens the file.  On success, the corresponding file descriptor
-  and name of the file is returned.
+  and name of the file is returned.  Otherwise, NIL and the UNIX error
+  code is returned.
 
- The last six characters of the template must be \"XXXXXX\"."
-  ;; Hope this buffer is large enough!
-  (let ((octets (%name->file template)))
-    (syscall ("mkstemp" c-call:c-string)
-	       (values result
-		       ;; Convert the file name back to a Lisp string.
-		       (%file->name octets))
-	       octets)))
+  The last six characters of the template must be \"XXXXXX\"."
+  (let* ((format (if (eql *filename-encoding* :null)
+		     :iso8859-1
+		     *filename-encoding*))
+	 ;; Convert the string to octets using the
+	 ;; *FILENAME-ENCODING*.  Should we signal an error if the
+	 ;; string can be encoded?
+	 (octets (stream:string-to-octets template
+					  :external-format format))
+	 (length (length octets))
+	 (buffer (make-array (1+ length)
+			     :element-type '(unsigned-byte 8)
+			     :initial-element 0)))
+    ;; Copy the octets from OCTETS to the null-terminated array BUFFER.
+    (replace buffer octets)
+    (syscall ("mkstemp" (* c-call:char))
+	     (values result
+		     ;; Convert the array of octets in BUFFER back to
+		     ;; a Lisp string.
+		     (stream:octets-to-string buffer
+					      :end (1- length)
+					      :external-format format))
+	     (sys:vector-sap buffer))))
 
 (defun unix-mkdtemp (template)
   _N"Generate a uniquely named temporary directory from Template,
   which must have \"XXXXXX\" as the last six characters.  The
   directory is created with permissions 0700.  The name of the
-  directory is returned."
-  (let* ((octets (%name->file template))
-	 (result (alien-funcall
-		  (extern-alien "mkdtemp"
-				(function (* char)
-					  c-call:c-string))
-		  octets)))
-    (if (null-alien result)
-	(values nil (unix-errno))
-	(%file->name octets))))
+  directory is returned.
+
+  If the directory cannot be created NIL and the UNIX error code is
+  returned."
+  (let* ((format (if (eql *filename-encoding* :null)
+		     :iso8859-1
+		     *filename-encoding*))
+	 ;; Encode the string using the appropriate
+	 ;; *filename-encoding*.  Should we signal an error if the
+	 ;; string can't be encoded in that format?
+	 (octets (stream:string-to-octets template
+					  :external-format format))
+	 (length (length octets))
+	 (buffer (make-array (1+ length)
+			     :element-type '(unsigned-byte 8)
+			     :initial-element 0)))
+    ;; Copy the octets from OCTETS to the null-terminated array BUFFER.
+    (replace buffer octets)
+    (let ((result (alien-funcall
+		   (extern-alien "mkdtemp"
+				 (function (* char)
+					   (* char)))
+		   (sys:vector-sap buffer))))
+      ;; If mkdtemp worked, a non-NIL value is returned, return the
+      ;; resulting name.  Otherwise, return NIL and the errno.
+      (if (null-alien result)
+	  (values nil (unix-errno))
+	  (values (stream:octets-to-string buffer
+					   :end (1- length)
+					   :external-format format))))))
