@@ -30,9 +30,13 @@
 (define-test mkstemp.bad-template
   (:tag :issues)
   (multiple-value-bind (fd errno)
-      (unix::unix-mkstemp "test-XXXXX")
+      (unix::unix-mkstemp "test-")
     ;; The template doesn't have enough X's so the FD should be NIL,
     ;; and a positive Unix errno value should be returned.
+    ;;
+    ;; Note that Darwin allows any number of X's in the template but
+    ;; Linux requires exactly 6.  Just test with no X's to handle all
+    ;; OSes.
     (assert-false fd)
     (assert-true (and (integerp errno) (plusp errno)))))
 
@@ -58,7 +62,8 @@
 (define-test mkdtemp.bad-template
   (:tag :issues)
   (multiple-value-bind (result errno)
-      (unix::unix-mkdtemp "dir-XXXXX")
+      (unix::unix-mkdtemp "dir-")
+    ;; No X's in template, like for mkstemp.bad-template test.
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
 
