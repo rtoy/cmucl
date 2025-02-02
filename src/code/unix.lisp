@@ -2965,4 +2965,4 @@
       ;; resulting name.  Otherwise, return NIL and the errno.
       (if (null-alien result)
 	  (values nil (unix-errno))
-	  (cast result c-call:c-string)))))
+	  (%file->name (cast result c-call:c-string))))))
