@@ -17,6 +17,26 @@
       (when fd
 	(unix:unix-unlink name)))))
 
+(define-test mkstemp.name-returned.2
+  (:tag :issues)
+  (let ((unix::*filename-encoding* :utf-8)
+	fd name)
+    (unwind-protect
+	 (progn
+	   ;; Temp name starts with a lower case alpha character.
+	   (let* ((template (concatenate 'string (string #\u+3b1)
+					 "test-XXXXXX"))
+		  (x-posn (position #\X template)))
+	     (multiple-value-setq (fd name)
+	       (unix::unix-mkstemp template))
+	     (assert-true fd)
+	     (assert-false (search "XXXXXX" name)
+			   name)
+	     (assert-true (string= name template :end1 x-posn :end2 x-posn)
+			  name)))
+      (when fd
+	(unix:unix-unlink name)))))
+
 (define-test mkstemp.bad-path
   (:tag :issues)
   (multiple-value-bind (fd errno)
@@ -49,6 +69,25 @@
 	   ;; Verify that the dir name no longer has X's.
 	   (assert-true (stringp name))
 	   (assert-false (search "XXXXXX" name)))
+      (when name
+	(unix:unix-rmdir name)))))
+
+(define-test mkdtemp.name-returned.2
+  (:tag :issues)
+  (let ((unix::*filename-encoding* :utf-8)
+	name)
+    (unwind-protect
+	 (progn
+	   ;; Temp name starts with a lower case alpha character.
+	   (let* ((template (concatenate 'string (string #\u+3b1)
+					 "dir-XXXXXX"))
+		  (x-posn (position #\X template)))
+	     (setf name (unix::unix-mkdtemp template))
+	     ;; Verify that the dir name no longer has X's.
+	     (assert-true (stringp name))
+	     (assert-false (search "XXXXXX" name))
+	     (assert-true (string= name template :end1 x-posn :end2 x-posn)
+			  name x-posn)))
       (when name
 	(unix:unix-rmdir name)))))
 
