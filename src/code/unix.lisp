@@ -2957,7 +2957,7 @@
   returned."
   ;; Make sure the template is valid.
   (unless (check-template template)
-    (return-from unix-mkstemp
+    (return-from unix-mkdtemp
       (values nil einval)))
   (let* ((format (if (eql *filename-encoding* :null)
 		     :iso8859-1
