@@ -47,6 +47,9 @@
     (assert-false fd)
     (assert-true (and (integerp errno) (plusp errno)))))
 
+;; Darwin allows any number of X's (including 0!) in the template but
+;; Linux requires exactly 6.  Hence skip this test.
+#-darwin
 (define-test mkstemp.bad-template
   (:tag :issues)
   (multiple-value-bind (fd errno)
@@ -54,9 +57,8 @@
     ;; The template doesn't have enough X's so the FD should be NIL,
     ;; and a positive Unix errno value should be returned.
     ;;
-    ;; Note that Darwin allows any number of X's in the template but
-    ;; Linux requires exactly 6.  Just test with no X's to handle all
-    ;; OSes.
+    ;; Note that Darwin allows any number of X's (including 0!) in the
+    ;; template but Linux requires exactly 6.
     (assert-false fd)
     (assert-true (and (integerp errno) (plusp errno)))))
 
@@ -98,6 +100,9 @@
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
 
+;; Darwin allows any number of X's (including 0!) in the template but
+;; Linux requires exactly 6.  Hence skip this test.
+#-darwin
 (define-test mkdtemp.bad-template
   (:tag :issues)
   (multiple-value-bind (result errno)
