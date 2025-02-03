@@ -59,12 +59,12 @@ fi
 # Compile up the C file that is used for testing alien funcalls to
 # functions that return integer types of different lengths.  We use
 # gcc since clang isn't always available.
-(cd $TESTDIR; gcc -m32 -O3 -c test-return.c)
+(cd "$TESTDIR"; gcc -m32 -O3 -c test-return.c)
 
 if [ $# -eq 0 ]; then
     # Test directory arg for run-all-tests if a non-default 
     # No args so run all the tests
-    $LISP -nositeinit -noinit -load $TESTDIR/run-tests.lisp -eval "(cmucl-test-runner:run-all-tests ${TESTDIRARG})"
+    $LISP -nositeinit -noinit -load "$TESTDIR"/run-tests.lisp -eval "(cmucl-test-runner:run-all-tests ${TESTDIRARG})"
 else
     # Run selected files.  Convert each file name to uppercase and append "-TESTS"
     result=""
@@ -73,6 +73,6 @@ else
 	new=`echo $f | tr '[a-z]' '[A-Z]'`
         result="$result "\"$new-TESTS\"
     done
-    $LISP -nositeinit -noinit -load $TESTDIR/run-tests.lisp -eval "(progn (cmucl-test-runner:load-test-files) (cmucl-test-runner:run-test $result))"
+    $LISP -nositeinit -noinit -load "$TESTDIR"/run-tests.lisp -eval "(progn (cmucl-test-runner:load-test-files) (cmucl-test-runner:run-test $result))"
 fi
 
