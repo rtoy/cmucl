@@ -47,18 +47,21 @@
     (assert-false fd)
     (assert-true (and (integerp errno) (plusp errno)))))
 
-;; Darwin allows any number of X's (including 0!) in the template but
-;; Linux requires exactly 6.  Hence skip this test.
-#-darwin
 (define-test mkstemp.bad-template
   (:tag :issues)
   (multiple-value-bind (fd errno)
       (unix::unix-mkstemp "test-")
     ;; The template doesn't have enough X's so the FD should be NIL,
     ;; and a positive Unix errno value should be returned.
-    ;;
-    ;; Note that Darwin allows any number of X's (including 0!) in the
-    ;; template but Linux requires exactly 6.
+    (assert-false fd)
+    (assert-true (and (integerp errno) (plusp errno)))))
+
+(define-test mkstemp.bad-template.2
+  (:tag :issues)
+  (multiple-value-bind (fd errno)
+      (unix::unix-mkstemp "test-XXXXXXX")
+    ;; The template has too many X's so the FD should be NIL, and a
+    ;; positive Unix errno value should be returned.
     (assert-false fd)
     (assert-true (and (integerp errno) (plusp errno)))))
 
@@ -100,14 +103,19 @@
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
 
-;; Darwin allows any number of X's (including 0!) in the template but
-;; Linux requires exactly 6.  Hence skip this test.
-#-darwin
 (define-test mkdtemp.bad-template
   (:tag :issues)
   (multiple-value-bind (result errno)
       (unix::unix-mkdtemp "dir-")
     ;; No X's in template, like for mkstemp.bad-template test.
+    (assert-false result)
+    (assert-true (and (integerp errno) (plusp errno)))))
+
+(define-test mkdtemp.bad-template.2
+  (:tag :issues)
+  (multiple-value-bind (result errno)
+      (unix::unix-mkdtemp "dir-XXXXXXX")
+    ;; Too many X's in template.
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
 
