@@ -1418,7 +1418,11 @@ msgid ""
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Call setlocale(3c) with fixed args.  Returns 0 on success."
+msgid ""
+"Set all the categories of the locale from the values of the\n"
+"  environment variables using setlocale(LC_ALL, \"\").\n"
+"\n"
+"  Returns 0 on success and -1 if setlocale failed."
 msgstr ""
 
 #: src/code/unix.lisp

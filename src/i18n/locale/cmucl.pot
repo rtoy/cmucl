@@ -9302,6 +9302,13 @@ msgstr ""
 
 #: src/code/extfmts.lisp
 msgid ""
+"Compute the number of octets needed to convert String using the\n"
+"  specified External-format.  The string is bound by Start (defaulting\n"
+"  to 0) and End (defaulting to the end of the string)."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
 "Encode the given String using External-Format and return a new\n"
 "  string.  The characters of the new string are the octets of the\n"
 "  encoded result, with each octet converted to a character via\n"

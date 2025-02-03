@@ -47,4 +47,19 @@ character and illegal outputs are replaced by a question mark.")
 				(declare (optimize (ext:inhibit-warnings 3)))
 			      (funcall ,error "Cannot output codepoint #x~X to ISO8859-2 stream"
 				       ,code))
-			    #x3F)))))))
+			    #x3F))))))
+  ()
+  ()
+  (octet-count (code state error present)
+    `(if (< ,code 160)
+	 1
+	 (let ((,present (get-inverse ,itable ,code)))
+	   (if ,present
+	       1
+	       (if ,error
+		   (locally
+		       ;; No warnings about fdefinition
+		       (declare (optimize (ext:inhibit-warnings 3)))
+		     (funcall ,error "Cannot output codepoint #x~X to ISO8859-2 stream"
+			      ,code))
+		   1))))))
