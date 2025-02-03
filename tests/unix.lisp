@@ -65,6 +65,14 @@
     (assert-false fd)
     (assert-true (and (integerp errno) (plusp errno)))))
 
+(define-test mkstemp.bad-template.3
+  (:tag :issues)
+  (multiple-value-bind (fd errno)
+      (unix::unix-mkstemp "test-XXXXXXa")
+    ;; The template doesn't end in X's
+    (assert-false fd)
+    (assert-true (and (integerp errno) (plusp errno)))))
+
 (define-test mkdtemp.name-returned
   (:tag :issues)
   (let (name)
@@ -116,6 +124,14 @@
   (multiple-value-bind (result errno)
       (unix::unix-mkdtemp "dir-XXXXXXX")
     ;; Too many X's in template.
+    (assert-false result)
+    (assert-true (and (integerp errno) (plusp errno)))))
+
+(define-test mkdtemp.bad-template.2
+  (:tag :issues)
+  (multiple-value-bind (result errno)
+      (unix::unix-mkdtemp "dir-XXXXXXa")
+    ;; Template doesn't end in X's
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
 
