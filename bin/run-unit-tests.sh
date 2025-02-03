@@ -51,7 +51,7 @@ trap cleanup EXIT
 
 #set -x
 if [ -n "${TESTDIR}" ]; then
-    TESTDIRARG=" :test-directory \"${TESTDIR}/\""
+    TESTDIRARG=" :test-directory \"$TESTDIR/\""
 else
     TESTDIR="tests/"
     TESTDIRARG=""

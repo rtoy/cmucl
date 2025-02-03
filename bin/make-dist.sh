@@ -182,9 +182,6 @@ fi
 TARGET="`echo $1 | sed 's:/*$::'`"
 
 echo INSTALL_DIR = $INSTALL_DIR
-#if [ -n "$INSTALL_DIR" ]; then
-#    VERSION="today"
-#fi
 
 echo cmucl-$VERSION-$ARCH-$OS
 ROOT=`dirname $0`
