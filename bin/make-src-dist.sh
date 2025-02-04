@@ -55,7 +55,6 @@ fi
 DESTDIR=${INSTALL_DIR:-release-$$}
 
 echo Creating source distribution
-set -x
 GTAR_OPTIONS="--exclude=.git --exclude='*.pot.~*~'"
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/share/cmucl/$VERSION/
 install ${GROUP} ${OWNER} -m 0755 bin/run-unit-tests.sh $DESTDIR/bin

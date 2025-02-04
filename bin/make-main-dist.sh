@@ -217,14 +217,13 @@ install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
 	$DESTDIR/${MANDIR}/cmucl-$VERSION.1
 install ${GROUP} ${OWNER} -m 0644 src/general-info/lisp.1 \
 	$DESTDIR/${MANDIR}/lisp-$VERSION.1
-set -x
 install ${GROUP} ${OWNER} -m 0644 src/general-info/README $DESTDIR/${DOCDIR}
 if [ -f src/general-info/release-$VERSION.txt ] 
 then
 	install ${GROUP} ${OWNER} -m 0644 src/general-info/release-$VERSION.txt \
 		$DESTDIR/${DOCDIR}
 fi
-set +x
+
 if [ -z "$INSTALL_DIR" ]; then
     sync ; sleep 1 ; sync ; sleep 1 ; sync
     echo Tarring main components
