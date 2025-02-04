@@ -42,8 +42,10 @@
 #include <time.h>
 #endif
 
+#include "cmucl-version.h"
+
 #ifndef CMUCL_VERSION
-#define CMUCL_VERSION "alpha"
+#error CMUCL_VERSION not defined!
 #endif
 
 

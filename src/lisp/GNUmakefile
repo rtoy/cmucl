@@ -41,7 +41,7 @@ OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 ### Don't look in RCS for the files, because we might not want the latest.
 %: RCS/%,v
 
-DEFAULT_VERSION = $(shell ../../bin/cmucl-version.sh)
+#DEFAULT_VERSION = $(shell ../../bin/cmucl-version.sh)
 
 lisp.nm: lisp lisp.a
 	echo 'Map file for lisp version ' `cat version` > ,lisp.nm
@@ -53,8 +53,11 @@ version.o : version.c version
 	mv ,version version
 	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
 
-lisp.o : lisp.c
-	$(CC) ${CFLAGS} $(CPPFLAGS) -DCMUCL_VERSION="\"${DEFAULT_VERSION}\"" -c $<
+lisp.o : lisp.c cmucl-version.h
+	$(CC) ${CFLAGS} $(CPPFLAGS) -c $<
+
+cmucl-version.h:
+	../../bin/cmucl-version.sh -f > cmucl-version.h
 
 lisp: ${OBJS} version.o
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp $^ ${OS_LIBS} -lm
@@ -126,7 +129,7 @@ translations:
 	  done; done
 
 # Always build lisp.o so that the embedded version is updated.
-.PHONY : translations lisp.o
+.PHONY : translations cmucl-version.h lisp.o 
 
 # Like translations, but we don't compute the diff.  We just overwrite
 # the po files in the repository so that we can tell if the

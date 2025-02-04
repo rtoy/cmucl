@@ -51,6 +51,7 @@ export GIT_FILE_COMMENT
 SKIPUTILS=no
 DEFAULT_VERSION="`bin/cmucl-version.sh`"
 export DEFAULT_VERISON
+echo DEFAULT_VERSION = $DEFAULT_VERSION
 
 # If gmake exists, assume it is GNU make and use it.
 if [ -z "$MAKE" ]; then
