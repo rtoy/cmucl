@@ -49,9 +49,6 @@ GIT_FILE_COMMENT="yes"
 export GIT_FILE_COMMENT
 
 SKIPUTILS=no
-DEFAULT_VERSION="`bin/git-version.sh`"
-export DEFAULT_VERISON
-echo DEFAULT_VERSION = $DEFAULT_VERSION
 
 # If gmake exists, assume it is GNU make and use it.
 if [ -z "$MAKE" ]; then
@@ -112,6 +109,13 @@ case `uname -s` in
 	ppc) BUILD_WORLD2=yes ;;
       esac ;;
 esac
+
+# Set default version and generate lisp/cmucl-version.h
+DEFAULT_VERSION="`bin/git-version.sh`"
+export DEFAULT_VERISON
+echo DEFAULT_VERSION = $DEFAULT_VERSION
+
+bin/git-version.sh -f > src/lisp/cmucl-version.h
 
 export LANG=en_US.UTF-8
 
