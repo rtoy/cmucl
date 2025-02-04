@@ -51,12 +51,6 @@ version.o : version.c version
 	mv ,version version
 	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
 
-lisp.o : lisp.c cmucl-version.h
-	$(CC) ${CFLAGS} $(CPPFLAGS) -c $<
-
-cmucl-version.h:
-	../../bin/git-version.sh -f > cmucl-version.h
-
 lisp: ${OBJS} version.o
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp $^ ${OS_LIBS} -lm
 	mv -f ,lisp lisp
