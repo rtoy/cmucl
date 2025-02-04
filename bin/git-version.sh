@@ -35,7 +35,7 @@ else
 /*
  * Cmucl version
  *
- * DO NOT EDIT!  This file is auto-generated via bin/cmucl-version.sh.
+ * DO NOT EDIT!  This file is auto-generated via bin/git-version.sh.
  */
 
 #define CMUCL_VERSION "$DEFAULT_VERSION"

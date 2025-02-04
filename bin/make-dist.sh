@@ -97,7 +97,7 @@ def_arch_os
 # Choose a version based on the git hash as the default version.  We
 # only compute a default if the git hash looks like a snapshot
 # ("snapshot-yyyy-mm") or a release number..
-DEFAULT_VERSION="`bin/cmucl-version.sh`"
+DEFAULT_VERSION="`bin/git-version.sh`"
 
 # Default compression is -J (xz).  These variables are passed to the
 # other scripts via the environmen, so export them.

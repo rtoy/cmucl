@@ -41,8 +41,6 @@ OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 ### Don't look in RCS for the files, because we might not want the latest.
 %: RCS/%,v
 
-#DEFAULT_VERSION = $(shell ../../bin/cmucl-version.sh)
-
 lisp.nm: lisp lisp.a
 	echo 'Map file for lisp version ' `cat version` > ,lisp.nm
 	$(NM) lisp | grep -v " [F] " >> ,lisp.nm
@@ -57,7 +55,7 @@ lisp.o : lisp.c cmucl-version.h
 	$(CC) ${CFLAGS} $(CPPFLAGS) -c $<
 
 cmucl-version.h:
-	../../bin/cmucl-version.sh -f > cmucl-version.h
+	../../bin/git-version.sh -f > cmucl-version.h
 
 lisp: ${OBJS} version.o
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp $^ ${OS_LIBS} -lm
