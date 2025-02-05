@@ -138,6 +138,7 @@ EOF
 
 if [ "$BUILD_RUNTIME" = "yes" ]; then
     echo Building runtime
+    bin/git-version.sh -f > src/lisp/cmucl-version.h
     (cd $TARGET/lisp; ${MAKE})
 fi
 
