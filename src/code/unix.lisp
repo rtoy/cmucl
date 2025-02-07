@@ -2904,26 +2904,11 @@
 			  (function (* char))))
 	c-string))
 
-(defun check-template (template)
-  ;; Make sure the template ends with exactly 6 X's and no more.
-  (let ((last-non-x (position-if-not #'(lambda (c)
-					 (char= c #\X))
-				     template
-				     :from-end t)))
-    (and last-non-x
-	 (= last-non-x (- (length template) 7)))))
-
 (defun unix-mkstemp (template)
   _N"Generates a unique temporary file name from TEMPLATE, and creates
   and opens the file.  On success, the corresponding file descriptor
   and name of the file is returned.  Otherwise, NIL and the UNIX error
-  code is returned.
-
-  The last six characters of the template must be \"XXXXXX\"."
-  ;; Make sure the template is valid.
-  (unless (check-template template)
-    (return-from unix-mkstemp
-      (values nil einval)))
+  code is returned."
   (let* ((format (if (eql *filename-encoding* :null)
 		     :iso8859-1
 		     *filename-encoding*))
@@ -2955,10 +2940,6 @@
 
   If the directory cannot be created NIL and the UNIX error code is
   returned."
-  ;; Make sure the template is valid.
-  (unless (check-template template)
-    (return-from unix-mkdtemp
-      (values nil einval)))
   (let* ((format (if (eql *filename-encoding* :null)
 		     :iso8859-1
 		     *filename-encoding*))

@@ -56,6 +56,8 @@
     (assert-false fd)
     (assert-true (and (integerp errno) (plusp errno)))))
 
+;; Darwin allows any number of X's.
+#-darwin
 (define-test mkstemp.bad-template.2
   (:tag :issues)
   (multiple-value-bind (fd errno)
@@ -111,6 +113,8 @@
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
 
+;; Darwin allows any number of X's.
+#-darwin
 (define-test mkdtemp.bad-template
   (:tag :issues)
   (multiple-value-bind (result errno)
@@ -119,6 +123,8 @@
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
 
+;; Darwin allows any number of X's.
+#-darwin
 (define-test mkdtemp.bad-template.2
   (:tag :issues)
   (multiple-value-bind (result errno)
