@@ -56,18 +56,7 @@
     (assert-false fd)
     (assert-true (and (integerp errno) (plusp errno)))))
 
-;; Darwin allows any number of X's.
-#-darwin
 (define-test mkstemp.bad-template.2
-  (:tag :issues)
-  (multiple-value-bind (fd errno)
-      (unix::unix-mkstemp "test-XXXXXXX")
-    ;; The template has too many X's so the FD should be NIL, and a
-    ;; positive Unix errno value should be returned.
-    (assert-false fd)
-    (assert-true (and (integerp errno) (plusp errno)))))
-
-(define-test mkstemp.bad-template.3
   (:tag :issues)
   (multiple-value-bind (fd errno)
       (unix::unix-mkstemp "test-XXXXXXa")
@@ -123,16 +112,6 @@
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
 
-;; Darwin allows any number of X's.
-#-darwin
-(define-test mkdtemp.bad-template.2
-  (:tag :issues)
-  (multiple-value-bind (result errno)
-      (unix::unix-mkdtemp "dir-XXXXXXX")
-    ;; Too many X's in template.
-    (assert-false result)
-    (assert-true (and (integerp errno) (plusp errno)))))
-
 (define-test mkdtemp.bad-template.2
   (:tag :issues)
   (multiple-value-bind (result errno)
@@ -140,4 +119,3 @@
     ;; Template doesn't end in X's
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
-

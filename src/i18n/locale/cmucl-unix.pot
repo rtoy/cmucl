@@ -1441,9 +1441,7 @@ msgid ""
 "Generates a unique temporary file name from TEMPLATE, and creates\n"
 "  and opens the file.  On success, the corresponding file descriptor\n"
 "  and name of the file is returned.  Otherwise, NIL and the UNIX error\n"
-"  code is returned.\n"
-"\n"
-"  The last six characters of the template must be \"XXXXXX\"."
+"  code is returned."
 msgstr ""
 
 #: src/code/unix.lisp
