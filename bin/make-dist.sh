@@ -94,11 +94,6 @@ def_arch_os () {
 # Figure out the architecture and OS in case options aren't given
 def_arch_os
 
-# Choose a version based on the git hash as the default version.  We
-# only compute a default if the git hash looks like a snapshot
-# ("snapshot-yyyy-mm") or a release number..
-DEFAULT_VERSION="`bin/git-version.sh`"
-
 # Default compression is -J (xz).  These variables are passed to the
 # other scripts via the environmen, so export them.
 COMPRESS=-J
@@ -149,17 +144,6 @@ if [ -n "$COMPRESS_ARG" ]; then
     esac
 fi
 
-if [ -z "$VERSION" ]; then
-    # If a default version exists, use it. Otherwise this is an
-    # error---at least one of these must not be empty.
-    if [ -z "${DEFAULT_VERSION}" ]; then
-	echo "Version (-V) must be specified because default version cannot be determined."
-	usage
-    else
-	VERSION=${DEFAULT_VERSION}
-    fi
-fi
-
 if [ ! -d "$1" ]
 then
 	echo "$1 isn't a directory"
@@ -179,6 +163,22 @@ if [ -z "$INSTALL_DIR" ]; then
 fi   
 
 TARGET="`echo $1 | sed 's:/*$::'`"
+
+# Choose a version based on the git hash as the default version.  We
+# only compute a default if the git hash looks like a snapshot
+# ("snapshot-yyyy-mm") or a release number..
+DEFAULT_VERSION="`$TARGET/lisp/lisp -print-version`"
+
+if [ -z "$VERSION" ]; then
+    # If a default version exists, use it. Otherwise this is an
+    # error---at least one of these must not be empty.
+    if [ -z "${DEFAULT_VERSION}" ]; then
+	echo "Version (-V) must be specified because default version cannot be determined."
+	usage
+    else
+	VERSION=${DEFAULT_VERSION}
+    fi
+fi
 
 echo INSTALL_DIR = $INSTALL_DIR
 

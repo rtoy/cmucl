@@ -95,6 +95,9 @@ alloc_str_list(const char *list[])
 }
 
 /* Default paths for CMUCLLIB */
+
+static char cmucl_version[] = CMUCL_VERSION;
+
 static char *cmucllib_search_list[] = {
     "./../lib/cmucl/" CMUCL_VERSION "/lib",
     NULL
@@ -676,7 +679,14 @@ main(int argc, const char *argv[], const char *envp[])
 	    debug_lisp_search = TRUE;
         } else if (strcmp(arg, "-unidata") == 0) {
           unidata = *++argptr;
-        }
+        } else if (strcmp(arg, "-print-version") == 0) {
+	    /*
+	     * Print the version and exit; we don't want to do
+	     * anything else!
+	     */
+	    printf("%s\n", cmucl_version);
+	    return 0;
+	}
     }
 
     default_core = arch_init(fpu_mode);
