@@ -47,6 +47,8 @@
     (assert-false fd)
     (assert-true (and (integerp errno) (plusp errno)))))
 
+;; Darwin accepts this template.  It creates the file "test-".
+#-darwin
 (define-test mkstemp.bad-template
   (:tag :issues)
   (multiple-value-bind (fd errno)
@@ -56,6 +58,9 @@
     (assert-false fd)
     (assert-true (and (integerp errno) (plusp errno)))))
 
+;; Darwin accepts this template and just creates the file
+;; "test-XXXXXXa".  (The next call would return an error.)
+#-darwin
 (define-test mkstemp.bad-template.2
   (:tag :issues)
   (multiple-value-bind (fd errno)
@@ -112,6 +117,8 @@
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
 
+;; Same issue with mkdtemp as with mkstemp above on Darwin.
+#-darwin
 (define-test mkdtemp.bad-template.2
   (:tag :issues)
   (multiple-value-bind (result errno)
