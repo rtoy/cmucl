@@ -142,6 +142,10 @@ install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${MANDIR}
 install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/lisp-$VERSION
 # Install symlink for lisp
 (cd $DESTDIR/bin; ln -fs lisp-$VERSION lisp)
+# Install symlink for man pages
+(cd $DESTDIR/${MANDIR}
+ ln -fs lisp-$VERSION.1 lisp.1
+ ln -fs cmucl-$VERSION.1 cmucl.1)
 
 if [ "$EXECUTABLE" = "true" ]
 then
