@@ -149,7 +149,7 @@ buildit ()
 	then
 	    $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
 	fi
-	$TOOLDIR/load-world.sh $TARGET "$VERSION" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
+	$TOOLDIR/load-world.sh $TARGET || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
 
 	$TARGET/lisp/lisp -lib $TARGET/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
 
