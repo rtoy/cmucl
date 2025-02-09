@@ -153,6 +153,14 @@ buildit ()
     fi
 }
 
+# Create unix-errno.lisp
+case `uname -s` in
+    Linux) ERRNO_FILES=/usr/include/asm-generic/errno*.h
+	   ;;
+esac
+
+awk -f bin/create-errno.awk ${ERRNO_FILES} > src/code/unix-errno.lisp
+
 BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
 UPDATE_TRANS=
@@ -203,19 +211,6 @@ if [ -z "$BASE" ]; then
 fi
 
 echo base = $BASE
-
-# Determine if we need to generate unix-errno.lisp
-
-# Set to "yes" if we auto-generate code/unix-errno.lisp.
-GEN_ERRNO=
-
-case `uname -s` in
-    # Add more cases as we support more OSes
-    Linux)
-	GEN_ERRNO=yes
-	;;
-esac
-
 
 bootfiles_dir=$SRCDIR/bootfiles/$version
 if [ -n "$bootfiles" ]; then

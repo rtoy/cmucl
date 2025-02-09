@@ -162,11 +162,8 @@
 (comf "target:code/string")
 (comf "target:code/mipsstrops")
 
+(comf "target:code/unix-errno" :proceed t)
 (comf "target:code/unix" :proceed t)
-(when (or (c:backend-featurep :linux))
-  ;; This is currently only available for some OSes.  Ideally, it
-  ;; should be available for all OSes.
-  (comf "target:code/unix-errno" :proceed t))
 
 (when (c:backend-featurep :mach)
   (comf "target:code/mach")

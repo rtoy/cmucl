@@ -59,16 +59,6 @@ CROSS="`echo $2 | sed 's:/*$::'`"
 SCRIPT="$3"
 LISP="${4:-lisp}"
 
-# Determine if we need to generate unix-errno.lisp
-# Set to "yes" if we auto-generate code/unix-errno.lisp.
-GEN_ERRNO=
-case `uname -s` in
-    # Add more cases as we support more OSes
-    Linux)
-	GEN_ERRNO=yes
-	;;
-esac
-
 if [ -z "$BOOTSTRAP" ]; then
     CROSSBOOT="$TARGET/cross-bootstrap.lisp"
 else
@@ -94,10 +84,13 @@ then
 		sed "s:^src:$CROSS:g" | xargs mkdir
 fi
 
-if [ "$GEN_ERRNO" = "yes" ]; then
-    # Generate code/unix-errno.lisp
-    $MAKE -C $TARGET/lisp ../code/unix-errno.lisp
-fi
+# Create unix-errno.lisp
+case `uname -s` in
+    Linux) ERRNO_FILES=/usr/include/asm-generic/errno*.h
+	   ;;
+esac
+
+awk -f bin/create-errno.awk ${ERRNO_FILES} > src/code/unix-errno.lisp
 
 echo cross boot = $CROSSBOOT
 $LISP "$@" -noinit -nositeinit <<EOF
