@@ -114,4 +114,20 @@ Unicode replacement character.")
   nil
   (copy-state (state)
     ;; The state is either NIL or T, so we can just return that.
-    `(progn ,state)))
+    `(progn ,state))
+  (octet-count (code state error)
+    `(let ((bom-count 0))
+       (unless ,state
+	 (setf bom-count 4)
+	 (setf ,state t))
+       (cond ((lisp::surrogatep ,code)
+	      (if ,error
+		  (locally
+		      ;; No warnings about fdefinition
+		      (declare (optimize (ext:inhibit-warnings 3)))
+		    (funcall ,error "Surrogate code #x~4,'0X is illegal for UTF32 output"
+			     ,code))
+		  ;; Replacement character is 2 octets
+		  (+ 2 bom-count)))
+	     (t
+	      (+ 4 bom-count))))))
