@@ -913,6 +913,10 @@ main(int argc, const char *argv[], const char *envp[])
     }
 #endif
     
+#ifdef LISP_IMPLEMENTATION_VERSION
+    SetSymbolValue(LISP_IMPLEMENTATION_VERSION, alloc_string(cmucl_version));
+#endif
+
     /*
      * Pick off sigint until the lisp system gets far enough along to
      * install it's own.
