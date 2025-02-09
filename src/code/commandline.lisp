@@ -408,3 +408,10 @@
 (defswitch "-version" #'version-switch-demon
   "Prints the cmucl version and exits; same as -version")
 
+;; This is never actually called from lisp because main() handles it
+;; and returns before the lisp initial function is ever run.  It's
+;; here so that -help will print it out so the user knows about it.
+(defswitch "print-version" #'version-switch-demon
+  "Like -version, but a core file doesn't have to loaded first.  The
+ version is printed and lisp exits immediately before doing any of the
+ core startup code.")
