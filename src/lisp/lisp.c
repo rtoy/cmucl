@@ -342,7 +342,7 @@ search_core(const char *lib, const char *default_core)
 	    return buf;
 	} else {
 	    if (debug_lisp_search) {
-		fprintf(stderr, "Found it, but we can't read it!\n");
+		fprintf(stderr, "Does not exist, or can't read it if it does!\n");
 	    }
 	}
     } while (*lib++ == ':');
