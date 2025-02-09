@@ -127,7 +127,6 @@ done
 
 for f in `(cd src/contrib; find . -type f -print | grep -v "asdf\|defsystem\|unix")`
 do
-    FILE=`basename $f`
     DIR=`dirname $f`
     install ${GROUP} ${OWNER} -m 0644 src/contrib/$f $DESTDIR/$CMUCLLIBVER/lib/contrib/$DIR
 done
@@ -142,7 +141,6 @@ done
 # Install mo files.  Ignore any emacs-style backup files.
 for f in `(cd $TARGET/i18n; find locale -type f -print | grep -v '~.*~\|.*~')`
 do
-    FILE=`basename $f`
     DIR=`dirname $f`
     install ${GROUP} ${OWNER} -m 0644 $TARGET/i18n/$f $DESTDIR/$CMUCLLIBVER/lib/$DIR
 done
