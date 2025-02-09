@@ -147,14 +147,6 @@ do
     install ${GROUP} ${OWNER} -m 0644 $TARGET/i18n/$f $DESTDIR/$CMUCLLIBVER/lib/$DIR
 done
 
-# Install po files.  (Do we really need to distribute the po files?)
-#for f in `(cd $TARGET/i18n; find locale -type f -print | grep -v '~.*~\|.*~')`
-#do
-#    FILE=`basename $f`
-#    DIR=`dirname $f`
-#    install ${GROUP} ${OWNER} -m 0644 $TARGET/i18n/$f $DESTDIR/$CMUCLLIBVER/lib/$DIR
-#done
-
 if [ -z "$INSTALL_DIR" ]; then
     sync ; sleep 1 ; sync ; sleep 1 ; sync
     echo Tarring extra components
