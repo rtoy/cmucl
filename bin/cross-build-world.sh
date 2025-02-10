@@ -90,7 +90,8 @@ case `uname -s` in
 	   ;;
 esac
 
-awk -f bin/create-errno.awk ${ERRNO_FILES} > src/code/unix-errno.lisp
+#awk -f bin/create-errno.awk ${ERRNO_FILES} > src/code/unix-errno.lisp
+bin/create-errno.sh ${ERRNO_FILES} > src/code/unix-errno.lisp
 
 echo cross boot = $CROSSBOOT
 $LISP "$@" -noinit -nositeinit <<EOF

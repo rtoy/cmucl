@@ -159,7 +159,8 @@ case `uname -s` in
 	   ;;
 esac
 
-awk -f bin/create-errno.awk ${ERRNO_FILES} > src/code/unix-errno.lisp
+#awk -f bin/create-errno.awk ${ERRNO_FILES} > src/code/unix-errno.lisp
+bin/create-errno.sh ${ERRNO_FILES} > src/code/unix-errno.lisp
 
 BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
