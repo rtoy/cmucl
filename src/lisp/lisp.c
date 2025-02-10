@@ -679,7 +679,8 @@ main(int argc, const char *argv[], const char *envp[])
 	    debug_lisp_search = TRUE;
         } else if (strcmp(arg, "-unidata") == 0) {
           unidata = *++argptr;
-        } else if (strcmp(arg, "-print-version") == 0) {
+        } else if ((strcmp(arg, "-version") == 0) ||
+		   (strcmp(arg, "--version") == 0)) {
 	    /*
 	     * Print the version and exit; we don't want to do
 	     * anything else!

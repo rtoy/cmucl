@@ -167,7 +167,7 @@ TARGET="`echo $1 | sed 's:/*$::'`"
 # Choose a version based on the git hash as the default version.  We
 # only compute a default if the git hash looks like a snapshot
 # ("snapshot-yyyy-mm") or a release number..
-DEFAULT_VERSION="`$TARGET/lisp/lisp -print-version`"
+DEFAULT_VERSION="`$TARGET/lisp/lisp --version`"
 
 if [ -z "$VERSION" ]; then
     # If a default version exists, use it. Otherwise this is an
