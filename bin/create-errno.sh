@@ -1,9 +1,14 @@
 #! /bin/sh
 
-# Generates the contents of the file code/unix-errno.lisp.  The args
-# to this script, if supplied, must be a list of files containing the
-# definitions of all the Unix errno values.
-#
+# Generates the contents of the file code/unix-errno.lisp.
+
+# For each supported OS, ERRNO_FILES should be set to a list of all
+# the files that contain the definitions of the errno values.
+case `uname -s` in
+    Linux) ERRNO_FILES=/usr/include/asm-generic/errno*.h
+	   ;;
+esac
+
 
 # The header was copied from code/unix.lisp.  This includes all the
 # support code for DEF-UNIX-ERROR and for all OSes that don't use the
@@ -251,7 +256,7 @@ EOF
 # containing the C definitions.
 awk '/^#define[ \t]+(E[A-Z0-9]+)[ \t]+([A-Z0-9]+).*$/ {
     printf "(def-unix-error %s %s)\n", $2, $3;
-}' "$@"
+}' ${ERRNO_FILES}
 
 # The tail was also copied from code/unix.lisp.  It's needed to tell
 # Lisp about the errno values.

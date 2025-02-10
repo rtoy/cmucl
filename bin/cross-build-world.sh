@@ -85,13 +85,7 @@ then
 fi
 
 # Create unix-errno.lisp
-case `uname -s` in
-    Linux) ERRNO_FILES=/usr/include/asm-generic/errno*.h
-	   ;;
-esac
-
-#awk -f bin/create-errno.awk ${ERRNO_FILES} > src/code/unix-errno.lisp
-bin/create-errno.sh ${ERRNO_FILES} > src/code/unix-errno.lisp
+bin/create-errno.sh > src/code/unix-errno.lisp
 
 echo cross boot = $CROSSBOOT
 $LISP "$@" -noinit -nositeinit <<EOF
