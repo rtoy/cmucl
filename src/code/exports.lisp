@@ -553,7 +553,22 @@
 	   "WRITEGRP"
 	   "WRITEOTH"
 	   "XMT1EN"
-	   ))
+	   )
+  ;; Additional errno for linux
+  #+linux
+  (:export
+   "EKEYREJECTED"
+   "EMEDIUMTYPE"
+   "ENOKEY"
+   "ECANCELED"
+   "EOWNERDEAD"
+   "EKEYEXPIRED"
+   "EKEYREVOKED"
+   "ERFKILL"
+   "ENOTRECOVERABLE"
+   "ENOMEDIUM"
+   "EHWPOISON"
+   ))
   
 (defpackage "FORMAT")
 
