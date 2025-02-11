@@ -26,8 +26,7 @@ cat <<EOF
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; This file contains the UNIX low-level support, just enough to run
-;;; CMUCL.
+;;; This file contains the UNIX errno values.
 ;;;
 (in-package "UNIX")
 (intl:textdomain "cmucl-unix")
