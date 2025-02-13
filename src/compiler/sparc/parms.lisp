@@ -358,11 +358,11 @@
     *fp-constant-0f0*
 
     lisp::*unidata-path*
+    lisp::*lisp-implementation-version*
     
     ;; Some spare static symbols.  Useful for adding another static
     ;; symbol without having to do a cross-compile.  Just rename one
     ;; of these to the desired name.
-    spare-9
     spare-8
     spare-7
     spare-6
