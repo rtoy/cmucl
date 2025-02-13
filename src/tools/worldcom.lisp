@@ -162,6 +162,8 @@
 (comf "target:code/string")
 (comf "target:code/mipsstrops")
 
+(when (c:backend-featurep :linux)
+  (comf "target:code/unix-errno-pkg"))
 (comf "target:code/unix-errno" :proceed t)
 (comf "target:code/unix" :proceed t)
 

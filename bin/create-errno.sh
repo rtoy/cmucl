@@ -28,8 +28,10 @@ cat <<EOF
 ;;;
 ;;; This file contains the UNIX errno values.
 ;;;
-(in-package "UNIX")
+(in-package "UNIX-ERRNO")
 (intl:textdomain "cmucl-unix")
+
+(use-package "COMMON-LISP")
 
 ;;;; Errno stuff.
 (eval-when (compile eval)
@@ -261,6 +263,7 @@ awk '/^#define[ \t]+(E[A-Z0-9]+)[ \t]+([A-Z0-9]+).*$/ {
 # Lisp about the errno values.
 cat <<EOF
 ;;; End auto-generated forms, if any.
+
 
 ;;;
 ;;; And now for something completely different ...

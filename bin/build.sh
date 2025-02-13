@@ -154,6 +154,7 @@ buildit ()
 }
 
 # Create unix-errno.lisp
+bin/create-errno-pkg.sh > src/code/unix-errno-pkg.lisp
 bin/create-errno.sh > src/code/unix-errno.lisp
 
 BUILDWORLD="$TOOLDIR/build-world.sh"
