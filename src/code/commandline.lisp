@@ -149,7 +149,14 @@
   the switch.  If no value was specified, then any following words are
   returned.  If there are no following words, then t is returned.  If
   the switch was not specified, then nil is returned."
-  (let* ((name (if (char= (schar sname 0) #\-) (subseq sname 1) sname))
+  (let* ((posn (position-if-not #'(lambda (ch)
+				    (char= ch #\-))
+				sname))
+	 ;; Strip up to 2 leading "-" to get the switch name.
+	 ;; Otherwise, return the entire switch name.
+	 (name (if (and posn (<= posn 2))
+		   (subseq sname posn)
+		   sname))
 	 (switch (find name *command-line-switches*
 		       :test #'string-equal
 		       :key #'cmd-switch-name)))
