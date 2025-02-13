@@ -15,10 +15,6 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/code/bsd-os.lisp
-msgid "Unix system call getrusage failed: ~A."
-msgstr ""
-
 #: src/code/signal.lisp
 msgid "Emt instruction"
 msgstr ""
