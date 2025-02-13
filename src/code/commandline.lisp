@@ -109,7 +109,13 @@
 	(return (setf *command-line-switches*
 		      (nreverse *command-line-switches*))))
       (let* ((position (position #\= (the simple-string str) :test #'char=))
-	     (switch (subseq (the simple-string str) 1 position))
+	     ;; Extract the name of the switch.  The actual arg can be
+	     ;; "-switch" or "--switch".
+	     (switch (subseq (the simple-string str)
+			     (position-if-not #'(lambda (c)
+						  (char= c #\-))
+					      str)
+			     position))
 	     (value (if position
 			(subseq (the simple-string str) (1+ position)
 				(length (the simple-string str))))))
@@ -366,7 +372,16 @@
 		     :key #'car))
       (destructuring-bind (name doc arg)
 	  s
-	(format t "    -~A ~@[~A~]~%" name (if arg (intl:gettext arg)))
+	;; Print both -switch and --switch
+	(let ((arg-value (if arg (intl:gettext arg))))
+	  ;; If there's an arg, print the two switches on separate
+	  ;; lines.  Otherwise, we can use one line.
+	  (cond (arg
+		 (format t "    -~A ~@[~A~]~%" name arg-value)
+		 (format t "    --~A ~@[~A~]~%" name arg-value))
+		(t
+		 (format t "    -~A, --~A~%" name name))))
+
 	;; Poor man's formatting of the help string
 	(let ((*print-right-margin* 80))
 	  ;; Extract all the words from the string and print them out
@@ -392,6 +407,7 @@
 (defswitch "help" #'help-switch-demon
   "Print out the command line options and exit")
 
+#+nil
 (defswitch "-help" #'help-switch-demon
   "Same as -help.")
 
@@ -405,6 +421,7 @@
 
 ;; Make --version work for the benefit of those who are accustomed to
 ;; GNU software.
+#+nil
 (defswitch "-version" #'version-switch-demon
   "Prints the cmucl version and exits; same as -version")
 
