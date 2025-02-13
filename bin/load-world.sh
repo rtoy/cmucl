@@ -2,30 +2,14 @@
 
 usage()
 {
-    echo "load-world.sh [-?p] target-directory [version-string]"
+    echo "load-world.sh [-?p] target-directory"
     echo "   -p    Skip loading of PCL (Mostly for cross-compiling)"
     echo "   -?    This help"
-    echo " If the version-string is not given, the current date and time is used"
     exit 1
 }
 
 SKIP_PCL=
 NO_PCL_FEATURE=
-# Default version is the date with the git hash.  Older versions of
-# git don't support --dirty, but the output in that case is what we
-# want (except for ending with "dirty"), so we're set.
-GIT_HASH="`(cd src; git describe --dirty 2>/dev/null || git describe 2>/dev/null)`"
-
-# If the git hash looks like a snapshot tag or release, don't add the date.
-VERSION="`date '+%Y-%m-%d %H:%M:%S'`${GIT_HASH:+ $GIT_HASH}"
-if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
-    VERSION="${GIT_HASH}"
-fi
-
-if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
-    VERSION="${GIT_HASH}"
-fi
-echo $VERSION
 
 while getopts "p" arg
 do

@@ -6209,7 +6209,7 @@ msgid "Same as -help."
 msgstr ""
 
 #: src/code/commandline.lisp
-msgid "Prints the cmucl version and exits"
+msgid "Prints the cmucl version and exits, without loading the lisp core."
 msgstr ""
 
 #: src/code/commandline.lisp

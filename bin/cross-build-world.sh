@@ -138,10 +138,11 @@ EOF
 
 if [ "$BUILD_RUNTIME" = "yes" ]; then
     echo Building runtime
+    bin/git-version.sh -f > src/lisp/cmucl-version.h
     (cd $TARGET/lisp; ${MAKE})
 fi
 
 if [ "$LOAD_KERNEL" = "yes" ]; then
     echo Load kernel.core
-    bin/load-world.sh -p $TARGET cross-compiled
+    bin/load-world.sh -p $TARGET
 fi

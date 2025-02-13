@@ -6,7 +6,8 @@
 # then just those tests are run.
 
 usage() {
-    echo "run-tests.sh [?] [-l lisp] [tests]"
+    echo "run-tests.sh [?] [-d test-dir] [-l lisp] [tests]"
+    echo "    -d test-dir  Directory containing the unit test files"
     echo "    -l lisp      Lisp to use for the tests; defaults to lisp"
     echo "    -?           This help message"
     echo ""
@@ -23,10 +24,11 @@ usage() {
 }
 
 LISP=lisp
-while getopts "h?l:" arg
+while getopts "h?l:d:" arg
 do
     case $arg in
       l) LISP=$OPTARG ;;
+      d) TESTDIR=$OPTARG ;;
       \?) usage ;;
     esac
 done
@@ -47,14 +49,21 @@ function cleanup {
 
 trap cleanup EXIT
 
+if [ -n "${TESTDIR}" ]; then
+    TESTDIRARG=" :test-directory \"$TESTDIR/\""
+else
+    TESTDIR="tests/"
+    TESTDIRARG=""
+fi
 # Compile up the C file that is used for testing alien funcalls to
 # functions that return integer types of different lengths.  We use
 # gcc since clang isn't always available.
-(cd tests; gcc -m32 -O3 -c test-return.c)
+(cd "$TESTDIR"; gcc -m32 -O3 -c test-return.c)
 
 if [ $# -eq 0 ]; then
+    # Test directory arg for run-all-tests if a non-default 
     # No args so run all the tests
-    $LISP -nositeinit -noinit -load tests/run-tests.lisp -eval '(cmucl-test-runner:run-all-tests)'
+    $LISP -nositeinit -noinit -load "$TESTDIR"/run-tests.lisp -eval "(cmucl-test-runner:run-all-tests ${TESTDIRARG})"
 else
     # Run selected files.  Convert each file name to uppercase and append "-TESTS"
     result=""
@@ -63,6 +72,6 @@ else
 	new=`echo $f | tr '[a-z]' '[A-Z]'`
         result="$result "\"$new-TESTS\"
     done
-    $LISP -nositeinit -noinit -load tests/run-tests.lisp -eval "(progn (cmucl-test-runner:load-test-files) (cmucl-test-runner:run-test $result))"
+    $LISP -nositeinit -noinit -load "$TESTDIR"/run-tests.lisp -eval "(progn (cmucl-test-runner:load-test-files) (cmucl-test-runner:run-test $result))"
 fi
 

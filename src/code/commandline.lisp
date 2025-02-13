@@ -400,11 +400,14 @@
   (format t "~A~%" (lisp-implementation-version))
   (ext:quit))
 
+;; the switches "-version" and "--version" are never actually called
+;; from lisp because main() handles it and returns before the lisp
+;; initial function is ever run.  It's here so that -help will print
+;; it out so the user knows about it.
 (defswitch "version" #'version-switch-demon
-  "Prints the cmucl version and exits")
+  "Prints the cmucl version and exits, without loading the lisp core.")
 
 ;; Make --version work for the benefit of those who are accustomed to
 ;; GNU software.
 (defswitch "-version" #'version-switch-demon
   "Prints the cmucl version and exits; same as -version")
-

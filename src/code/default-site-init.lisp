@@ -32,13 +32,22 @@
 ;;;   bin/
 ;;;   lib/
 ;;;    cmucl/
-;;;     lib/
-;;;      lisp*.coore
-;;;   man/
-;;;   src/
+;;;     <version>/
+;;;       lib/
+;;;   share/
+;;;    cmucl/
+;;;     <version>/
+;;;      src/
+;;;      tests/
+;;;    man/
+;;;     man1/
 ;;;
 ;;; If your sources are located somewhere else, change this
 ;;; accordingly.
-(setf (search-list "target:")
-      '("library:../src/"))
+(push (pathname
+       (concatenate 'string
+		    "library:../../../../share/cmucl/"
+		    lisp::*lisp-implementation-version*
+		    "/src/"))
+      (search-list "target:"))
 
