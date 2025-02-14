@@ -2092,7 +2092,9 @@ When annotations are present, invoke them at the right positions."
     (c:deftransform pprint-defun)
     (c:defoptimizer pprint-defun)
     (ext:with-float-traps-masked pprint-with-like)
-    (ext:with-float-traps-enabled pprint-with-like)))
+    (ext:with-float-traps-enabled pprint-with-like)
+    (ext::with-temporary-stream pprint-with-like)
+    (ext::with-temporary-directory pprint-with-like)))
 
 (defun pprint-init ()
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))
