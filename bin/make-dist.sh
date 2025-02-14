@@ -94,21 +94,6 @@ def_arch_os () {
 # Figure out the architecture and OS in case options aren't given
 def_arch_os
 
-# Choose a version based on the git hash as the default version.  We
-# only compute a default if the git hash looks like a snapshot
-# ("snapshot-yyyy-mm") or a release number..
-GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
-
-echo GIT_HASH = ${GIT_HASH}
-
-if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
-    DEFAULT_VERSION=`expr "${GIT_HASH}" : "snapshot-\(.*\)"`
-fi
-
-if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
-    DEFAULT_VERSION="${GIT_HASH}"
-fi
-
 # Default compression is -J (xz).  These variables are passed to the
 # other scripts via the environmen, so export them.
 COMPRESS=-J
@@ -159,17 +144,6 @@ if [ -n "$COMPRESS_ARG" ]; then
     esac
 fi
 
-if [ -z "$VERSION" ]; then
-    # If a default version exists, use it. Otherwise this is an
-    # error---at least one of these must not be empty.
-    if [ -z "${DEFAULT_VERSION}" ]; then
-	echo "Version (-V) must be specified because default version cannot be determined."
-	usage
-    else
-	VERSION=${DEFAULT_VERSION}
-    fi
-fi
-
 if [ ! -d "$1" ]
 then
 	echo "$1 isn't a directory"
@@ -190,9 +164,23 @@ fi
 
 TARGET="`echo $1 | sed 's:/*$::'`"
 
-if [ -n "$INSTALL_DIR" ]; then
-    VERSION="today"
+# Choose a version based on the git hash as the default version.  We
+# only compute a default if the git hash looks like a snapshot
+# ("snapshot-yyyy-mm") or a release number..
+DEFAULT_VERSION="`$TARGET/lisp/lisp --version`"
+
+if [ -z "$VERSION" ]; then
+    # If a default version exists, use it. Otherwise this is an
+    # error---at least one of these must not be empty.
+    if [ -z "${DEFAULT_VERSION}" ]; then
+	echo "Version (-V) must be specified because default version cannot be determined."
+	usage
+    else
+	VERSION=${DEFAULT_VERSION}
+    fi
 fi
+
+echo INSTALL_DIR = $INSTALL_DIR
 
 echo cmucl-$VERSION-$ARCH-$OS
 ROOT=`dirname $0`

@@ -42,6 +42,12 @@
 #include <time.h>
 #endif
 
+#include "cmucl-version.h"
+
+#ifndef CMUCL_VERSION
+#error CMUCL_VERSION not defined!
+#endif
+
 
 
 /* SIGINT handler that invokes the monitor. */
@@ -89,10 +95,11 @@ alloc_str_list(const char *list[])
 }
 
 /* Default paths for CMUCLLIB */
+
+static char cmucl_version[] = CMUCL_VERSION;
+
 static char *cmucllib_search_list[] = {
-    "./.",
-    "./../lib/cmucl/lib",
-    "./../lib",
+    "./../lib/cmucl/" CMUCL_VERSION "/lib",
     NULL
 };
 
@@ -335,7 +342,7 @@ search_core(const char *lib, const char *default_core)
 	    return buf;
 	} else {
 	    if (debug_lisp_search) {
-		fprintf(stderr, "Found it, but we can't read it!\n");
+		fprintf(stderr, "Does not exist, or can't read it if it does!\n");
 	    }
 	}
     } while (*lib++ == ':');
@@ -719,7 +726,15 @@ main(int argc, const char *argv[], const char *envp[])
 	    debug_lisp_search = TRUE;
         } else if (match_option(arg, "unidata")) {
           unidata = *++argptr;
-        }
+        } else if ((strcmp(arg, "-version") == 0) ||
+		   (strcmp(arg, "--version") == 0)) {
+	    /*
+	     * Print the version and exit; we don't want to do
+	     * anything else!
+	     */
+	    printf("%s\n", cmucl_version);
+	    return 0;
+	}
     }
 
     default_core = arch_init(fpu_mode);
@@ -946,6 +961,10 @@ main(int argc, const char *argv[], const char *envp[])
     }
 #endif
     
+#ifdef LISP_IMPLEMENTATION_VERSION
+    SetSymbolValue(LISP_IMPLEMENTATION_VERSION, alloc_string(cmucl_version));
+#endif
+
     /*
      * Pick off sigint until the lisp system gets far enough along to
      * install it's own.

@@ -6205,7 +6205,15 @@ msgid "Print out the command line options and exit"
 msgstr ""
 
 #: src/code/commandline.lisp
-msgid "Prints the cmucl version and exits"
+msgid "Same as -help."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "Prints the cmucl version and exits, without loading the lisp core."
+msgstr ""
+
+#: src/code/commandline.lisp
+msgid "Prints the cmucl version and exits; same as -version"
 msgstr ""
 
 #: src/code/env-access.lisp

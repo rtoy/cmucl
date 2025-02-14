@@ -1419,8 +1419,8 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid ""
-"Set all the categories of the locale from the values of the\n"
-"  environment variables using setlocale(LC_ALL, \"\").\n"
+"Set all the categories of the locale according to the values of\n"
+"  the environment variables by calling setlocale(LC_ALL, \"\").\n"
 "\n"
 "  Returns 0 on success and -1 if setlocale failed."
 msgstr ""
@@ -1434,5 +1434,22 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid "Get the codeset from the locale"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Generates a unique temporary file name from TEMPLATE, and creates\n"
+"  and opens the file.  On success, the corresponding file descriptor\n"
+"  and name of the file is returned.\n"
+"\n"
+" The last six characters of the template must be \"XXXXXX\"."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Generate a uniquely named temporary directory from Template,\n"
+"  which must have \"XXXXXX\" as the last six characters.  The\n"
+"  directory is created with permissions 0700.  The name of the\n"
+"  directory is returned."
 msgstr ""
 
