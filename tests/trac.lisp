@@ -103,6 +103,7 @@
   (assert-equal '(:absolute "TMP" "Foo"  "bar")
 		(pathname-directory "/tmp/Foo/BAR/" :case :common)))
   
+#+nil
 (define-test trac.36
   (:tag :trac)
   (let ((path "/tmp/trac.36.bom.txt"))
@@ -121,6 +122,20 @@
 		    (bug :utf16))
       (assert-equal (values #\H 8)
 		    (bug :utf32)))))
+
+(define-test trac.36
+  (:tag :trac)
+  (flet ((bug (&optional (format :utf16))
+	   (ext::with-temporary-stream (s :direction :io :external-format format)
+				       (format s "Hello~%")
+				       (format t "posn = ~A~%" (file-position s))
+				       (file-position s 0)
+				       (let ((ch (read-char s)))
+					 (values ch (file-position s))))))
+    (assert-equal (values #\H 4)
+		  (bug :utf16))
+    (assert-equal (values #\H 8)
+		  (bug :utf32))))
 
 (define-test trac.43
   (:tag :trac)
