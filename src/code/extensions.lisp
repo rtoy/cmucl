@@ -629,31 +629,34 @@
 	(okay (gensym "OKAY-"))
 	(err (gensym "ERR-")))
     `(progn
-       (unless (member ,direction '(:input :output :io))
-	 (error ":direction must be one of :input, :output, :io, not ~S"
+       (unless (member ,direction '(:output :io))
+	 (error ":direction must be one of :output or :io, not ~S"
 		,direction))
-       (unwind-protect
-	  (multiple-value-bind (,fd ,filename)
-	      (unix::unix-mkstemp "/tmp/temp-stream-XXXXXX")
-	    (let* ((,dir ,direction)
-		   (,s (make-fd-stream ,fd
-				      :input (member ,dir '(:input :io))
-				      :output (member ,dir '(:output :io))
-				      :element-type ',element-type
-				      :pathname ,filename
-				      :external-format ',external-format
-				      :decoding-error ,decoding-error
-				      :encoding-error ,encoding-error)))
-	      ;; Delete the file; we have an open fd to the file, though.
-	      (multiple-value-bind (,okay ,err)
-		  (unix::unix-unlink ,filename)
-		(unless ,okay
-		  (error "Unable to unlink temporary file ~S: ~A"
-			 ,filename (unix:get-unix-error-msg ,err))))
-	      ,@decls
-	      ,@forms))
-       ;; Close the fd now that we're done.
-       (unix:unix-close ,fd)))))
+       (let (,fd ,filename ,s)
+	 (unwind-protect
+	      (progn
+		(multiple-value-setq (,fd ,filename)
+		  (unix::unix-mkstemp "/tmp/temp-stream-XXXXXX"))
+		(let* ((,dir ,direction))
+		  (setf ,s (make-fd-stream ,fd
+					   :input (member ,dir '(:input :io))
+					   :output (member ,dir '(:output :io))
+					   :element-type ',element-type
+					   :name ,filename
+					   :external-format ,external-format
+					   :decoding-error ,decoding-error
+					   :encoding-error ,encoding-error)))
+		;; Delete the file; we have an open fd to the file, though.
+		(multiple-value-bind (,okay ,err)
+		    (unix::unix-unlink ,filename)
+		  (unless ,okay
+		    (error "Unable to unlink temporary file ~S: ~A"
+			   ,filename (unix:get-unix-error-msg ,err))))
+		(locally ,@decls
+		  ,@forms))
+	   ;; Close the stream and the fd now that we're done.
+	   (close ,s)
+	   (unix:unix-close ,fd))))))
 
 ;;; WITH-TEMPORARY-DIRECTORY  -- Public
 (defmacro with-temporary-directory ((dirname template)
@@ -670,8 +673,8 @@
 	  (unless ,dirname
 	    (error "Unable to create temp directory: ~A"
 		   (unix:get-unix-error-msg ,err)))
-	  ,@decls
-	  ,@forms)
+	  (locally ,@decls
+	    ,@forms))
      ;; Remove the temp directory and all its contents.  Is there a
      ;; better way?
      (ext:run-program "/bin/rm" (list "-rf" ,dirname)))))
