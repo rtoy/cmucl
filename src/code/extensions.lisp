@@ -612,3 +612,68 @@
   "Return an EQ hash of X.  The value of this hash for any given object can (of
   course) change at arbitary times."
   `(lisp::pointer-hash ,x))
+
+;;; WITH-TEMPORARY-STREAM  -- Public
+;;;
+(defmacro with-temporary-stream ((s &key
+				      (direction :output)
+				      (element-type 'base-char)
+				      (external-format :default)
+				      decoding-error
+				      encoding-error)
+				 &parse-body (forms decls))
+  "Return a stream to a temporary file that is automatically created."
+  (let ((fd (gensym "FD-"))
+	(filename (gensym "FILENAME-"))
+	(dir (gensym "DIRECTION-"))
+	(okay (gensym "OKAY-"))
+	(err (gensym "ERR-")))
+    `(progn
+       (unless (member ,direction '(:input :output :io))
+	 (error ":direction must be one of :input, :output, :io, not ~S"
+		,direction))
+       (unwind-protect
+	  (multiple-value-bind (,fd ,filename)
+	      (unix::unix-mkstemp "/tmp/temp-stream-XXXXXX")
+	    (let* ((,dir ,direction)
+		   (,s (make-fd-stream ,fd
+				      :input (member ,dir '(:input :io))
+				      :output (member ,dir '(:output :io))
+				      :element-type ',element-type
+				      :pathname ,filename
+				      :external-format ',external-format
+				      :decoding-error ,decoding-error
+				      :encoding-error ,encoding-error)))
+	      ;; Delete the file; we have an open fd to the file, though.
+	      (multiple-value-bind (,okay ,err)
+		  (unix::unix-unlink ,filename)
+		(unless ,okay
+		  (error "Unable to unlink temporary file ~S: ~A"
+			 ,filename (unix:get-unix-error-msg ,err))))
+	      ,@decls
+	      ,@forms))
+       ;; Close the fd now that we're done.
+       (unix:unix-close ,fd)))))
+
+;;; WITH-TEMPORARY-DIRECTORY  -- Public
+(defmacro with-temporary-directory ((dirname template)
+				    &parse-body (forms decls))
+  "Return a pathname to a temporary directory.  TEMPLATE is a string that
+  is used as a prefix for the name of the temporary directory.  The
+  directory and all its contents are automatically removed afterward."
+  (let ((err (gensym "ERR-")))
+    `(let (,err)
+       (unwind-protect
+	(multiple-value-setq (,dirname ,err)
+	    (unix::unix-mkdtemp (concatenate 'string ,template
+					     "XXXXXX")))
+	  (unless ,dirname
+	    (error "Unable to create temp directory: ~A"
+		   (unix:get-unix-error-msg ,err)))
+	  ,@decls
+	  ,@forms)
+     ;; Remove the temp directory and all its contents.  Is there a
+     ;; better way?
+     (ext:run-program "/bin/rm" (list "-rf" ,dirname)))))
+     
+	  
