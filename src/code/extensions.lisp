@@ -672,8 +672,9 @@
 		(unix::unix-mkdtemp (concatenate 'string ,template
 						 "XXXXXX")))
 	      (unless ,dirname
-		(error "Unable to create temp directory: ~A"
+		(error "Unable to create temporary directory: ~A"
 		       (unix:get-unix-error-msg ,err)))
+	      (setf ,dirname (concatenate 'string ,dirname "/"))
 	      (locally ,@decls
 		,@forms))
 	 ;; Remove the temp directory and all its contents.  Is there a
