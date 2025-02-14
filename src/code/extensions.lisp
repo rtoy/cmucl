@@ -665,18 +665,20 @@
   is used as a prefix for the name of the temporary directory.  The
   directory and all its contents are automatically removed afterward."
   (let ((err (gensym "ERR-")))
-    `(let (,err)
+    `(let (,dirname ,err)
        (unwind-protect
-	(multiple-value-setq (,dirname ,err)
-	    (unix::unix-mkdtemp (concatenate 'string ,template
-					     "XXXXXX")))
-	  (unless ,dirname
-	    (error "Unable to create temp directory: ~A"
-		   (unix:get-unix-error-msg ,err)))
-	  (locally ,@decls
-	    ,@forms))
-     ;; Remove the temp directory and all its contents.  Is there a
-     ;; better way?
-     (ext:run-program "/bin/rm" (list "-rf" ,dirname)))))
+	    (progn
+	      (multiple-value-setq (,dirname ,err)
+		(unix::unix-mkdtemp (concatenate 'string ,template
+						 "XXXXXX")))
+	      (unless ,dirname
+		(error "Unable to create temp directory: ~A"
+		       (unix:get-unix-error-msg ,err)))
+	      (locally ,@decls
+		,@forms))
+	 ;; Remove the temp directory and all its contents.  Is there a
+	 ;; better way?
+	 (when ,dirname
+	   (ext:run-program "/bin/rm" (list "-rf" ,dirname)))))))
      
 	  
