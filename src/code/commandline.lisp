@@ -351,7 +351,8 @@
 
 (defun help-switch-demon (switch)
   (declare (ignore switch))
-  (format t (intl:gettext "~&Usage: ~A <options>~2%") *command-line-utility-name*)
+  (format t (intl:gettext "~&Usage: ~A <options> [-- [app-args]*]~2%")
+	  *command-line-utility-name*)
   (flet
       ((get-words (s)
 	 (declare (string s))
@@ -379,15 +380,11 @@
 		     :key #'car))
       (destructuring-bind (name doc arg)
 	  s
-	;; Print both -switch and --switch
-	(let ((arg-value (if arg (intl:gettext arg))))
-	  ;; If there's an arg, print the two switches on separate
-	  ;; lines.  Otherwise, we can use one line.
-	  (cond (arg
-		 (format t "    -~A ~@[~A~]~%" name arg-value)
-		 (format t "    --~A ~@[~A~]~%" name arg-value))
-		(t
-		 (format t "    -~A, --~A~%" name name))))
+	;; Print both -switch and --switch, and the optional arg
+	;; value.
+	(format t "    -~A|--~A   ~@[~A~]~%"
+		name name
+		(if arg (intl:gettext arg)))
 
 	;; Poor man's formatting of the help string
 	(let ((*print-right-margin* 80))
@@ -414,10 +411,6 @@
 (defswitch "help" #'help-switch-demon
   "Print out the command line options and exit")
 
-#+nil
-(defswitch "-help" #'help-switch-demon
-  "Same as -help.")
-
 (defun version-switch-demon (switch)
   (declare (ignore switch))
   (format t "~A~%" (lisp-implementation-version))
@@ -425,10 +418,3 @@
 
 (defswitch "version" #'version-switch-demon
   "Prints the cmucl version and exits")
-
-;; Make --version work for the benefit of those who are accustomed to
-;; GNU software.
-#+nil
-(defswitch "-version" #'version-switch-demon
-  "Prints the cmucl version and exits; same as -version")
-
