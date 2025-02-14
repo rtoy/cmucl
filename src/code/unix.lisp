@@ -2914,27 +2914,30 @@
 		     *filename-encoding*))
 	 ;; Convert the string to octets using the
 	 ;; *FILENAME-ENCODING*.  Should we signal an error if the
-	 ;; string can be encoded?
+	 ;; string can't be encoded?
 	 (octets (stream:string-to-octets template
 					  :external-format format))
-	 (length (length octets))
-	 (buffer (make-array (1+ length)
-			     :element-type '(unsigned-byte 8)
-			     :initial-element 0)))
-    ;; Copy the octets from OCTETS to the null-terminated array BUFFER.
-    (replace buffer octets)
-    (syscall ("mkstemp" (* c-call:char))
-	     (values result
-		     ;; Convert the array of octets in BUFFER back to
-		     ;; a Lisp string.
-		     (stream:octets-to-string buffer
-					      :end length
-					      :external-format format))
-	     (sys:vector-sap buffer))))
+	 (length (length octets)))
+    (with-alien ((buffer (* c-call:unsigned-char)))
+      (setf buffer (make-alien c-call:unsigned-char (1+ length)))
+      ;; Copy the octets from OCTETS to the null-terminated array BUFFER.
+      (dotimes (k length)
+	(setf (deref buffer k) (aref octets k)))
+      (setf (deref buffer length) 0)
+
+      (syscall ("mkstemp" (* c-call:char))
+	       (values result
+		       (progn
+			 ;; Copy out the alien bytes and convert back
+			 ;; to a lisp string.
+			 (dotimes (k length)
+			   (setf (aref octets k) (deref buffer k)))
+			 (stream:octets-to-string octets
+						  :external-format format)))
+	       (cast buffer (* c-call:char))))))
 
 (defun unix-mkdtemp (template)
-  _N"Generate a uniquely named temporary directory from Template,
-  which must have \"XXXXXX\" as the last six characters.  The
+  _N"Generate a uniquely named temporary directory from Template.  The
   directory is created with permissions 0700.  The name of the
   directory is returned.
 
@@ -2948,19 +2951,19 @@
 	 ;; string can't be encoded in that format?
 	 (octets (stream:string-to-octets template
 					  :external-format format))
-	 (length (length octets))
-	 (buffer (make-array (1+ length)
-			     :element-type '(unsigned-byte 8)
-			     :initial-element 0)))
-    ;; Copy the octets from OCTETS to the null-terminated array BUFFER.
-    (replace buffer octets)
-    (let ((result (alien-funcall
-		   (extern-alien "mkdtemp"
-				 (function (* char)
-					   (* char)))
-		   (sys:vector-sap buffer))))
-      ;; If mkdtemp worked, a non-NIL value is returned, return the
-      ;; resulting name.  Otherwise, return NIL and the errno.
-      (if (null-alien result)
-	  (values nil (unix-errno))
-	  (%file->name (cast result c-call:c-string))))))
+	 (length (length octets)))
+    (with-alien ((buffer (* c-call:unsigned-char)))
+      (setf buffer (make-alien c-call:unsigned-char (1+ length)))
+      ;; Copy the octets from OCTETS to the null-terminated array BUFFER.
+      (dotimes (k length)
+	(setf (deref buffer k) (aref octets k)))
+      (let ((result (alien-funcall
+		     (extern-alien "mkdtemp"
+				   (function (* char)
+					     (* char)))
+		     (cast buffer (* char)))))
+	;; If mkdtemp worked, a non-NIL value is returned, return the
+	;; resulting name.  Otherwise, return NIL and the errno.
+	(if (null-alien result)
+	    (values nil (unix-errno))
+	    (%file->name (cast result c-call:c-string)))))))
