@@ -243,12 +243,12 @@
 	(lisp::finish-standard-output-streams)
 	(setf start next)))))
 
-;; Docstrings should have lines longer than 72 characters so that we
-;; can print out the docstrings nicely on one line for help.
-;;                                                                     | <-- char 72
+;; Docstrings MUST consist of simple text and punctuation and
+;; newlines; no special markup is allowed.  When help is printed, the
+;; help string is automatically filled and wrapped to 80 columns.
 (defswitch "eval" #'eval-switch-demon
   "Evaluate the specified Lisp expression during the start up
-  sequence.  the value of the form will not be printed unless it is
+  sequence.  The value of the form will not be printed unless it is
   wrapped in a form that does output."
   "expression")
 
@@ -338,7 +338,7 @@
 
 (defswitch "quiet" nil
   "Causes Lisp to start up silently, disabling printing of the herald
-  and causing most unnecessary noise, like GC messages,load messages,
+  and causing most unnecessary noise, like GC messages, load messages,
   etc. to be suppressed.")
 
 (defswitch "debug-lisp-search" nil
