@@ -2631,17 +2631,6 @@
   (let ((result
 	  (alien-funcall
 	   (extern-alien "strerror"
-			 (function (* unsigned-char) int))
+			 (function (* char) int))
 	   errno)))
-    ;; We need to convert the set of octets to a Lisp string according
-    ;; to the appropriate external format.  Copy the C string out to
-    ;; an array which we can then convert to a string.
-    (let* ((octets (make-array 100 :element-type '(unsigned-byte 8) :fill-pointer 0)))
-      (loop for k from 0
-	    for byte = (deref result k)
-	    until (zerop byte)
-	    do
-	       (vector-push-extend byte octets))
-      (lisp::with-array-data ((data octets) (start) (end))
-	(declare (ignore start end))
-	(values (stream:octets-to-string data :end (length octets)))))))
+    (string-decode (cast result c-string) :default)))
