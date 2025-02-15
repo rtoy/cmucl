@@ -109,7 +109,13 @@
 	(return (setf *command-line-switches*
 		      (nreverse *command-line-switches*))))
       (let* ((position (position #\= (the simple-string str) :test #'char=))
-	     (switch (subseq (the simple-string str) 1 position))
+	     ;; Extract the name of the switch.  The actual arg can be
+	     ;; "-switch" or "--switch".
+	     (switch (subseq (the simple-string str)
+			     (position-if-not #'(lambda (c)
+						  (char= c #\-))
+					      str)
+			     position))
 	     (value (if position
 			(subseq (the simple-string str) (1+ position)
 				(length (the simple-string str))))))
@@ -143,7 +149,14 @@
   the switch.  If no value was specified, then any following words are
   returned.  If there are no following words, then t is returned.  If
   the switch was not specified, then nil is returned."
-  (let* ((name (if (char= (schar sname 0) #\-) (subseq sname 1) sname))
+  (let* ((posn (position-if-not #'(lambda (ch)
+				    (char= ch #\-))
+				sname))
+	 ;; Strip up to 2 leading "-" to get the switch name.
+	 ;; Otherwise, return the entire switch name.
+	 (name (if (and posn (<= posn 2))
+		   (subseq sname posn)
+		   sname))
 	 (switch (find name *command-line-switches*
 		       :test #'string-equal
 		       :key #'cmd-switch-name)))
@@ -230,12 +243,12 @@
 	(lisp::finish-standard-output-streams)
 	(setf start next)))))
 
-;; Docstrings should have lines longer than 72 characters so that we
-;; can print out the docstrings nicely on one line for help.
-;;                                                                     | <-- char 72
+;; Docstrings MUST consist of simple text and punctuation and
+;; newlines; no special markup is allowed.  When help is printed, the
+;; help string is automatically filled and wrapped to 80 columns.
 (defswitch "eval" #'eval-switch-demon
   "Evaluate the specified Lisp expression during the start up
-  sequence.  the value of the form will not be printed unless it is
+  sequence.  The value of the form will not be printed unless it is
   wrapped in a form that does output."
   "expression")
 
@@ -325,7 +338,7 @@
 
 (defswitch "quiet" nil
   "Causes Lisp to start up silently, disabling printing of the herald
-  and causing most unnecessary noise, like GC messages,load messages,
+  and causing most unnecessary noise, like GC messages, load messages,
   etc. to be suppressed.")
 
 (defswitch "debug-lisp-search" nil
@@ -338,7 +351,8 @@
 
 (defun help-switch-demon (switch)
   (declare (ignore switch))
-  (format t (intl:gettext "~&Usage: ~A <options>~2%") *command-line-utility-name*)
+  (format t (intl:gettext "~&Usage: ~A <options> [-- [app-args]*]~2%")
+	  *command-line-utility-name*)
   (flet
       ((get-words (s)
 	 (declare (string s))
@@ -366,7 +380,12 @@
 		     :key #'car))
       (destructuring-bind (name doc arg)
 	  s
-	(format t "    -~A ~@[~A~]~%" name (if arg (intl:gettext arg)))
+	;; Print both -switch and --switch, and the optional arg
+	;; value.
+	(format t "    -~A|--~A   ~@[~A~]~%"
+		name name
+		(if arg (intl:gettext arg)))
+
 	;; Poor man's formatting of the help string
 	(let ((*print-right-margin* 80))
 	  ;; Extract all the words from the string and print them out
@@ -392,9 +411,6 @@
 (defswitch "help" #'help-switch-demon
   "Print out the command line options and exit")
 
-(defswitch "-help" #'help-switch-demon
-  "Same as -help.")
-
 (defun version-switch-demon (switch)
   (declare (ignore switch))
   (format t "~A~%" (lisp-implementation-version))
@@ -406,8 +422,3 @@
 ;; it out so the user knows about it.
 (defswitch "version" #'version-switch-demon
   "Prints the cmucl version and exits, without loading the lisp core.")
-
-;; Make --version work for the benefit of those who are accustomed to
-;; GNU software.
-(defswitch "-version" #'version-switch-demon
-  "Prints the cmucl version and exits; same as -version")
