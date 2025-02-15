@@ -110,6 +110,13 @@ case `uname -s` in
       esac ;;
 esac
 
+# Set default version and generate lisp/cmucl-version.h
+DEFAULT_VERSION="`bin/git-version.sh`"
+export DEFAULT_VERISON
+echo DEFAULT_VERSION = $DEFAULT_VERSION
+
+bin/git-version.sh -f > src/lisp/cmucl-version.h
+
 export LANG=en_US.UTF-8
 
 buildit ()
@@ -146,9 +153,10 @@ buildit ()
 	then
 	    $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
 	fi
-	$TOOLDIR/load-world.sh $TARGET "$VERSION" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
+	$TOOLDIR/load-world.sh $TARGET || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
 
-	$TARGET/lisp/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
+	$TARGET/lisp/lisp -lib $TARGET/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
+
 	return 0;
     fi
 }
@@ -229,7 +237,7 @@ buildit
 bootfiles=
 
 TARGET=$BASE-3
-OLDLISP="${BASE}-2/lisp/lisp $OLDLISPFLAGS"
+OLDLISP="${BASE}-2/lisp/lisp -lib ${BASE}-2/lisp $OLDLISPFLAGS"
 ENABLE=$ENABLE3
 
 BUILD=2
@@ -240,7 +248,7 @@ buildit
 
 TARGET=$BASE-4
 CLEAN_FLAGS="-K all"
-OLDLISP="${BASE}-3/lisp/lisp $OLDLISPFLAGS"
+OLDLISP="${BASE}-3/lisp/lisp -lib ${BASE}-3/lisp $OLDLISPFLAGS"
 ENABLE=$ENABLE4
 
 if [ "${BUILD_POT}" = "yes" ]; then
@@ -258,7 +266,7 @@ buildit
 
 # Asdf and friends are part of the base install, so we need to build
 # them now.
-$TARGET/lisp/lisp -noinit -nositeinit -batch << EOF || exit 3
+$TARGET/lisp/lisp -lib $TARGET/lisp -noinit -nositeinit -batch << EOF || exit 3
 (in-package :cl-user)
 (setf (ext:search-list "target:")
       '("$TARGET/" "src/"))
@@ -278,7 +286,7 @@ EOF
 
 if [ "$SKIPUTILS" = "no" ];
 then
-    OLDLISP="${BASE}-4/lisp/lisp $OLDLISPFLAGS"
+    OLDLISP="${BASE}-4/lisp/lisp -lib ${BASE}-4/lisp $OLDLISPFLAGS"
     time $TOOLDIR/build-utils.sh $TARGET
 fi
 
