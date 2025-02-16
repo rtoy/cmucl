@@ -2561,7 +2561,10 @@
 
 #+solaris
 (defun unix-getpwuid (uid)
-  _N"Return a USER-INFO structure for the user identified by UID, or NIL if not found."
+  _N"Return a USER-INFO structure for the user identified by UID.  If
+  not found, NIL is returned with a second value indicating the cause
+  of the failure.  In particular, if the second value is 0 (or
+  ENONENT, ESRCH, EBADF, etc.), then the uid was not found."
   (declare (type unix-uid uid))
   (with-alien ((buf (array c-call:char 1024))
 	       (user-info (struct passwd)))
@@ -2591,7 +2594,10 @@
 
 #+bsd
 (defun unix-getpwuid (uid)
-  _N"Return a USER-INFO structure for the user identified by UID, or NIL if not found."
+  _N"Return a USER-INFO structure for the user identified by UID.  If
+  not found, NIL is returned with a second value indicating the cause
+  of the failure.  In particular, if the second value is 0 (or
+  ENONENT, ESRCH, EBADF, etc.), then the uid was not found."
   (declare (type unix-uid uid))
   (let ((result
          (alien-funcall
@@ -2611,7 +2617,7 @@
 
 #+linux
 (defun unix-getpwuid (uid)
-  "Return a USER-INFO structure for the user identified by UID.  If
+  _N"Return a USER-INFO structure for the user identified by UID.  If
   not found, NIL is returned with a second value indicating the cause
   of the failure.  In particular, if the second value is 0 (or
   ENONENT, ESRCH, EBADF, etc.), then the uid was not found."

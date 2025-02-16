@@ -268,12 +268,13 @@
 ;;; from parsed arguments.
 
 #+darwin
+(intl:with-textdomain ("cmucl-darwin-os")
 (defvar *enable-darwin-path-normalization* nil
   "When non-NIL, pathnames are on Darwin are normalized when created.
   Otherwise, the pathnames are unchanged.
 
   This must be NIL during bootstrapping because Unicode is not yet
-  available.")
+  available."))
 
 (defun %make-pathname-object (host device directory name type version)
   (if (typep host 'logical-host)
