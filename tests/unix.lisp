@@ -20,7 +20,7 @@
       (when fd
 	(unix:unix-unlink name)))))
 
-(define-test mkstemp.name-returned.2
+(define-test mkstemp.non-ascii-name-returned
   (:tag :issues)
   (let ((unix::*filename-encoding* :utf-8)
 	fd name)
