@@ -2932,8 +2932,10 @@
 		       (progn
 			 ;; Copy out the alien bytes and convert back
 			 ;; to a lisp string.
-			 (dotimes (k length)
-			   (setf (aref octets k) (deref buffer k)))
+			 (system:without-gcing
+			     (kernel:system-area-copy (alien-sap buffer) 0
+						      (vector-sap octets) 0
+						      (* length vm:byte-bits)))
 			 (stream:octets-to-string octets
 						  :external-format format)))
 	       (cast buffer (* c-call:char))))))
@@ -2959,7 +2961,7 @@
       ;; Copy the octets from OCTETS to the null-terminated array BUFFER.
       (system:without-gcing
 	  (kernel:system-area-copy (vector-sap octets) 0
-				   (alien-sap buffer)
+				   (alien-sap buffer) 0
 				   (* length vm:byte-bits)))
       (setf (deref buffer length) 0)
 
