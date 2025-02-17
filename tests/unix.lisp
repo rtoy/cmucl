@@ -18,7 +18,7 @@
 	     (assert-false (equalp filename template))
 	     (assert-true (>= 5 (mismatch filename template))))))
       (when fd
-	(unix:unix-unlink name)))))
+	(unix:unix-unlink filename)))))
 
 (define-test mkstemp.non-ascii-name-returned
   (:tag :issues)
