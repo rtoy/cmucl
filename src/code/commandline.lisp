@@ -190,17 +190,17 @@
 					 (demons *command-switch-demons*))
   (flet ((invoke-demon (switch)
 	   (let* ((name (cmd-switch-name switch))
-		  (demon (cdr (assoc name demons :test #'string-equal))))
+		  (demon (cdr (assoc name demons :test #'string=))))
 	     (cond (demon (funcall demon switch))
-		   ((or (member name *legal-cmd-line-switches* :test #'string-equal :key #'car)
+		   ((or (member name *legal-cmd-line-switches* :test #'string= :key #'car)
 			(not *complain-about-illegal-switches*)))
 		   (t (warn (intl:gettext "~S is an illegal switch") switch)))
 	     (lisp::finish-standard-output-streams))))
     ;; We want to process -help (or --help) first, if it's given.
     ;; Since we're asking for help, we don't want to process any of
     ;; the other switches.
-    (let ((maybe-help (or (find "help" switches :key #'cmd-switch-name :test #'string-equal)
-			  (find "-help" switches :key #'cmd-switch-name :test #'string-equal))))
+    (let ((maybe-help (or (find "help" switches :key #'cmd-switch-name :test #'string=)
+			  (find "-help" switches :key #'cmd-switch-name :test #'string=))))
       (if maybe-help
 	(invoke-demon maybe-help)
 	(dolist (switch switches t)
