@@ -7,13 +7,16 @@
 
 (define-test mkstemp.name-returned
   (:tag :issues)
-  (let (fd name)
+  (let (fd filename)
     (unwind-protect
 	 (progn
-	   (multiple-value-setq (fd name)
-	     (unix::unix-mkstemp "test-XXXXXX"))
-	   (assert-true fd)
-	   (assert-false (search "XXXXXX" name)))
+	   (let ((template "test-XXXXXX"))
+	     (multiple-value-setq (fd filename)
+	       (unix::unix-mkstemp (copy-seq template)))
+	     (assert-true fd)
+	     (assert-true (equalp (length filename) (length template)))
+	     (assert-false (equalp filename template))
+	     (assert-true (>= 5 (mismatch filename template))))))
       (when fd
 	(unix:unix-unlink name)))))
 
