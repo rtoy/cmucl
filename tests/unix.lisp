@@ -84,7 +84,7 @@
       (when name
 	(unix:unix-rmdir name)))))
 
-(define-test mkdtemp.name-returned.2
+(define-test mkdtemp.non-ascii-name-returned
   (:tag :issues)
   (let ((unix::*filename-encoding* :utf-8)
 	name)
