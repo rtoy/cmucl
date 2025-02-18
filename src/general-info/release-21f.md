@@ -119,6 +119,7 @@ public domain.
     * ~~#364~~ Add interface to `mkdtemp` and `mkstemp`
     * ~~#367~~ Add stream:string-count-octets to count octets in a string
     * ~~#369~~ Improve docstring for `unix::unix-setlocale`
+    * ~~#379~~ Support GNU-style command-line option names
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

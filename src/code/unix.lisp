@@ -2921,8 +2921,10 @@
     (with-alien ((buffer (* c-call:unsigned-char)))
       (setf buffer (make-alien c-call:unsigned-char (1+ length)))
       ;; Copy the octets from OCTETS to the null-terminated array BUFFER.
-      (dotimes (k length)
-	(setf (deref buffer k) (aref octets k)))
+      (system:without-gcing
+	  (kernel:system-area-copy (vector-sap octets) 0
+				   (alien-sap buffer) 0
+				   (* length vm:byte-bits)))
       (setf (deref buffer length) 0)
 
       (syscall ("mkstemp" (* c-call:char))
@@ -2930,8 +2932,10 @@
 		       (progn
 			 ;; Copy out the alien bytes and convert back
 			 ;; to a lisp string.
-			 (dotimes (k length)
-			   (setf (aref octets k) (deref buffer k)))
+			 (system:without-gcing
+			     (kernel:system-area-copy (alien-sap buffer) 0
+						      (vector-sap octets) 0
+						      (* length vm:byte-bits)))
 			 (stream:octets-to-string octets
 						  :external-format format)))
 	       (cast buffer (* c-call:char))))))
@@ -2955,8 +2959,12 @@
     (with-alien ((buffer (* c-call:unsigned-char)))
       (setf buffer (make-alien c-call:unsigned-char (1+ length)))
       ;; Copy the octets from OCTETS to the null-terminated array BUFFER.
-      (dotimes (k length)
-	(setf (deref buffer k) (aref octets k)))
+      (system:without-gcing
+	  (kernel:system-area-copy (vector-sap octets) 0
+				   (alien-sap buffer) 0
+				   (* length vm:byte-bits)))
+      (setf (deref buffer length) 0)
+
       (let ((result (alien-funcall
 		     (extern-alien "mkdtemp"
 				   (function (* char)
