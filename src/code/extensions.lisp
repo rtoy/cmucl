@@ -658,6 +658,21 @@
 	   (close ,s)
 	   (unix:unix-close ,fd))))))
 
+;;; WITH-TEMPORARY-FILE  -- Public
+(defmacro with-temporary-file ((filename)
+			       &parse-body (forms decls))
+  (let ((fd (gensym "FD-")))
+    `(let (,filename)
+       (unwind-protect
+	    (let (,fd)
+	      (multiple-value-setq (,fd ,filename)
+		(unix::unix-mkstemp "/tmp/cmucl-temp-file-XXXXXX"))
+	      (unix:unix-close ,fd)
+	      (locally ,@decls
+		,@forms))
+	 (delete-file ,filename)))))
+	
+
 ;;; WITH-TEMPORARY-DIRECTORY  -- Public
 (defmacro with-temporary-directory ((dirname template)
 				    &parse-body (forms decls))
