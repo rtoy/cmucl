@@ -7,19 +7,6 @@
 
 (define-test mkstemp.name-returned
   (:tag :issues)
-<<<<<<< HEAD
-  (let (fd name)
-    (unwind-protect
-	 (progn
-	   (multiple-value-setq (fd name)
-	     (unix::unix-mkstemp "test-XXXXXX"))
-	   (assert-true fd)
-	   (assert-false (search "XXXXXX" name)))
-      (when fd
-	(unix:unix-unlink name)))))
-
-(define-test mkstemp.name-returned.2
-=======
   (let (fd filename)
     (unwind-protect
 	 (progn
@@ -34,7 +21,6 @@
 	(unix:unix-unlink filename)))))
 
 (define-test mkstemp.non-ascii-name-returned
->>>>>>> master
   (:tag :issues)
   (let ((unix::*filename-encoding* :utf-8)
 	fd name)
@@ -76,7 +62,7 @@
       (when name
 	(unix:unix-rmdir name)))))
 
-(define-test mkdtemp.name-returned.2
+(define-test mkdtemp.non-ascii-name-returned
   (:tag :issues)
   (let ((unix::*filename-encoding* :utf-8)
 	name)
@@ -101,3 +87,5 @@
       (unix::unix-mkdtemp "random-dir/dir-XXXXXX")
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
+
+
