@@ -627,22 +627,29 @@
 	(filename (gensym "FILENAME-"))
 	(dir (gensym "DIRECTION-"))
 	(okay (gensym "OKAY-"))
-	(err (gensym "ERR-")))
+	(err (gensym "ERR-"))
+	(file-template (gensym "FILE-TEMPLATE-")))
     `(progn
        (unless (member ,direction '(:output :io))
 	 (error ":direction must be one of :output or :io, not ~S"
 		,direction))
-       (let (,fd ,filename ,s)
+       (let ((,file-template (concatenate 'string
+					  "/tmp/cmucl-temp-stream-"
+					  "XXXXXX"))
+	     ,fd ,filename ,s)
 	 (unwind-protect
 	      (progn
 		(multiple-value-setq (,fd ,filename)
-		  (unix::unix-mkstemp "/tmp/temp-stream-XXXXXX"))
+		  (unix::unix-mkstemp ,file-template))
+		(unless ,fd
+		  (error "Unable to create temporary stream at ~S: ~A~%"
+			 ,file-template
+			 (unix:get-unix-error-msg ,filename)))
 		(let* ((,dir ,direction))
 		  (setf ,s (make-fd-stream ,fd
 					   :input (member ,dir '(:input :io))
 					   :output (member ,dir '(:output :io))
 					   :element-type ',element-type
-					   :name ,filename
 					   :external-format ,external-format
 					   :decoding-error ,decoding-error
 					   :encoding-error ,encoding-error)))
@@ -654,47 +661,62 @@
 			   ,filename (unix:get-unix-error-msg ,err))))
 		(locally ,@decls
 		  ,@forms))
-	   ;; Close the stream and the fd now that we're done.
-	   (close ,s)
-	   (unix:unix-close ,fd))))))
+	   ;; Close the stream which will close the fd now that we're
+	   ;; done.
+	   (when ,s
+	     (close ,s)))))))
 
 ;;; WITH-TEMPORARY-FILE  -- Public
-(defmacro with-temporary-file ((filename)
+(defmacro with-temporary-file ((filename &key prefix)
 			       &parse-body (forms decls))
-  (let ((fd (gensym "FD-")))
-    `(let (,filename)
+  (let ((fd (gensym "FD-"))
+	(file-template (gensym "TEMP-PATH-")))
+    `(let ((,file-template (concatenate 'string
+					(or ,prefix
+					    "/tmp/cmucl-temp-file-")
+					"XXXXXX"))
+	   ,filename)
        (unwind-protect
 	    (let (,fd)
 	      (multiple-value-setq (,fd ,filename)
-		(unix::unix-mkstemp "/tmp/cmucl-temp-file-XXXXXX"))
+		(unix::unix-mkstemp ,file-template))
+	      (unless ,fd
+		(error "Unable to create temporary file with template ~S: ~A~%"
+		       ,file-template
+		       (unix:get-unix-error-msg ,filename)))
 	      (unix:unix-close ,fd)
 	      (locally ,@decls
 		,@forms))
-	 (delete-file ,filename)))))
-	
+	 ;; We're done so delete the temp file, if one was created.
+	 (when (stringp ,filename)
+	   (delete-file ,filename))))))
 
 ;;; WITH-TEMPORARY-DIRECTORY  -- Public
-(defmacro with-temporary-directory ((dirname template)
+(defmacro with-temporary-directory ((dirname &key prefix)
 				    &parse-body (forms decls))
   "Return a pathname to a temporary directory.  TEMPLATE is a string that
   is used as a prefix for the name of the temporary directory.  The
   directory and all its contents are automatically removed afterward."
-  (let ((err (gensym "ERR-")))
-    `(let (,dirname ,err)
+  (let ((err (gensym "ERR-"))
+	(dir-path (gensym "DIR-PATH"))
+	(dir-template (gensym "DIR-TEMPLATE-")))
+    `(let ((,dir-template (concatenate 'string
+				       (or ,prefix
+					   "/tmp/cmucl-temp-dir")
+				       "XXXXXX"))
+	   ,dirname ,err)
        (unwind-protect
 	    (progn
 	      (multiple-value-setq (,dirname ,err)
-		(unix::unix-mkdtemp (concatenate 'string ,template
-						 "XXXXXX")))
+		(unix::unix-mkdtemp ,dir-template))
 	      (unless ,dirname
-		(error "Unable to create temporary directory: ~A"
+		(error "Unable to create temporary directory at ~S: ~A"
+		       ,dir-template
 		       (unix:get-unix-error-msg ,err)))
 	      (setf ,dirname (concatenate 'string ,dirname "/"))
 	      (locally ,@decls
 		,@forms))
-	 ;; Remove the temp directory and all its contents.  Is there a
-	 ;; better way?
+	 ;; If a temp directory was created, remove it and all its
+	 ;; contents.  Is there a better way?
 	 (when ,dirname
 	   (ext:run-program "/bin/rm" (list "-rf" ,dirname)))))))
-     
-	  
