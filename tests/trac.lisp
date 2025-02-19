@@ -127,16 +127,17 @@
   (:tag :trac)
   (flet ((bug (&optional (format :utf16))
 	   (ext::with-temporary-stream (s :direction :io :external-format format)
-				       (format s "Hello~%")
-				       (format t "posn = ~A~%" (file-position s))
-				       (file-position s 0)
-				       (let ((ch (read-char s)))
-					 (values ch (file-position s))))))
+	     (format s "Hello~%")
+	     (format t "posn = ~A~%" (file-position s))
+	     (file-position s 0)
+	     (let ((ch (read-char s)))
+	       (values ch (file-position s))))))
     (assert-equal (values #\H 4)
 		  (bug :utf16))
     (assert-equal (values #\H 8)
 		  (bug :utf32))))
 
+#+nil
 (define-test trac.43
   (:tag :trac)
   (assert-true
@@ -155,6 +156,23 @@
 		(unread-char ch stream)
 		(let ((p0* (file-position stream)))
 		  (eql p0* p0)))))))))
+
+(define-test trac.43
+    (:tag :trac)
+  (assert-true
+   (ext:with-temporary-file (path)
+     (with-open-file (ostream path :direction :output
+				   :external-format :utf-8)
+       (dotimes (i 1000)
+	 (write-char (code-char #x1234) ostream)))
+
+     (with-open-file (stream path :direction :input
+				  :external-format :utf-8)
+       (let ((p0 (file-position stream))
+	     (ch (read-char stream)))
+	 (unread-char ch stream)
+	 (let ((p0* (file-position stream)))
+	   (eql p0* p0)))))))
 
 (define-test trac.50
   (:tag :trac)
