@@ -936,3 +936,29 @@ os_get_user_homedir(const char* name, int *status)
     return NULL;
 }
     
+char *
+os_temp_path()
+{
+#if defined(DARWIN)
+    // macosx has a secure per-user temporary directory.
+    // Don't cache the result as this is only called once.
+    char path[PATH_MAX];
+    char *result;
+
+    int pathSize = confstr(_CS_DARWIN_USER_TEMP_DIR, path, PATH_MAX);
+    if (pathSize == 0 || pathSize > PATH_MAX) {
+	strlcpy(path, "/tmp", sizeof(path));
+    }
+    
+    return strdup(path);
+#else
+    char *result;
+    char *tmp_path = getenv("TMP");
+
+    if (tmp_path == NULL) {
+	tmp_path = "/tmp";
+    }
+    
+    return strdup(tmp_path);
+#endif    
+}

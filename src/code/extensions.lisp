@@ -613,6 +613,12 @@
   course) change at arbitary times."
   `(lisp::pointer-hash ,x))
 
+(alien:def-alien-routine os-temp-path c-call:c-string)
+
+(defun get-os-temp-path ()
+  "Get a path to an appropriate temporary location from the OS"
+  "/tmp/")
+
 ;;; WITH-TEMPORARY-STREAM  -- Public
 ;;;
 (defmacro with-temporary-stream ((s &key
@@ -634,7 +640,8 @@
 	 (error ":direction must be one of :output or :io, not ~S"
 		,direction))
        (let ((,file-template (concatenate 'string
-					  "/tmp/cmucl-temp-stream-"
+					  (get-os-temp-path)
+					  "cmucl-temp-stream-"
 					  "XXXXXX"))
 	     ,fd ,filename ,s)
 	 (unwind-protect
@@ -673,7 +680,8 @@
 	(file-template (gensym "TEMP-PATH-")))
     `(let ((,file-template (concatenate 'string
 					(or ,prefix
-					    "/tmp/cmucl-temp-file-")
+					    (get-os-temp-path)
+					    "cmucl-temp-file-")
 					"XXXXXX"))
 	   ,filename)
        (unwind-protect
@@ -702,7 +710,8 @@
 	(dir-template (gensym "DIR-TEMPLATE-")))
     `(let ((,dir-template (concatenate 'string
 				       (or ,prefix
-					   "/tmp/cmucl-temp-dir")
+					   (get-os-temp-path)
+					   "cmucl-temp-dir-")
 				       "XXXXXX"))
 	   ,dirname ,err)
        (unwind-protect
