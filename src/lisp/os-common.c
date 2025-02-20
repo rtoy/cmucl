@@ -22,7 +22,7 @@
 #include <unistd.h>
 #include <time.h>
 #if defined(DARWIN)
-#include <sys/syslimits.h>
+#include <limits.h>
 #endif
 
 #include "os.h"
