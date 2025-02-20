@@ -21,6 +21,9 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <time.h>
+#if defined(DARWIN)
+#include <sys/syslimits.h>
+#endif
 
 #include "os.h"
 #include "internals.h"
