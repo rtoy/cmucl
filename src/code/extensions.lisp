@@ -613,11 +613,24 @@
   course) change at arbitary times."
   `(lisp::pointer-hash ,x))
 
-(alien:def-alien-routine os-temp-path c-call:c-string)
 
 (defun get-os-temp-path ()
-  "Get a path to an appropriate temporary location from the OS"
-  "/tmp/")
+  "Get a path to an appropriate temporary location from the OS.  A string
+  is returned to that path.  The path ends with a \"/\" character."
+  (let ((path (alien:alien-funcall
+	       (alien:extern-alien "os_temp_path"
+				   (function (alien:* c-call:char))))))
+    (when (alien:null-alien path)
+      (error "Unable to find path to temporary directory"))
+
+    (unwind-protect
+	 (let* ((string (unix::%file->name (cast path c-call:c-string)))
+		(len (length string)))
+	   (if (char= #\/ (aref string (1- len)))
+	       string
+	       (concatenate 'string string "/")))
+      (unless (alien:null-alien path)
+	(alien:free-alien path)))))
 
 ;;; WITH-TEMPORARY-STREAM  -- Public
 ;;;
