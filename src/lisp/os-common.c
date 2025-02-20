@@ -946,7 +946,6 @@ os_temp_path()
     // macosx has a secure per-user temporary directory.
     // Don't cache the result as this is only called once.
     char path[PATH_MAX];
-    char *result;
 
     int pathSize = confstr(_CS_DARWIN_USER_TEMP_DIR, path, PATH_MAX);
     if (pathSize == 0 || pathSize > PATH_MAX) {
