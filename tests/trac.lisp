@@ -123,6 +123,7 @@
       (assert-equal (values #\H 8)
 		    (bug :utf32)))))
 
+#+nil
 (define-test trac.36
   (:tag :trac)
   (flet ((bug (&optional (format :utf16))
@@ -136,6 +137,24 @@
 		  (bug :utf16))
     (assert-equal (values #\H 8)
 		  (bug :utf32))))
+
+(define-test trac.36
+    (:tag :trac)
+    (flet ((bug (&optional (format :utf16))
+	     (ext:with-temporary-file (path)
+	       (with-open-file (s path
+				  :direction :output
+				  :external-format format)
+		 (format s "Hello~%"))
+	       (with-open-file (s path 
+				  :direction :input
+				  :external-format format)
+		 (let ((ch (read-char s)))
+		   (values ch (file-position s)))))))
+      (assert-equal (values #\H 4)
+		    (bug :utf16))
+      (assert-equal (values #\H 8)
+		    (bug :utf32)))))
 
 #+nil
 (define-test trac.43
@@ -157,6 +176,7 @@
 		(let ((p0* (file-position stream)))
 		  (eql p0* p0)))))))))
 
+#+nil
 (define-test trac.43
     (:tag :trac)
   (assert-true
@@ -174,11 +194,25 @@
 	 (let ((p0* (file-position stream)))
 	   (eql p0* p0)))))))
 
+(define-test trac.43
+    (:tag :trac)
+  (assert-true
+   (ext:with-temporary-stream (stream :direction :io :external-format :utf-8)
+     (dotimes (i 1000)
+       (write-char (code-char #x1234) stream))
+     (file-position stream 0)
+     (let ((p0 (file-position stream))
+	   (ch (read-char stream)))
+       (unread-char ch stream)
+       (let ((p0* (file-position stream)))
+	 (eql p0* p0))))))
+
 (define-test trac.50
   (:tag :trac)
   (assert-equal "#P(:DIRECTORY (:ABSOLUTE \"tmp\" \"\" \"a\" \"\" \"b\"))"
 		(princ-to-string (make-pathname :directory '(:absolute "tmp" "" "a" "" "b")))))
 
+#+nil
 (define-test trac.58
   (:tag :trac)
   (assert-false
@@ -197,6 +231,23 @@
 		    (push (list i ch (char-code ch)) failures)))))
 	    failures)
        (delete-file path)))))
+
+(define-test trac.58
+    (:tag :trac)
+  (assert-false
+   (let (failures)
+     (ext:with-temporary-file (path)
+       (with-open-file (s path :direction :output :external-format :utf-16)
+	 (dotimes (i 300)
+	   (write-char (code-char i) s)))
+
+       (with-open-file (s path :direction :input :external-format :utf-16)
+	 (dotimes (i 300)
+	   (let ((ch (read-char s nil nil)))
+	     (unless (= i (char-code ch))
+	       (push (list i ch (char-code ch)) failures)))))
+       failures))
+   failures))
 
 (define-test trac.63
   (:tag :trac)
@@ -282,6 +333,7 @@
   (assert-equal "A1234AAAA"
 		(subseq (trac.70-test *trac.70* "a12345") 0 9)))
 
+#+nil
 (define-test trac.79
   (:tag :trac)
   ;; Create a temp file full of latin1 characters.
@@ -301,12 +353,29 @@
 		      (file-position s)))))
        (delete-file path)))))
 
+(define-test trac.79
+  (:tag :trac)
+  ;; Create a temp file full of latin1 characters.
+  (assert-equal
+   '(0 1)
+   (ext:with-temporary-file (path)
+     (with-open-file (s path :direction :output :if-exists :supersede
+			     :external-format :latin1)
+       (dotimes (k 255)
+	 (write-char (code-char k) s)))
+     (with-open-file (s path :direction :input :external-format :latin1)
+       (list (file-position s)
+	     (progn
+	       (read-char s)
+	       (file-position s)))))))
+
 (define-test trac.80
   (:tag :trac)
   ;; The following formats should not signal an error.
   (assert-true (ignore-errors (format nil "~ve" 21 5d-234)))
   (assert-true (ignore-errors (format nil "~ve" 100 5d-234))))
 
+#+nil
 (define-test trac.87.output
   (:tag :trac)
   ;; Test that run-program accepts :element-type and produces the
@@ -330,6 +399,27 @@
 	      octets)))
       (delete-file path))))
 
+(define-test trac.87.output
+  (:tag :trac)
+  ;; Test that run-program accepts :element-type and produces the
+  ;; correct output.
+  (let ((string "Hello"))
+    (ext:with-temporary-file (path)
+      (with-open-file (s path :direction :output :if-exists :supersede
+			      :external-format :latin1)
+	(write-string string s))
+      (let* ((expected (stream:string-to-octets string :external-format :latin1))
+	     (octets (make-array (length expected)
+				 :element-type '(unsigned-byte 8)))
+	     (proc (ext:run-program "/bin/cat" (list path)
+				    :output :stream
+				    :element-type '(unsigned-byte 8))))
+	(read-sequence octets (ext:process-output proc))
+	(assert-equalp
+	 expected
+	 octets)))))
+
+#+nil
 (define-test trac.87.input
   (:tag :trac)
   ;; Test that run-program accepts :element-type and produces the
@@ -354,6 +444,28 @@
 	      octets
 	      output)))
       (delete-file path))))
+
+(define-test trac.87.input
+  (:tag :trac)
+  ;; Test that run-program accepts :element-type and produces the
+  ;; correct input (and output).
+  (let ((string "Hello"))
+    (ext:with-temporary-file (path)
+      (with-open-file (s path :direction :output :if-exists :supersede
+			      :external-format :latin1)
+	(write-string string s))
+      (let ((octets (stream:string-to-octets string :external-format :latin1))
+	    (output (make-array (length string)
+				:element-type '(unsigned-byte 8)))
+	    (proc (ext:run-program "/bin/cat" (list path)
+				   :input :stream
+				   :output :stream
+				   :element-type '(unsigned-byte 8))))
+	(write-sequence octets (ext:process-input proc))
+	(read-sequence output (ext:process-output proc))
+	(assert-equalp
+	 octets
+	 output)))))
       
 (define-test trac.92
   (:tag :trac)
@@ -413,6 +525,7 @@
 ;; Not quite what ticket 101 is about, but it came up in investigating
 ;; CLEAR-OUTPUT on a Gray stream.  Verify CLEAR-OUTPUT actually
 ;; does. Previously, it did nothing.
+#+nil
 (define-test trac.101
   (:tag :trac)
   (assert-eql
@@ -429,6 +542,20 @@
 	    (file-length s))
        (close s)
        (delete-file *test-file*)))))
+
+(define-test trac.101
+  (:tag :trac)
+  (assert-eql
+   0
+   (ext:with-temporary-file (test-file)
+     (let ((s (open test-file
+		    :direction :output
+		    :if-exists :supersede)))
+       (write-char #\a s)
+       (clear-output s)
+       (close s)
+       (setf s (open test-file))
+       (file-length s)))))
 
 (defun read-string-fn (str)
      (handler-case
