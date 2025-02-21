@@ -2053,9 +2053,7 @@
   _N"Returns a string describing the error number which was returned by a
   UNIX system call."
   (declare (type integer error-number))
-  (if (array-in-bounds-p *unix-errors* error-number)
-      (svref *unix-errors* error-number)
-      (format nil _"Unknown error [~d]" error-number)))
+  (unix::unix-strerror error-number))
 
 
 ;;;; Lisp types used by syscalls.
@@ -2975,3 +2973,14 @@
 	(if (null-alien result)
 	    (values nil (unix-errno))
 	    (%file->name (cast result c-call:c-string)))))))
+
+(defun unix-strerror (errno)
+  _N"Returns a string that describes the error code Errno"
+  (let ((result
+	  (alien-funcall
+	   (extern-alien "strerror"
+			 (function (* char) int))
+	   errno)))
+    ;; Result from strerror can be localized so we need to decode
+    ;; those octets to get a proper Lisp string.
+    (string-decode (cast result c-string) :default)))
