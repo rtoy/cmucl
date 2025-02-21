@@ -641,7 +641,7 @@
 				      decoding-error
 				      encoding-error)
 				 &parse-body (forms decls))
-  "Return a stream to a temporary file that is automatically created."
+  _N"Return a stream to a temporary file that is automatically created."
   (let ((fd (gensym "FD-"))
 	(filename (gensym "FILENAME-"))
 	(dir (gensym "DIRECTION-"))
@@ -689,13 +689,19 @@
 ;;; WITH-TEMPORARY-FILE  -- Public
 (defmacro with-temporary-file ((filename &key prefix)
 			       &parse-body (forms decls))
+  _N"Creates a temporary file with a name bound to Filename which a
+ namestring.  If Prefix is not provided, the temporary file is created
+ in a OS-dependent location.  Otherwise the prefix is used as a prefix
+ for the name.  On completion, the file is automatically removed."
   (let ((fd (gensym "FD-"))
 	(file-template (gensym "TEMP-PATH-")))
-    `(let ((,file-template (concatenate 'string
-					(or ,prefix
-					    (get-os-temp-path)
-					    "cmucl-temp-file-")
-					"XXXXXX"))
+    `(let ((,file-template
+	     (concatenate 'string
+			  (or ,prefix
+			      (concatenate 'string
+					   (get-os-temp-path)
+					   "cmucl-temp-file-"))
+			  "XXXXXX"))
 	   ,filename)
        (unwind-protect
 	    (let (,fd)
@@ -715,17 +721,20 @@
 ;;; WITH-TEMPORARY-DIRECTORY  -- Public
 (defmacro with-temporary-directory ((dirname &key prefix)
 				    &parse-body (forms decls))
-  "Return a pathname to a temporary directory.  TEMPLATE is a string that
-  is used as a prefix for the name of the temporary directory.  The
-  directory and all its contents are automatically removed afterward."
+ _N"Return a namestring to a temporary directory.  If Prefix is not
+ provided, the directory is created in an OS-dependent location.
+ Otherwise, the Prefix is a string that is used as a prefix for the
+ name of the temporary directory.  The directory and all its contents
+ are automatically removed afterward."
   (let ((err (gensym "ERR-"))
-	(dir-path (gensym "DIR-PATH"))
 	(dir-template (gensym "DIR-TEMPLATE-")))
-    `(let ((,dir-template (concatenate 'string
-				       (or ,prefix
+    `(let ((,dir-template
+	     (concatenate 'string
+			  (or ,prefix
+			      (concatenate 'string
 					   (get-os-temp-path)
-					   "cmucl-temp-dir-")
-				       "XXXXXX"))
+					   "cmucl-temp-dir-"))
+			  "XXXXXX"))
 	   ,dirname ,err)
        (unwind-protect
 	    (progn
