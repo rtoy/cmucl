@@ -632,6 +632,19 @@
       (unless (alien:null-alien path)
 	(alien:free-alien path)))))
 
+;; Create a template suitable for mkstemp and mkdtemp.  PREFIX is
+;; string (or NIL) provided by the macros and is used as is as the
+;; template prefix.  If PREFIX is NIL, the prefix is obtained by
+;; appending DEFAULT-NAME to the OS-dependent temporary path.  In all
+;; cases, we append exactly 6 X's to create the finale template.
+(defun create-template (prefix default-name)
+  (concatenate 'string
+	       (or prefix
+		   (concatenate 'string
+				(get-os-temp-path)
+				default-name))
+	       "XXXXXX"))
+
 ;;; WITH-TEMPORARY-STREAM  -- Public
 ;;;
 (defmacro with-temporary-stream ((s &key
@@ -652,10 +665,7 @@
        (unless (member ,direction '(:output :io))
 	 (error ":direction must be one of :output or :io, not ~S"
 		,direction))
-       (let ((,file-template (concatenate 'string
-					  (get-os-temp-path)
-					  "cmucl-temp-stream-"
-					  "XXXXXX"))
+       (let ((,file-template (create-template nil "cmucl-temp-stream-"))
 	     ,fd ,filename ,s)
 	 (unwind-protect
 	      (progn
@@ -695,13 +705,7 @@
  for the name.  On completion, the file is automatically removed."
   (let ((fd (gensym "FD-"))
 	(file-template (gensym "TEMP-PATH-")))
-    `(let ((,file-template
-	     (concatenate 'string
-			  (or ,prefix
-			      (concatenate 'string
-					   (get-os-temp-path)
-					   "cmucl-temp-file-"))
-			  "XXXXXX"))
+    `(let ((,file-template (create-template ,prefix "cmucl-temp-file-"))
 	   ,filename)
        (unwind-protect
 	    (let (,fd)
@@ -728,13 +732,7 @@
  are automatically removed afterward."
   (let ((err (gensym "ERR-"))
 	(dir-template (gensym "DIR-TEMPLATE-")))
-    `(let ((,dir-template
-	     (concatenate 'string
-			  (or ,prefix
-			      (concatenate 'string
-					   (get-os-temp-path)
-					   "cmucl-temp-dir-"))
-			  "XXXXXX"))
+    `(let ((,dir-template (create-template ,prefix "cmucl-temp-dir-"))
 	   ,dirname ,err)
        (unwind-protect
 	    (progn
