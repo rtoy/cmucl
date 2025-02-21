@@ -939,12 +939,22 @@ os_get_user_homedir(const char* name, int *status)
     return NULL;
 }
     
+/*
+ * Return a new string containing the path to an OS-dependent location
+ * where temporary files/directories can be stored.  If NULL is
+ * returned, such a location could not be found or some other error
+ * happened.
+ *
+ * Caller must call free(0 on the string returned.
+ */
 char *
 os_temp_path()
 {
 #if defined(DARWIN)
-    // macosx has a secure per-user temporary directory.
-    // Don't cache the result as this is only called once.
+    /*
+     * macosx has a secure per-user temporary directory.
+     * Don't cache the result as this is only called once.
+     */
     char path[PATH_MAX];
 
     int pathSize = confstr(_CS_DARWIN_USER_TEMP_DIR, path, PATH_MAX);
@@ -954,7 +964,10 @@ os_temp_path()
     
     return strdup(path);
 #else
-    char *result;
+    /*
+     * If the TMP envvar is set, use that as the temporary directory.
+     * Otherwise, just assume "/tmp" will work.
+     */
     char *tmp_path = getenv("TMP");
 
     if (tmp_path == NULL) {
