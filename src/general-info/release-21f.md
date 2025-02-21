@@ -117,9 +117,12 @@ public domain.
     * ~~#363~~ Version numbers added to files and directories.  The
       distribution layout has changed.
     * ~~#364~~ Add interface to `mkdtemp` and `mkstemp`
-    * ~~#367~~ Add stream:string-count-octets to count octets in a string
+    * ~~#367~~ Add `stream:string-count-octets` to count octets in a string
     * ~~#369~~ Improve docstring for `unix::unix-setlocale`
+    * ~~#375~~ `unix-mkstemp` and `unix-mkdtemp` actually returns the
+      file names now.
     * ~~#379~~ Support GNU-style command-line option names
+    * ~~#382~~ Command-line options are case-sensitive
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
