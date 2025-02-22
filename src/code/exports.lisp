@@ -200,7 +200,6 @@
 	   "NEGATE-BIGNUM" "SUBTRACT-BIGNUM"))
 
 (defpackage "UNIX"
-  (:use "UNIX-ERRNO")
   (:export "UNIX-CURRENT-DIRECTORY"
 	   "UNIX-OPEN"
 	   "UNIX-READ"
@@ -678,9 +677,11 @@
    ;;"EHWPOISON"
    ))
 
-(do-external-symbols (s "UNIX-ERRNO")
-  (import s "UNIX")
-  (export s "UNIX"))
+(ext:without-package-locks
+  (do-external-symbols (s "UNIX-ERRNO")
+    (shadowing-import s "UNIX")
+    (export (find-symbol (symbol-name s) "UNIX-ERRNO")
+	    "UNIX")))
   
 (defpackage "FORMAT")
 
