@@ -127,9 +127,8 @@
 (define-test trac.36
   (:tag :trac)
   (flet ((bug (&optional (format :utf16))
-	   (ext::with-temporary-stream (s :direction :io :external-format format)
+	   (ext:with-temporary-stream (s :direction :io :external-format format)
 	     (format s "Hello~%")
-	     (format t "posn = ~A~%" (file-position s))
 	     (file-position s 0)
 	     (let ((ch (read-char s)))
 	       (values ch (file-position s))))))

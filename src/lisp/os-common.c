@@ -945,7 +945,7 @@ os_get_user_homedir(const char* name, int *status)
  * returned, such a location could not be found or some other error
  * happened.
  *
- * Caller must call free(0 on the string returned.
+ * Caller must call free() on the string returned.
  */
 char *
 os_temp_path()
