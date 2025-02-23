@@ -42,6 +42,12 @@
 #include <time.h>
 #endif
 
+#include "cmucl-version.h"
+
+#ifndef CMUCL_VERSION
+#error CMUCL_VERSION not defined!
+#endif
+
 
 
 /* SIGINT handler that invokes the monitor. */
@@ -89,10 +95,11 @@ alloc_str_list(const char *list[])
 }
 
 /* Default paths for CMUCLLIB */
+
+static char cmucl_version[] = CMUCL_VERSION;
+
 static char *cmucllib_search_list[] = {
-    "./.",
-    "./../lib/cmucl/lib",
-    "./../lib",
+    "./../lib/cmucl/" CMUCL_VERSION "/lib",
     NULL
 };
 
@@ -335,7 +342,7 @@ search_core(const char *lib, const char *default_core)
 	    return buf;
 	} else {
 	    if (debug_lisp_search) {
-		fprintf(stderr, "Found it, but we can't read it!\n");
+		fprintf(stderr, "Does not exist, or can't read it if it does!\n");
 	    }
 	}
     } while (*lib++ == ':');
@@ -453,6 +460,41 @@ core_failure(const char* core, const char* argv[])
     exit(1);
 }
 
+/*
+ * Match the actual command line option "arg" with the arg name in
+ * "argname".  The option matches if it is exacty the arg name
+ * prefixed by either one or two "-" characters.
+ *
+ * Returns non-zero if it matches.
+ */
+int match_option(const char* arg, const char* argname)
+{
+    if ((strlen(arg) < 2) || strlen(argname) < 1) {
+	/*
+	 * The actual arg must be at least 2 characters.  The argname
+	 * must have at least 1.
+	 */
+	return 0;
+    }
+
+    /* Must start with a "-" */
+    if (arg[0] != '-') {
+	return 0;
+    }
+
+    if (strcmp(arg + 1, argname) == 0) {
+	/* We have "-" followed by the argname.  That's a match. */
+	return 1;
+    }
+    
+    if ((arg[1] == '-') && (strcmp(arg + 2, argname) == 0)) {
+	/* We have "--" followed by the argname.  That's a match. */
+	return 1;
+    }
+
+    return 0;
+}
+    
 int
 main(int argc, const char *argv[], const char *envp[])
 {
@@ -522,7 +564,7 @@ main(int argc, const char *argv[], const char *envp[])
 
     argptr = argv;
     while ((arg = *++argptr) != NULL) {
-	if (strcmp(arg, "-core") == 0) {
+	if (match_option(arg, "core")) {
 	    if (builtin_image_flag) {
 		fprintf(stderr,
 			"Warning:  specifying a core file with an executable image is unusual,\nbut should work.\n");
@@ -536,87 +578,98 @@ main(int argc, const char *argv[], const char *envp[])
 	    core = *++argptr;
 	    if (core == NULL) {
 		fprintf(stderr,
-			"-core must be followed by the name of the core file to use.\n");
+			"%s must be followed by the name of the core file to use.\n",
+			arg);
 		exit(1);
 	    }
-	} else if (strcmp(arg, "-lib") == 0) {
+	} else if (match_option(arg, "lib")) {
 	    lib = *++argptr;
 	    if (lib == NULL) {
 		fprintf(stderr,
-			"-lib must be followed by a string denoting the CMUCL library path.\n");
+			"%s must be followed by a string denoting the CMUCL library path.\n",
+			arg);
 		exit(1);
 	    }
-        } else if (strcmp(arg, "-read-only-space-size") == 0) {
+        } else if (match_option(arg, "read-only-space-size")) {
             const char *str = *++argptr;
 
             if (str == NULL) {
                 fprintf(stderr,
-                        "-read-only-space-size must be followed by the size in MBytes.\n");
+                        "%s must be followed by the size in MBytes.\n",
+			arg);
                 exit(1);
             }
             read_only_space_size = atoi(str) * 1024 * 1024;
             if (read_only_space_size > READ_ONLY_SPACE_SIZE) {
                 fprintf(stderr,
-                        "-read-only-space-size must be no greater than %lu MBytes.\n",
+                        "%s must be no greater than %lu MBytes.\n",
+			arg,
                         READ_ONLY_SPACE_SIZE / (1024 * 1024UL));
                 fprintf(stderr, "  Continuing with default size.\n");
                 read_only_space_size = READ_ONLY_SPACE_SIZE;
             }
-        } else if (strcmp(arg, "-static-space-size") == 0) {
+        } else if (match_option(arg, "static-space-size")) {
             const char *str = *++argptr;
 
             if (str == NULL) {
                 fprintf(stderr,
-                        "-static-space-size must be followed by the size in MBytes.\n");
+                        "%s must be followed by the size in MBytes.\n",
+			arg);
                 exit(1);
             }
             static_space_size = atoi(str) * 1024 * 1024;
             if (static_space_size > STATIC_SPACE_SIZE) {
                 fprintf(stderr,
-                        "-static-space-size must be no greater than %lu MBytes.\n",
+                        "%s must be no greater than %lu MBytes.\n",
+			arg,
                         STATIC_SPACE_SIZE / (1024 * 1024UL));
                 fprintf(stderr, "  Continuing with default size.\n");
                 static_space_size = STATIC_SPACE_SIZE;
             }
-        } else if (strcmp(arg, "-binding-stack-size") == 0) {
+        } else if (match_option(arg, "binding-stack-size")) {
             const char *str = *++argptr;
 
             if (str == NULL) {
                 fprintf(stderr,
-                        "-binding-stack-size must be followed by the size in MBytes.\n");
+                        "%s must be followed by the size in MBytes.\n",
+			arg);
                 exit(1);
             }
             binding_stack_size = atoi(str) * 1024 * 1024;
             if (binding_stack_size > BINDING_STACK_SIZE) {
                 fprintf(stderr,
-                        "-binding-stack-size must be no greater than %lu MBytes.\n",
+                        "%s must be no greater than %lu MBytes.\n",
+			arg,
                         BINDING_STACK_SIZE / (1024 * 1024UL));
                 fprintf(stderr, "  Continuing with default size.\n");
                 binding_stack_size = BINDING_STACK_SIZE;
             }
-        } else if (strcmp(arg, "-control-stack-size") == 0) {
+        } else if (match_option(arg, "control-stack-size")) {
             const char *str = *++argptr;
 
             if (str == NULL) {
                 fprintf(stderr,
-                        "-control-stack-size must be followed by the size in MBytes.\n");
+                        "%s must be followed by the size in MBytes.\n",
+			arg);
                 exit(1);
             }
             control_stack_size = atoi(str) * 1024 * 1024;
             if (control_stack_size > CONTROL_STACK_SIZE) {
                 fprintf(stderr,
-                        "-control-stack-size must be no greater than %lu MBytes.\n",
+                        "%s must be no greater than %lu MBytes.\n",
+			arg,
                         CONTROL_STACK_SIZE / (1024 * 1024UL));
                 fprintf(stderr, "  Continuing with default size.\n");
                 control_stack_size = CONTROL_STACK_SIZE;
             }
-	} else if (strcmp(arg, "-dynamic-space-size") == 0) {
+	} else if (match_option(arg, "dynamic-space-size")) {
 	    const char *str;
 
 	    str = *++argptr;
 	    if (str == NULL) {
 		fprintf(stderr,
-			"-dynamic-space-size must be followed by the size to use in MBytes.\n");
+			"%s must be followed by the size to use in MBytes.\n",
+			arg);
 		exit(1);
 	    }
 #ifndef sparc
@@ -662,17 +715,26 @@ main(int argc, const char *argv[], const char *envp[])
 #endif
 	    if (dynamic_space_size > DYNAMIC_SPACE_SIZE) {
 		fprintf(stderr,
-			"-dynamic-space-size must be no greater than %lu MBytes.\n",
+			"%s must be no greater than %lu MBytes.\n",
+			arg,
 			DYNAMIC_SPACE_SIZE / (1024 * 1024UL));
 		exit(1);
 	    }
-	} else if (strcmp(arg, "-monitor") == 0) {
+	} else if (match_option(arg, "monitor")) {
 	    monitor = TRUE;
-	} else if (strcmp(arg, "-debug-lisp-search") == 0) {
+	} else if (match_option(arg, "debug-lisp-search")) {
 	    debug_lisp_search = TRUE;
-        } else if (strcmp(arg, "-unidata") == 0) {
+        } else if (match_option(arg, "unidata")) {
           unidata = *++argptr;
-        }
+        } else if ((strcmp(arg, "-version") == 0) ||
+		   (strcmp(arg, "--version") == 0)) {
+	    /*
+	     * Print the version and exit; we don't want to do
+	     * anything else!
+	     */
+	    printf("%s\n", cmucl_version);
+	    return 0;
+	}
     }
 
     default_core = arch_init(fpu_mode);
@@ -889,7 +951,7 @@ main(int argc, const char *argv[], const char *envp[])
 
     argptr = argv;
     while ((arg = *++argptr) != NULL) {
-	if (strcmp(arg, "-batch") == 0)
+	if (match_option(arg, "batch"))
 	    SetSymbolValue(BATCH_MODE, T);
     }
 
@@ -899,6 +961,10 @@ main(int argc, const char *argv[], const char *envp[])
     }
 #endif
     
+#ifdef LISP_IMPLEMENTATION_VERSION
+    SetSymbolValue(LISP_IMPLEMENTATION_VERSION, alloc_string(cmucl_version));
+#endif
+
     /*
      * Pick off sigint until the lisp system gets far enough along to
      * install it's own.

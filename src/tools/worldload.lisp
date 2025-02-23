@@ -31,12 +31,6 @@
 ;(setf lisp::*enable-dynamic-space-code* t)
 
 
-;;; Get some data on this core.
-;;;
-(write-string "What is the current lisp-implementation-version? ")
-(force-output)
-(set '*lisp-implementation-version* (read-line))
-
 ;;; Load the rest of the reader (maybe byte-compiled.)
 (maybe-byte-load "target:code/sharpm")
 (maybe-byte-load "target:code/backq")

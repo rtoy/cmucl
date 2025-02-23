@@ -27,6 +27,8 @@ public domain.
     * The RNG has changed from an old version of xoroshiro128+ to
       xoroshiro128**.  This means sequences of random numbers will be
       different from before.  See ~~#276~~.
+    * The layout of the distribution has changed.  Version numbers are
+      added to files and directories.  For the exact layout, see !261.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
@@ -112,9 +114,15 @@ public domain.
     * ~~#360~~ Adding site-init file
     * ~~#361~~ Add herald item to mention where to report issues
     * ~~#362~~ Simplify "library:" search-list
+    * ~~#363~~ Version numbers added to files and directories.  The
+      distribution layout has changed.
     * ~~#364~~ Add interface to `mkdtemp` and `mkstemp`
-    * ~~#367~~ Add stream:string-count-octets to count octets in a string
+    * ~~#367~~ Add `stream:string-count-octets` to count octets in a string
     * ~~#369~~ Improve docstring for `unix::unix-setlocale`
+    * ~~#375~~ `unix-mkstemp` and `unix-mkdtemp` actually returns the
+      file names now.
+    * ~~#379~~ Support GNU-style command-line option names
+    * ~~#382~~ Command-line options are case-sensitive
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

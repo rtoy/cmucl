@@ -6060,7 +6060,7 @@ msgstr ""
 #: src/code/commandline.lisp
 msgid ""
 "Evaluate the specified Lisp expression during the start up\n"
-"  sequence.  the value of the form will not be printed unless it is\n"
+"  sequence.  The value of the form will not be printed unless it is\n"
 "  wrapped in a form that does output."
 msgstr ""
 
@@ -6182,7 +6182,7 @@ msgstr ""
 #: src/code/commandline.lisp
 msgid ""
 "Causes Lisp to start up silently, disabling printing of the herald\n"
-"  and causing most unnecessary noise, like GC messages,load messages,\n"
+"  and causing most unnecessary noise, like GC messages, load messages,\n"
 "  etc. to be suppressed."
 msgstr ""
 
@@ -6197,7 +6197,7 @@ msgid "Specify the unidata.bin file to be used."
 msgstr ""
 
 #: src/code/commandline.lisp
-msgid "~&Usage: ~A <options>~2%"
+msgid "~&Usage: ~A <options> [-- [app-args]*]~2%"
 msgstr ""
 
 #: src/code/commandline.lisp
@@ -6205,15 +6205,7 @@ msgid "Print out the command line options and exit"
 msgstr ""
 
 #: src/code/commandline.lisp
-msgid "Same as -help."
-msgstr ""
-
-#: src/code/commandline.lisp
-msgid "Prints the cmucl version and exits"
-msgstr ""
-
-#: src/code/commandline.lisp
-msgid "Prints the cmucl version and exits; same as -version"
+msgid "Prints the cmucl version and exits, without loading the lisp core."
 msgstr ""
 
 #: src/code/env-access.lisp
