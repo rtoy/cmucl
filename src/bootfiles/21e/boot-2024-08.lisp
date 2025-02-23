@@ -12,6 +12,7 @@
 ;; Unintern all the symbols in the UNIX package that conflict with the
 ;; symbols in the UNIX-ERRNO package.
 (in-package "UNIX")
+#+nil
 (ext:without-package-locks 
   (dolist (s '(UNIX:ENOENT UNIX:EINPROGRESS UNIX:EBADF UNIX:EXDEV UNIX:EADDRINUSE
 	       UNIX:EBADE UNIX:EIDRM UNIX:ENOTEMPTY UNIX:EISDIR UNIX:ESTRPIPE UNIX:EPERM
