@@ -49,6 +49,7 @@ linux:build:
     # Regular build using the cross-compiled result or snapshot.  The
     # analyzer job requires gcc, so make sure we build with gcc here
     # instead of clang. 
+    - rm -rf linux-?
     - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     # When the result of `git describe` cannot be used as a version
@@ -193,6 +194,7 @@ osx:build:
     #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
     # Regular build using the cross-compiled result or snapshot.
     # Need /opt/local/bin to get msgmerge and msgfmt programs.
+    - rm -rf darwin-?
     - PATH=/opt/local/bin:$PATH bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
     # If needed use -V to specify the version in case some tag makes git
     # describe return something that make-dist.sh doesn't like.
@@ -317,6 +319,7 @@ opensuse:build:
     # Regular build using the cross-compiled result or snapshot.  The
     # analyzer job requires gcc, so make sure we build with gcc here
     # instead of clang. 
+    - rm -rf linux-?
     - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
     # If needed use -V to specify the version in case some tag makes git
