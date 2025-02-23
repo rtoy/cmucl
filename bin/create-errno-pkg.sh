@@ -6,5 +6,11 @@ case `uname -s` in
     Linux) ERRNO_FILES=/usr/include/asm-generic/errno*.h
 	   ;;
 esac
-    
-gawk -f bin/gen-errno-exports.gawk ${ERRNO_FILES}
+
+cat <<EOF
+(defpackage "UNIX-ERRNO"
+  (:export
+`awk -f bin/gen-errno-exports.gawk ${ERRNO_FILES} | sort `
+   ))
+
+EOF
