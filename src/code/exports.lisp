@@ -31,6 +31,9 @@
 (if (find-package "BIGNUM")
     (rename-package "BIGNUM" "BIGNUM" 'nil)
     (make-package "BIGNUM" :nicknames 'nil :use nil))
+(if (find-package "UNIX-ERRNO")
+    (rename-package "UNIX-ERRNO" "UNIX-ERRNO" 'nil)
+    (make-package "UNIX-ERRNO" :nicknames 'nil :use nil))
 (if (find-package "UNIX")
     (rename-package "UNIX" "UNIX" 'nil)
     (make-package "UNIX" :nicknames 'nil :use nil))
@@ -640,17 +643,7 @@
 	   ;; Other symbols from structures, etc.
 	   "C-CC" "C-CFLAG" "C-IFLAG" "C-ISPEED" "C-LFLAG" "C-OFLAG" "C-OSPEED"
 	   "CHECK" "D-NAME" "D-RECLEN"    
-	        
-	       
-	         
-	          
-	        
-	         
-	         
-	        
-	        
-	         
-	     "F-GETFL" "F-GETOWN" "F-SETFL" "F-SETOWN" "FAPPEND"
+	   "F-GETFL" "F-GETOWN" "F-SETFL" "F-SETOWN" "FAPPEND"
 	   "FASYNC" "FD-SET" "FD-ZERO" "FNDELAY" "F_OK" "GID-T" "IT-INTERVAL"
 	   "IT-VALUE" "ITIMERVAL" "L_INCR" "L_SET" "L_XTND" "MAP_ANONYMOUS"
 	   "MAP_FIXED" "MAP_PRIVATE" "MAP_SHARED" "MS_ASYNC" "MS_INVALIDATE"
@@ -698,7 +691,6 @@
   (:export "TCHARS"
 	   "LTCHARS"
 	   "D-NAMLEN"
-
 	   
 	   ;; run-program.lisp
 	   "SGTTYB"
@@ -727,13 +719,7 @@
 
 	   ;; Other symbols
 	   "BLKCNT-T" "D-INO" "D-OFF"     
-	         
-	          
-	         
-	          
-	         
-	         
-	      "O_NOCTTY" "SIGSTKFLT"
+	   "O_NOCTTY" "SIGSTKFLT"
 	   "SG-FLAGS"
 	   "TIOCGETP"
 	   "TIOCSETP"
@@ -746,53 +732,6 @@
   (:export "D-INO"
 	   "D-OFF"
 	   "DIRECT"
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   "ECANCELED"
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   "ENOTSUP"
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
-	   
 	   "EXECGRP"
 	   "EXECOTH"
 	   "EXECOWN"
