@@ -38,6 +38,7 @@ linux:build:
       - linux-2/*.log
       - linux-3/*.log
       - linux-4/
+      - src/lisp/
   needs:
     - job: linux:install
       artifacts: true
