@@ -197,6 +197,10 @@ osx:build:
     # If needed use -V to specify the version in case some tag makes git
     # describe return something that make-dist.sh doesn't like.
     - bin/make-dist.sh -I dist darwin-4
+    # Show the version used for building lisp and then git so we
+    # easily tell if the osx build is dirty or not.
+    - cat src/lisp/cmucl-version.h
+    - git describe --dirty
 
 osx:test:
   stage: test
