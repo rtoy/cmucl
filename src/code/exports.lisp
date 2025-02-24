@@ -309,18 +309,18 @@
 
 	   ;; Other symbols from structures, etc.
 	   "C-CC" "C-CFLAG" "C-IFLAG" "C-ISPEED" "C-LFLAG" "C-OFLAG" "C-OSPEED"
-	   "CHECK" "D-NAME" "D-RECLEN" "E2BIG" "EACCES" "EADDRINUSE" "EADDRNOTAVAIL"
-	   "EAFNOSUPPORT" "EAGAIN" "EALREADY" "EBADF" "EBUSY" "ECHILD"
-	   "ECONNABORTED" "ECONNREFUSED" "ECONNRESET" "EDEADLK" "EDESTADDRREQ"
-	   "EDOM" "EDQUOT" "EEXIST" "EFAULT" "EFBIG" "EHOSTDOWN" "EHOSTUNREACH"
-	   "EINPROGRESS" "EINTR" "EINVAL" "EIO" "EISCONN" "EISDIR" "ELOOP" "EMFILE"
-	   "EMLINK" "EMSGSIZE" "ENAMETOOLONG" "ENETDOWN" "ENETRESET" "ENETUNREACH"
-	   "ENFILE" "ENOBUFS" "ENODEV" "ENOENT" "ENOEXEC" "ENOMEM" "ENOPROTOOPT"
-	   "ENOSPC" "ENOTBLK" "ENOTCONN" "ENOTDIR" "ENOTEMPTY" "ENOTSOCK" "ENOTTY"
-	   "ENXIO" "EOPNOTSUPP" "EPERM" "EPFNOSUPPORT" "EPIPE" "EPROTONOSUPPORT"
-	   "EPROTOTYPE" "ERANGE" "EREMOTE" "EROFS" "ESHUTDOWN" "ESOCKTNOSUPPORT"
-	   "ESPIPE" "ESRCH" "ESUCCESS" "ETIMEDOUT" "ETOOMANYREFS" "ETXTBSY" "EUSERS"
-	   "EWOULDBLOCK" "EXDEV" "F-GETFL" "F-GETOWN" "F-SETFL" "F-SETOWN" "FAPPEND"
+	   "CHECK" "D-NAME" "D-RECLEN"    
+	        
+	       
+	         
+	          
+	        
+	         
+	         
+	        
+	        
+	         
+	     "F-GETFL" "F-GETOWN" "F-SETFL" "F-SETOWN" "FAPPEND"
 	   "FASYNC" "FD-SET" "FD-ZERO" "FNDELAY" "F_OK" "GID-T" "IT-INTERVAL"
 	   "IT-VALUE" "ITIMERVAL" "L_INCR" "L_SET" "L_XTND" "MAP_ANONYMOUS"
 	   "MAP_FIXED" "MAP_PRIVATE" "MAP_SHARED" "MS_ASYNC" "MS_INVALIDATE"
@@ -396,14 +396,14 @@
 	   "SGTTYB"
 
 	   ;; Other symbols
-	   "BLKCNT-T" "D-INO" "D-OFF" "EADV" "EBADE" "EBADFD" "EBADMSG" "EBADR"
-	   "EBADRQC" "EBADSLT" "EBFONT" "ECHRNG" "ECOMM" "EDEADLOCK" "EDOTDOT"
-	   "EIDRM" "EILSEQ" "EISNAM" "EL2HLT" "EL2NSYNC" "EL3HLT" "EL3RST" "ELIBACC"
-	   "ELIBBAD" "ELIBEXEC" "ELIBMAX" "ELIBSCN" "ELNRNG" "EMULTIHOP" "ENAVAIL"
-	   "ENOANO" "ENOCSI" "ENODATA" "ENOLCK" "ENOLINK" "ENOMSG" "ENONET" "ENOPKG"
-	   "ENOSR" "ENOSTR" "ENOSYS" "ENOTNAM" "ENOTUNIQ" "EOVERFLOW" "EPROTO"
-	   "EREMCHG" "EREMOTEIO" "ERESTART" "ESRMNT" "ESTALE" "ESTRPIPE" "ETIME"
-	   "EUCLEAN" "EUNATCH" "EXFULL" "O_NOCTTY" "SIGSTKFLT"
+	   "BLKCNT-T" "D-INO" "D-OFF"     
+	         
+	          
+	         
+	          
+	         
+	         
+	      "O_NOCTTY" "SIGSTKFLT"
 	   "SG-FLAGS"
 	   "TIOCGETP"
 	   "TIOCSETP"
@@ -416,57 +416,57 @@
   (:export "D-INO"
 	   "D-OFF"
 	   "DIRECT"
-	   "EADV"
-	   "EBADE"
-	   "EBADFD"
-	   "EBADMSG"
-	   "EBADR"
-	   "EBADRQC"
-	   "EBADSLT"
-	   "EBFONT"
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
 	   "ECANCELED"
-	   "ECHRNG"
-	   "ECOMM"
-	   "EDEADLOCK"
-	   "EIDRM"
-	   "EILSEQ"
-	   "EL2HLT"
-	   "EL2NSYNC"
-	   "EL3HLT"
-	   "EL3RST"
-	   "ELIBACC"
-	   "ELIBBAD"
-	   "ELIBEXEC"
-	   "ELIBMAX"
-	   "ELIBSCN"
-	   "ELNRNG"
-	   "EMULTIHOP"
-	   "ENOANO"
-	   "ENOCSI"
-	   "ENODATA"
-	   "ENOLCK"
-	   "ENOLINK"
-	   "ENOMSG"
-	   "ENONET"
-	   "ENOPKG"
-	   "ENOSR"
-	   "ENOSTR"
-	   "ENOSYS"
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
 	   "ENOTSUP"
-	   "ENOTUNIQ"
-	   "EOVERFLOW"
-	   "EPROTO"
-	   "EREMCHG"
-	   "ERESTART"
-	   "ESRMNT"
-	   "ESTALE"
-	   "ESTRPIPE"
-	   "ETIME"
-	   "EUNATCH"
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
 	   "EXECGRP"
 	   "EXECOTH"
 	   "EXECOWN"
-	   "EXFULL"
+	   
 	   "F-DUPFD"
 	   "F-GETFD"
 	   "F-SETFD"
@@ -553,7 +553,134 @@
 	   "WRITEGRP"
 	   "WRITEOTH"
 	   "XMT1EN"
-	   ))
+	   )
+  ;; Errno symbols arranged by OS
+  #+linux
+  (:export "ESUCCESS"
+	   "EPERM"
+	   "ENOENT"
+	   "ESRCH"
+	   "EINTR"
+	   "EIO"
+	   "ENXIO"
+	   "E2BIG"
+	   "ENOEXEC"
+	   "EBADF"
+	   "ECHILD"
+	   "EAGAIN"
+	   "ENOMEM"
+	   "EACCES"
+	   "EFAULT"
+	   "ENOTBLK"
+	   "EBUSY"
+	   "EEXIST"
+	   "EXDEV"
+	   "ENODEV"
+	   "ENOTDIR"
+	   "EISDIR"
+	   "EINVAL"
+	   "ENFILE"
+	   "EMFILE"
+	   "ENOTTY"
+	   "ETXTBSY"
+	   "EFBIG"
+	   "ENOSPC"
+	   "ESPIPE"
+	   "EROFS"
+	   "EMLINK"
+	   "EPIPE"
+	   "EDOM"
+	   "ERANGE"
+	   "EDEADLK"
+	   "ENAMETOOLONG"
+	   "ENOLCK"
+	   "ENOSYS"
+	   "ENOTEMPTY"
+	   "ELOOP"
+	   "EWOULDBLOCK"
+	   "ENOMSG"
+	   "EIDRM"
+	   "ECHRNG"
+	   "EL2NSYNC"
+	   "EL3HLT"
+	   "EL3RST"
+	   "ELNRNG"
+	   "EUNATCH"
+	   "ENOCSI"
+	   "EL2HLT"
+	   "EBADE"
+	   "EBADR"
+	   "EXFULL"
+	   "ENOANO"
+	   "EBADRQC"
+	   "EBADSLT"
+	   "EDEADLOCK"
+	   "EBFONT"
+	   "ENOSTR"
+	   "ENODATA"
+	   "ETIME"
+	   "ENOSR"
+	   "ENONET"
+	   "ENOPKG"
+	   "EREMOTE"
+	   "ENOLINK"
+	   "EADV"
+	   "ESRMNT"
+	   "ECOMM"
+	   "EPROTO"
+	   "EMULTIHOP"
+	   "EDOTDOT"
+	   "EBADMSG"
+	   "EOVERFLOW"
+	   "ENOTUNIQ"
+	   "EBADFD"
+	   "EREMCHG"
+	   "ELIBACC"
+	   "ELIBBAD"
+	   "ELIBSCN"
+	   "ELIBMAX"
+	   "ELIBEXEC"
+	   "EILSEQ"
+	   "ERESTART"
+	   "ESTRPIPE"
+	   "EUSERS"
+	   "ENOTSOCK"
+	   "EDESTADDRREQ"
+	   "EMSGSIZE"
+	   "EPROTOTYPE"
+	   "ENOPROTOOPT"
+	   "EPROTONOSUPPORT"
+	   "ESOCKTNOSUPPORT"
+	   "EOPNOTSUPP"
+	   "EPFNOSUPPORT"
+	   "EAFNOSUPPORT"
+	   "EADDRINUSE"
+	   "EADDRNOTAVAIL"
+	   "ENETDOWN"
+	   "ENETUNREACH"
+	   "ENETRESET"
+	   "ECONNABORTED"
+	   "ECONNRESET"
+	   "ENOBUFS"
+	   "EISCONN"
+	   "ENOTCONN"
+	   "ESHUTDOWN"
+	   "ETOOMANYREFS"
+	   "ETIMEDOUT"
+	   "ECONNREFUSED"
+	   "EHOSTDOWN"
+	   "EHOSTUNREACH"
+	   "EALREADY"
+	   "EINPROGRESS"
+	   "ESTALE"
+	   "EUCLEAN"
+	   "ENOTNAM"
+	   "ENAVAIL"
+	   "EISNAM"
+	   "EREMOTEIO"
+	   "EDQUOT"
+	   )
+  )
   
 (defpackage "FORMAT")
 
