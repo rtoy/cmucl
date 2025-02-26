@@ -33,6 +33,8 @@ variables:
       - build-2/*.log
       - build-3/*.log
       - build-4/
+      # Needed by Linux analyzer stage
+      - src/lisp/cmucl-version.h
   script:
     # Do cross compile first
     #- bin/create-target.sh xtarget x86_linux_clang
