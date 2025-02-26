@@ -29,7 +29,49 @@ variables:
       - build-2/*.log
       - build-3/*.log
       - build-4/
+
+# Default configuration for running the ansi-tests.
+.ansi_test_template: &ansi_test_configuration
+  stage: ansi-test
+  artifacts:
+    paths:
+      - ansi-test/test.out
+  script:
+    - bin/run-ansi-tests.sh -l dist/bin/lisp
   
+# Default configuration for running unit tests.
+.unit_test_template: &unit_test_configuration
+  stage: test
+  artifacts:
+    paths:
+      - ansi-test/test.out
+      - test.log
+  script:
+    - echo LANG = $LANG
+    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
+# Default configuration to test creation of lisp executable and
+# testing the exectuable works.
+.exec_test_template: &exec_test_configuration
+  stage: test
+  script:
+    # Create an executable and test it by printing the version.
+    - dist/bin/lisp -eval '(save-lisp "saved-lisp-executable" :executable t)'
+    - ./saved-lisp-executable --version
+
+# Default configuration for running the benchmarks.
+.benchmark_template: &benchmark_configuration
+  stage: benchmark
+  artifacts:
+    paths:
+      - benchmarks/cl-bench/results
+  script:
+    - cd benchmarks/cl-bench
+    - mkdir tmp
+    - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
+    - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
+    - ../../snapshot/bin/lisp -load report
+    
 stages:
   - install
   - build
@@ -93,31 +135,21 @@ linux:cross-build:
     - bin/make-dist.sh -I xdist xlinux-4
 
 linux:test:
-  stage: test
+  <<: *unit_test_configuration
   tags:
     - linux
-  artifacts:
-    paths:
-      - ansi-test/test.out
-      - test.log
   needs:
     # Needs artifacts from build (dist/)
     - job: linux:build
       artifacts: true
-  script:
-    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 linux:exec-test:
-  stage: test
+  <<: *exec_test_configuration
   tags:
     - linux
   needs:
     - job: linux:build
       artifacts: true
-  script:
-    # Create an executable and test it by printing the version.
-    - dist/bin/lisp -eval '(save-lisp "saved-lisp-executable" :executable t)'
-    - ./saved-lisp-executable --version
 
 linux:cross-test:
   stage: test
@@ -135,37 +167,23 @@ linux:cross-test:
     - bin/run-unit-tests.sh -l xdist/bin/lisp 2>&1 | tee cross-test.log
 
 linux:ansi-test:
-  stage: ansi-test
+  <<: *ansi_test_configuration
   tags:
     - linux
-  artifacts:
-    paths:
-      - ansi-test/test.out
   needs:
     # Needs artifacts from build (dist/)
     - job: linux:build
       artifacts: true
-  script:
-    - bin/run-ansi-tests.sh -l dist/bin/lisp
     
 linux:benchmark:
-  stage: benchmark
+  <<: *benchmark_configuration
   tags:
     - linux
-  artifacts:
-    paths:
-      - benchmarks/cl-bench/results
   needs:
     # Needs artifacts from install (snapshot/) and build (dist/)
     - job: linux:install
       artifacts: true
     - job: linux:build
-  script:
-    - cd benchmarks/cl-bench
-    - mkdir tmp
-    - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
-    - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
-    - ../../snapshot/bin/lisp -load report
 
 osx:install:
   stage: install
@@ -193,68 +211,40 @@ osx:build:
     - !reference [.build_cmucl, script]
 
 osx:test:
-  stage: test
+  <<: *unit_test_configuration
   tags:
     - macos-virtualbox
-  artifacts:
-    paths:
-      - ansi-test/test.out
-      - test.log
   needs:
     # Needs artifacts from build (dist/)
     - job: osx:build
       artifacts: true
-  script:
-    - echo LANG = $LANG
-    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 osx:exec-test:
-  stage: test
+  <<: *exec_test_configuration
   tags:
     - macos-virtualbox
   needs:
     - job: osx:build
       artifacts: true
-  script:
-    # Create an executable and test it by printing the version.
-    - dist/bin/lisp -eval '(save-lisp "saved-lisp-executable" :executable t)'
-    - ./saved-lisp-executable --version
   
 osx:ansi-test:
-  stage: ansi-test
+  <<: *ansi_test_configuration
   tags:
     - macos-virtualbox
-  artifacts:
-    paths:
-      - ansi-test/test.out
   needs:
     # Needs artifacts from build (dist/)
     - job: osx:build
       artifacts: true
-  script:
-    # NB: sometimes we can't clone the ansi-test repo (bad cert!?!).
-    # Manually cloning it in the gitlab build dir helps with this
-    # issue until we can figure out what's going on.
-    - bin/run-ansi-tests.sh -l dist/bin/lisp
   
 osx:benchmark:
-  stage: benchmark
+  <<: *benchmark_configuration
   tags:
     - macos-virtualbox
-  artifacts:
-    paths:
-      - benchmarks/cl-bench/results
   needs:
     # Needs artifacts from install (snapshot/) and build (dist/)
     - job: osx:install
       artifacts: true
     - job:  osx:build
-  script:
-    - cd benchmarks/cl-bench
-    - mkdir tmp
-    - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
-    - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
-    - ../../snapshot/bin/lisp -load report
 
 # Optional job that runs the static analyzer.  It needs the files from
 # the linux-4 directory built in the linux:build job.
@@ -301,31 +291,20 @@ opensuse:build:
     - !reference [.build_cmucl, script]
 
 opensuse:test:
-  stage: test
+  <<: *unit_test_configuration
   tags:
-    - linux
-  artifacts:
-    paths:
-      - ansi-test/test.out
-      - test.log
+    - opensuse
   needs:
     # Needs artifacts from build (dist/)
     - job: opensuse:build
       artifacts: true
-  script:
-    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 opensuse:ansi-test:
-  stage: ansi-test
+  <<: *ansi_test_configuration
   tags:
-    - linux
-  artifacts:
-    paths:
-      - ansi-test/test.out
+    - opensuse
   needs:
     # Needs artifacts from build (dist/)
     - job: opensuse:build
       artifacts: true
-  script:
-    - bin/run-ansi-tests.sh -l dist/bin/lisp
 
