@@ -10,8 +10,13 @@ variables:
     paths:
       - snapshot/
   script:
-    - wget -nv $download_url/cmucl-$version-$osname.tar.bz2
-    - wget -nv $download_url/cmucl-$version-$osname.extra.tar.bz2
+    - echo PATH = $PATH
+    - ls -F /usr/local/bin
+    - type -all gitlab-runner
+    - $CURL -o cmucl-$version-$osname.tar.bz2 $download_url/cmucl-$version-$osname.tar.bz2
+    - $CURL -o cmucl-$version-$osname.extra.tar.bz2 $download_url/cmucl-$version-$osname.extra.tar.bz2
+    #- wget -nv $download_url/cmucl-$version-$osname.tar.bz2
+    #- wget -nv $download_url/cmucl-$version-$osname.extra.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-$osname.tar.bz2; tar xjf ../cmucl-$version-$osname.extra.tar.bz2)
 
@@ -102,6 +107,7 @@ linux:install:
     - linux
   variables:
     osname: "linux"
+    CURL: "curl"
 
 linux:build:
   <<: *build_configuration
@@ -193,19 +199,12 @@ linux:benchmark:
     - job: linux:build
 
 osx:install:
-  stage: install
+  <<: *install_configuration
   tags:
     - macos-virtualbox
-  artifacts:
-    paths:
-      - snapshot/
-  script:
-    - echo PATH = $PATH
-    - ls -F /usr/local/bin
-    - type -all gitlab-runner
-    - /opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
-    - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
+  variables:
+    osname: "darwin"
+    CURL: "/opt/local/bin/curl"
 
 osx:build:
   <<: *build_configuration
@@ -280,6 +279,7 @@ opensuse:install:
     - opensuse
   variables:
     osname: "linux"
+    CURL: "curl"
 
 opensuse:build:
   <<: *build_configuration
