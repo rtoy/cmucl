@@ -3,6 +3,18 @@ variables:
   version: "2024-08-x86"
   bootstrap: "-B boot-2024-08"
 
+# Install configuration
+.install_template: &install_configuration
+  stage: install
+  artifacts:
+    paths:
+      - snapshot/
+  script:
+    - wget -nv $download_url/cmucl-$version-$osname.tar.bz2
+    - wget -nv $download_url/cmucl-$version-$osname.extra.tar.bz2
+    - mkdir snapshot
+    - (cd snapshot; tar xjf ../cmucl-$version-$osname.tar.bz2; tar xjf ../cmucl-$version-$osname.extra.tar.bz2)
+
 # Rule to build cmucl for all OSes, assuming we don't need anything
 # special and the option '-C ""' is good enough.
 .build_cmucl:
@@ -18,6 +30,7 @@ variables:
     # When the result of `git describe` cannot be used as a version
     # string, an alternative can be provided with the -V flag
     - bin/make-dist.sh -I dist build-4
+
 
 # Default build configuration to be added to each build stage for each
 # OS.
@@ -84,17 +97,11 @@ cache:
 
 
 linux:install:
-  stage: install
+  <<: *install_configuration
   tags:
     - linux
-  artifacts:
-    paths:
-      - snapshot/
-  script:
-    - wget -nv $download_url/cmucl-$version-linux.tar.bz2
-    - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
-    - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
+  variables:
+    osname: "linux"
 
 linux:build:
   <<: *build_configuration
