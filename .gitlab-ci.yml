@@ -275,17 +275,11 @@ linux:static-analyzer:
     - make -C linux-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 
 
 opensuse:install:
-  stage: install
+  <<: *install_configuration
   tags:
     - opensuse
-  artifacts:
-    paths:
-      - snapshot/
-  script:
-    - wget -nv $download_url/cmucl-$version-linux.tar.bz2
-    - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
-    - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
+  variables:
+    osname: "linux"
 
 opensuse:build:
   <<: *build_configuration
