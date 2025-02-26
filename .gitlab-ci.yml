@@ -3,7 +3,8 @@ variables:
   version: "2024-08-x86"
   bootstrap: "-B boot-2024-08"
 
-# Install configuration
+# Default install configuration to download the cmucl tarballs to use
+# for building.
 .install_template: &install_configuration
   stage: install
   artifacts:
@@ -21,7 +22,9 @@ variables:
 
 # Default build configuration to be added to each build stage for each
 # OS.  This assumes we don't need anything special between OSes, and
-# the option '-C ""' is good enough.
+# the option '-C ""' is good enough.  We also override the default
+# build dirs by using the -b option so that we know where the results
+# are, independent of OS.
 .build_template: &build_configuration
   stage: build
   artifacts:
@@ -95,7 +98,7 @@ stages:
 
 cache:
 
-
+#### Linux jobs ####
 linux:install:
   <<: *install_configuration
   tags:
@@ -191,6 +194,7 @@ linux:benchmark:
       artifacts: true
     - job: linux:build
 
+#### OSX (Mac) jobs ####
 osx:install:
   <<: *install_configuration
   tags:
@@ -264,6 +268,7 @@ linux:static-analyzer:
     - make -C build-4/lisp clean
     - make -C build-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 
 
+#### OpenSUSE jobs ####
 opensuse:install:
   <<: *install_configuration
   tags:
