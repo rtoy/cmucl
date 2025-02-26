@@ -18,7 +18,18 @@ variables:
     # When the result of `git describe` cannot be used as a version
     # string, an alternative can be provided with the -V flag
     - bin/make-dist.sh -I dist build-4
-    
+
+# Default build configuration to be added to each build stage for each
+# OS.
+.build_template: &build_configuration
+  stage: build
+  artifacts:
+    paths:
+      - dist/
+      - build-2/*.log
+      - build-3/*.log
+      - build-4/
+  
 stages:
   - install
   - build
@@ -44,15 +55,9 @@ linux:install:
     - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
 
 linux:build:
-  stage: build
+  <<: *build_configuration
   tags:
     - linux
-  artifacts:
-    paths:
-      - dist/
-      - build-2/*.log
-      - build-3/*.log
-      - build-4/
   needs:
     - job: linux:install
       artifacts: true
@@ -178,15 +183,9 @@ osx:install:
     - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
 
 osx:build:
-  stage: build
+  <<: *build_configuration
   tags:
     - macos-virtualbox
-  artifacts:
-    paths:
-      - dist/
-      - darwin-2/*.log
-      - darwin-3/*.log
-      - darwin-4/*.log
   needs:
     - job: osx:install
       artifacts: true
@@ -292,15 +291,9 @@ opensuse:install:
     - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
 
 opensuse:build:
-  stage: build
+  <<: *build_configuration
   tags:
     - opensuse
-  artifacts:
-    paths:
-      - dist/
-      - build-2/*.log
-      - build-3/*.log
-      - build-4/
   needs:
     - job: opensuse:install
       artifacts: true
