@@ -13,16 +13,23 @@ variables:
     - echo PATH = $PATH
     - ls -F /usr/local/bin
     - type -all gitlab-runner
+    # Download binaries.  (Do we really need the extras tarball?)
     - $CURL -o cmucl-$version-$osname.tar.bz2 $download_url/cmucl-$version-$osname.tar.bz2
     - $CURL -o cmucl-$version-$osname.extra.tar.bz2 $download_url/cmucl-$version-$osname.extra.tar.bz2
-    #- wget -nv $download_url/cmucl-$version-$osname.tar.bz2
-    #- wget -nv $download_url/cmucl-$version-$osname.extra.tar.bz2
     - mkdir snapshot
     - (cd snapshot; tar xjf ../cmucl-$version-$osname.tar.bz2; tar xjf ../cmucl-$version-$osname.extra.tar.bz2)
 
-# Rule to build cmucl for all OSes, assuming we don't need anything
-# special and the option '-C ""' is good enough.
-.build_cmucl:
+# Default build configuration to be added to each build stage for each
+# OS.  This assumes we don't need anything special between OSes, and
+# the option '-C ""' is good enough.
+.build_template: &build_configuration
+  stage: build
+  artifacts:
+    paths:
+      - dist/
+      - build-2/*.log
+      - build-3/*.log
+      - build-4/
   script:
     # Do cross compile first
     #- bin/create-target.sh xtarget x86_linux_clang
@@ -35,18 +42,6 @@ variables:
     # When the result of `git describe` cannot be used as a version
     # string, an alternative can be provided with the -V flag
     - bin/make-dist.sh -I dist build-4
-
-
-# Default build configuration to be added to each build stage for each
-# OS.
-.build_template: &build_configuration
-  stage: build
-  artifacts:
-    paths:
-      - dist/
-      - build-2/*.log
-      - build-3/*.log
-      - build-4/
 
 # Default configuration for running the ansi-tests.
 .ansi_test_template: &ansi_test_configuration
@@ -116,8 +111,6 @@ linux:build:
   needs:
     - job: linux:install
       artifacts: true
-  script:
-    - !reference [.build_cmucl, script]
 
 linux:cross-build:
   stage: build
@@ -213,8 +206,6 @@ osx:build:
   needs:
     - job: osx:install
       artifacts: true
-  script:
-    - !reference [.build_cmucl, script]
 
 osx:test:
   <<: *unit_test_configuration
@@ -270,8 +261,8 @@ linux:static-analyzer:
     # the results to the log file instead of also having it go to the
     # console.  If someday there's less or no output, we can consider
     # having the logs go to the console too.
-    - make -C linux-4/lisp clean
-    - make -C linux-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 
+    - make -C build-4/lisp clean
+    - make -C build-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 
 
 opensuse:install:
   <<: *install_configuration
@@ -288,8 +279,6 @@ opensuse:build:
   needs:
     - job: opensuse:install
       artifacts: true
-  script:
-    - !reference [.build_cmucl, script]
 
 opensuse:test:
   <<: *unit_test_configuration
