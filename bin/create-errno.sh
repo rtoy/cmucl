@@ -5,11 +5,14 @@
 # definitions of all the Unix errno values.
 #
 
+# Where the output should go.
+OUTPUT="src/code/errno.lisp"
+
 # The header was copied from code/unix.lisp.  This includes all the
 # support code for DEF-UNIX-ERROR and for all OSes that don't use the
 # awk script to create the DEF-UNIX-ERROR forms.
 #
-cat <<EOF
+cat > $OUTPUT <<EOF
 ;;; -*- Package: ERRNO -*-
 ;;;
 ;;; **********************************************************************
@@ -51,7 +54,11 @@ cat <<EOF
        (declaim (simple-vector *unix-errors*)))))
 
 ) ;eval-when
+EOF
 
+# Output the default def-unix-error forms for the OSes where we don't
+# grovel the include files to get the errno definitions.
+cat >> $OUTPUT <<EOF
 ;;; 
 ;;; From <errno.h>
 ;;; 
@@ -249,13 +256,20 @@ EOF
 
 # Create appropriate DEF-UNIX-ERROR forms by reading header files
 # containing the C definitions.
+
+# Set ERRNO_FILES to the files where we can find errno definitions.
+case `uname -s` in
+    Linux) ERRNO_FILES=/usr/include/asm-generic/errno*.h
+	   ;;
+esac
+
 awk '/^#define[ \t]+(E[A-Z0-9]+)[ \t]+([A-Z0-9]+).*$/ {
     printf "(def-unix-error %s %s)\n", $2, $3;
-}' "$@"
+}' "$@" ${ERRNO_FILES} >> $OUTPUT
 
 # The tail was also copied from code/unix.lisp.  It's needed to tell
 # Lisp about the errno values.
-cat <<EOF
+cat >>$OUTPUT <<EOF
 ;;; End auto-generated forms, if any.
 
 ;;;

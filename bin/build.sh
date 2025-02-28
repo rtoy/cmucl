@@ -157,14 +157,8 @@ buildit ()
     fi
 }
 
-# Create src/code/errno.lisp by reading the errno definitions from the
-# header files.
-case `uname -s` in
-    Linux) ERRNO_FILES=/usr/include/asm-generic/errno*.h
-	   ;;
-esac
-
-bin/create-errno.sh ${ERRNO_FILES} > src/code/errno.lisp
+# Create the errno file containing all the def-unix-error forms.
+bin/create-errno.sh
 
 BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"

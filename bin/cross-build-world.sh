@@ -84,13 +84,8 @@ then
 		sed "s:^src:$CROSS:g" | xargs mkdir
 fi
 
-# Create unix-errno.lisp
-case `uname -s` in
-    Linux) ERRNO_FILES=/usr/include/asm-generic/errno*.h
-	   ;;
-esac
-
-bin/create-errno.sh ${ERRNO_FILES} > src/code/errno.lisp
+# Create the errno file containing all the def-unix-error forms.
+bin/create-errno.sh
 
 echo cross boot = $CROSSBOOT
 $LISP "$@" -noinit -nositeinit <<EOF
