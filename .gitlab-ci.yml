@@ -184,6 +184,7 @@ osx:build:
       - darwin-2/*.log
       - darwin-3/*.log
       - darwin-4/*.log
+      - src/code/errno.lisp
   needs:
     - job: osx:install
       artifacts: true
