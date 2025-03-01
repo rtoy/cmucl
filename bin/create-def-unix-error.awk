@@ -8,7 +8,15 @@ BEGIN {
     # This is to catch any duplicates.  We assume the latter value is
     # NOT what we want.  This happens on Darwin where EOPNOSUPP is
     # defined twice due to #if's.
-    if (!($2 in errno)) {
+    found = 0
+    for (key in errno) {
+	if (errno[key] == $2) {
+	    printf ";; Ignoring dup of %s: old value %d, new value %\n", $2, errno[key], $3;
+	    found = 1;
+	    break;
+       }
+    }
+    if (!found) {
 	errno[count] = $2;
 	value[count] = $3;
 	++count;
