@@ -19,6 +19,8 @@ cat bin/errno-template.lisp > $OUTPUT
 case `uname -s` in
     Linux) ERRNO_FILES=/usr/include/asm-generic/errno*.h
 	   ;;
+    Darwin) ERRNO_FILES=/usr/include/sys/errno.h
+	    ;;
 esac
 
 awk '/^#define[ \t]+(E[A-Z0-9]+)[ \t]+([A-Z0-9]+).*$/ {

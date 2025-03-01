@@ -44,7 +44,7 @@
 ;;; 
 (def-unix-error ESUCCESS 0 _N"Successful")
 
-#-linux
+#-(or linux darwin)
 (progn
 (def-unix-error EPERM 1 _N"Operation not permitted")
 (def-unix-error ENOENT 2 _N"No such file or directory")
@@ -86,7 +86,7 @@
 )
 
 ;;; 
-#-(or linux svr4)
+#-(or linux svr4 darwin)
 (progn
 ;;; non-blocking and interrupt i/o
 (def-unix-error EWOULDBLOCK 35 _N"Operation would block")
