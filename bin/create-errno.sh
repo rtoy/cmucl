@@ -21,6 +21,8 @@ case `uname -s` in
 	   ;;
     Darwin) ERRNO_FILES=/usr/include/sys/errno.h
 	    ;;
+    SunOS) ERRNO_FILES=/usr/include/sys/errno.h
+	   ;;
 esac
 
 awk -f bin/create-def-unix-error.awk ${ERRNO_FILES} >> $OUTPUT
