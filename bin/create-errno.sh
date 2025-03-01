@@ -23,9 +23,7 @@ case `uname -s` in
 	    ;;
 esac
 
-awk '/^#define[ \t]+(E[A-Z0-9]+)[ \t]+([A-Z0-9]+).*$/ {
-    printf "(def-unix-error %s %s)\n", $2, $3;
-}' "$@" ${ERRNO_FILES} >> $OUTPUT
+awk -f bin/create-def-unix-error.awk ${ERRNO_FILES} >> $OUTPUT
 
 # The tail was also copied from code/unix.lisp.  It's needed to tell
 # Lisp about the errno values.
