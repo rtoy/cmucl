@@ -44,8 +44,8 @@
 ;;; 
 (def-unix-error ESUCCESS 0 _N"Successful")
 
-#-(or linux darwin svr4) 
-(progn
+;; Default errno values.  These are used only if we could not
+;; auto-generate these forms.
 (def-unix-error EPERM 1 _N"Operation not permitted")
 (def-unix-error ENOENT 2 _N"No such file or directory")
 (def-unix-error ESRCH 3 _N"No such process")
@@ -138,7 +138,9 @@
 ;;; VICE
 (def-unix-error EVICEERR 70 _N"Remote file system error _N")
 (def-unix-error EVICEOP 71 _N"syscall was handled by Vice")
-)
 
-;;; Auto-generated forms, if any, follow here.
+;;; End of default def-unix-error forms
+
+;;; And now for something completely different ...
+(emit-unix-errors)
 
