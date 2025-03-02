@@ -5,6 +5,32 @@
 # definitions of all the Unix errno values.
 #
 
+usage ()
+{
+    cat <<EOF
+create-erno.sh [-h?DS]
+    -h    This help
+    -?    This help
+    -D	  Do not auto-generate; use default
+
+    -S    Show the resulting generated file; the file is still created.
+
+Auto-generates, if possible, the file src/code/errno.lisp that
+contains the def-unix-error forms.
+EOF
+    exit 0
+}
+
+while getopts "h?DS" arg
+do
+    case $arg in
+	h) usage ;;
+	\?) usage ;;
+	D) DEFAULT=yes ;;
+	S) SHOW=yes ;;
+    esac
+done
+
 # Where the output should go.
 OUTPUT="src/code/errno.lisp"
 
@@ -13,14 +39,16 @@ OUTPUT="src/code/errno.lisp"
 TEMPLATE="bin/errno-template.lisp"
 
 # Set ERRNO_FILES to the files where we can find errno definitions.
-case `uname -s` in
-    Linux) ERRNO_FILES=/usr/include/asm-generic/errno*.h
-	   ;;
-    Darwin) ERRNO_FILES=/usr/include/sys/errno.h
-	    ;;
-    SunOS) ERRNO_FILES=/usr/include/sys/errno.h
-	   ;;
-esac
+if [ -z "$DEFAULT" ]; then
+    case `uname -s` in
+	Linux) ERRNO_FILES=/usr/include/asm-generic/errno*.h
+	       ;;
+	Darwin) ERRNO_FILES=/usr/include/sys/errno.h
+		;;
+	SunOS) ERRNO_FILES=/usr/include/sys/errno.h
+	       ;;
+    esac
+fi
 
 if [ -z "$ERRNO_FILES" ]; then
     # Copy the main errno template to the output.  The template is a lisp
@@ -46,3 +74,7 @@ EOF
     sed '1,/^;;; End of default/d' "$TEMPLATE" >> $OUTPUT
 fi
 
+# If -S option given, cat the output file to stdout
+if [ -n "$SHOW" ]; then
+    cat $OUTPUT
+fi
