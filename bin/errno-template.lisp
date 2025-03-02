@@ -22,10 +22,11 @@
 (defparameter *compiler-unix-errors* nil)
 
 (defmacro def-unix-error (name number &optional description)
+  (declare (ignore description))
   `(progn
      (eval-when (compile eval)
        (push (cons ,number ,description) *compiler-unix-errors*))
-     (defconstant ,name ,number ,description)
+     (defconstant ,name ,number)
      (export ',name)))
 
 (defmacro emit-unix-errors ()
