@@ -12,7 +12,7 @@
 ;;; This file contains the UNIX low-level support, just enough to run
 ;;; CMUCL.
 ;;;
-(in-package "ERRNO")
+(in-package "UNIX")
 (intl:textdomain "cmucl-unix")
 
 ;;;; Errno stuff.
