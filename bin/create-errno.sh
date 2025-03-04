@@ -82,7 +82,8 @@ if [ -n "$SHOW" ]; then
 fi
 
 # Now generate the defpackage form for the ERRNO package.
-cat > src/code/exports-errno.lisp <<EOF
+{
+    cat  <<EOF
 ;;; -*- Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
@@ -94,7 +95,11 @@ cat > src/code/exports-errno.lisp <<EOF
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; All the stuff necessary to export various symbols from various packages.
+;;; Defines the ERRNO package and all the exported symbols.
+;;;
+;;; This file is auto-generated via bin/create-errno.sh.
+;;;
+;;; DO NOT EDIT!
 ;;;
 
 (in-package "LISP")
@@ -107,9 +112,16 @@ cat > src/code/exports-errno.lisp <<EOF
 
 (defpackage "ERRNO"
   (:export
-$(grep '(def-unix-error ' $ERRNO_FILE |
-  cut -d ' ' -f2 |
-  sed 's/\(.*\)/   "\1"/' |
-  sort)
+EOF
+    # Get the def-unix-error forms from the ERRNO_FILE, extract out
+    # the name, put double-quotes around them and then sort the result
+    # to get all the exported symbols for the ERRNO package.
+    grep '(def-unix-error ' $ERRNO_FILE |
+	cut -d ' ' -f2 |
+	sed 's/\(.*\)/   "\1"/' |
+	sort
+    # Close the defpackage form
+    cat <<EOF
    ))
 EOF
+} > src/code/exports-errno.lisp
