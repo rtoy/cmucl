@@ -110,6 +110,8 @@ fi
     (rename-package "ERRNO" "ERRNO" 'nil)
     (make-package "ERRNO" :nicknames 'nil :use nil))
 
+(use-package '("LISP") "ERRNO")
+
 (defpackage "ERRNO"
   (:export
 EOF
