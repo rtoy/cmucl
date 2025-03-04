@@ -32,7 +32,7 @@ do
 done
 
 # Where the output should go.
-OUTPUT="src/code/errno.lisp"
+ERRNO_FILE="src/code/errno.lisp"
 
 # Template file containing the default def-unix-error forms and other
 # support code.
@@ -53,7 +53,7 @@ fi
 if [ -z "$ERRNO_FILES" ]; then
     # Copy the main errno template to the output.  The template is a lisp
     # file so we can read and modify it more easily.
-    cat "$TEMPLATE" > $OUTPUT
+    cat "$TEMPLATE" > $ERRNO_FILE
 else
     # We can autogenerate the def-unix-error forms.  Copy just the
     # initial part of the template, up to the first def-unix-error
@@ -73,10 +73,43 @@ EOF
 	# The tail was also copied from code/unix.lisp.  It's needed to tell
 	# Lisp about the errno values.
 	sed '1,/^;;; End of default/d' "$TEMPLATE"
-    } > $OUTPUT
+    } > $ERRNO_FILE
 fi
 
 # If -S option given, cat the output file to stdout
 if [ -n "$SHOW" ]; then
-    cat $OUTPUT
+    cat $ERRNO_FILE
 fi
+
+# Now generate the defpackage form for the ERRNO package.
+cat > src/code/exports-errno.lisp <<EOF
+;;; -*- Log: C.Log -*-
+;;;
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;;
+(ext:file-comment
+  ": src/code/exports-errno.lisp $")
+;;;
+;;; **********************************************************************
+;;;
+;;; All the stuff necessary to export various symbols from various packages.
+;;;
+
+(in-package "LISP")
+
+(intl:textdomain "cmucl")
+
+(if (find-package "ERRNO")
+    (rename-package "ERRNO" "ERRNO" 'nil)
+    (make-package "ERRNO" :nicknames 'nil :use nil))
+
+(defpackage "ERRNO"
+  (:export
+$(grep '(def-unix-error ' $ERRNO_FILE |
+  cut -d ' ' -f2 |
+  sed 's/\(.*\)/   "\1"/' |
+  sort)
+   ))
+EOF
