@@ -78,6 +78,7 @@
 
 ;;; Make sure the package structure is correct.
 ;;;
+(maybe-byte-load "code:exports-errno")
 (maybe-byte-load "code:exports")
 
 ;;; Load random code sources.
