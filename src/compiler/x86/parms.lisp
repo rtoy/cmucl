@@ -380,9 +380,10 @@
       :key-or-value
 
       lisp::*unidata-path*
-      lisp::*lisp-implementation-version*
+
       ;; Spare symbols.  Rename these when you need to add some static
       ;; symbols and don't want to do a cross-compile.
+      spare-9
       spare-8
       spare-7
       spare-6
