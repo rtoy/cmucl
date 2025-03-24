@@ -494,7 +494,67 @@ int match_option(const char* arg, const char* argname)
 
     return 0;
 }
+
+char *
+update_path_from_core(const char* cmucllib, const char* core)
+{
+    char *newlib = strdup(cmucllib);
+
+    if (core != NULL) {
+	newlib = prepend_core_path(cmucllib, core);
+	if (debug_lisp_search) {
+	    fprintf(stderr, "core = %s\nPrepended path = %s\n",
+		    core, newlib);
+	}
+    } else if (getenv("CMUCLCORE") != NULL) {
+	core = getenv("CMUCLCORE");
+	newlib = prepend_core_path(cmucllib, core);
+	if (debug_lisp_search) {
+	    fprintf(stderr, "CMUCLCORE = %s\nPrepended path = %s\n",
+		    core, newlib);
+	}
+    }
+
+    return newlib;
+}
+
+/*
+ * Append the values of |cmucllib_search_list| to |path| where |path|
+ * is a colon-separated list of directories.
+ *
+ * A new string is returned for the new colon-separated list of
+ * directories.
+ */
+char *
+append_default_path(const char* path, const char* argv0, const char* core)
+{
+    int len;
+    char *new_path;
+    char *cmucllib;
+
+    cmucllib = default_cmucllib(argv0);
+    fprintf(stderr, "default_cmucllib = %s\n", cmucllib);
+    cmucllib = update_path_from_core(cmucllib, core);
+
+    /* Figure out how much space we need to append the default path to PATH. */
+
+    len = 2 + strlen(path) + strlen(cmucllib);
+
+    new_path = malloc(len);
+    strcpy(new_path, path);
+    strcat(new_path, ":");
+    strcat(new_path, cmucllib);
     
+    if (debug_lisp_search) {
+	fprintf(stderr, "Append lib path = %s\n", new_path);
+    }
+
+    free(cmucllib);
+    
+    return new_path;
+}
+
+
 int
 main(int argc, const char *argv[], const char *envp[])
 {
@@ -795,13 +855,13 @@ main(int argc, const char *argv[], const char *envp[])
      * neither are set, set cmucllib to our default search path.
      */
     if (lib != NULL) {
-	cmucllib = strdup(lib);
+	cmucllib = append_default_path(lib, argv[0], core);
     } else {
 	char *libvar;
 
 	libvar = getenv("CMUCLLIB");
 	if (libvar != NULL) {
-	    cmucllib = strdup(libvar);
+	    cmucllib = append_default_path(libvar, argv[0], core);
 	} else {
 	    /*
              * The following doesn't make sense for executables.  They
@@ -809,25 +869,39 @@ main(int argc, const char *argv[], const char *envp[])
              * which they were dumped.
              */
 	    if (builtin_image_flag == 0) {
-                const char *newlib = NULL;
-
                 /*
                  * We need to use our default search path.  If a core file
                  * is given, we prepend the directory of the core file to
                  * the search path.
                  */
                 cmucllib = default_cmucllib(argv[0]);
+		if (debug_lisp_search) {
+		    fprintf(stderr, "default cmuclllib = %s\n", cmucllib);
+		}
+		
+#if 1
+		cmucllib = update_path_from_core(cmucllib, core);
+#else		
                 if (core != NULL) {
                     newlib = prepend_core_path(cmucllib, core);
+		    if (debug_lisp_search) {
+			fprintf(stderr, "core = %s\nPrepended path = %s\n",
+				core, newlib);
+		    }
                 } else if (getenv("CMUCLCORE") != NULL) {
                     core = getenv("CMUCLCORE");
                     newlib = prepend_core_path(cmucllib, core);
+		    if (debug_lisp_search) {
+			fprintf(stderr, "CMUCLCORE = %s\nPrepended path = %s\n",
+				core, newlib);
+		    }
                 }
 
                 if (newlib != NULL) {
                     free((void *) cmucllib);
                     cmucllib = newlib;
                 }
+#endif		
             }
         }
     }
