@@ -2,20 +2,24 @@
 
 usage()
 {
-    echo "load-world.sh [-?p] target-directory"
-    echo "   -p    Skip loading of PCL (Mostly for cross-compiling)"
-    echo "   -?    This help"
+    echo "load-world.sh [-?pv:] target-directory"
+    echo "   -p      Skip loading of PCL (Mostly for cross-compiling)"
+    echo "   -v ver  Set the value of *lisp-implementation-version* to VER"
+    echo "   -?      This help"
     exit 1
 }
 
 SKIP_PCL=
 NO_PCL_FEATURE=
 
-while getopts "p" arg
+while getopts "p?v:" arg
 do
   case $arg in
       p) SKIP_PCL="yes"
          shift;;
+      v) VERSION="$OPTARG"
+	 shift 2
+	 ;;
       \?) usage ;;
   esac
 done
@@ -35,9 +39,9 @@ if [ -n "$SKIP_PCL" ]; then
     NO_PCL_FEATURE="(pushnew :no-pcl *features*)"
 fi
 
-# If version string given, use it, otherwise use the default.
-if [ -n "$2" ]; then
-    VERSION="$2"
+# If version string not given, use the git version
+if [ -z "$VERSION" ]; then
+    VERSION=`bin/git-version.sh`
 fi
 
 $TARGET/lisp/lisp -core $TARGET/lisp/kernel.core <<EOF
