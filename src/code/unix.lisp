@@ -2559,10 +2559,7 @@
 
 #+solaris
 (defun unix-getpwuid (uid)
-  _N"Return a USER-INFO structure for the user identified by UID.  If
-  not found, NIL is returned with a second value indicating the cause
-  of the failure.  In particular, if the second value is 0 (or
-  ENONENT, ESRCH, EBADF, etc.), then the uid was not found."
+  _N"Return a USER-INFO structure for the user identified by UID, or NIL if not found."
   (declare (type unix-uid uid))
   (with-alien ((buf (array c-call:char 1024))
 	       (user-info (struct passwd)))
@@ -2592,10 +2589,7 @@
 
 #+bsd
 (defun unix-getpwuid (uid)
-  _N"Return a USER-INFO structure for the user identified by UID.  If
-  not found, NIL is returned with a second value indicating the cause
-  of the failure.  In particular, if the second value is 0 (or
-  ENONENT, ESRCH, EBADF, etc.), then the uid was not found."
+  _N"Return a USER-INFO structure for the user identified by UID, or NIL if not found."
   (declare (type unix-uid uid))
   (let ((result
          (alien-funcall
@@ -2637,7 +2631,8 @@
 	    (cast buf (* c-call:char))
 	    1024
             (addr result))))
-      (if (not (zerop (sap-int (alien-sap result))))
+      (if (null-alien result)
+	  (values nil returned)
           (make-user-info
            :name (string (cast (slot result 'pw-name) c-call:c-string))
            :password (string (cast (slot result 'pw-passwd) c-call:c-string))
@@ -2645,8 +2640,7 @@
            :gid (slot result 'pw-gid)
            :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
            :dir (string (cast (slot result 'pw-dir) c-call:c-string))
-           :shell (string (cast (slot result 'pw-shell) c-call:c-string)))
-	  (values nil returned)))))
+           :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
 ;;; Getrusage is not provided in the C library on Solaris 2.4, and is
 ;;; rather slow on later versions so the "times" system call is
