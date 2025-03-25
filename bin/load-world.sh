@@ -41,7 +41,15 @@ fi
 
 # If version string not given, use the git version
 if [ -z "$VERSION" ]; then
-    VERSION=`bin/git-version.sh`
+    # Try to get the version from cmucl-version.h so that we match
+    # exactly what was used for building lisp.  Otherwise, fall back
+    # to git-version.sh
+    FILE="src/lisp/cmucl-version.h"
+    if [ -f "$FILE" ]; then
+	VERSION=`grep CMUCL_VERSION "$FILE" | sed 's/^.*CMUCL_VERSION //'`
+    else
+	VERSION=`bin/git-version.sh`
+    fi
 fi
 
 $TARGET/lisp/lisp -core $TARGET/lisp/kernel.core <<EOF
