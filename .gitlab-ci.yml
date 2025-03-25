@@ -35,6 +35,8 @@ variables:
       - build-4/
       # Needed by Linux analyzer stage
       - src/lisp/cmucl-version.h
+      # Save this so we can see the generated errno
+      - src/code/errno.lisp
   script:
     # Do cross compile first
     #- bin/create-target.sh xtarget x86_linux_clang
