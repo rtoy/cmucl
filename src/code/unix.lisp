@@ -2553,8 +2553,11 @@
 		    :password (string (cast (slot passwd 'pw-passwd) c-call:c-string))
 		    :uid (slot passwd 'pw-uid)
 		    :gid (slot passwd 'pw-gid)
-		    :gecos (string (cast (slot passwd 'pw-gecos) c-call:c-string))
-		    :dir (string (cast (slot passwd 'pw-dir) c-call:c-string))
+		    ;; The GECOS field could be unicode
+		    :gecos (string-decode (cast (slot passwd 'pw-gecos) c-call:c-string)
+					  :default)
+		    ;; The home directory could be unicode 
+		    :dir (%file->name (cast (slot passwd 'pw-dir) c-call:c-string))
 		    :shell (string (cast (slot passwd 'pw-shell) c-call:c-string))))))
 	(unless (null-alien result)
 	  (let ((passwd (deref result)))
