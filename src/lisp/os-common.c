@@ -957,7 +957,11 @@ os_getpwuid(uid_t uid)
 again:
     switch (getpwuid_r(uid, &pwd, buffer, size, &ppwd)) {
       case 0:
-	  /* Success, though we might not have a matching entry */
+	  /*
+	   * Success, though we might not have a matching entry.  But
+	   * if we do, copy the entry to a new structure and return
+	   * that.
+	   */
 	  if (ppwd != NULL) {
 	      result = (struct passwd*) malloc(sizeof(pwd));
 	      result->pw_name = strdup(pwd.pw_name);
@@ -967,11 +971,6 @@ again:
 	      result->pw_gecos = strdup(pwd.pw_gecos);
 	      result->pw_dir = strdup(pwd.pw_dir);
 	      result->pw_shell = strdup(pwd.pw_shell);
-	      printf("pw-name   = %p\n", result->pw_name);
-	      printf("pw-passwd = %p\n", result->pw_passwd);
-	      printf("pw-gecos  = %p\n", result->pw_gecos);
-	      printf("pw_dir    = %p\n", result->pw_dir);
-	      printf("pw_shell  = %p\n", result->pw_shell);
 	  }
 	      
 	  break;
