@@ -2557,90 +2557,42 @@
 
 ;;;; User and group database access, POSIX Standard 9.2.2
 
-#+solaris
-(defun unix-getpwuid (uid)
-  _N"Return a USER-INFO structure for the user identified by UID, or NIL if not found."
-  (declare (type unix-uid uid))
-  (with-alien ((buf (array c-call:char 1024))
-	       (user-info (struct passwd)))
-    (let ((result
-	   (alien-funcall
-	    (extern-alien "getpwuid_r"
-			  (function (* (struct passwd))
-				    c-call:unsigned-int
-				    (* (struct passwd))
-				    (* c-call:char)
-				    c-call:unsigned-int))
-	    uid
-	    (addr user-info)
-	    (cast buf (* c-call:char))
-	    1024)))
-      (when (not (zerop (sap-int (alien-sap result))))
-	(make-user-info
-	 :name (string (cast (slot result 'pw-name) c-call:c-string))
-	 :password (string (cast (slot result 'pw-passwd) c-call:c-string))
-	 :uid (slot result 'pw-uid)
-	 :gid (slot result 'pw-gid)
-	 :age (string (cast (slot result 'pw-age) c-call:c-string))
-	 :comment (string (cast (slot result 'pw-comment) c-call:c-string))
-	 :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
-	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
-	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
-
-#+bsd
-(defun unix-getpwuid (uid)
-  _N"Return a USER-INFO structure for the user identified by UID, or NIL if not found."
-  (declare (type unix-uid uid))
-  (let ((result
-         (alien-funcall
-          (extern-alien "getpwuid"
-			  (function (* (struct passwd))
-				    c-call:unsigned-int))
-          uid)))
-    (when (not (zerop (sap-int (alien-sap result))))
-      (make-user-info
-       :name (string (cast (slot result 'pw-name) c-call:c-string))
-       :password (string (cast (slot result 'pw-passwd) c-call:c-string))
-       :uid (slot result 'pw-uid)
-       :gid (slot result 'pw-gid)
-       :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
-       :dir (string (cast (slot result 'pw-dir) c-call:c-string))
-       :shell (string (cast (slot result 'pw-shell) c-call:c-string))))))
-
-#+linux
 (defun unix-getpwuid (uid)
   "Return a USER-INFO structure for the user identified by UID.  If
   not found, NIL is returned with a second value indicating the cause
   of the failure.  In particular, if the second value is 0 (or
   ENONENT, ESRCH, EBADF, etc.), then the uid was not found."
   (declare (type unix-uid uid))
-  (with-alien ((buf (array c-call:char 16384))
-	       (user-info (struct passwd))
-               (result (* (struct passwd))))
-    (let ((returned
-	   (alien-funcall
-	    (extern-alien "getpwuid_r"
-			  (function c-call:int
-                                    c-call:unsigned-int
-                                    (* (struct passwd))
-                                    (* c-call:char)
-                                    c-call:unsigned-int
-                                    (* (* (struct passwd)))))
-	    uid
-	    (addr user-info)
-	    (cast buf (* c-call:char))
-	    1024
-            (addr result))))
-      (if (not (zerop (sap-int (alien-sap result))))
-          (make-user-info
-           :name (string (cast (slot result 'pw-name) c-call:c-string))
-           :password (string (cast (slot result 'pw-passwd) c-call:c-string))
-           :uid (slot result 'pw-uid)
-           :gid (slot result 'pw-gid)
-           :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
-           :dir (string (cast (slot result 'pw-dir) c-call:c-string))
-           :shell (string (cast (slot result 'pw-shell) c-call:c-string)))
-	  (values nil returned)))))
+  (with-alien ((result (* (struct passwd))))
+    (let (result)
+      (unwind-protect
+	   (progn
+	     (setf result
+		   (alien-funcall
+		    (extern-alien "os_getpwuid"
+				  (function (* (struct passwd))
+					    uid-t))
+		    uid))
+	     (if (null-alien result)
+		 (values nil (unix-errno))
+		 (let ((passwd (deref result)))
+		   (make-user-info
+		    :name (string (cast (slot passwd 'pw-name) c-call:c-string))
+		    :password (string (cast (slot passwd 'pw-passwd) c-call:c-string))
+		    :uid (slot passwd 'pw-uid)
+		    :gid (slot passwd 'pw-gid)
+		    :gecos (string (cast (slot passwd 'pw-gecos) c-call:c-string))
+		    :dir (string (cast (slot passwd 'pw-dir) c-call:c-string))
+		    :shell (string (cast (slot passwd 'pw-shell) c-call:c-string))))))
+	(unless (null-alien result)
+	  (let ((passwd (deref result)))
+	    (free-alien (slot passwd 'pw-name))
+	    (free-alien (slot passwd 'pw-passwd))
+	    (free-alien (slot passwd 'pw-gecos))
+	    (free-alien (slot passwd 'pw-dir))
+	    (free-alien (slot passwd 'pw-shell)))
+	  (free-alien result))))))
+
 
 ;;; Getrusage is not provided in the C library on Solaris 2.4, and is
 ;;; rather slow on later versions so the "times" system call is

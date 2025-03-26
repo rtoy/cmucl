@@ -936,3 +936,62 @@ os_get_user_homedir(const char* name, int *status)
     return NULL;
 }
     
+struct passwd*
+os_getpwuid(uid_t uid)
+{
+    char initial[1024];
+    char *buffer, *obuffer;
+    size_t size;
+    struct passwd pwd;
+    struct passwd *ppwd;
+    struct passwd *result = NULL;
+
+    buffer = initial;
+    obuffer = NULL;
+    size = sizeof(initial) / sizeof(initial[0]);
+
+    /*
+     * Keep trying with larger buffers until a maximum is reached.  We
+     * assume (1 << 20) is large enough for any OS.
+     */
+again:
+    switch (getpwuid_r(uid, &pwd, buffer, size, &ppwd)) {
+      case 0:
+	  /* Success, though we might not have a matching entry */
+	  if (ppwd != NULL) {
+	      result = (struct passwd*) malloc(sizeof(pwd));
+	      result->pw_name = strdup(pwd.pw_name);
+	      result->pw_passwd = strdup(pwd.pw_passwd);
+	      result->pw_uid = pwd.pw_uid;
+	      result->pw_gid = pwd.pw_gid;
+	      result->pw_gecos = strdup(pwd.pw_gecos);
+	      result->pw_dir = strdup(pwd.pw_dir);
+	      result->pw_shell = strdup(pwd.pw_shell);
+	      printf("pw-name   = %p\n", result->pw_name);
+	      printf("pw-passwd = %p\n", result->pw_passwd);
+	      printf("pw-gecos  = %p\n", result->pw_gecos);
+	      printf("pw_dir    = %p\n", result->pw_dir);
+	      printf("pw_shell  = %p\n", result->pw_shell);
+	  }
+	      
+	  break;
+      case ERANGE:
+	  /* Buffer is too small, double its size and try again */
+	  size *= 2;
+	  if (size > (1 << 20)) {
+	      break;
+	  }
+	  if ((buffer = realloc(obuffer, size)) == NULL) {
+	      break;
+	  }
+	  obuffer = buffer;
+	  goto again;
+      default:
+	/* All other errors */
+	break;
+    }
+
+    free(obuffer);
+    
+    return result;
+}
