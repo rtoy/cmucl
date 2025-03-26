@@ -2409,43 +2409,15 @@
   (password "" :type string)
   (uid 0 :type unix-uid)
   (gid 0 :type unix-gid)
-  #+solaris (age "" :type string)
-  #+solaris (comment "" :type string)
-  #+freebsd (change -1 :type fixnum)
   (gecos "" :type string)
   (dir "" :type string)
   (shell "" :type string))
 
-;; see <pwd.h>
-#+solaris
-(def-alien-type nil
-    (struct passwd
-	    (pw-name (* char))          ; user's login name
-	    (pw-passwd (* char))        ; no longer used
-	    (pw-uid uid-t)              ; user id
-	    (pw-gid gid-t)              ; group id
-	    (pw-age (* char))           ; password age (not used)
-	    (pw-comment (* char))       ; not used
-	    (pw-gecos (* char))         ; typically user's full name
-	    (pw-dir (* char))           ; user's home directory
-	    (pw-shell (* char))))       ; user's login shell
+;; See <pwd.h>
+;;
+;; While each OS may contain additional fields, we only need the ones
+;; that are used the user-info structure.
 
-#+bsd
-(def-alien-type nil
-    (struct passwd
-	    (pw-name (* char))          ; user's login name
-	    (pw-passwd (* char))        ; no longer used
-	    (pw-uid uid-t)              ; user id
-	    (pw-gid gid-t)              ; group id
-            (pw-change int)             ; password change time
-            (pw-class (* char))         ; user access class
-	    (pw-gecos (* char))         ; typically user's full name
-	    (pw-dir (* char))           ; user's home directory
-	    (pw-shell (* char))         ; user's login shell
-            (pw-expire int)             ; account expiration
-            #+(or freebsd darwin)
-	    (pw-fields int)))           ; internal
-#+linux
 (def-alien-type nil
     (struct passwd
 	    (pw-name (* char))          ; user's login name
