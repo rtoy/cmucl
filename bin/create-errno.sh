@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# Generates the contents of the file code/unix-errno.lisp.  The args
+# Generates the contents of the file code/errno.lisp.  The args
 # to this script, if supplied, must be a list of files containing the
 # definitions of all the Unix errno values.
 #
