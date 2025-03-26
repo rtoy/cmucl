@@ -89,3 +89,10 @@
     (assert-true (and (integerp errno) (plusp errno)))))
 
 
+(define-test getpwuid
+  (:tag :issues)
+  ;; Check that we get something sensible from unix-getpwuid.
+  (let ((info (unix:unix-getpwuid 0)))
+    (assert-true info)
+    (assert-equal (unix:user-info-name info)
+		  "root")))
