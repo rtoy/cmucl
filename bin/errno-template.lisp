@@ -24,19 +24,8 @@
 (defmacro def-unix-error (name number &optional description)
   (declare (ignore description))
   `(progn
-     (eval-when (compile eval)
-       (push (cons ,number ,description) *compiler-unix-errors*))
      (defconstant ,name ,number)
      (export ',name)))
-
-(defmacro emit-unix-errors ()
-  (let* ((max (apply #'max (mapcar #'car *compiler-unix-errors*)))
-	 (array (make-array (1+ max) :initial-element nil)))
-    (dolist (error *compiler-unix-errors*)
-      (setf (svref array (car error)) (cdr error)))
-    `(progn
-       (defvar *unix-errors* ',array)
-       (declaim (simple-vector *unix-errors*)))))
 
 ) ;eval-when
 
@@ -146,7 +135,3 @@
 ;;; Do NOT modify the line below.  bin/create-errno.sh depends on it.
 
 ;;; End of default def-unix-error forms
-
-;;; And now for something completely different ...
-(emit-unix-errors)
-
