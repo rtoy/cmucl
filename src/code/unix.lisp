@@ -2417,9 +2417,12 @@
 ;;
 ;; While each OS may contain additional fields, we only need the ones
 ;; that are used the user-info structure.
+;;
+;; NOTE: This may NOT be the actual OS-defined passwd structure.  It
+;; is the structure returned by os_getpwuid (in unix-getpwuid).
 
 (def-alien-type nil
-    (struct passwd
+    (struct unix-passwd
 	    (pw-name (* char))          ; user's login name
 	    (pw-passwd (* char))        ; no longer used
 	    (pw-uid uid-t)              ; user id

@@ -946,7 +946,22 @@ os_get_user_homedir(const char* name, int *status)
  * The caller MUST call os_free_getpwuid() to free the space allocated
  * by os_getpwuid().
  */
-struct passwd*
+
+/*
+ * This MUST match the definition in code/unix.lisp.
+ */
+struct unix_passwd 
+{
+    char* pw_name;
+    char* pw_passwd;
+    uid_t pw_uid;
+    gid_t pw_gid;
+    char* pw_gecos;
+    char* pw_dir;
+    char* pw_shell;
+};
+    
+struct unix_passwd*
 os_getpwuid(uid_t uid)
 {
     char initial[1024];
@@ -954,7 +969,7 @@ os_getpwuid(uid_t uid)
     size_t size;
     struct passwd pwd;
     struct passwd *ppwd;
-    struct passwd *result = NULL;
+    struct unix_passwd *result = NULL;
 
     buffer = initial;
     obuffer = NULL;
@@ -973,7 +988,7 @@ again:
 	   * that.
 	   */
 	  if (ppwd != NULL) {
-	      result = (struct passwd*) malloc(sizeof(pwd));
+	      result = (struct unix_passwd*) malloc(sizeof(pwd));
 	      result->pw_name = strdup(pwd.pw_name);
 	      result->pw_passwd = strdup(pwd.pw_passwd);
 	      result->pw_uid = pwd.pw_uid;
