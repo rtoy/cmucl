@@ -936,6 +936,16 @@ os_get_user_homedir(const char* name, int *status)
     return NULL;
 }
     
+
+/*
+ * Get the passwd info for the user id UID.  If the uid does not
+ * exist, return NULL.  Otherwise, return a passwd struct that has the
+ * slots filled in that are needed to create the USER-INFO structure.
+ * All other slots in passwd are undefined.
+ *
+ * The caller MUST call os_free_getpwuid() to free the space allocated
+ * by os_getpwuid().
+ */
 struct passwd*
 os_getpwuid(uid_t uid)
 {
@@ -993,4 +1003,19 @@ again:
     free(obuffer);
     
     return result;
+}
+
+/*
+ * Free the space allocated for the passwd struct returned by
+ * os_getpwuid().
+ */
+void
+os_free_getpwuid(struct passwd* pwd)
+{
+    free(pwd->pw_name);
+    free(pwd->pw_passwd);
+    free(pwd->pw_gecos);
+    free(pwd->pw_dir);
+    free(pwd->pw_shell);
+    free(pwd);
 }

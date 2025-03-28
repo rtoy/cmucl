@@ -2560,13 +2560,11 @@
 		    :dir (%file->name (cast (slot passwd 'pw-dir) c-call:c-string))
 		    :shell (string (cast (slot passwd 'pw-shell) c-call:c-string))))))
 	(unless (null-alien result)
-	  (let ((passwd (deref result)))
-	    (free-alien (slot passwd 'pw-name))
-	    (free-alien (slot passwd 'pw-passwd))
-	    (free-alien (slot passwd 'pw-gecos))
-	    (free-alien (slot passwd 'pw-dir))
-	    (free-alien (slot passwd 'pw-shell)))
-	  (free-alien result))))))
+	  (alien-funcall
+	   (extern-alien "os_free_getpwuid"
+			 (function c-call:void
+				   (* (struct passwd))))
+	   result))))))
 
 
 ;;; Getrusage is not provided in the C library on Solaris 2.4, and is
