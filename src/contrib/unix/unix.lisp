@@ -629,6 +629,35 @@
 
 
 ;;;; User and group database access, POSIX Standard 9.2.2
+;; see <pwd.h>
+#+solaris
+(def-alien-type nil
+    (struct passwd
+	    (pw-name (* char))          ; user's login name
+	    (pw-passwd (* char))        ; no longer used
+	    (pw-uid uid-t)              ; user id
+	    (pw-gid gid-t)              ; group id
+	    (pw-age (* char))           ; password age (not used)
+	    (pw-comment (* char))       ; not used
+	    (pw-gecos (* char))         ; typically user's full name
+	    (pw-dir (* char))           ; user's home directory
+	    (pw-shell (* char))))       ; user's login shell
+
+#+bsd
+(def-alien-type nil
+    (struct passwd
+	    (pw-name (* char))          ; user's login name
+	    (pw-passwd (* char))        ; no longer used
+	    (pw-uid uid-t)              ; user id
+	    (pw-gid gid-t)              ; group id
+            (pw-change int)             ; password change time
+            (pw-class (* char))         ; user access class
+	    (pw-gecos (* char))         ; typically user's full name
+	    (pw-dir (* char))           ; user's home directory
+	    (pw-shell (* char))         ; user's login shell
+            (pw-expire int)             ; account expiration
+            #+(or freebsd darwin)
+	    (pw-fields int)))           ; internal
 
 #+solaris
 (defun unix-getpwnam (login)

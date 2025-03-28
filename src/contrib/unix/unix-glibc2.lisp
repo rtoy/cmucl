@@ -219,6 +219,16 @@
       (gr-gid gid-t)                    ; numerical group ID
       (gr-mem (* (* char)))))           ; vector of pointers to member names
 
+(def-alien-type nil
+    (struct passwd
+	    (pw-name (* char))          ; user's login name
+	    (pw-passwd (* char))        ; no longer used
+	    (pw-uid uid-t)              ; user id
+	    (pw-gid gid-t)              ; group id
+	    (pw-gecos (* char))         ; typically user's full name
+	    (pw-dir (* char))           ; user's home directory
+	    (pw-shell (* char))))       ; user's login shell
+
 ;;; From stdio.h
 
 ;;; From sys/types.h
