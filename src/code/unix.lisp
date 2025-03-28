@@ -2413,16 +2413,10 @@
   (dir "" :type string)
   (shell "" :type string))
 
-;; See <pwd.h>
-;;
-;; While each OS may contain additional fields, we only need the ones
-;; that are used the user-info structure.
-;;
-;; NOTE: This may NOT be the actual OS-defined passwd structure.  It
-;; is the structure returned by os_getpwuid (in unix-getpwuid).
-
+;; The C structure that is returned by os_getpwuid containing the info
+;; that we use to fill the user-info object.
 (def-alien-type nil
-    (struct unix-passwd
+    (struct os-unix-info
 	    (pw-name (* char))          ; user's login name
 	    (pw-passwd (* char))        ; no longer used
 	    (pw-uid uid-t)              ; user id

@@ -950,7 +950,7 @@ os_get_user_homedir(const char* name, int *status)
 /*
  * This MUST match the definition in code/unix.lisp.
  */
-struct unix_passwd 
+struct os_user_info
 {
     char* pw_name;
     char* pw_passwd;
@@ -961,7 +961,7 @@ struct unix_passwd
     char* pw_shell;
 };
     
-struct unix_passwd*
+struct os_user_info*
 os_getpwuid(uid_t uid)
 {
     char initial[1024];
@@ -969,7 +969,7 @@ os_getpwuid(uid_t uid)
     size_t size;
     struct passwd pwd;
     struct passwd *ppwd;
-    struct unix_passwd *result = NULL;
+    struct os_user_info *result = NULL;
 
     buffer = initial;
     obuffer = NULL;
@@ -988,7 +988,7 @@ again:
 	   * that.
 	   */
 	  if (ppwd != NULL) {
-	      result = (struct unix_passwd*) malloc(sizeof(pwd));
+	      result = (struct os_user_info*) malloc(sizeof(*result));
 	      result->pw_name = strdup(pwd.pw_name);
 	      result->pw_passwd = strdup(pwd.pw_passwd);
 	      result->pw_uid = pwd.pw_uid;
@@ -1025,7 +1025,7 @@ again:
  * os_getpwuid().
  */
 void
-os_free_getpwuid(struct passwd* pwd)
+os_free_getpwuid(struct os_user_info* pwd)
 {
     free(pwd->pw_name);
     free(pwd->pw_passwd);
