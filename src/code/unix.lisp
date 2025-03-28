@@ -2540,14 +2540,24 @@
       (unwind-protect
 	   (progn
 	     (setf result
-		   (alien-funcall
-		    (extern-alien "os_getpwuid"
-				  (function (* (struct passwd))
-					    uid-t))
-		    uid))
+		   (locally
+		       ;; Inhibit warnings about not being able to
+		       ;; optimize away %sap-alien and doing runtime
+		       ;; allocation.
+		       (declare (optimize (ext:inhibit-warnings 3)))
+		     (alien-funcall
+		      (extern-alien "os_getpwuid"
+				    (function (* (struct passwd))
+					      uid-t))
+		      uid)))
 	     (if (null-alien result)
 		 (values nil (unix-errno))
-		 (let ((passwd (deref result)))
+		 (let ((passwd (locally
+				   ;; Inhibit warnings about not being able to
+				   ;; optimize away %sap-alien and doing runtime
+				   ;; allocation.
+				   (declare (optimize (ext:inhibit-warnings 3)))
+				 (deref result))))
 		   (make-user-info
 		    :name (string (cast (slot passwd 'pw-name) c-call:c-string))
 		    :password (string (cast (slot passwd 'pw-passwd) c-call:c-string))
@@ -2557,7 +2567,7 @@
 		    :gecos (string-decode (cast (slot passwd 'pw-gecos) c-call:c-string)
 					  :default)
 		    ;; The home directory could be unicode 
-		    :dir (%file->name (cast (slot passwd 'pw-dir) c-call:c-string))
+		    :dir (%file->name (string (cast (slot passwd 'pw-dir) c-call:c-string)))
 		    :shell (string (cast (slot passwd 'pw-shell) c-call:c-string))))))
 	(unless (null-alien result)
 	  (alien-funcall
