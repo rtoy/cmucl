@@ -82,7 +82,10 @@ if [ -z "$DEFAULT" -a -n "$ERRNO_FILE" ]; then
     # First check that the errno definitions haven't changed.  If they
     # have, exit with an error.
 
-    (find_errno | diff -u "$ERRNO_FILE" - ) || exit 1
+    if ! (find_errno | diff -u "$ERRNO_FILE" -) ; then
+	echo "Error:  Current $ERRNO_FILE differs from header file definitions"
+	exit 1
+    fi
 fi
 
 # Create the src/code/errno.lisp file from the template and the
