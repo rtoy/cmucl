@@ -2419,7 +2419,7 @@
 ;; The C structure that is returned by os_getpwuid containing the info
 ;; that we use to fill the user-info object.
 (def-alien-type nil
-    (struct os-unix-info
+    (struct os-user-info
 	    (pw-name (* char))          ; user's login name
 	    (pw-passwd (* char))        ; no longer used
 	    (pw-uid uid-t)              ; user id
@@ -2535,7 +2535,7 @@
   of the failure.  In particular, if the second value is 0 (or
   ENONENT, ESRCH, EBADF, etc.), then the uid was not found."
   (declare (type unix-uid uid))
-  (with-alien ((result (* (struct passwd))))
+  (with-alien ((result (* (struct os-user-info))))
     (let (result)
       (unwind-protect
 	   (progn
@@ -2547,7 +2547,7 @@
 		       (declare (optimize (ext:inhibit-warnings 3)))
 		     (alien-funcall
 		      (extern-alien "os_getpwuid"
-				    (function (* (struct passwd))
+				    (function (* (struct os-user-info))
 					      uid-t))
 		      uid)))
 	     (if (null-alien result)
@@ -2573,7 +2573,7 @@
 	  (alien-funcall
 	   (extern-alien "os_free_getpwuid"
 			 (function c-call:void
-				   (* (struct passwd))))
+				   (* (struct os-user-info))))
 	   result))))))
 
 
