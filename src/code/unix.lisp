@@ -370,26 +370,10 @@
   nil)
 
 
-;; Use getcwd instead of getwd.  But what should we do if the path
-;; won't fit?  Try again with a larger size?  We don't do that right
-;; now.
-#+nil
 (defun unix-current-directory ()
-  ;; 5120 is some randomly selected maximum size for the buffer for getcwd.
-  (with-alien ((buf (array c-call:char 5120)))
-    (let ((result
-	   (alien-funcall 
-	    (extern-alien "getcwd"
-				(function (* c-call:char)
-					  (* c-call:char) c-call:int))
-	    (cast buf (* c-call:char))
-	    5120)))
-	
-      (values (not (zerop
-		    (sap-int (alien-sap result))))
-	      (%file->name (cast buf c-call:c-string))))))
-
-(defun unix-current-directory ()
+  "Get the current working directory.  If the directory could be
+  determined, T and the directory name as a string are returned.
+  Otherwise, both values are NIL."
   (let (result)
     (unwind-protect
 	 (progn
