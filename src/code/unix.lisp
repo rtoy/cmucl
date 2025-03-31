@@ -373,6 +373,7 @@
 ;; Use getcwd instead of getwd.  But what should we do if the path
 ;; won't fit?  Try again with a larger size?  We don't do that right
 ;; now.
+#+nil
 (defun unix-current-directory ()
   ;; 5120 is some randomly selected maximum size for the buffer for getcwd.
   (with-alien ((buf (array c-call:char 5120)))
@@ -387,6 +388,19 @@
       (values (not (zerop
 		    (sap-int (alien-sap result))))
 	      (%file->name (cast buf c-call:c-string))))))
+
+(defun unix-current-directory ()
+  (let (result)
+    (unwind-protect
+	 (progn
+	   (setf result
+	       (alien-funcall
+		(extern-alien "os_getcwd"
+			      (function (* c-call:char)))))
+	   (values (not (null-alien result))
+		   (%file->name (cast result c-call:c-string))))
+      (unless (null-alien result)
+	(free-alien result)))))
 
 ;;; Unix-access accepts a path and a mode.  It returns two values the
 ;;; first is T if the file is accessible and NIL otherwise.  The second
