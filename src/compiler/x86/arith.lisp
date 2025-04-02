@@ -257,18 +257,6 @@
     (inst sar r 2)
     (inst imul r y)))
 
-(define-vop (fast-*-c/fixnum=>fixnum fast-safe-arith-op)
-  (:translate *)
-  ;; We need different loading characteristics.
-  (:args (x :scs (any-reg control-stack)))
-  (:info y)
-  (:arg-types tagged-num (:constant (signed-byte 30)))
-  (:results (r :scs (any-reg)))
-  (:result-types tagged-num)
-  (:note _N"inline fixnum arithmetic")
-  (:generator 3
-    (inst imul r x y)))
-
 (define-vop (fast-*/signed=>signed fast-safe-arith-op)
   (:translate *)
   ;; We need different loading characteristics.
@@ -282,17 +270,84 @@
     (move r x)
     (inst imul r y)))
 
-(define-vop (fast-*-c/signed=>signed fast-safe-arith-op)
-  (:translate *)
-  ;; We need different loading characteristics.
-  (:args (x :scs (signed-reg signed-stack)))
-  (:info y)
-  (:arg-types signed-num (:constant (signed-byte 32)))
-  (:results (r :scs (signed-reg)))
-  (:result-types signed-num)
-  (:note _N"inline (signed-byte 32) arithmetic")
-  (:generator 4
-    (inst imul r x y)))
+(macrolet
+    ((frob (r x y temp)
+       `(if (sc-is ,x any-reg)
+	    ;; Only optimize the multiplication if x is a register and
+	    ;; for y = 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13.
+	    (cond
+	      ((= ,y 2)
+	       (inst lea ,r (make-ea :dword :base ,x :index ,x)))
+	      ((= ,y 3)
+	       ;; r = x + x*2 = 3*x
+	       (inst lea ,r (make-ea :dword :base ,x :index ,x :scale 2)))
+	      ((or (= ,y 4) (= ,y 8))
+	       (inst lea ,r (make-ea :dword :index ,x :scale ,y)))
+	      ((= ,y 5)
+	       ;; r = x + x*4
+	       (inst lea ,r (make-ea :dword :base ,x :index ,x :scale 4)))
+	      ((= ,y 6)
+	       ;; r = x + x*2
+	       ;; r = r + r = 2*(x + x*2) = 6*x
+	       (inst lea ,r (make-ea :dword :base ,x :index ,x :scale 2))
+	       (inst add ,r ,r))
+	      ((= ,y 7)
+	       ;; temp = x*8
+	       ;; r = temp - x
+	       (inst lea ,temp (make-ea :dword :index ,x :scale 8))
+	       (inst sub ,temp ,x))
+	      ((= ,y 9)
+	       ;; r = x + x*8
+	       (inst lea  ,r (make-ea :dword :base ,x :index ,x :scale 8)))
+	      ((= ,y 10)
+	       ;; r = x + x*4 = 5*x
+	       ;; r = r + r = 2*(5*x) = 10*x
+	       (inst lea  ,r (make-ea :dword :base ,x :index ,x :scale 4))
+	       (inst add ,r ,r))
+	      ((= ,y 11)
+	       ;; temp = x + 4*x = 5*x
+	       ;; r = x + 2*temp = x + 10*x = 11*x
+	       (inst lea ,temp (make-ea :dword :base ,x :index ,x :scale 4))
+	       (inst lea ,r (make-ea :dword :base ,x :index ,temp :scale 2)))
+	      ((= ,y 12)
+	       ;; r = x + 2*x = 3*x
+	       ;; r = 2*r
+	       (inst lea ,r (make-ea :dword :base ,x :index ,x :scale 2))
+	       (inst shl ,r 2))
+	      ((= ,y 13)
+	       ;; temp = x + 2*x = 3*x
+	       ;; r = x + 4*temp = x + 12*x = 13*x
+	       (inst lea ,temp (make-ea :dword :base ,x :index ,x :scale 2))
+	       (inst lea ,r (make-ea :dword :base ,x :index ,temp :scale 4)))
+	      (t
+	       (inst imul ,r ,x ,y)))
+	    (inst imul ,r ,x ,y))))
+
+  (define-vop (fast-*-c/fixnum=>fixnum fast-safe-arith-op)
+    (:translate *)
+    ;; We need different loading characteristics.
+    (:args (x :scs (any-reg control-stack)))
+    (:info y)
+    (:arg-types tagged-num (:constant (signed-byte 30)))
+    (:results (r :scs (any-reg)))
+    (:result-types tagged-num)
+    (:temporary (:sc any-reg) temp)
+    (:note _N"inline fixnum arithmetic")
+    (:generator 3
+      (frob r x y temp)))
+
+  (define-vop (fast-*-c/signed=>signed fast-safe-arith-op)
+    (:translate *)
+    ;; We need different loading characteristics.
+    (:args (x :scs (signed-reg signed-stack)))
+    (:info y)
+    (:arg-types signed-num (:constant (signed-byte 32)))
+    (:results (r :scs (signed-reg)))
+    (:result-types signed-num)
+    (:temporary (:sc signed-reg) temp)
+    (:note _N"inline (signed-byte 32) arithmetic")
+    (:generator 4
+      (frob r x y temp))))
 
 (define-vop (fast-*/unsigned=>unsigned fast-safe-arith-op)
   (:translate *)
@@ -328,7 +383,7 @@
 	  (inst test y y)  ; Smaller instruction
 	  (inst cmp y 0))
       (inst jmp :eq zero))
-    (move eax x)
+    (move eax x) 
     (inst cdq)
     (inst idiv eax y)
     (if (location= quo eax)
