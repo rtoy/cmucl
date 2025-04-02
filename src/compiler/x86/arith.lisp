@@ -295,7 +295,8 @@
 	       ;; temp = x*8
 	       ;; r = temp - x
 	       (inst lea ,temp (make-ea :dword :index ,x :scale 8))
-	       (inst sub ,temp ,x))
+	       (inst sub ,temp ,x)
+	       (move ,r ,temp))
 	      ((= ,y 9)
 	       ;; r = x + x*8
 	       (inst lea  ,r (make-ea :dword :base ,x :index ,x :scale 8)))
