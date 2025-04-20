@@ -36,7 +36,7 @@ void LispActionProc(Widget w,XEvent *event,String *params,Cardinal *num_params)
   message_add_packet(reply);
   message_put_dblword(reply,ACTION_REPLY);
   message_write_widget(reply,w,widget_tag);
-  message_write_int(reply,event,int_tag);
+  message_write_int(reply,event->type,int_tag);
   message_write_string(reply,params[0],string_tag);
 
   message_send(client_socket,reply);

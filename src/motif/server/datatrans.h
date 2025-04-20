@@ -15,12 +15,12 @@
 #define combine_type_and_data(type,data) ((type<<24)|data)
 
 extern void message_write_string(message_t message,String string,int type_tag);
-extern void message_write_widget();
+extern void message_write_widget(message_t message,Widget widget,int type_tag);
 extern void message_write_widget_class();
 extern void message_write_function();
 extern void message_write_short();
 extern void message_write_boolean();
-extern void message_write_int();
+extern void message_write_int(message_t message,int value,int type_tag);
 extern void message_write_xid();
 extern void message_write_atom();
 extern void message_write_string_token();
@@ -29,8 +29,8 @@ extern void message_write_xm_string();
 extern void message_write_enum();
 extern void message_write_resource_names();
 extern void message_write_widget_list();
-extern void message_write_translation_table();
-extern void message_write_accelerator_table();
+extern void message_write_translation_table(message_t m,XtTranslations t,int tag);
+extern void message_write_accelerator_table(message_t m,XtAccelerators a,int tag);
 extern void message_write_font_list();
 extern void message_write_string_table();
 extern void message_write_xm_string_table();
