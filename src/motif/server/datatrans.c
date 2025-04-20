@@ -547,7 +547,7 @@ void toolkit_write_value(message_t message, caddr_t value, String type)
   (*write_value)(message,value,type_tag);
 }
 
-void toolkit_read_value(message_t message,char *dest,String type)
+void toolkit_read_value(message_t message,void *dest,String type)
 {
   int tag,data;
   type_reader read_value;

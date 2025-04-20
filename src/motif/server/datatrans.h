@@ -14,7 +14,7 @@
 
 #define combine_type_and_data(type,data) ((type<<24)|data)
 
-extern void message_write_string(message_t message,int token,int tag);
+extern void message_write_string(message_t message,String string,int type_tag);
 extern void message_write_widget();
 extern void message_write_widget_class();
 extern void message_write_function();
@@ -70,6 +70,6 @@ extern void message_read_float();
 
 
 extern void toolkit_write_value();
-extern void toolkit_read_value(message_t message,char *dest,String type);
+extern void toolkit_read_value(message_t message,void *dest,String type);
 
 #endif
