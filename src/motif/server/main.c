@@ -71,7 +71,7 @@ int use_unix_socket=1;
 enum { Global, Normal, Local } socket_choice = Normal;
 
 #if defined(BSD) || defined(linux)
-void bury_zombie ()
+void bury_zombie (int signal)
 {
   /* This is called to handle SIGCHLD. Wait3 lets BSD lay
    * the dead child process to rest. Otherwise it hangs 

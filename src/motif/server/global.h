@@ -40,4 +40,4 @@ extern void CallbackHandler();
 extern void ProtocolHandler();
 extern void EventHandler();
 extern void NonMaskableHandler();
-extern void LispActionProc();
+extern void LispActionProc(Widget w,XEvent *event,String *params,Cardinal *num_params);
