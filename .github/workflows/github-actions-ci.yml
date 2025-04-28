@@ -29,12 +29,16 @@ jobs:
           tar -C cmucl -xjf cmucl-2024-04-x86-linux.tar.bz2
       - name: Build cmucl
         run: |
+          git describe
           bin/build.sh -B boot-2024-08 -C "" -o cmucl/bin/lisp
           ls -A
           # Specify a version; we can't seem to do this automatically
           # here.
           bin/make-dist.sh -V "github-ci" -SI dist-linux linux-4
+          ls -A dist-linux/bin
+          ls -A dist-linux/lib/cmucl
+          
       - name: Run Tests
         run: |
-          bin/run-unit-tests.sh -l dist-linux/bin/lisp
+          bin/run-unit-tests.sh -l "dist-linux/bin/lisp -lib
           bin/run-ansi-tests.sh -l dist-linux/bin/lisp
