@@ -17,6 +17,10 @@ jobs:
           sudo apt-get update
           # Cmucl needs 32-bit libs to run
           sudo apt-get install gcc-multilib
+          # X libraries
+          sudo apt-get install libxt-dev
+          # Motif
+          sudo apt-get install libmotif-dev
       - name: Install cmucl
         # cmucl is installed cmucl in the current directory
         run: |
