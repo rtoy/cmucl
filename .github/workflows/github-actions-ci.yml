@@ -34,9 +34,12 @@ jobs:
           # Specify a version; we can't seem to do this automatically
           # here.
           bin/make-dist.sh -V "github-ci" -SI dist-linux linux-4
-          ls -A dist-linux/bin
-          ls -A dist-linux/lib/cmucl
-          
+      - name: Archive build
+        uses: actions/upload-artifacts@v4
+        with:
+          name: build-results
+          path: |
+            dist-linux/*
       - name: Run Tests
         run: |
           bin/run-unit-tests.sh -l "dist-linux/bin/lisp --lib dist-linux/lib/cmucl/github-ci/lib"
