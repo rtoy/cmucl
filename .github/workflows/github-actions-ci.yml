@@ -39,5 +39,5 @@ jobs:
           
       - name: Run Tests
         run: |
-          bin/run-unit-tests.sh -l "dist-linux/bin/lisp -lib
-          bin/run-ansi-tests.sh -l dist-linux/bin/lisp
+          bin/run-unit-tests.sh -l "dist-linux/bin/lisp --lib dist-linux/lib/cmucl/github-ci/lib"
+          bin/run-ansi-tests.sh -l "dist-linux/bin/lisp --lib dist-linux/lib/cmucl/github-ci/lib"
