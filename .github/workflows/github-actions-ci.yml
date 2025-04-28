@@ -1,0 +1,33 @@
+name: GitHub Actions Continuous Integration
+run-name: ${{ github.actor }} is running CI 🚀
+on: [push]
+jobs:
+  Continuous-Integration:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
+      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
+      - name: Update OS and get tools
+        run: |
+          sudo apt-get update
+          # Cmucl needs 32-bit libs to run
+          sudo apt-get install gcc-multilib
+      - name: Install cmucl
+        # cmucl is installed cmucl in the current directory
+        run: |
+          wget -nv https://common-lisp.net/project/cmucl/downloads/snapshots/2024/04/cmucl-2024-04-x86-linux.tar.bz2
+          mkdir cmucl 
+          tar -C cmucl -xjf cmucl-2024-04-x86-linux.tar.bz2
+      - name: Build cmucl
+        run: |
+          bin/build.sh -B boot-2024-08 -C "" -o cmucl/bin/lisp
+          bin/make-dist.sh -SI dist-linux linux-4
+      - name: Run Tests
+        run: |
+          bin/run-unit-tests.sh -l dist-linux/bin/lisp
+          bin/run-ansi-tests.sh -l dist-linux/bin/lisp
