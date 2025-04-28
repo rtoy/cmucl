@@ -29,6 +29,7 @@ public domain.
       different from before.  See ~~#276~~.
     * The layout of the distribution has changed.  Version numbers are
       added to files and directories.  For the exact layout, see !261.
+    * Update mk:defsystem to v3.9.2.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
@@ -123,6 +124,7 @@ public domain.
       file names now.
     * ~~#379~~ Support GNU-style command-line option names
     * ~~#382~~ Command-line options are case-sensitive
+    * ~~#398~~ Update mk:defsystem to v3.9.2
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
