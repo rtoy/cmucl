@@ -30,7 +30,10 @@ jobs:
       - name: Build cmucl
         run: |
           bin/build.sh -B boot-2024-08 -C "" -o cmucl/bin/lisp
-          bin/make-dist.sh -SI dist-linux linux-4
+          # Specify a version; we can't seem to do this automatically
+          # here.
+          git describe --dirty
+          bin/make-dist.sh -V `git describe --dirty` -SI dist-linux linux-4
       - name: Run Tests
         run: |
           bin/run-unit-tests.sh -l dist-linux/bin/lisp
