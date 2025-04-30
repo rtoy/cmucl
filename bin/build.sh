@@ -110,13 +110,6 @@ case `uname -s` in
       esac ;;
 esac
 
-# Set default version and generate lisp/cmucl-version.h
-DEFAULT_VERSION="`bin/git-version.sh`"
-export DEFAULT_VERISON
-echo DEFAULT_VERSION = $DEFAULT_VERSION
-
-bin/git-version.sh -f > src/lisp/cmucl-version.h
-
 export LANG=en_US.UTF-8
 
 buildit ()
@@ -185,6 +178,18 @@ do
 	    ;;
     esac
 done
+
+# Set default version and generate lisp/cmucl-version.h
+set -x
+echo VERSION = $VERSION
+echo GIT_HASH = $GIT_HASH
+DEFAULT_VERSION="`bin/git-version.sh ${VERSION:+ -v ${VERSION}}`"
+# Export DEFAULT_VERSION 
+export DEFAULT_VERISON
+echo DEFAULT_VERSION = $DEFAULT_VERSION
+
+bin/git-version.sh -f ${VERSION:+ -v ${VERSION}} > src/lisp/cmucl-version.h
+
 
 # If -b not given, try to derive one instead of just using "build".
 if [ -z "$BASE" ]; then
