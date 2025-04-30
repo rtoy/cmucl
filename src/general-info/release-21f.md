@@ -123,6 +123,8 @@ public domain.
       file names now.
     * ~~#379~~ Support GNU-style command-line option names
     * ~~#382~~ Command-line options are case-sensitive
+    * ~~#386~~ Generate def-unix-error froms from OS-specific files.
+      This replaces the original versions in unix.lisp.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
