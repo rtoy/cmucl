@@ -157,8 +157,9 @@ buildit ()
     fi
 }
 
-# Create the errno file containing all the def-unix-error forms.  Exit
-# if there's an error in creating the errno file.
+# Create the errno file containing all the def-unix-error forms.  No
+# options mean we use the existing OS-specific template.  Exit if
+# there's an error in creating the errno file.
 bin/create-errno.sh || exit 1
 
 BUILDWORLD="$TOOLDIR/build-world.sh"

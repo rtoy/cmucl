@@ -13,11 +13,24 @@ create-erno.sh [-h?DS]
     -?    This help
     -U    Update the errno file    
     -D	  Do not auto-generate; use default
-
     -S    Show the resulting generated file; the file is still created.
 
 Auto-generates, if possible, the file src/code/errno.lisp that
 contains the def-unix-error forms.
+
+If no options are given (the usual case), src/code/errno.lisp is
+updated with the OS-specific values in
+bin/errno-{lisp,darwin,solaris}.lisp.  For other OSes a default value
+in bin/errno-default.lisp is used.  For supported OSes, we also
+regenerate the def-unix-error forms from the system header files and
+display a diff between this and the existing files.
+
+If -U is given, the existing OS-specific file is updated with the
+generated values.  Use this to update the file if the OS has added or
+modified errno values.
+
+If -D is given, default values are used.  The defaults are the
+original def-unix-error values from an older version of unix.lisp.
 EOF
     exit 0
 }
