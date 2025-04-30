@@ -179,17 +179,9 @@ do
     esac
 done
 
-# Set default version and generate lisp/cmucl-version.h
-set -x
-echo VERSION = $VERSION
-echo GIT_HASH = $GIT_HASH
-DEFAULT_VERSION="`bin/git-version.sh ${VERSION:+ -v ${VERSION}}`"
-# Export DEFAULT_VERSION 
-export DEFAULT_VERISON
-echo DEFAULT_VERSION = $DEFAULT_VERSION
-
+# Generate lisp/cmucl-version.h with the appropriate version.  The -v
+# option (if given) overrides the default that git-describe.sh uses.
 bin/git-version.sh -f ${VERSION:+ -v ${VERSION}} > src/lisp/cmucl-version.h
-
 
 # If -b not given, try to derive one instead of just using "build".
 if [ -z "$BASE" ]; then
