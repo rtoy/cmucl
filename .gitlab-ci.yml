@@ -76,6 +76,9 @@ variables:
     # Create an executable and test it by printing the version.
     - dist/bin/lisp -eval '(save-lisp "saved-lisp-executable" :executable t)'
     - ./saved-lisp-executable --version
+    # Run the unit tests with the executable, just to make sure the
+    # executable works as expected.
+    - bin/run-unit-tests.sh -l saved-lisp-executable
 
 # Default configuration for running the benchmarks.
 .benchmark_template: &benchmark_configuration
