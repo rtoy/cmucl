@@ -78,7 +78,7 @@ variables:
     - ./saved-lisp-executable --version
     # Run the unit tests with the executable, just to make sure the
     # executable works as expected.
-    - bin/run-unit-tests.sh -l saved-lisp-executable
+    - bin/run-unit-tests.sh -l ./saved-lisp-executable
 
 # Default configuration for running the benchmarks.
 .benchmark_template: &benchmark_configuration
