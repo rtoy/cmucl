@@ -1767,7 +1767,7 @@
 		     (format t "fd-stream-in-index = ~D~%" (fd-stream-in-index stream))
 		     (format t "posn = ~A~%" posn))
 		   (decf posn (- (fd-stream-in-length stream)
-				 (fd-stream-in-index stream)))
+				 (fd-stream-in-index stream))))
 		 #+nil
 		 (format t "fd-stream-unread = ~S~%" (fd-stream-unread stream))
 		 (when (fd-stream-unread stream) ;;@@
