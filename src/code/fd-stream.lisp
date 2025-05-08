@@ -1699,7 +1699,7 @@
 	      (posn errno)
 	    (unix:unix-lseek (fd-stream-fd stream) 0 unix:l_incr)
 	  (declare (type (or (integer 0) null) posn))
-	  ;;#+nil
+	  #+nil
 	  (format t "lseek returns ~D ~D~%" posn errno)
 	  (cond (posn
 		 ;; Adjust for buffered output:
@@ -1720,7 +1720,7 @@
 		 (decf posn (- (fd-stream-ibuf-tail stream)
 			       (fd-stream-ibuf-head stream)))
 
-		 ;;#+nil
+		 #+nil
 		 (format t "Updated posn = ~D~%" posn)
 		 #+unicode
 		 (when (fd-stream-string-buffer stream)
@@ -1737,14 +1737,14 @@
 		       ;; octet-count doesn't use that.  Hence,
 		       ;; subtract one from string-index and
 		       ;; string-buffer-len.
-		       ;;#+nil
+		       #+nil
 		       (progn
 			 (format t "~&ocount = ~D~%" ocount)
 			 (format t "posn = ~D~%" posn))
 		       (loop for k of-type fixnum from (1- (fd-stream-string-index stream))
 			       below (1- (fd-stream-string-buffer-len stream))
 			     do (decf posn (aref ocount k)))
-		       ;;#+nil
+		       #+nil
 		       (progn
 			 (format t "new posn = ~D~%" posn)
 			 (format t "in-buffer-length = ~D~%" in-buffer-length)
@@ -1760,7 +1760,7 @@
 		   ;; string-buffer and no in-buffer, then the ibuf
 		   ;; tail and head pointers contain all the
 		   ;; information needed.
-		   ;;#+nil
+		   #+nil
 		   (progn
 		     (format t "in-buffer-length = ~D~%" in-buffer-length)
 		     (format t "in-length = ~D~%" (fd-stream-in-length stream))
@@ -1768,15 +1768,11 @@
 		     (format t "posn = ~A~%" posn))
 		   (decf posn (- (fd-stream-in-length stream)
 				 (fd-stream-in-index stream)))
-		   (format t "After inbuffer update posn = ~A~%" posn))
-		 ;;#+nil
+		 #+nil
 		 (format t "fd-stream-unread = ~S~%" (fd-stream-unread stream))
 		 (when (fd-stream-unread stream) ;;@@
 		   (decf posn))
 		 ;; Divide bytes by element size.
-		 (format t "posn = ~A, size = ~A, trunc = ~A~%"
-			 posn (fd-stream-element-size stream)
-			 (truncate posn (fd-stream-element-size stream)))
 		 (truncate posn (fd-stream-element-size stream)))
 		((eq errno unix:espipe)
 		 nil)
