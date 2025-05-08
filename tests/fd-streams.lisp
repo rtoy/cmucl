@@ -34,3 +34,34 @@
 	  (setf s (open *test-file*))
 	  (file-length s))
      (delete-file *test-file*))))
+
+(define-test file-position.1
+    (:tag :issues)
+  ;; Create a short test file
+  (let ((test-file (merge-pathnames #p"file-pos.txt" *test-path*)))
+    (with-open-file (s test-file
+		       :direction :output
+		       :if-exists :supersede)
+      (write-string "aaaaaa" s)
+      (write-char #\newline s))
+    (with-open-file (s test-file)
+      (read-line s)
+      (assert-true (file-position s 0))
+      (assert-equal (file-position s) 0))))
+
+(define-test file-position.2
+    (:tag :issues)
+  ;; Create a test file just longer than the internal in-buffer length
+  ;; and the first line is more than 512 characters long.
+  (let ((test-file (merge-pathnames #p"file-pos.txt" *test-path*)))
+    (with-open-file (s test-file
+		       :direction :output
+		       :if-exists :supersede)
+      (write-string (make-string 512 :initial-element #\a) s)
+      (write-char #\newline s)
+      (write-string "zzzzz" s)
+      (write-char #\newline s))
+    (with-open-file (s test-file)
+      (read-line s)
+      (assert-true (file-position s 0))
+      (assert-equal (file-position s) 0))))
