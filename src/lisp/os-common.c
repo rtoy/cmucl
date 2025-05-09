@@ -948,7 +948,7 @@ os_getcwd(void)
     char *result = NULL;
 
     result = getcwd(buffer, size);
-    
+
     while (result == NULL && errno == ERANGE) {
 	/*
 	 * Buffer is too small, double its size and try again.
@@ -969,5 +969,3 @@ os_getcwd(void)
 
     return result;
 }
-
-    
