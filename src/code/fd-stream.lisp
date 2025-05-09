@@ -1764,7 +1764,8 @@
 		   (progn
 		     (format t "in-buffer-length = ~D~%" in-buffer-length)
 		     (format t "in-length = ~D~%" (fd-stream-in-length stream))
-		     (format t "fd-stream-in-index = ~D~%" (fd-stream-in-index stream)))
+		     (format t "fd-stream-in-index = ~D~%" (fd-stream-in-index stream))
+		     (format t "posn = ~A~%" posn))
 		   (decf posn (- (fd-stream-in-length stream)
 				 (fd-stream-in-index stream))))
 		 #+nil
@@ -1795,9 +1796,14 @@
 	(setf (fd-stream-unread stream) nil) ;;@@
 	#+unicode
 	(progn
+	  ;; Clear out any pending input from the string buffer
 	  (setf (fd-stream-last-char-read-size stream) 0)
 	  (setf (fd-stream-string-index stream)
 		(fd-stream-string-buffer-len stream)))
+	;; Mark the in-buffer as empty.
+	(setf (fd-stream-in-index stream)
+	      (fd-stream-in-length stream))
+	;; Mark the ibuf as empty.
 	(setf (fd-stream-ibuf-head stream) 0)
 	(setf (fd-stream-ibuf-tail stream) 0)
 	;; Trash cached value for listen, so that we check next time.
