@@ -269,7 +269,7 @@
 
 #+darwin
 (defvar *enable-darwin-path-normalization* nil
-  "When non-NIL, pathnames are on Darwin are normalized when created.
+  _N"When non-NIL, pathnames are on Darwin are normalized when created.
   Otherwise, the pathnames are unchanged.
 
   This must be NIL during bootstrapping because Unicode is not yet

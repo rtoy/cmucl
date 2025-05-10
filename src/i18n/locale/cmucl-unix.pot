@@ -1285,10 +1285,6 @@ msgid ""
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Unknown error [~d]"
-msgstr ""
-
-#: src/code/unix.lisp
 msgid ""
 "Perform the UNIX select(2) system call.\n"
 "  (declare (type (integer 0 #.FD-SETSIZE) num-descriptors)\n"
@@ -1452,5 +1448,9 @@ msgid ""
 "\n"
 "  If the directory cannot be created NIL and the UNIX error code is\n"
 "  returned."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Returns a string that describes the error code Errno"
 msgstr ""
 
