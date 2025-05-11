@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _HPPA_LISPREGS_H_
-#define _HPPA_LISPREGS_H_
+#ifndef HPPA_LISPREGS_H
+#define HPPA_LISPREGS_H
 
 #define NREGS	(32)
 
@@ -72,4 +72,4 @@
 #define SC_NPC(sc) ((sc)->sc_pcoqt)
 #endif
 
-#endif /* _HPPA_LISPREGS_H_ */
+#endif /* HPPA_LISPREGS_H */

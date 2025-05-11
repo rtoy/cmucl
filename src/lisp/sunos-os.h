@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _SUNOS_OS_H_
-#define _SUNOS_OS_H_
+#ifndef SUNOS_OS_H
+#define SUNOS_OS_H
 
 #ifdef SOLARIS
 #undef boolean
@@ -68,4 +68,4 @@ extern void save_context(void);
 
 #define PROTECTION_VIOLATION_SIGNAL SIGSEGV
 
-#endif /* _SUNOS_OS_H_ */
+#endif /* SUNOS_OS_H */

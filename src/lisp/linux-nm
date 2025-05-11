@@ -1,2 +1,2 @@
 #!/bin/sh
-nm -p "$@" | grep -v " [FUtdb?w] " | uniq
+nm -g $* | awk 'NF == 3 && $2 !~ /[VWa-z]/ { gsub("^stub_", "", $3); print; }'

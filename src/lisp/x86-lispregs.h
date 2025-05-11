@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _X86_LISPREGS_H_
-#define _X86_LISPREGS_H_
+#ifndef X86_LISPREGS_H
+#define X86_LISPREGS_H
 
 /* These register names and offsets correspond to definitions
  * in compiler/x86/vm.lisp. They map into accessors in the
@@ -77,4 +77,4 @@
 /* #define SC_EFLAGS(sc) ((sc)->uc_mcontext.gregs[EFL])*/
 #endif
 
-#endif /* _X86_LISPREGS_H_ */
+#endif /* X86_LISPREGS_H */

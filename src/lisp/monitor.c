@@ -155,7 +155,7 @@ regs_cmd(char **ptr)
 {
     printf("CSP\t=\t0x%08lX\n", (unsigned long) current_control_stack_pointer);
     printf("FP\t=\t0x%08lX\n", (unsigned long) current_control_frame_pointer);
-#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64)
+#if !defined(BINDING_STACK_POINTER)
     printf("BSP\t=\t0x%08lX\n", (unsigned long) current_binding_stack_pointer);
 #endif
 #if defined(i386) || defined(__x86_64)
@@ -163,12 +163,15 @@ regs_cmd(char **ptr)
 #endif
 
     printf("DYNAMIC\t=\t0x%08lX\n", (unsigned long) current_dynamic_space);
-#if defined(ibmrt) || defined(i386) || defined(__x86_64)
+#if defined(ALLOCATION_POINTER)
     printf("ALLOC\t=\t0x%08lX\n", SymbolValue(ALLOCATION_POINTER));
-    printf("TRIGGER\t=\t0x%08lX\n", SymbolValue(INTERNAL_GC_TRIGGER));
 #else
     printf("ALLOC\t=\t0x%08lX\n",
 	   (unsigned long) current_dynamic_space_free_pointer);
+#endif
+#if defined(INTERNAL_GC_TRIGGER)
+    printf("TRIGGER\t=\t0x%08lX\n", SymbolValue(INTERNAL_GC_TRIGGER));
+#else
     printf("TRIGGER\t=\t0x%08lX\n", (unsigned long) current_auto_gc_trigger);
 #endif
     printf("STATIC\t=\t0x%08lX\n", SymbolValue(STATIC_SPACE_FREE_POINTER));

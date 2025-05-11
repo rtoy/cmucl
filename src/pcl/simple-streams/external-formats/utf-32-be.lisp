@@ -61,4 +61,18 @@ Unicode replacement character.")
 				  ,code))
 		       +replacement-character-code+)))
 	     (t
-	      (out ,code))))))
+	      (out ,code)))))
+  ()
+  ()
+  (octet-count (code state error)
+    `(cond ((lisp::surrogatep ,code)
+	    (if ,error
+		(locally
+		    ;; No warnings about fdefinition
+		    (declare (optimize (ext:inhibit-warnings 3)))
+		  (funcall ,error "Surrogate code #x~4,'0X is illegal for UTF32 output"
+			   ,code))
+		;; Replacement character is 2 octets
+		2))
+	   (t
+	    4))))

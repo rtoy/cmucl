@@ -9,9 +9,9 @@
  * interface to both elf and mach-o support.  I (rtoy) was too lazy to
  * change the name to something more descriptive.
  */
-#if !defined(_ELF_H_INCLUDED_)
+#if !defined(ELF_H_INCLUDED)
 
-#define _ELF_H_INCLUDED_
+#define ELF_H_INCLUDED
 
 /*
  * Script to use for linking everything to make an executable.

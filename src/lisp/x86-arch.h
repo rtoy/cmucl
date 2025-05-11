@@ -4,7 +4,7 @@
  been placed in the public domain.
 
 */
-#ifndef __X86_ARCH_H
+#ifndef X86_ARCH_H
 
 #include <stdint.h>
 

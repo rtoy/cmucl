@@ -31,4 +31,17 @@ character and illegal outputs are replaced by a question mark.")
 		     (funcall ,error "Cannot output codepoint #x~X to ISO8859-1 stream"
 			      ,code 1))
 		      #x3F)
-		  ,code))))
+		  ,code)))
+  ()
+  ()
+  (octet-count (code state error)
+    `(if (> ,code 255)
+	 (if ,error
+	     (locally
+		 ;; No warnings about fdefinition
+		 (declare (optimize (ext:inhibit-warnings 3)))
+	       (funcall ,error
+			(intl:gettext "Cannot output codepoint #x~X to ISO8859-1 stream")
+			,code 1))
+	     1)
+	 1)))

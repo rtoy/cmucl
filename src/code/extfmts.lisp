@@ -19,7 +19,8 @@
 	  string-encode string-decode set-system-external-format
 	  +replacement-character-code+
 	  list-all-external-formats
-	  describe-external-format))
+	  describe-external-format
+	  string-octet-count))
 
 (defvar *default-external-format*
   :utf-8
@@ -52,6 +53,7 @@
   flush					; flush state
   copy-state				; copy state
   osc					; octets to string, counted
+  oc					; number of octets to encode string
   max)
 
 ;; Unicode replacement character U+FFFD
@@ -96,6 +98,11 @@
   (copy-state nil :type (or null function) :read-only t)
   (cache nil :type (or null simple-vector))
   ;;
+  ;; Function to count the number of octets needed to encode a
+  ;; codepoint.  Basically like code-to-octets, except we return the
+  ;; number of octets needed instead of the octets themselves.
+  (octet-count #'%efni :type (or null function) :read-only t)
+  ;;
   ;; Minimum number of octets needed to form a codepoint
   (min 1 :type kernel:index :read-only t)
   ;;
@@ -126,7 +133,8 @@
   (setf (gethash (ef-name ef) *external-formats*) ef))
 
 (declaim (inline ef-octets-to-code ef-code-to-octets ef-flush-state ef-copy-state
-		 ef-cache ef-min-octets ef-max-octets))
+		 ef-cache ef-min-octets ef-max-octets
+		 ef-octet-count))
 
 (defun ef-octets-to-code (ef)
   (efx-octets-to-code (ef-efx ef)))
@@ -142,6 +150,9 @@
 
 (defun ef-cache (ef)
   (efx-cache (ef-efx ef)))
+
+(defun ef-octet-count (ef)
+  (efx-octet-count (ef-efx ef)))
 
 (defun ef-min-octets (ef)
   (efx-min (ef-efx ef)))
@@ -166,7 +177,7 @@
 ;;; DEFINE-EXTERNAL-FORMAT  -- Public
 ;;;
 ;;; name (&key base min max size documentation) (&rest slots) octets-to-code
-;;;       code-to-octets flush-state copy-state
+;;;       code-to-octets flush-state copy-state octet-count
 ;;;
 ;;;   Define a new external format.  If base is specified, then an
 ;;;   external format is defined that is based on a previously defined
@@ -228,6 +239,15 @@
 ;;;   This should probably be a deep copy so that if the original
 ;;;   state is modified, the copy is not.
 ;;;
+;;; octet-count (code state error &rest vars)
+;;;   Defines a form to determine the number of octets needed to
+;;;   encode the given CODE using the external format.  This is
+;;;   essentially the same as CODE-TO-OCTETS, except the encoding is
+;;;   not saved anywhere.  ERROR is the same as in CODE-TO-OCTETS.
+;;;
+;;;   This should return one value: the number of octets needed to
+;;;   encode the given code.
+;;;
 ;;; Note: external-formats work on code-points, not
 ;;;   characters, so that the entire 31 bit ISO-10646 range can be
 ;;;   used internally regardless of the size of a character recognized
@@ -238,7 +258,7 @@
 (defmacro define-external-format (name (&key base min max size (documentation ""))
 				       (&rest slots)
 				       &optional octets-to-code code-to-octets
-				       flush-state copy-state)
+				       flush-state copy-state octet-count)
   (let* ((tmp (gensym))
 	 (min (or min size 1))
 	 (max (or max size 6))
@@ -282,7 +302,17 @@
 		     (declare (ignorable ,state))
 		     (let (,@',slotb
 			   ,@(loop for var in vars collect `(,var (gensym))))
-		       ,body))))
+		       ,body)))
+		(octet-count ((code state error &rest vars) body)
+		  `(lambda (,',tmp ,state ,error)
+		     (declare (ignorable ,state ,error)
+			      (optimize (ext:inhibit-warnings 3)))
+		     (let (,@',slotb
+			   (,code ',code)
+			   ,@(loop for var in vars collect `(,var (gensym))))
+		       `(let ((,',code (the lisp:codepoint ,,',tmp)))
+			  (declare (ignorable ,',code))
+			  ,,body)))))
        (%intern-ef (make-external-format ,name
 		    ,(if base
 			 `(ef-efx (find-external-format ,(ef-name base)))
@@ -291,7 +321,8 @@
 				    :flush-state ,flush-state
 			            :copy-state ,copy-state
 				    :cache (make-array +ef-max+
-							  :initial-element nil)
+						       :initial-element nil)
+				    :octet-count ,octet-count
 				    :min ,(min min max)
 				    :max ,(max min max)))
 		    nil
@@ -688,7 +719,20 @@ character and illegal outputs are replaced by a question mark.")
 				 (intl:gettext "Cannot output codepoint #x~X to ISO8859-1 stream")
 				 ,code 1))
 		      #x3F)
-		  ,code))))
+		  ,code)))
+  ()
+  ()
+  (octet-count (code state error)
+    `(if (> ,code 255)
+	 (if ,error
+	     (locally
+		 ;; No warnings about fdefinition
+		 (declare (optimize (ext:inhibit-warnings 3)))
+	       (funcall ,error
+			(intl:gettext "Cannot output codepoint #x~X to ISO8859-1 stream")
+			,code 1))
+	     1)
+	 1)))
 
 ;;; OCTETS-TO-CODEPOINT, CODEPOINT-TO-OCTETS  -- Semi-Public
 ;;;
@@ -708,6 +752,10 @@ character and illegal outputs are replaced by a question mark.")
 (defmacro codepoint-to-octets (external-format code state output &optional error)
   (let ((ef (find-external-format external-format)))
     (funcall (ef-code-to-octets ef) code state output error)))
+
+(defmacro count-codepoint-octets (external-format code state &optional error)
+  (let ((ef (find-external-format external-format)))
+    (funcall (ef-octet-count ef) code state error)))
 
 
 
@@ -877,6 +925,42 @@ character and illegal outputs are replaced by a question mark.")
 	 (f (ef-copy-state ef)))
     (when f
       (funcall f state))))
+
+(defmacro octet-count (external-format char state &optional error)
+  (let ((nchar (gensym))
+	(nstate (gensym))
+	(count-it (gensym))
+	(ch (gensym)))
+    `(let ((,nchar ,char)
+	   (,nstate ,state))
+       (when (null ,nstate) (setq ,nstate (setf ,state (cons nil nil))))
+       (if (lisp::surrogatep (char-code ,nchar) :high)
+	   (setf (car ,nstate) ,nchar)
+	   (flet ((,count-it (,ch)
+		    (count-codepoint-octets ,external-format ,ch (cdr ,nstate) ,error)))
+	     (if (car ,nstate)
+		 (prog1
+		     (,count-it (if (lisp::surrogatep (char-code ,nchar) :low)
+				    (surrogates-to-codepoint (car ,nstate) ,nchar)
+				    (if ,error
+					(locally
+					    (declare (optimize (ext:inhibit-warnings 3)))
+					  (funcall ,error
+						   (intl:gettext "Cannot convert invalide surrogate #~x~X to character")
+						   ,nchar))
+					+replacement-character-code+)))
+		   (setf (car ,nstate) nil))
+		 ;; A lone trailing (low surrogate gets replaced with
+		 ;; the replacement character.
+		 (,count-it (if (lisp::surrogatep (char-code ,nchar) :low)
+				(if ,error
+				    (locally
+					(declare (optimize (ext:inhibit-warnings 3)))
+				      (funcall ,error
+					       (intl:gettext "Cannot convert lone trailing surrogate #x~X to character")
+					       ,nchar))
+				    +replacement-character-code+)
+				(char-code ,nchar)))))))))
 
 (def-ef-macro ef-string-to-octets (extfmt lisp::lisp +ef-max+ +ef-so+)
   `(lambda (string start end buffer buffer-start buffer-end error bufferp
@@ -1071,6 +1155,31 @@ character and illegal outputs are replaced by a question mark.")
       (values (if stringp string (lisp::shrink-vector string pos)) (- pos s-start) last-octet new-state))))
 
 
+(def-ef-macro ef-string-octet-count (extfmt lisp::lisp +ef-max+ +ef-oc+)
+  `(lambda (string start end error &aux (total 0) (state nil))
+     (dotimes (i (- end start) total)
+       (incf total
+	     (octet-count ,extfmt (schar string (+ start i)) state error)))))
+
+(defun string-octet-count (string &key (start 0) end  (external-format :default) error)
+  "Compute the number of octets needed to convert String using the
+  specified External-format.  The string is bound by Start (defaulting
+  to 0) and End (defaulting to the end of the string)."
+  (let ((composing-format-p
+	  ;; Determine is the external format is a composing format
+	  ;; which we determine by seeing that the name of the format
+	  ;; is a cons.  Probably not the best way.
+	  (consp (ef-name (find-external-format external-format)))))
+    ;; We currently don't know how to get just the number of octets
+    ;; when a composing external format is used.  As a workaround, use
+    ;; STRING-TO-OCTETS to find the number of octets.
+    (if composing-format-p
+	 (nth-value 1
+		    (string-to-octets string :start start :end end
+					     :external-format external-format))
+	 (lisp::with-array-data ((string string) (start start) (end end))
+	   (funcall (ef-string-octet-count external-format)
+		    string start end error)))))
 
 (def-ef-macro ef-encode (extfmt lisp::lisp +ef-max+ +ef-en+)
   `(lambda (string start end result error  &aux (ptr 0) (state nil))
@@ -1186,10 +1295,11 @@ character and illegal outputs are replaced by a question mark.")
 	(#.+ef-so+ (%ef-string-to-octets ef))
 	(#.+ef-en+ (%ef-encode ef))
 	(#.+ef-de+ (%ef-decode ef))
-	(#.+ef-osc+ (%ef-octets-to-string-counted ef))))
+	(#.+ef-osc+ (%ef-octets-to-string-counted ef))
+	(#.+ef-oc+ (%ef-octet-count ef))))
     `(setf (aref (ef-cache (find-external-format ,(ef-name ef))) ,slot)
 	 ,(subst (ef-name ef) ef
-		 (function-lambda-expression (aref (ef-cache ef) slot))))))
+		 (function-lambda-expression (aref (ef-cache ef) slot)))))))
 
 ;;; Builtin external formats.
 
@@ -1307,7 +1417,17 @@ replacement character.")
          ((< ,code #x800) (utf8 ,code 1))
          ((< ,code #x10000) (utf8 ,code 2))
          ((< ,code #x110000) (utf8 ,code 3))
-         (t (error "How did this happen?  Codepoint U+~X is illegal" ,code))))))
+         (t (error "How did this happen?  Codepoint U+~X is illegal" ,code)))))
+  ()
+  ()
+  (octet-count (code state error)
+    `(locally
+	 (declare (optimize (ext:inhibit-warnings 3)))
+       (cond ((< ,code #x80) 1)
+             ((< ,code #x800) 2)
+             ((< ,code #x10000) 3)
+             ((< ,code #x110000) 4)
+             (t (error "How did this happen?  Codepoint U+~X is illegal" ,code))))))
 
 (define-external-format :ascii (:size 1 :documentation
 "US ASCII 7-bit encoding.  Illegal input sequences are replaced with
@@ -1333,4 +1453,14 @@ replaced with a question mark.")
 			  (declare (optimize (ext:inhibit-warnings 3)))
 			(funcall ,error "Cannot output codepoint #x~X to ASCII stream" ,code))
 		      #x3F)
-		  ,code))))
+		  ,code)))
+  ()
+  ()
+  (octet-count (code state error)
+    `(if (> ,code #x7f)
+	 (if ,error
+	     (locally
+		 (declare (optimize (ext:inhibit-warnings 3)))
+	       (funcall ,error "Cannot output codepoint #x~X to ASCII stream" ,code))
+	     1)
+	 1)))

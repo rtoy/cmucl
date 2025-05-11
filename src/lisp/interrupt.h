@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _INTERRUPT_H_
-#define _INTERRUPT_H_
+#ifndef INTERRUPT_H
+#define INTERRUPT_H
 
 #include <signal.h>
 
@@ -57,4 +57,4 @@ extern union interrupt_handler interrupt_handlers[NSIG];
 		   sigaddset(s,SIGUSR1), sigaddset(s,SIGUSR2))
 #endif
 
-#endif /* _INTERRUPT_H_ */
+#endif /* INTERRUPT_H */

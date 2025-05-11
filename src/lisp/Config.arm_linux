@@ -1,0 +1,40 @@
+# -*- Mode: makefile -*-
+
+PATH1 = ../../src/lisp
+vpath %.h $(PATH1)
+vpath %.c $(PATH1)
+vpath %.S $(PATH1)
+
+CMULOCALE = ../../src/i18n/locale
+vpath %.pot $(CMULOCALE)
+vpath %.po  $(CMULOCALE)
+vpath %.mo  $(CMULOCALE)
+
+GC_SRC := gc.c
+
+CPPFLAGS := -DUNICODE -iquote . -iquote $(PATH1)
+CFLAGS += -marm -Wstrict-prototypes -Wall -O0 -ggdb3 -fno-omit-frame-pointer -ffp-contract=off
+ASFLAGS = -g
+
+ARCH_SRC = arm-arch.c
+
+NM = $(PATH1)/linux-nm
+DEPEND_FLAGS = -MM
+
+ASSEM_SRC = arm-assem.S undefineds-assem.S
+OS_SRC += Linux-os.c os-common.c elf.c
+OS_LIBS = -ldl -lutil
+OS_LINK_FLAGS = -marm -rdynamic -Wl,-Map,foo -Wl,-z,noexecstack
+
+EXEC_FINAL_OBJ = exec-final.o
+
+# Convert undefineds.h to a set of stubs.  Preprocess undefineds.h,
+# remove preprocessor junk and take each symbol and make a stub out of
+# it.
+#
+# TODO: Modify undefineds.h and get rid of the F(foo) and D(foo) stuff.
+undefineds-assem.S: undefineds.h
+	$(CPP) '-DF(x)=x' '-DD(x)' $< | \
+	sed -e '/^#/d' -e '/^ *$$/d' -e 's/,$$//' | \
+	sort | \
+	awk 'BEGIN { print "\t.text\n" } { printf "\t.align 2\n\t.global stub_%s\nstub_%s:\n\tb %s\n\n", $$1, $$1, $$1 }' > $@

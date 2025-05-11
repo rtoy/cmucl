@@ -5,8 +5,8 @@
  *
  */
 
-#ifndef _X86_VALIDATE_DARWIN_H_
-#define _X86_VALIDATE_DARWIN_H_
+#ifndef X86_VALIDATE_DARWIN_H
+#define X86_VALIDATE_DARWIN_H
 
 /*
  * Also look in compiler/x86/parms.lisp for some of the parameters.
@@ -49,4 +49,4 @@
 #define FOREIGN_LINKAGE_SPACE_SIZE (0x100000)	/* 1MB */
 #endif
 
-#endif /*_X86_VALIDATE_DARWIN_H_*/
+#endif /*X86_VALIDATE_DARWIN_H*/

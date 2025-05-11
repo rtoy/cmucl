@@ -1521,12 +1521,12 @@ Z may be any number, but the result is always a complex."
 	;; space 0 to get maybe-inline functions inlined
 	(declare (optimize (speed 3) (space 0)))
       (cond ((> (abs x)
-		#-(or linux hpux) #.(/ (%asinh most-positive-double-float) 4d0)
-		;; This is more accurate under linux.
-		#+(or linux hpux) #.(/ (+ (%log 2.0d0)
-					  (%log most-positive-double-float)) 4d0))
+		(/ (%asinh most-positive-double-float) 4d0))
+             ;; Kahan says the answer is
+             ;;
+             ;;   copysign(1, x) + i*copysign(0, y)
 	     (coerce-to-complex-type (float-sign x)
-				     (float-sign y) z))
+				     (float-sign y 0d0) z))
 	    (t
 	     (let* ((tv (%tan y))
 		    (beta (+ 1.0d0 (* tv tv)))

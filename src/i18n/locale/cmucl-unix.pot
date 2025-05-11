@@ -1285,10 +1285,6 @@ msgid ""
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Unknown error [~d]"
-msgstr ""
-
-#: src/code/unix.lisp
 msgid ""
 "Perform the UNIX select(2) system call.\n"
 "  (declare (type (integer 0 #.FD-SETSIZE) num-descriptors)\n"
@@ -1418,7 +1414,11 @@ msgid ""
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Call setlocale(3c) with fixed args.  Returns 0 on success."
+msgid ""
+"Set all the categories of the locale according to the values of\n"
+"  the environment variables by calling setlocale(LC_ALL, \"\").\n"
+"\n"
+"  Returns 0 on success and -1 if setlocale failed."
 msgstr ""
 
 #: src/code/unix.lisp
@@ -1430,5 +1430,27 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid "Get the codeset from the locale"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Generates a unique temporary file name from TEMPLATE, and creates\n"
+"  and opens the file.  On success, the corresponding file descriptor\n"
+"  and name of the file is returned.  Otherwise, NIL and the UNIX error\n"
+"  code is returned."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Generate a uniquely named temporary directory from Template.  The\n"
+"  directory is created with permissions 0700.  The name of the\n"
+"  directory is returned.\n"
+"\n"
+"  If the directory cannot be created NIL and the UNIX error code is\n"
+"  returned."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Returns a string that describes the error code Errno"
 msgstr ""
 

@@ -3,20 +3,23 @@
 usage() {
     echo "cross-build-world.sh [-crlX] [-B file] [-G Gnumake] target-dir cross-dir cross-compiler-script [build-binary [flags]]"
     echo "  -c      Clean target and cross directories before compiling"
+    echo "  -i      Enable interactive mode (output to screen instead of log file)."
     echo "  -r      Recompile lisp runtime"
     echo "  -l      Load cross-compiled kernel to make a new lisp kernel"
     echo "  -B file Use this as the cross bootstrap file." 
     echo "  -G make Specifies the name of GNU make"
-    echo "  -X      (break) before quitting the cross compilation (for debugging)"
+    echo "  -X      Execute (break) before quitting the cross-build"
 }
 
 MAKE=make
+INTERACTIVE=nil
 BREAK=""
 
-while getopts "crlXB:G:" arg
+while getopts "cirlXB:G:" arg
 do
     case $arg in
       c) CLEAN_DIR=yes ;;
+      i) INTERACTIVE=t ;;
       r) BUILD_RUNTIME=yes ;;
       l) LOAD_KERNEL=yes ;;
       B) BOOTSTRAP=$OPTARG ;;
@@ -98,7 +101,7 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (load "target:tools/setup" :if-source-newer :load-source)
 (comf "target:tools/setup" :load t)
 
-(setq *gc-verbose* nil *interactive* nil)
+(setq *gc-verbose* nil *interactive* $INTERACTIVE)
 
 (load "$SCRIPT")
 
@@ -117,6 +120,9 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (pushnew :no-clm *features*)
 (pushnew :no-hemlock *features*)
 
+;; At this point we can stop and play around with the compiler to various bits.
+;; EOF
+
 (load "target:tools/worldcom")
 #-(or no-compiler runtime) (load "target:tools/comcom")
 ;; Compile at least new-genesis, so that genesis doesn't take ages
@@ -132,10 +138,11 @@ EOF
 
 if [ "$BUILD_RUNTIME" = "yes" ]; then
     echo Building runtime
+    bin/git-version.sh -f > src/lisp/cmucl-version.h
     (cd $TARGET/lisp; ${MAKE})
 fi
 
 if [ "$LOAD_KERNEL" = "yes" ]; then
     echo Load kernel.core
-    bin/load-world.sh -p $TARGET cross-compiled
+    bin/load-world.sh -p $TARGET
 fi

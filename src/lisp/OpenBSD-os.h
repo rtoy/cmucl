@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _OPENBSD_OS_H_
-#define _OPENBSD_OS_H_
+#ifndef OPENBSD_OS_H
+#define OPENBSD_OS_H
 
 
 #include <sys/types.h>
@@ -30,4 +30,4 @@ typedef int os_vm_prot_t;
 #define uc_sigmask sc_mask
 int *sc_reg(struct sigcontext *, int);
 
-#endif /* _OPENBSD_OS_H_ */
+#endif /* OPENBSD_OS_H */

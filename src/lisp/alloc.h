@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _ALLOC_H_
-#define _ALLOC_H_
+#ifndef ALLOC_H
+#define ALLOC_H
 
 #include "lisp.h"
 
@@ -15,4 +15,4 @@ extern lispobj alloc_number(long n);
 extern lispobj alloc_string(const char *str);
 extern lispobj alloc_sap(void *ptr);
 
-#endif /* _ALLOC_H_ */
+#endif /* ALLOC_H */

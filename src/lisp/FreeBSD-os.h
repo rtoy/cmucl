@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _FREEBSD_OS_H_
-#define _FREEBSD_OS_H_
+#ifndef FREEBSD_OS_H
+#define FREEBSD_OS_H
 
 #include <sys/mman.h>
 
@@ -42,4 +42,4 @@ void restore_fpu(ucontext_t *);
 #define PROTECTION_VIOLATION_CODE SEGV_ACCERR
 #endif
 
-#endif /* _FREEBSD_OS_H_ */
+#endif /* FREEBSD_OS_H */

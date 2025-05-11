@@ -915,14 +915,14 @@
   "Defines a new package called PACKAGE.  Each of OPTIONS should be one of the
    following:
      (:NICKNAMES {package-name}*)
-     (:SIZE <integer>)
+     (:DOCUMENTATION doc-string)
+     (:USE {package-name}*)
      (:SHADOW {symbol-name}*)
      (:SHADOWING-IMPORT-FROM <package-name> {symbol-name}*)
-     (:USE {package-name}*)
      (:IMPORT-FROM <package-name> {symbol-name}*)
-     (:INTERN {symbol-name}*)
      (:EXPORT {symbol-name}*)
-     (:DOCUMENTATION doc-string)
+     (:INTERN {symbol-name}*)
+     (:SIZE <integer>)
    All options except :SIZE and :DOCUMENTATION can be used multiple times."
   (let ((nicknames nil)
 	(size nil)

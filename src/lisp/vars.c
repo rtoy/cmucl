@@ -128,6 +128,10 @@ make_var(char *name, boolean perm)
 	name = buffer;
     }
     var->name = (char *) malloc(strlen(name) + 1);
+    if (var->name == NULL) {
+	perror("malloc");
+	exit(1);
+    }
     strcpy(var->name, name);
     var->clock = 0;
     var->permanent = perm;

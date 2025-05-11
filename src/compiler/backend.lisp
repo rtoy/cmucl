@@ -106,7 +106,11 @@
     (warn (intl:gettext "Unknown VM support routine: ~A") name))
   (let ((local-name (symbolicate (backend-name *target-backend*) "-" name)))
     `(progn
-       (defun ,local-name ,ll ,@body)
+       (defun ,local-name
+	 ,ll
+	 (macrolet ((vm::emit-not-implemented ()
+		      `(vm::not-implemented ,',local-name)))
+	   ,@body))
        (setf (,(intern (concatenate 'simple-string
 				    "VM-SUPPORT-ROUTINES-"
 				    (string name))

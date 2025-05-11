@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _PPC_VALIDATE_H_
-#define _PPC_VALIDATE_H_
+#ifndef PPC_VALIDATE_H
+#define PPC_VALIDATE_H
 
 #ifdef LINKAGE_TABLE
 /*
@@ -83,4 +83,4 @@
 #define HOLE_SIZE 0x2000
 #endif
 
-#endif /* _PPC_VALIDATE_H_ */
+#endif /* PPC_VALIDATE_H */

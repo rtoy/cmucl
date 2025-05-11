@@ -17,7 +17,7 @@
      :darwin				; Darwin OS (Mac OS X)
      :bsd				; We're a BSD-type OS
      :cmu				; Announce this is CMUCL
-     :cmu20 :cmu20a			; (Mostly) current version identifier
+     :cmu21 :cmu21e			; (Mostly) current version identifier
      :gencgc				; Generational GC is supported on ppc.
      :relative-package-names
      :modular-arith			; Modular arithmetic

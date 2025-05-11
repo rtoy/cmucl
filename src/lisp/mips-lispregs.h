@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _MIPS_LISPREGS_H_
-#define _MIPS_LISPREGS_H_
+#ifndef MIPS_LISPREGS_H
+#define MIPS_LISPREGS_H
 
 #ifdef LANGUAGE_ASSEMBLY
 #define REG(num) $num
@@ -65,4 +65,4 @@
 #define SC_REG(sc, n) ((sc)->sc_regs[n])
 #define SC_PC(sc) ((sc)->sc_pc)
 
-#endif /* _MIPS_LISPREGS_H_ */
+#endif /* MIPS_LISPREGS_H */

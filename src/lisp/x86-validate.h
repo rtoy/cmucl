@@ -5,8 +5,8 @@
  *
  */
 
-#ifndef _X86_VALIDATE_H_
-#define _X86_VALIDATE_H_
+#ifndef X86_VALIDATE_H
+#define X86_VALIDATE_H
 
 #if defined(__linux__)
 #include "x86-validate-linux.h"
@@ -33,4 +33,4 @@
 /* Note that GENCGC only uses dynamic_space 0. */
 #define DYNAMIC_1_SPACE_START	(DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE)
 
-#endif /* _X86_VALIDATE_H_ */
+#endif /* X86_VALIDATE_H */

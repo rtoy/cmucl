@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _LISP_H_
-#define _LISP_H_
+#ifndef LISP_H
+#define LISP_H
 
 #define LowtagOf(obj) ((obj)&lowtag_Mask)
 #define TypeOf(obj) ((obj)&type_Mask)
@@ -55,4 +55,4 @@ typedef u32 lispobj;
 
 typedef enum {AUTO, X87, SSE2} fpu_mode_t;
 
-#endif /* _LISP_H_ */
+#endif /* LISP_H */

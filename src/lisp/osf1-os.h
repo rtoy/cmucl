@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _OSF1_OS_H_
-#define _OSF1_OS_H_
+#ifndef OSF1_OS_H
+#define OSF1_OS_H
 
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -22,4 +22,4 @@ typedef int os_vm_prot_t;
 
 #define OS_VM_DEFAULT_PAGESIZE	8192
 
-#endif /* _OSF1_OS_H_ */
+#endif /* OSF1_OS_H */

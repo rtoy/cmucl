@@ -6,8 +6,8 @@
 */
 
 
-#ifndef _ALPHA_LISPREGS_H_
-#define _ALPHA_LISPREGS_H_
+#ifndef ALPHA_LISPREGS_H
+#define ALPHA_LISPREGS_H
 
 #define NREGS	(32)
 
@@ -74,4 +74,4 @@
 
 #define call_into_lisp_LRA_page 0x10000
 
-#endif /* _ALPHA_LISPREGS_H_ */
+#endif /* ALPHA_LISPREGS_H */

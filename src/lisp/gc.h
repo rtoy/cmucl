@@ -3,8 +3,8 @@
  *
  */
 
-#ifndef _GC_H_
-#define _GC_H_
+#ifndef GC_H
+#define GC_H
 
 extern void gc_init(void);
 extern void collect_garbage(void);
@@ -19,4 +19,4 @@ extern void clear_auto_gc_trigger(void);
 
 #endif /* ibmrt */
 
-#endif /* _GC_H_ */
+#endif /* GC_H */

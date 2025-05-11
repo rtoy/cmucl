@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _SPARC_LISPREGS_H_
-#define _SPARC_LISPREGS_H_
+#ifndef SPARC_LISPREGS_H
+#define SPARC_LISPREGS_H
 
 #ifdef LANGUAGE_ASSEMBLY
 
@@ -153,4 +153,4 @@ extern int *solaris_register_address(struct ucontext *, int);
 
 #endif
 
-#endif /* _SPARC_LISPREGS_H_ */
+#endif /* SPARC_LISPREGS_H */

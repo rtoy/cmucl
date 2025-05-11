@@ -16,7 +16,7 @@ TARGET="`echo $1 | sed 's:/*$::'`"
 shift
 
 $TARGET/lisp/lisp \
-	-noinit -nositeinit -batch "$@" <<EOF || exit 3
+	-lib $TARGET/lisp -noinit -nositeinit -batch "$@" <<EOF || exit 3
 (in-package :cl-user)
 
 (setf lisp::*enable-package-locked-errors* nil)

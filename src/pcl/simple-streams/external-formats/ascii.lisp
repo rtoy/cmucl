@@ -33,5 +33,15 @@ replaced with a question mark.")
 			  (declare (optimize (ext:inhibit-warnings 3)))
 			(funcall ,error "Cannot output codepoint #x~X to ASCII stream" ,code))
 		      #x3F)
-		  ,code))))
+		  ,code)))
+  ()
+  ()
+  (octet-count (code state error)
+    `(if (> ,code #x7f)
+	 (if ,error
+	     (locally
+		 (declare (optimize (ext:inhibit-warnings 3)))
+	       (funcall ,error "Cannot output codepoint #x~X to ASCII stream" ,code))
+	     1)
+	 1)))
 

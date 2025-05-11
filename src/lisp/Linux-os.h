@@ -8,8 +8,8 @@
 
 */
 
-#ifndef _LINUX_OS_H_
-#define _LINUX_OS_H_
+#ifndef LINUX_OS_H
+#define LINUX_OS_H
 
 #include <stdlib.h>
 #include <signal.h>
@@ -50,4 +50,4 @@ void restore_fpu(ucontext_t *);
 
 #define PROTECTION_VIOLATION_SIGNAL SIGSEGV
 
-#endif /* _LINUX_OS_H_ */
+#endif /* LINUX_OS_H */

@@ -2698,6 +2698,43 @@ maybe_static_array_p(lispobj header)
     return result;
 }
 
+static int
+scav_static_vector(lispobj object)
+{
+    lispobj *ptr = (lispobj *) PTR(object);
+    lispobj header = *ptr;
+
+    if (debug_static_array_p) {
+        fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n",
+                (void*)object, ptr);
+        fprintf(stderr, "  Header value = 0x%lx\n", (unsigned long) header);
+    }
+
+    if (maybe_static_array_p(header)) {
+        int static_p;
+
+        if (debug_static_array_p) {
+            fprintf(stderr, "Possible static vector at %p.  header = 0x%lx\n",
+                    ptr, (unsigned long) header);
+        }
+
+        static_p = (HeaderValue(header) & 1) == 1;
+        if (static_p) {
+            /*
+             * We have a static vector.  Mark it as
+             * reachable by setting the MSB of the header.
+             */
+            *ptr = header | 0x80000000;
+            if (debug_static_array_p) {
+                fprintf(stderr, "Scavenged static vector @%p, header = 0x%lx\n",
+                        ptr, (unsigned long) header);
+            }
+        }
+    }
+
+    return 1;
+}
+
 
 
 /* Scavenging */
@@ -2756,41 +2793,7 @@ scavenge(void *start_obj, long nwords)
                        || other_space_p(object)) {
                 words_scavenged = 1;
             } else {
-                lispobj *ptr = (lispobj *) PTR(object);
-                words_scavenged = 1;
-                if (debug_static_array_p) {
-                    fprintf(stderr, "Not in Lisp spaces:  object = %p, ptr = %p\n",
-                            (void*)object, ptr);    
-                }
-                
-                if (1) {
-                    lispobj header = *ptr;
-                    if (debug_static_array_p) {
-                        fprintf(stderr, "  Header value = 0x%lx\n", (unsigned long) header);
-                    }
-                    
-                    if (maybe_static_array_p(header)) {
-                        int static_p;
-
-                        if (debug_static_array_p) {
-                            fprintf(stderr, "Possible static vector at %p.  header = 0x%lx\n",
-                                    ptr, (unsigned long) header);
-                        }
-                      
-                        static_p = (HeaderValue(header) & 1) == 1;
-                        if (static_p) {
-                            /*
-                             * We have a static vector.  Mark it as
-                             * reachable by setting the MSB of the header.
-                             */
-                            *ptr = header | 0x80000000;
-                            if (debug_static_array_p) {
-                                fprintf(stderr, "Scavenged static vector @%p, header = 0x%lx\n",
-                                        ptr, (unsigned long) header);
-                            }
-                        }
-                    }
-                }
+                words_scavenged = scav_static_vector(object);
             }
 	} else if ((object & 3) == 0)
 	    words_scavenged = 1;
@@ -4322,7 +4325,7 @@ u32_vector(lispobj obj, unsigned *length)
 static inline void
 free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
 {
-    unsigned length = UINT_MAX; // to compare to
+    unsigned length = UINT_MAX;
     unsigned *index_vector = u32_vector(hash_table->index_vector, &length);
     unsigned *next_vector = u32_vector(hash_table->next_vector, 0);
     int free_p = 1;
@@ -6753,10 +6756,9 @@ scavenge_newspace_generation_one_scan(int generation)
 {
     int i;
 
-#if 0
-    fprintf(stderr, "Starting one full scan of newspace generation %d\n",
-	    generation);
-#endif
+    DPRINTF(gencgc_verbose,
+            (stderr, "Starting one full scan of newspace generation %d\n",
+             generation));
 
     for (i = 0; i < last_free_page; i++) {
 	if (PAGE_ALLOCATED(i) && !PAGE_UNBOXED(i)
@@ -6861,10 +6863,10 @@ scavenge_newspace_generation_one_scan(int generation)
 	    i = last_page;
 	}
     }
-#if 0
-    fprintf(stderr, "Finished one full scan of newspace generation %d\n",
-	    generation);
-#endif
+
+    DPRINTF(gencgc_verbose,
+            (stderr, "Finished one full scan of newspace generation %d\n",
+             generation));
 }
 
 /* Scan all weak objects and reset weak object lists */
@@ -6893,9 +6895,8 @@ scavenge_newspace_generation(int generation)
     struct new_area (*previous_new_areas)[] = NULL;
     int previous_new_areas_index;
 
-#if 0
-    fprintf(stderr, "Start scavenge_newspace_generation %d\n", generation);
-#endif
+    DPRINTF(gencgc_verbose,
+            (stderr, "Start scavenge_newspace_generation %d\n", generation));
 
 #define SC_NS_GEN_CK 0
 #if SC_NS_GEN_CK
@@ -7075,9 +7076,9 @@ scavenge_newspace_generation(int generation)
 		    "*** scav.new.gen. %d: write protected page %d written to? dont_move=%d\n",
 		    generation, i, PAGE_DONT_MOVE(i));
 #endif
-#if 0
-    fprintf(stderr, "Finished scavenge_newspace_generation %d\n", generation);
-#endif
+
+    DPRINTF(gencgc_verbose,
+            (stderr, "Finished scavenge_newspace_generation %d\n", generation));
 }
 
 
@@ -7836,20 +7837,26 @@ garbage_collect_generation(int generation, int raise)
     scavenge_control_stack();
 #endif
 
+    DPRINTF(gencgc_verbose,
+            (stderr, "Scavenging interrupt handlers ...\n"));
+
     scavenge_interrupt_handlers();
 
-#ifdef PRINTNOISE
-    printf("Scavenging the binding stack (%d bytes) ...\n",
-	   ((lispobj *) get_binding_stack_pointer() -
-	    binding_stack) * sizeof(lispobj));
-#endif
+    DPRINTF(gencgc_verbose,
+            (stderr, "Done scavenging interrupt handlers\n"));
+
+    DPRINTF(gencgc_verbose,
+            (stderr, "Scavenging the binding stack (%d bytes) ...\n",
+             ((lispobj *) get_binding_stack_pointer() -
+              binding_stack) * sizeof(lispobj)));
+
     /* Scavenge the binding stack. */
     scavenge(binding_stack,
 	     (lispobj *) get_binding_stack_pointer() - binding_stack);
 
-#ifdef PRINTNOISE
-    printf("Done scavenging the binding stack.\n");
-#endif
+    DPRINTF(gencgc_verbose,
+            (stderr, "Done scavenging the binding stack.\n"));
+
     /*
      * Scavenge the scavenge_hooks in case this refers to a hook added
      * in a prior generation GC. From here on the scavenger_hook will
@@ -7857,29 +7864,43 @@ garbage_collect_generation(int generation, int raise)
      * doing here.
      */
 
-#ifdef PRINTNOISE
-    printf("Scavenging the scavenger hooks ...\n");
-#endif
+    DPRINTF(gencgc_verbose,
+            (stderr, "Scavenging the scavenger hooks ...\n"));
+
     scavenge(&scavenger_hooks, 1);
-#ifdef PRINTNOISE
-    printf("Done scavenging the scavenger hooks.\n");
-#endif
+
+    DPRINTF(gencgc_verbose,
+            (stderr, "Done scavenging the scavenger hooks.\n"));
 
     static_space_size = (lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER)
 	- static_space;
-    if (gencgc_verbose > 1)
-	fprintf(stderr, "Scavenge static space: %ld bytes\n",
-		static_space_size * sizeof(lispobj));
+
+    DPRINTF(gencgc_verbose,
+            (stderr, "Scavenge static space: %ld bytes\n",
+             static_space_size * sizeof(lispobj)));
+
     scavenge(static_space, static_space_size);
+
+    DPRINTF(gencgc_verbose,
+            (stderr, "Done scavenging static space\n"));
 
     /*
      * All generations but the generation being GCed need to be
      * scavenged. The new_space generation needs special handling as
      * objects may be moved in - it is handle separately below.
      */
-    for (i = 0; i < NUM_GENERATIONS; i++)
-	if (i != generation && i != new_space)
+    for (i = 0; i < NUM_GENERATIONS; i++) {
+	if (i != generation && i != new_space) {
+            DPRINTF(gencgc_verbose,
+                    (stderr, "Scavenge generation %lu (gen = %d, new space = %d)\n",
+                     i, generation, new_space));
+
 	    scavenge_generation(i);
+
+            DPRINTF(gencgc_verbose,
+                    (stderr, "Done scavenging generation %lu\n", i));
+        }
+    }
 
     /*
      * Finally scavenge the new_space generation.  Keep going until no

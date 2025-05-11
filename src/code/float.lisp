@@ -1137,7 +1137,8 @@
 			      (floatit (ash bits -1))
 			    #+nil
 			    (progn
-			      (format t "1: f0, f1 = ~A ~A~%" f0 f1)
+                              (format t "x = ~A~%" x)
+			      (format t "1: f0, f1 = ~A~%" f0)
 			      (format t "   scale = ~A~%" (1+ scale)))
 			    
 			    (scale-float f0 (1+ scale))))
@@ -1146,14 +1147,30 @@
 			      (floatit bits)
 			    #+nil
 			    (progn
-			      (format t "2: f0, f1 = ~A ~A~%" f0 f1)
+			      (format t "2: f0, f1 = ~A~%" f0)
 			      (format t "   scale = ~A~%" scale)
-			      (format t "scale-float f0 = ~A~%" (scale-float f0 scale))
-			      (when f1
-				(format t "scale-float f1 = ~A~%"
-					(scale-float f1 (- scale 53)))))
-			    
-				(scale-float f0 scale))))))
+			      (format t "scale-float f0 = ~A~%" (scale-float f0 scale)))
+                            (let ((min-exponent
+                                    ;; Compute the min (unbiased) exponent
+                                    (ecase format
+                                      (single-float
+                                       (- vm:single-float-normal-exponent-min
+                                          vm:single-float-bias
+                                          vm:single-float-digits))
+                                      (double-float
+                                       (- vm:double-float-normal-exponent-min
+                                          vm:double-float-bias
+                                          vm:double-float-digits)))))
+                              ;; F0 is always between 0.5 and 1.  If
+                              ;; SCALE is the min exponent, we have a
+                              ;; denormal number just less than the
+                              ;; least-positive float.  We want to
+                              ;; return the least-positive-float so
+                              ;; multiply F0 by 2 (without adjusting
+                              ;; SCALE) to get the nearest float.
+                              (if (= scale min-exponent)
+                                  (scale-float (* 2 f0) scale)
+			          (scale-float f0 scale))))))))
 	       (floatit (bits)
 		 (let ((sign (if plusp 0 1)))
 		   (case format

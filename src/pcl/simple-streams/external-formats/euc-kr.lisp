@@ -1007,4 +1007,16 @@ character and illegal outputs are replaced by a question mark.")
 		 (t
 		  (if ,error
 		      (funcall ,error "Cannot output codepoint #x~X to EUC-KR format." ,code)
-		      (,output #X3f))))))))
+		      (,output #X3f)))))))
+  ()
+  ()
+  (octet-count (code state error present)
+    `(if (<= ,code #x7f)
+	 1
+	 (let ((,present (get-inverse ,itable ,code)))
+	   (cond (,present
+		  2)
+		 (t
+		  (if ,error
+		      (funcall ,error "Cannot output codepoint #x~X to EUC-KR format." ,code)
+		      1)))))))

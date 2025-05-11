@@ -530,9 +530,10 @@
 
 (defsetf nn-last-read-message-number %set-nn-last-read-message-number)
 
-(defconstant nntp-eof "."
-  "NNTP marks the end of a textual response with this.  NNTP also recognizes
-   this as the end of a post.")
+(defconstant nntp-eof
+  (coerce '(#\. #\return) 'string)
+  "NNTP marks the end of a textual response with this.  NNTP also
+  recognizes this as the end of a post.")
 
 ;;; This macro binds a variable to each successive line of input from NNTP
 ;;; and exits when it sees the NNTP end-of-file-marker, a period by itself on

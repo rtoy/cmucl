@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _LISPREGS_H_
-#define _LISPREGS_H_
+#ifndef LISPREGS_H
+#define LISPREGS_H
 
 #if defined(mips) || defined(irix)
 #include "mips-lispregs.h"
@@ -40,6 +40,10 @@
 #include "ppc-lispregs.h"
 #endif
 
+#ifdef __arm__
+#include "arm-lispregs.h"
+#endif
+
 /* This matches the definition of sc-offset in code/debug-info.lisp */
 #define SC_OFFSET(sc,offset) (((offset) << 5) | (sc))
 
@@ -56,4 +60,4 @@
 extern char *lisp_register_names[];
 #endif
 
-#endif /* _LISPREGS_H_ */
+#endif /* LISPREGS_H */

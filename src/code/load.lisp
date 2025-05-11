@@ -565,7 +565,8 @@
 		   (fasload filename)
 		   (sloload filename))
 	       (let ((pn (merge-pathnames (pathname filename)
-					  *default-pathname-defaults* nil)))
+					  *default-pathname-defaults* nil))
+                     (if-does-not-exist (if if-does-not-exist :error nil)))
 		 (if (wild-pathname-p pn)
 		     (dolist (file (directory pn) t)
 		       (internal-load pn file if-does-not-exist contents

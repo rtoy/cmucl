@@ -57,15 +57,18 @@ if [ -n "$KEEP" ]; then
     esac
 fi
 	  
-find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" -o \
-	-name "*.axpf" -o \
-	-name "*.hpf" -o \
-	-name "*.pmaxf" -o \
-	-name "*.sgif" -o \
-	-name "*.ppcf" -o \
-	-name "*.sparcf" -o \
-	-name "*.x86f" -o \
-	-name "*.sse2f" $CORE | $GREP $PATTERN | xargs rm 2> /dev/null
+find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" \
+	-o -name "*.armf" \
+	-o -name "*.axpf" \
+	-o -name "*.hpf" \
+	-o -name "*.ppcf" \
+	-o -name "*.pmaxf" \
+	-o -name "*.sgif" \
+	-o -name "*.sparcf" \
+	-o -name "*.sse2f" \
+	-o -name "*.x86f" \
+	$CORE |
+	$GREP $PATTERN | xargs rm 2> /dev/null
 
 for d in $TARGET
 do

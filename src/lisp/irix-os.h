@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _IRIX_OS_H_
-#define _IRIX_OS_H_
+#ifndef IRIX_OS_H
+#define IRIX_OS_H
 
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -26,4 +26,4 @@ typedef int os_vm_prot_t;
    pagesize is 16384 */
 #define OS_VM_DEFAULT_PAGESIZE	16384
 
-#endif /* _IRIX_OS_H_ */
+#endif /* IRIX_OS_H */

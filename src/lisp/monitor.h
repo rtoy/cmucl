@@ -5,10 +5,10 @@
 
 */
 
-#ifndef _MONITOR_H_
-#define _MONITOR_H_
+#ifndef MONITOR_H
+#define MONITOR_H
 
 extern void ldb_monitor(void);
 extern void throw_to_monitor(void);
 
-#endif /* _MONITOR_H_ */
+#endif /* MONITOR_H */

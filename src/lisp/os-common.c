@@ -12,6 +12,7 @@
 #include <math.h>
 #include <netdb.h>
 #include <pwd.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -608,8 +609,8 @@ os_sleep(double seconds)
  * function that works across all OSes.
  */
 int
-os_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-        unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+os_stat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uint64_t *nlink,
+        unsigned int *uid, unsigned int *gid, uint64_t *rdev, int64_t *size,
         int64_t *atime, int64_t *mtime, int64_t *ctime,
         long *blksize, int64_t *blocks)
 {
@@ -661,8 +662,8 @@ os_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_
 }
 
 int
-os_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+os_fstat(int fd, uint64_t *dev, uint64_t *ino, unsigned int *mode, uint64_t *nlink,
+         unsigned int *uid, unsigned int *gid, uint64_t *rdev, int64_t *size,
          int64_t *atime, int64_t *mtime, int64_t *ctime,
          long *blksize, int64_t *blocks)
 {
@@ -693,8 +694,8 @@ os_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *
 }
 
 int
-os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+os_lstat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uint64_t *nlink,
+         unsigned int *uid, unsigned int *gid, uint64_t *rdev, int64_t *size,
          int64_t *atime, int64_t *mtime, int64_t *ctime,
          long *blksize, int64_t *blocks)
 {
@@ -753,26 +754,27 @@ os_file_author(const char *path)
      * Keep trying with larger buffers until a maximum is reached.  We
      * assume (1 << 20) is large enough for any OS.
      */
-    while (size <= (1 << 20)) {
-        switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
-          case 0:
-              /* Success, though we might not have a matching entry */
-              result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
-              goto exit;
-          case ERANGE:
-              /* Buffer is too small, double its size and try again */
-              size *= 2;
-              obuffer = (buffer == initial) ? NULL : buffer;
-              if ((buffer = realloc(obuffer, size)) == NULL) {
-                  goto exit;
-              }
-              continue;
-          default:
-              /* All other errors */
-              goto exit;
-        }
+again:
+    switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
+      case 0:
+	  /* Success, though we might not have a matching entry */
+	  result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
+	  break;
+      case ERANGE:
+	  /* Buffer is too small, double its size and try again */
+	  size *= 2;
+	  if (size > (1 << 20)) {
+	      break;
+	  }
+	  if ((buffer = realloc(obuffer, size)) == NULL) {
+	      break;
+	  }
+	  obuffer = buffer;
+	  goto again;
+      default:
+	/* All other errors */
+	break;
     }
-exit:
     free(obuffer);
     
     return result;

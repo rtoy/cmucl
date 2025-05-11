@@ -1009,7 +1009,8 @@
 		   (ecase type
 		     (#.vm:function-header-type
 		      (if (or (c:backend-featurep :sparc)
-			      (c:backend-featurep :ppc))
+			      (c:backend-featurep :ppc)
+			      (c:backend-featurep :arm))
 			  defn
 			  (make-random-descriptor
 			   (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)
@@ -2081,13 +2082,16 @@
     (let ((linux-p (and (or (eq (c:backend-fasl-file-implementation c:*backend*)
 				#.c:x86-fasl-file-implementation)
 			    (eq (c:backend-fasl-file-implementation c:*backend*)
-				#.c:alpha-fasl-file-implementation))
+				#.c:alpha-fasl-file-implementation)
+			    (eq (c:backend-fasl-file-implementation c:*backend*)
+				#.c:arm-fasl-file-implementation))
 			(c:backend-featurep :linux)))
 	  (freebsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
 			       #.c:x86-fasl-file-implementation)
 			   (c:backend-featurep :freebsd))))
       (cond
 	((and #+linkage-table nil
+	      (not (c::backend-featurep :arm))
 	      (or linux-p freebsd-p)
 	      (lookup-sym (concatenate 'string "PVE_stub_" name))))
 	((and #+linkage-table nil
@@ -2414,7 +2418,22 @@
  	 (:l
   	  (setf (sap-ref-16 sap 2)
 	        (maybe-byte-swap-short
-  		 (ldb (byte 16 0) value))))))))
+  		 (ldb (byte 16 0) value))))))
+      (#.c:arm-fasl-file-implementation
+       (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
+	 ;; Grab either the low (:movw) or high (:movt) 16 bits of the
+	 ;; value. Then smash that value into the inst at the right
+	 ;; place.
+	 (let* ((adjusted-value
+		  (ecase kind
+		    (:movw
+		     (ldb (byte 16 0) value))
+		    (:movt
+		     (ldb (byte 16 16) value))))
+		(imm4 (ldb (byte 4 12) adjusted-value))
+		(imm12 (ldb (byte 12 0) adjusted-value)))
+	   (setf (sap-ref-32 sap 0)
+		 (maybe-byte-swap (logior inst (ash imm4 16) imm12))))))))
   (undefined-value))
 
 (defun linkage-info-to-core ()
@@ -2433,6 +2452,7 @@
 				(number-to-core (cdr rtn)))
 		 result))
     (cold-setq (cold-intern '*initial-assembler-routines*) result))
+  #+linkage-table
   (cold-setq (cold-intern '*linkage-table-data*)
 	     (make-cold-linkage-vector *cold-linkage-table*)))
 

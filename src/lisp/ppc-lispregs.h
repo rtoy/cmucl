@@ -1,5 +1,5 @@
-#ifndef _PPC_LISPREGS_H_
-#define _PPC_LISPREGS_H_
+#ifndef PPC_LISPREGS_H
+#define PPC_LISPREGS_H
 
 #if defined DARWIN
 #if defined LANGUAGE_ASSEMBLY
@@ -120,4 +120,4 @@
 
 #endif
 
-#endif /* _PPC_LISPREGS_H_ */
+#endif /* PPC_LISPREGS_H */

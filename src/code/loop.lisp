@@ -1169,7 +1169,10 @@ collected result will be returned as the value of the LOOP."
 		;; these type symbols.
 		(let ((type-spec (or (gethash z (loop-universe-type-symbols *loop-universe*))
 				     (gethash (symbol-name z) (loop-universe-type-keywords *loop-universe*)))))
-		  (when type-spec
+                  ;; If Z is NIL, we have something like (loop for var nil ...).
+                  ;; In that case, we need to pop the source to skip over the
+                  ;; type, just as if we had (loop for var fixnum ...)
+		  (when (or type-spec (null z))
 		    (loop-pop-source)
 		    type-spec)))
 	       (t 

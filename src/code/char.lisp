@@ -31,7 +31,6 @@
 	  alphanumericp char= char/= char< char> char<= char>= char-equal
 	  char-not-equal char-lessp char-greaterp char-not-greaterp
 	  char-not-lessp character char-code code-char char-upcase
-	  char-titlecase title-case-p
 	  char-downcase digit-char char-int char-name name-char
 	  codepoint-limit codepoint))
 
@@ -60,6 +59,57 @@
 (deftype codepoint ()
   `(integer 0 (,codepoint-limit)))
 
+(defconstant +ascii-limit+
+  127
+  "A character code strictly larger than this is handled using Unicode
+  rules.")
+
+;; Table of mappings for upper case and lower case letters.  See
+;; src/lisp/case-mapping.c.
+(alien:def-alien-variable "case_mapping" 
+    (alien:array c-call:unsigned-short 1024))
+
+(alien:def-alien-variable "stage2"
+    (alien:array c-call:unsigned-int nil))
+
+;; Each entry in the case mapping table consists of the code for
+;; either an upper case or lower case character code.
+(defconstant +upper-case-entry+ (byte 16 0))
+(defconstant +lower-case-entry+ (byte 16 16))
+
+(defconstant +stage2-size+ 6
+  "Number of bits used for the index of the second stage table of the
+  case mapping table.")
+
+(declaim (inline case-mapping-entry))
+(defun case-mapping-entry (code)
+  "For the character code, CODE, the 32-bit value from the
+  case mapping table that indicates the delta between CODE and the
+  corresponding upper or lower case character for CODE."
+  (declare (type (integer 0 (#.char-code-limit)) code)
+           (optimize (speed 3) (safety 0)))
+  (let* ((index1 (ldb (byte (- 16 +stage2-size+) +stage2-size+)
+                      code))
+         (index2 (ldb (byte +stage2-size+ 0)
+                      code))
+         (stage2-offset (alien:deref case-mapping index1)))
+    (alien:deref stage2 (+ stage2-offset index2))))
+
+(declaim (inline case-mapping-lower-case))
+(defun case-mapping-lower-case (code)
+  "Compute the lower-case character code for the given character CODE.
+  If no lower-case code exists, just return CODE."
+  (declare (type (integer 0 (#.char-code-limit)) code)
+           (optimize (speed 3)))
+  (ldb (byte 16 0) (- code (ldb +lower-case-entry+ (case-mapping-entry code)))))
+
+(declaim (inline case-mapping-upper-case))
+(defun case-mapping-upper-case (code)
+  "Compute the upper-case character code for the given character CODE.
+  If no upper-case code exists, just return CODE."
+  (declare (type (integer 0 (#.char-code-limit)) code)
+           (optimize (speed 3)))
+  (ldb (byte 16 0) (- code (ldb +upper-case-entry+ (case-mapping-entry code)))))
 
 (macrolet ((frob (char-names-list)
 	     (collect ((results))
@@ -208,9 +258,9 @@
   (declare (character char))
   (and (typep char 'base-char)
        (let ((m (char-code (the base-char char))))
-	 (or (< 31 m 127)
+	 (or (<= (char-code #\space ) m (char-code #\~))
 	     #+(and unicode (not unicode-bootstrap))
-	     (and (> m 127)
+	     (and (> m +ascii-limit+)
 		  (>= (unicode-category m) +unicode-category-graphic+))))))
 
 
@@ -219,9 +269,10 @@
   argument is an alphabetic character; otherwise NIL."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91) (< 96 m 123)
+    (or (<= (char-code #\A) m (char-code #\Z))
+        (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
+	(and (> m +ascii-limit+)
 	     (<= +unicode-category-letter+ (unicode-category m)
 		 (+ +unicode-category-letter+ #x0F))))))
 
@@ -231,10 +282,10 @@
   argument is an upper-case character, NIL otherwise."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91)
+    (or (<= (char-code #\A) m (char-code #\Z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
-	     (= (unicode-category m) +unicode-category-upper+)))))
+	(and (> m +ascii-limit+)
+             (not (zerop (ldb +lower-case-entry+ (case-mapping-entry m))))))))
 
 
 (defun lower-case-p (char)
@@ -242,21 +293,10 @@
   argument is a lower-case character, NIL otherwise."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 96 m 123)
+    (or (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
-	     (= (unicode-category m) +unicode-category-lower+)))))
-
-(defun title-case-p (char)
-  "The argument must be a character object; title-case-p returns T if the
-  argument is a title-case character, NIL otherwise."
-  (declare (character char))
-  (let ((m (char-code char)))
-    (or (< 64 m 91)
-	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
-	     (= (unicode-category m) +unicode-category-title+)))))
-
+	(and (> m +ascii-limit+)
+             (not (zerop (ldb +upper-case-entry+ (case-mapping-entry m))))))))
 
 (defun both-case-p (char)
   "The argument must be a character object.  Both-case-p returns T if the
@@ -264,12 +304,11 @@
   both upper and lower case.  For ASCII, this is the same as Alpha-char-p."
   (declare (character char))
   (let ((m (char-code char)))
-    (or (< 64 m 91) (< 96 m 123)
+    (or (<= (char-code #\A) m (char-code #\Z))
+        (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
-	     (<= +unicode-category-upper+
-		 (unicode-category m)
-		 +unicode-category-title+)))))
+	(and (> m +ascii-limit+)
+             (not (zerop (case-mapping-entry m)))))))
 
 
 (defun digit-char-p (char &optional (radix 10.))
@@ -298,9 +337,11 @@
   (declare (character char))
   (let ((m (char-code char)))
     ;; Shortcut for ASCII digits and upper and lower case ASCII letters
-    (or (< 47 m 58) (< 64 m 91) (< 96 m 123)
+    (or (<= (char-code #\0) m (char-code #\9))
+        (<= (char-code #\A) m (char-code #\Z))
+        (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
-	(and (> m 127)
+	(and (> m +ascii-limit+)
 	     (<= +unicode-category-letter+ (unicode-category m)
 		 (+ +unicode-category-letter+ #x0F))))))
 
@@ -369,14 +410,14 @@
 
 (defmacro equal-char-code (character)
   `(let ((ch (char-code ,character)))
-     ;; Handle ASCII separately for bootstrapping and for unidata missing.
-     (if (< 64 ch 91)
-	 (+ ch 32)
-	 #-(and unicode (not unicode-bootstrap))
-	 ch
-	 #+(and unicode (not unicode-bootstrap))
-	 (if (> ch 127) (unicode-lower ch) ch))))
-
+     ;; Handle ASCII separately for bootstrapping.
+     (cond ((<= (char-code #\A) ch (char-code #\Z))
+            (logxor ch #x20))
+	   #+(and unicode (not unicode-bootstrap))
+           ((> ch +ascii-limit+)
+            (case-mapping-lower-case ch))
+           (t
+            ch))))
 
 (defun char-equal (character &rest more-characters)
   "Returns T if all of its arguments are the same character.
@@ -453,41 +494,12 @@
 (defun char-upcase (char)
   "Returns CHAR converted to upper-case if that is possible."
   (declare (character char))
-  #-(and unicode (not unicode-bootstrap))
-  (if (lower-case-p char)
-      (code-char (- (char-code char) 32))
-      char)
-  #+(and unicode (not unicode-bootstrap))
-  (let ((m (char-code char)))
-    (cond ((> m 127) (code-char (unicode-upper m)))
-	  ((< 96 m 123) (code-char (- m 32)))
-	  (t char))))
-
-(defun char-titlecase (char)
-  "Returns CHAR converted to title-case if that is possible."
-  (declare (character char))
-  #-(and unicode (not unicode-bootstrap))
-  (if (lower-case-p char)
-      (code-char (- (char-code char) 32))
-      char)
-  #+(and unicode (not unicode-bootstrap))
-  (let ((m (char-code char)))
-    (cond ((> m 127) (code-char (unicode-title m)))
-	  ((< 96 m 123) (code-char (- m 32)))
-	  (t char))))
+  (char-upcase char))
 
 (defun char-downcase (char)
   "Returns CHAR converted to lower-case if that is possible."
   (declare (character char))
-  #-(and unicode (not unicode-bootstrap))
-  (if (upper-case-p char)
-      (code-char (+ (char-code char) 32))
-      char)
-  #+(and unicode (not unicode-bootstrap))
-  (let ((m (char-code char)))
-    (cond ((> m 127) (code-char (unicode-lower m)))
-	  ((< 64 m 91) (code-char (+ m 32)))
-	  (t char))))
+  (char-downcase char))
 
 (defun digit-char (weight &optional (radix 10))
   "All arguments must be integers.  Returns a character object that

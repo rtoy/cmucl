@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _HPUX_OS_H_
-#define _HPUX_OS_H_
+#ifndef HPUX_OS_H
+#define HPUX_OS_H
 
 #include <sys/mman.h>
 
@@ -21,4 +21,4 @@ typedef int os_vm_prot_t;
 
 #define OS_VM_DEFAULT_PAGESIZE	4096
 
-#endif /* _HPUX_OS_H_ */
+#endif /* HPUX_OS_H */

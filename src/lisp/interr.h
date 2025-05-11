@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _INTERR_H_
-#define _INTERR_H_
+#ifndef INTERR_H
+#define INTERR_H
 
 #define crap_out(msg) do { write(2, msg, sizeof(msg)); lose(); } while (0)
 
@@ -17,4 +17,4 @@ extern void internal_error(os_context_t * context);
 extern void utf16_output(unsigned short int* utf16, int len);
 extern lispobj debug_print(lispobj string);
 
-#endif /* _INTERR_H_ */
+#endif /* INTERR_H */

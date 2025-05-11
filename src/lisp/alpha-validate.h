@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _ALPHA_VALIDATE_H_
-#define _ALPHA_VALIDATE_H_
+#ifndef ALPHA_VALIDATE_H
+#define ALPHA_VALIDATE_H
 
 #ifndef linux
 
@@ -46,4 +46,4 @@
 
 #endif
 
-#endif /* _ALPHA_VALIDATE_H_ */
+#endif /* ALPHA_VALIDATE_H */

@@ -236,7 +236,8 @@
 
   :site-init
       If true, then the name of the site init file to load.  The default is
-  library:site-init.  No error if this does not exist.
+  library:site-init if it exists.  If not, library:default-site-init
+  is used if it exists.  No error if these files do not exist.
 
   :print-herald
       If true (the default), print out the lisp system herald when starting.
@@ -347,7 +348,8 @@
 	       (when (and site-init
 			  (not (and process-command-line
 				    (find-switch "nositeinit"))))
-		 (load site-init :if-does-not-exist nil :verbose nil))
+		 (or (load site-init :if-does-not-exist nil :verbose nil)
+		     (load "library:default-site-init" :if-does-not-exist nil :verbose nil)))
 	       (when (and process-command-line (find-switch "edit"))
 		 (setf *editor-lisp-p* t))
 	       (when (and load-init-file
@@ -443,7 +445,8 @@
 
 (setf (getf *herald-items* :bugs)
       `(,#'(lambda (stream)
-	     (write-string (intl:gettext "See <http://www.cmucl.org/> for support information.") stream))
+	     (write-string (intl:gettext "Please visit https://cmucl.org/bugs to report bugs and ask questions.")
+			   stream))
 	terpri
 	,#'(lambda (stream)
 	     (write-string (intl:gettext "Loaded subsystems:") stream))))

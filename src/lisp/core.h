@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _CORE_H_
-#define _CORE_H_
+#ifndef CORE_H
+#define CORE_H
 
 #include "lisp.h"
 
@@ -41,4 +41,4 @@ struct ndir_entry {
 
 extern lispobj load_core_file(const char *file, fpu_mode_t *fpu_type);
 
-#endif /* _CORE_H_ */
+#endif /* CORE_H */

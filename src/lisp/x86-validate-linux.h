@@ -5,8 +5,8 @@
  *
  */
 
-#ifndef _X86_VALIDATE_LINUX_H_
-#define _X86_VALIDATE_LINUX_H_
+#ifndef X86_VALIDATE_LINUX_H
+#define X86_VALIDATE_LINUX_H
 
 /*
  * Also look in compiler/x86/parms.lisp for some of the parameters.
