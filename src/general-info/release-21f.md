@@ -125,6 +125,7 @@ public domain.
     * ~~#382~~ Command-line options are case-sensitive
     * ~~#386~~ Generate def-unix-error froms from OS-specific files.
       This replaces the original versions in unix.lisp.
+    * ~~#401~~ `file-position` now returns the correct value
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
