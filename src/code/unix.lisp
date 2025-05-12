@@ -1594,7 +1594,7 @@
 	      ;; using ">") allows for the trailing "/" if we find this
 	      ;; component is a directory.
 	      (when (>= new-fill-ptr (length result))
-		(let ((longer (make-string (* 3 (length result))
+		(let ((longer (make-string (* 3 new-fill-ptr)
 					   :initial-element (code-char 0))))
 		  (replace longer result :end1 fill-ptr)
 		  (setq result longer)))
