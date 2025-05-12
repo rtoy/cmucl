@@ -22,7 +22,8 @@
 		read-char-no-edit listen-skip-whitespace concat-pnames
 		iterate once-only collect do-anonymous undefined-value
 		required-argument define-hash-cache defun-cached
-		cache-hash-eq do-hash))
+		cache-hash-eq do-hash
+	        vector-push-extend-sequence))
 
 (import 'lisp::whitespace-char-p)
 
@@ -612,3 +613,26 @@
   "Return an EQ hash of X.  The value of this hash for any given object can (of
   course) change at arbitary times."
   `(lisp::pointer-hash ,x))
+
+;;; VECTOR-PUSH-EXTEND-SEQUENCE -- Public
+;;;
+(defun vector-push-extend-sequence (new-seq array)
+  "Like Vector-Push-Extend except that instead of a single element we
+  push the contents of New-Seq to the end of Array.  Array must a fill
+  pointer.  Returns the new fill-pointer."
+  (declare (vector array))
+  (let ((fill-pointer (fill-pointer array))
+	(new-seq-len (length new-seq)))
+    (declare (type kernel:index fill-pointer new-seq-len))
+    (when (>= (+ fill-pointer new-seq-len)
+	      (kernel:%array-available-elements array))
+      (let ((extension (max new-seq-len
+			    (if (zerop (length array))
+				1
+				(length array)))))
+	(setf array (adjust-array array (+ fill-pointer extension)))))
+    (prog1
+	(setf (kernel:%array-fill-pointer array)
+	      (+ fill-pointer new-seq-len))
+      (replace array new-seq
+	       :start1 fill-pointer))))
