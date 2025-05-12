@@ -201,12 +201,11 @@ write_object_section_header(int fd, long length, os_vm_address_t addr)
 {
     extern Elf_Shdr sh;
     /*
-     * DO NOT include SHF_EXECINSTR and SHF_WRITE here.  Newer
-     * versions of the Linux ld will warn that we have sections that
-     * have RWX permissions.  We don't need those flags for our core
-     * sections.
+     * DO NOT include SHF_EXECINSTR here.  Newer versions of the Linux
+     * ld will warn that we have sections that have RWX permissions.
+     * We don't need those flags for our core sections.
      */
-    Elf_Word flags = SHF_ALLOC;
+    Elf_Word flags = SHF_ALLOC | SHF_WRITE;
 
     sh.sh_name		= strlen(string_table_name) + 2;
     sh.sh_type		= SHT_PROGBITS;
