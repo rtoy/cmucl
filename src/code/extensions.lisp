@@ -616,13 +616,16 @@
 
 ;;; VECTOR-PUSH-EXTEND-SEQUENCE -- Public
 ;;;
-(defun vector-push-extend-sequence (new-seq array)
+(defun vector-push-extend-sequence (new-vec array &key (start 0) (end (length new-vec)))
   "Like Vector-Push-Extend except that instead of a single element we
-  push the contents of New-Seq to the end of Array.  Array must a fill
-  pointer.  Returns the new fill-pointer."
-  (declare (vector array))
+  push the contents of New-Seq bounded by Start and End to the end of
+  Array.  Array must have a fill pointer.  Returns the new
+  fill-pointer."
+  (declare (vector array new-vec))
+  (unless (<= start end)
+    (error "Illegal bounding indices:  ~S ~S" start end))
   (let ((fill-pointer (fill-pointer array))
-	(new-seq-len (length new-seq)))
+	(new-seq-len (- end start)))
     (declare (type kernel:index fill-pointer new-seq-len))
     (when (>= (+ fill-pointer new-seq-len)
 	      (kernel:%array-available-elements array))
@@ -635,4 +638,6 @@
 	(setf (kernel:%array-fill-pointer array)
 	      (+ fill-pointer new-seq-len))
       (replace array new-seq
-	       :start1 fill-pointer))))
+	       :start1 fill-pointer
+	       :start2 start
+	       :end2 end))))
