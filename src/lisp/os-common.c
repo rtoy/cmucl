@@ -936,36 +936,3 @@ os_get_user_homedir(const char* name, int *status)
     return NULL;
 }
     
-/*
- * Return a new string (or NULL) for the current working directory.
- * The caller must free this space.
- */
-char*
-os_getcwd(void)
-{
-    size_t size = 5120;
-    char *buffer = malloc(size);
-    char *result = NULL;
-
-    result = getcwd(buffer, size);
-
-    while (result == NULL && errno == ERANGE) {
-	/*
-	 * Buffer is too small, double its size and try again.
-	 *
-	 * If the size is too big just give up.  Or if we can't
-	 * allocate a new buffer of the desired size, also give up.
-	 */
-	size *= 2;
-
-	if (size > (1 << 20)) {
-	    break;
-	}
-	if ((buffer = realloc(buffer, size)) == NULL) {
-	    break;
-	}
-	result = getcwd(buffer, size);
-    }
-
-    return result;
-}

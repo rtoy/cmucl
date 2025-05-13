@@ -190,3 +190,19 @@ os_install_interrupt_handlers(void)
     interrupt_install_low_level_handler(SIGSEGV, sigsegv_handler);
     interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
 }
+
+/*
+ * Return a new string (or NULL) for the current working directory.
+ * The caller must free this space.
+ */
+char *
+os_getcwd(void)
+{
+    char buf[PATH_MAX];
+    char *cwd;
+
+    if ((cwd = getcwd(buf, sizeof(buf))) == NULL) {
+	return NULL;
+    }
+    return strdup(cwd);
+}
