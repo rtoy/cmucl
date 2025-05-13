@@ -201,9 +201,8 @@ write_object_section_header(int fd, long length, os_vm_address_t addr)
 {
     extern Elf_Shdr sh;
     /*
-     * DO NOT include SHF_EXECINSTR here.  Newer versions of the Linux
-     * ld will warn that we have sections that have RWX permissions.
-     * We don't need those flags for our core sections.
+     * These sections need the execute bit set and we depend on
+     * validate() to do that.  Do not set the execute bit here!
      */
     Elf_Word flags = SHF_ALLOC | SHF_WRITE;
 
