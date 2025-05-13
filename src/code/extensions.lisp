@@ -618,7 +618,7 @@
 ;;;
 (defun vector-push-extend-sequence (new-vec array &key (start 0) (end (length new-vec)))
   "Like Vector-Push-Extend except that instead of a single element we
-  push the contents of New-Seq bounded by Start and End to the end of
+  push the contents of New-Vec bounded by Start and End to the end of
   Array.  Array must have a fill pointer.  Returns the new
   fill-pointer."
   (declare (vector array new-vec))
