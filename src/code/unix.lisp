@@ -1576,7 +1576,7 @@
 	    (concatenate 'simple-string dir "/" name)
 	    name))))
 
-(defun unix-resolve-links (pathname)
+(defun old-unix-resolve-links (pathname)
   _N"Returns the pathname with all symbolic links resolved."
   (declare (simple-string pathname))
   (let ((len (length pathname))
@@ -1603,7 +1603,8 @@
 		       :end1 new-fill-ptr
 		       :start2 name-start
 		       :end2 name-end)
-	      (let ((kind (unix-file-kind (if (zerop name-end) "/" result) t)))
+	      (let ((kind (unix-file-kind (if (zerop name-end) "/" (coerce result 'simple-string)) t)))
+		(format t "kind = ~A~%" kind)
 		(unless kind (return nil))
 		(cond ((eq kind :link)
 		       (multiple-value-bind (link err) (unix-readlink result)
@@ -1611,8 +1612,12 @@
 			   (error (intl:gettext "Error reading link ~S: ~S")
 				  (subseq result 0 fill-ptr)
 				  (get-unix-error-msg err)))
+			 (format t "readlink = ~A~%" link)
 			 (cond ((or (zerop (length link))
 				    (char/= (schar link 0) #\/))
+				(format t "relative link~%")
+				(format t "  fill-ptr, new-fill-ptr = ~D, ~D~%" fill-ptr new-fill-ptr)
+				(format t "  result = ~A~%" (subseq result 0 fill-ptr))
 				;; It's a relative link
 				(fill result (code-char 0)
 				      :start fill-ptr
@@ -1629,6 +1634,8 @@
 				;; It's absolute.
 				(and (> (length link) 0)
 				     (char= (schar link 0) #\/))
+				(format t "absolute link ~A~%" link)
+				(format t "result = ~A~%" result)
 				(fill result (code-char 0) :end new-fill-ptr)
 				(setf fill-ptr 0)))
 			 (setf pending
@@ -1650,6 +1657,160 @@
 		       (setf name-start (1+ name-end)))
 		      (t
 		       (return nil))))))))))
+
+#+nil
+(defun unix-resolve-links (pathname)
+  _N"Returns the pathname with all symbolic links resolved."
+  (declare (simple-string pathname))
+  (let ((len (length pathname))
+	(pending pathname)
+	(old-fill-ptr 0))
+    (declare (fixnum len) (simple-string pending))
+    (if (zerop len)
+	pathname
+	(let ((result (make-array 100
+				  :element-type 'character
+				  :initial-element (code-char 0)
+				  :fill-pointer 0))
+	      (fill-ptr 0)
+	      (name-start 0))
+	  (loop
+	    (let* ((name-end (or (position #\/ pending :start name-start) len))
+		   (new-fill-ptr (+ fill-ptr (- name-end name-start))))
+	      ;; grow the result string, if necessary.  the ">=" (instead of
+	      ;; using ">") allows for the trailing "/" if we find this
+	      ;; component is a directory.
+	      #+nil
+	      (when (>= new-fill-ptr (length result))
+		(let ((longer (make-string (* 3 new-fill-ptr)
+					   :initial-element (code-char 0))))
+		  (replace longer result :end1 fill-ptr)
+		  (setq result longer)))
+	      #+nil
+	      (replace result pending
+		       :start1 fill-ptr
+		       :end1 new-fill-ptr
+		       :start2 name-start
+		       :end2 name-end)
+	      (setf old-fill-ptr (fill-pointer result))
+	      (ext:vector-push-extend-sequence pending result
+					       :initial-element (code-char 0)
+					       :start name-start
+					       :end name-end)
+	      (lisp::with-array-data ((result-data result) (start) (end))
+		(declare (ignore start end))
+		(let ((kind (unix-file-kind (if (zerop name-end)
+						"/"
+						result-data)
+					    t)))
+		  (format t "kind = ~A~%" kind)
+		  (unless kind (return nil))
+		  (cond ((eq kind :link)
+			 (multiple-value-bind (link err) (unix-readlink result-data)
+			   (unless link
+			     (error (intl:gettext "Error reading link ~S: ~S")
+				    result
+				    (get-unix-error-msg err)))
+			   (format t "readlink = ~A~%" link)
+			   (cond ((or (zerop (length link))
+				      (char/= (schar link 0) #\/))
+				  ;; It's a relative link
+				  (format t "relative link~%")
+				  (fill result (code-char 0)
+					:start old-fill-ptr)
+				  (setf (fill-pointer result) old-fill-ptr)
+				  (format t "  result = ~A~%" result)
+				  result
+				  #+nil
+				  (fill result (code-char 0)
+					:start fill-ptr
+					:end new-fill-ptr))
+				 ((string= result "/../" :end1 4)
+				  (format t "Across super-root~%")
+				  ;; It's across the super-root.
+				  (let ((slash (or (position #\/ result :start 4)
+						   0)))
+				    #+nil
+				    (fill result (code-char 0)
+					  :start slash
+					  :end new-fill-ptr)
+				    #+nil
+				    (setf fill-ptr slash)))
+				 (t
+				  ;; It's absolute.
+				  (and (> (length link) 0)
+				       (char= (schar link 0) #\/))
+				  (format t "absolute link ~A~%" link)
+				  (format t "result = ~A~%" result)
+				  #+nil
+				  (fill result (code-char 0) :end new-fill-ptr)
+				  #+nil
+				  (setf fill-ptr 0)
+				  (fill result (code-char 0))
+				  (setf (fill-pointer result) 0)
+				  ))
+			   (setf pending
+				 (if (= name-end len)
+				     link
+				     (concatenate 'simple-string
+						  link
+						  (subseq pending name-end))))
+			   (setf len (length pending))
+			   (setf name-start 0)))
+			((= name-end len)
+			 (format t "name-end (~D) = len (~D)~%" name-end len)
+			 (when (eq kind :directory)
+			   #+nil
+			   (setf (schar result new-fill-ptr) #\/)
+			   #+nil
+			   (incf new-fill-ptr)
+			   (vector-push-extend #\/ result))
+			 (return (subseq result 0 new-fill-ptr)))
+			((eq kind :directory)
+			 (format t "kind = directory~%")
+			 #+nil
+			 (setf (aref result new-fill-ptr) #\/)
+			 #+nil
+			 (setf fill-ptr (1+ new-fill-ptr))
+			 (vector-push-extend #\/ result)
+			 (setf name-start (1+ name-end)))
+			(t
+			 (return nil)))))))))))
+
+#+nil
+(defun unix-realpath (src)
+  (declare (simple-string src))
+  (with-alien ((resolved-name (array char 5120)))
+    (let ((result
+	    (alien-funcall
+	     (extern-alien "realpath"
+			   (function (* c-call:char)
+				     c-call:c-string
+				     c-call:c-string))
+	     (%name->file src)
+	     (cast resolved-name c-call:c-string))))
+      (if (null-alien result)
+	  (values nil (unix-errno))
+	  (values (string (cast result c-call:c-string)) 0)))))
+
+(defun unix-realpath (src)
+  (declare (simple-string src))
+  (let (result)
+    (unwind-protect
+	 (progn
+	   (setf result
+		 (alien-funcall
+		  (extern-alien "realpath"
+				(function (* c-call:char)
+					  c-call:c-string
+					  (* c-call:char)))
+		  (%name->file src)
+		  (sap-alien (sys:int-sap 0) (* c-call:char))))
+	   (if (null-alien result)
+	       (values nil (unix-errno))
+	       (values (%file->name (cast result c-call:c-string)))))
+      (when result
+	(free-alien result)))))
 
 (defun unix-simplify-pathname (src)
   (declare (simple-string src))
