@@ -936,3 +936,13 @@ os_get_user_homedir(const char* name, int *status)
     return NULL;
 }
     
+
+/*
+ * Return a new string (or NULL) for the current working directory.
+ * The caller must free this space.
+ */
+char *
+os_getcwd(void)
+{
+    return getcwd(NULL, 0);
+}
