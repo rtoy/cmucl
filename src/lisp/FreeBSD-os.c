@@ -362,13 +362,3 @@ os_support_sse2()
     return TRUE;
 }
 #endif
-
-/*
- * Return a new string (or NULL) for the current working directory.
- * The caller must free this space.
- */
-char *
-os_getcwd(void)
-{
-    return getcwd(NULL, 0);
-}

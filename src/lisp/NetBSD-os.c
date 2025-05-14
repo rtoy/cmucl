@@ -427,19 +427,3 @@ os_support_sse2()
 	return FALSE;
 }
 #endif
-
-/*
- * Return a new string (or NULL) for the current working directory.
- * The caller must free this space.
- */
-char *
-os_getcwd(void)
-{
-    char buf[PATH_MAX];
-    char *cwd;
-
-    if ((cwd = getcwd(buf, sizeof(buf))) == NULL) {
-	return NULL;
-    }
-    return strdup(cwd);
-}
