@@ -21,8 +21,7 @@
 
 (defparameter *compiler-unix-errors* nil)
 
-(defmacro def-unix-error (name number &optional description)
-  (declare (ignore description))
+(defmacro def-unix-error (name number)
   `(progn
      (defconstant ,name ,number)
      (export ',name)))
@@ -32,5 +31,5 @@
 ;;; 
 ;;; From <errno.h>
 ;;; 
-(def-unix-error ESUCCESS 0 _N"Successful")
+(def-unix-error ESUCCESS 0)
 
