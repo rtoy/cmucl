@@ -15,10 +15,6 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/code/errno.lisp
-msgid "Successful"
-msgstr ""
-
 #: src/code/unix.lisp
 msgid ""
 "The encoding to use for converting a namestring to a string that can\n"
