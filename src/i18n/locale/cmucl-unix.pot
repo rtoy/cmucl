@@ -636,6 +636,12 @@ msgid "Error reading link ~S: ~S"
 msgstr ""
 
 #: src/code/unix.lisp
+msgid ""
+"Returns the pathname with all symbolic links expanded and\n"
+" references to '.' and '..' and extra '/' characters removed."
+msgstr ""
+
+#: src/code/unix.lisp
 msgid "Successful"
 msgstr ""
 

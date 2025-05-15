@@ -1733,6 +1733,28 @@
 	   dst)
 	  (t
 	   (subseq dst 0 dst-len)))))
+
+(defun unix-realpath (pathname)
+  _N"Returns the pathname with all symbolic links expanded and
+ references to '.' and '..' and extra '/' characters removed."
+  (declare (simple-string pathname))
+  (let (result)
+    (unwind-protect
+	 (progn
+	   (setf result
+		 (alien-funcall
+		  (extern-alien "realpath"
+				(function (* c-call:char)
+					  c-call:c-string
+					  (* c-call:char)))
+		  pathname
+		  (sap-alien (int-sap 0) (* c-call:char))))
+	   (if (null-alien result)
+	       (values nil (unix-get-errno))
+	       (values (string (cast result c-call:c-string))
+		       0)))
+      (unless (null-alien result)
+	(free-alien result)))))
 
 ;;;; Errno stuff.
 
