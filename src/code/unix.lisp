@@ -1574,6 +1574,7 @@
 	    (concatenate 'simple-string dir "/" name)
 	    name))))
 
+#+nil
 (defun unix-resolve-links (pathname)
   _N"Returns the pathname with all symbolic links resolved."
   (declare (simple-string pathname))
@@ -1648,6 +1649,15 @@
 		       (setf name-start (1+ name-end)))
 		      (t
 		       (return nil))))))))))
+
+(defun unix-resolve-links (pathname)
+  _N"Returns the pathname with all symbolic links resolved."
+  (declare (simple-string pathname))
+  (let ((resolved (unix:unix-realpath pathname)))
+    (if (and resolved (eq (unix-file-kind resolved) :directory))
+	;; Append a "/" if the path is a directory.
+	(concatenate 'string resolved "/")
+	resolved)))
 
 (defun unix-simplify-pathname (src)
   (declare (simple-string src))
@@ -1747,11 +1757,11 @@
 				(function (* c-call:char)
 					  c-call:c-string
 					  (* c-call:char)))
-		  pathname
+		  (%name->file pathname)
 		  (sap-alien (int-sap 0) (* c-call:char))))
 	   (if (null-alien result)
 	       (values nil (unix-get-errno))
-	       (values (string (cast result c-call:c-string))
+	       (values (string (%file->name (cast result c-call:c-string)))
 		       0)))
       (unless (null-alien result)
 	(free-alien result)))))
