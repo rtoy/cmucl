@@ -959,7 +959,7 @@
 	     :format-control (intl:gettext "Bad place for a wild pathname."))
       (let ((namestring (unix-namestring (merge-pathnames pathname) t)))
 	(when (and namestring (unix:unix-file-kind namestring))
-	  (pathname (unix::unix-realpath
+	  (pathname (unix::unix-resolve-links
 		     (unix:unix-maybe-prepend-current-directory
 		      namestring)))))))
 
