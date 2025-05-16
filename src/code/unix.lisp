@@ -1574,179 +1574,10 @@
 	    (concatenate 'simple-string dir "/" name)
 	    name))))
 
-#+nil
-(defun unix-resolve-links (pathname)
-  _N"Returns the pathname with all symbolic links resolved."
-  (declare (simple-string pathname))
-  (let ((len (length pathname))
-	(pending pathname))
-    (declare (fixnum len) (simple-string pending))
-    (if (zerop len)
-	pathname
-	(let ((result (make-string 100 :initial-element (code-char 0)))
-	      (fill-ptr 0)
-	      (name-start 0))
-	  (loop
-	    (let* ((name-end (or (position #\/ pending :start name-start) len))
-		   (new-fill-ptr (+ fill-ptr (- name-end name-start))))
-	      ;; grow the result string, if necessary.  the ">=" (instead of
-	      ;; using ">") allows for the trailing "/" if we find this
-	      ;; component is a directory.
-	      (when (>= new-fill-ptr (length result))
-		(let ((longer (make-string (* 3 new-fill-ptr)
-					   :initial-element (code-char 0))))
-		  (replace longer result :end1 fill-ptr)
-		  (setq result longer)))
-	      (replace result pending
-		       :start1 fill-ptr
-		       :end1 new-fill-ptr
-		       :start2 name-start
-		       :end2 name-end)
-	      (let ((kind (unix-file-kind (if (zerop name-end) "/" result) t)))
-		(unless kind (return nil))
-		(cond ((eq kind :link)
-		       (multiple-value-bind (link err) (unix-readlink result)
-			 (unless link
-			   (error (intl:gettext "Error reading link ~S: ~S")
-				  (subseq result 0 fill-ptr)
-				  (get-unix-error-msg err)))
-			 (cond ((or (zerop (length link))
-				    (char/= (schar link 0) #\/))
-				;; It's a relative link
-				(fill result (code-char 0)
-				      :start fill-ptr
-				      :end new-fill-ptr))
-			       ((string= result "/../" :end1 4)
-				;; It's across the super-root.
-				(let ((slash (or (position #\/ result :start 4)
-						 0)))
-				  (fill result (code-char 0)
-					:start slash
-					:end new-fill-ptr)
-				  (setf fill-ptr slash)))
-			       (t
-				;; It's absolute.
-				(and (> (length link) 0)
-				     (char= (schar link 0) #\/))
-				(fill result (code-char 0) :end new-fill-ptr)
-				(setf fill-ptr 0)))
-			 (setf pending
-			       (if (= name-end len)
-				   link
-				   (concatenate 'simple-string
-						link
-						(subseq pending name-end))))
-			 (setf len (length pending))
-			 (setf name-start 0)))
-		      ((= name-end len)
-		       (when (eq kind :directory)
-			 (setf (schar result new-fill-ptr) #\/)
-			 (incf new-fill-ptr))
-		       (return (subseq result 0 new-fill-ptr)))
-		      ((eq kind :directory)
-		       (setf (schar result new-fill-ptr) #\/)
-		       (setf fill-ptr (1+ new-fill-ptr))
-		       (setf name-start (1+ name-end)))
-		      (t
-		       (return nil))))))))))
-
-(defun unix-resolve-links (pathname)
-  _N"Returns the pathname with all symbolic links resolved."
-  (declare (simple-string pathname))
-  (let ((resolved (unix:unix-realpath pathname)))
-    (if (and resolved (eq (unix-file-kind resolved) :directory))
-	;; Append a "/" if the path is a directory.
-	(concatenate 'string resolved "/")
-	resolved)))
-
-(defun unix-simplify-pathname (src)
-  (declare (simple-string src))
-  (let* ((src-len (length src))
-	 (dst (make-string src-len))
-	 (dst-len 0)
-	 (dots 0)
-	 (last-slash nil))
-    (macrolet ((deposit (char)
-			`(progn
-			   (setf (schar dst dst-len) ,char)
-			   (incf dst-len))))
-      (dotimes (src-index src-len)
-	(let ((char (schar src src-index)))
-	  (cond ((char= char #\.)
-		 (when dots
-		   (incf dots))
-		 (deposit char))
-		((char= char #\/)
-		 (case dots
-		   (0
-		    ;; Either ``/...' or ``...//...'
-		    (unless last-slash
-		      (setf last-slash dst-len)
-		      (deposit char)))
-		   (1
-		    ;; Either ``./...'' or ``..././...''
-		    (decf dst-len))
-		   (2
-		    ;; We've found ..
-		    (cond
-		     ((and last-slash (not (zerop last-slash)))
-		      ;; There is something before this ..
-		      (let ((prev-prev-slash
-			     (position #\/ dst :end last-slash :from-end t)))
-			(cond ((and (= (+ (or prev-prev-slash 0) 2)
-				       last-slash)
-				    (char= (schar dst (- last-slash 2)) #\.)
-				    (char= (schar dst (1- last-slash)) #\.))
-			       ;; The something before this .. is another ..
-			       (deposit char)
-			       (setf last-slash dst-len))
-			      (t
-			       ;; The something is some random dir.
-			       (setf dst-len
-				     (if prev-prev-slash
-					 (1+ prev-prev-slash)
-					 0))
-			       (setf last-slash prev-prev-slash)))))
-		     (t
-		      ;; There is nothing before this .., so we need to keep it
-		      (setf last-slash dst-len)
-		      (deposit char))))
-		   (t
-		    ;; Something other than a dot between slashes.
-		    (setf last-slash dst-len)
-		    (deposit char)))
-		 (setf dots 0))
-		(t
-		 (setf dots nil)
-		 (setf (schar dst dst-len) char)
-		 (incf dst-len))))))
-    (when (and last-slash (not (zerop last-slash)))
-      (case dots
-	(1
-	 ;; We've got  ``foobar/.''
-	 (decf dst-len))
-	(2
-	 ;; We've got ``foobar/..''
-	 (unless (and (>= last-slash 2)
-		      (char= (schar dst (1- last-slash)) #\.)
-		      (char= (schar dst (- last-slash 2)) #\.)
-		      (or (= last-slash 2)
-			  (char= (schar dst (- last-slash 3)) #\/)))
-	   (let ((prev-prev-slash
-		  (position #\/ dst :end last-slash :from-end t)))
-	     (if prev-prev-slash
-		 (setf dst-len (1+ prev-prev-slash))
-		 (return-from unix-simplify-pathname "./")))))))
-    (cond ((zerop dst-len)
-	   "./")
-	  ((= dst-len src-len)
-	   dst)
-	  (t
-	   (subseq dst 0 dst-len)))))
-
 (defun unix-realpath (pathname)
   _N"Returns the pathname with all symbolic links expanded and
- references to '.' and '..' and extra '/' characters removed."
+ references to '.' and '..' and extra '/' characters removed.  If
+ expansion fails, NIL is returned and the errno."
   (declare (simple-string pathname))
   (let (result)
     (unwind-protect
@@ -1765,6 +1596,16 @@
 		       0)))
       (unless (null-alien result)
 	(free-alien result)))))
+
+(defun unix-resolve-links (pathname)
+  _N"Returns the pathname with all symbolic links resolved."
+  (declare (simple-string pathname))
+  (let ((resolved (unix:unix-realpath pathname)))
+    (if (and resolved (eq (unix-file-kind resolved) :directory))
+	;; Append a "/" if the path is a directory.
+	(concatenate 'string resolved "/")
+	resolved)))
+
 
 ;;;; Errno stuff.
 
