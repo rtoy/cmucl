@@ -123,6 +123,10 @@ public domain.
       file names now.
     * ~~#379~~ Support GNU-style command-line option names
     * ~~#382~~ Command-line options are case-sensitive
+    * ~~#385~~ Fixed compiler warning about `%p` in Linux-os.c
+    * ~~#394~~ Add `os_getcwd` to get the current directory
+    * ~~#400~~ `unix-resolve-links` no longer breaks on some lengths
+    * ~~#401~~ `file-position` now returns the correct value
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

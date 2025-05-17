@@ -33,6 +33,13 @@ msgid "Syscall ~A failed: ~A"
 msgstr ""
 
 #: src/code/unix.lisp
+msgid ""
+"Get the current working directory.  If the directory could be\n"
+"  determined, T and the directory name as a string are returned.\n"
+"  Otherwise, both values are NIL."
+msgstr ""
+
+#: src/code/unix.lisp
 msgid "Test for read permission"
 msgstr ""
 
