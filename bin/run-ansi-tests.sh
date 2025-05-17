@@ -29,7 +29,7 @@ do
 done
 
 # Shift out the options
-shift $[$OPTIND - 1]
+shift $((OPTIND - 1))
 
 # Branch to use for tests
 #
@@ -42,12 +42,12 @@ set -x
 if [ -d ../ansi-test ]; then
     # We already have clone; make sure it's clean by stashing any
     # changes.  Then pull any updates for the desired branch.
-    (cd ../ansi-test; git stash; git checkout $BRANCH; git pull --rebase)
+    (cd ../ansi-test || exit 1; git stash; git checkout $BRANCH; git pull --rebase)
 else    
     (cd ../; git clone https://gitlab.common-lisp.net/cmucl/ansi-test.git)
 fi
 
-cd ../ansi-test
+cd ../ansi-test || exit 1
 git checkout $BRANCH
 
 make LISP="$LISP batch -noinit -nositeinit"
