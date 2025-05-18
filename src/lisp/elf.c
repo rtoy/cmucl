@@ -200,7 +200,11 @@ static int
 write_object_section_header(int fd, long length, os_vm_address_t addr)
 {
     extern Elf_Shdr sh;
-    Elf_Word flags = SHF_ALLOC | SHF_EXECINSTR | SHF_WRITE;
+    /*
+     * These sections need the execute bit set and we depend on
+     * validate() to do that.  Do not set the execute bit here!
+     */
+    Elf_Word flags = SHF_ALLOC | SHF_WRITE;
 
     sh.sh_name		= strlen(string_table_name) + 2;
     sh.sh_type		= SHT_PROGBITS;
