@@ -29,6 +29,13 @@ msgid "Syscall ~A failed: ~A"
 msgstr ""
 
 #: src/code/unix.lisp
+msgid ""
+"Get the current working directory.  If the directory could be\n"
+"  determined, T and the directory name as a string are returned.\n"
+"  Otherwise, both values are NIL."
+msgstr ""
+
+#: src/code/unix.lisp
 msgid "Test for read permission"
 msgstr ""
 
@@ -621,11 +628,14 @@ msgid "Returns either :file, :directory, :link, :special, or NIL."
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Returns the pathname with all symbolic links resolved."
+msgid ""
+"Returns the pathname with all symbolic links expanded and\n"
+" references to '.' and '..' and extra '/' characters removed.  If\n"
+" expansion fails, NIL is returned and the errno."
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Error reading link ~S: ~S"
+msgid "Returns the pathname with all symbolic links resolved."
 msgstr ""
 
 #: src/code/unix.lisp
