@@ -2,7 +2,7 @@
 
 usage() {
     cat <<EOF
-`basename $0` -C option -E ext [-h?] [-t gnutar] [-I destdir] [version]
+$(basename "$0") -C option -E ext [-h?] [-t gnutar] [-I destdir] [version]
   -h           This help
   -?           This help
   -t tar       Name/path to GNU tar
@@ -28,11 +28,11 @@ do
 	E) COMPRESS_EXT=$OPTARG ;;
         t) GTAR=$OPTARG ;;
         I) INSTALL_DIR=$OPTARG ;;
-	h | \?) usage; exit 1 ;;
+	h | \?) usage ;;
     esac
 done
 
-shift `expr $OPTIND - 1`
+shift $((OPTIND - 1))
 
 # -C and -E options are required
 if [ -z "$COMPRESS" ]; then
@@ -49,21 +49,30 @@ fi
 if [ -n "$1" ]; then
     VERSION=$1
 else
-    VERSION="`date '+%Y-%m-%d-%H:%M:%S'`"
+    VERSION="$(date '+%Y-%m-%d-%H:%M:%S')"
 fi
 
 DESTDIR=${INSTALL_DIR:-release-$$}
 
 echo Creating source distribution
-GTAR_OPTIONS="--exclude=.git --exclude='*.pot.~*~'"
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/share/cmucl/$VERSION/
-install ${GROUP} ${OWNER} -m 0755 bin/run-unit-tests.sh $DESTDIR/bin
-${GTAR} ${GTAR_OPTIONS} -cf - src tests | (cd $DESTDIR/share/cmucl/$VERSION; ${GTAR} xf -)
+run_gtar() {
+    ${GTAR} --exclude=.git --exclude='*.pot.~*~' "$@"
+}
+
+installit() {
+    install ${GROUP:+ -g "$GROUP"} ${OWNER:+ -o "$OWNER"} "$@"
+}
+
+set -x
+# GTAR_OPTIONS="--exclude=.git --exclude='*.pot.~*~'"
+installit -d -m 0755 "$DESTDIR"/share/cmucl/"$VERSION"/
+installit -m 0755 bin/run-unit-tests.sh "$DESTDIR"/bin
+run_gtar -cf - src tests | (cd "$DESTDIR"/share/cmucl/"$VERSION" || exit 1; ${GTAR} xf -)
 if [ -z "$INSTALL_DIR" ]; then
     # echo "  Compressing with $ZIP"
-    ls $DESTDIR/share/cmucl/$VERSION/
-    ${GTAR} ${GTAR_OPTIONS} ${COMPRESS} -C $DESTDIR -cf cmucl-src-$VERSION.tar.$COMPRESS_EXT share/cmucl/$VERSION/src
+    ls "$DESTDIR"/share/cmucl/"$VERSION"/
+    run_gtar "${COMPRESS}" -C "$DESTDIR" -cf cmucl-src-"$VERSION".tar."$COMPRESS_EXT" share/cmucl/"$VERSION"/src
 else
     # Install in the specified directory
-    ${GTAR} ${GTAR_OPTIONS} -cf - src tests | (cd $DESTDIR/share/cmucl/$VERSION; ${GTAR:-tar} xf -)
+    run_gtar -cf - src tests | (cd "$DESTDIR"/share/cmucl/"$VERSION" || exit 1; ${GTAR:-tar} xf -)
 fi
