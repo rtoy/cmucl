@@ -10,6 +10,8 @@ $(basename "$0") -C option -E ext [-h?] [-t gnutar] [-I destdir] [version]
   -E ext       Extension to use for the tarball.  Must be consistent with
                  -C option.  Required.
   -I destdir   Install directly to given directory instead of creating a tarball
+  -G group     Group to use
+  -O owner     Owner to use
    version     The version.  Defaults to the current date
 
 This is generally called by make-dist.sh and not normally invoked by the user
@@ -21,13 +23,15 @@ EOF
 
 GTAR=tar
 
-while getopts "C:E:h?t:I:" arg
+while getopts "C:E:h?t:I:G:O:" arg
 do
     case $arg in
 	C) COMPRESS=$OPTARG ;;
 	E) COMPRESS_EXT=$OPTARG ;;
         t) GTAR=$OPTARG ;;
         I) INSTALL_DIR=$OPTARG ;;
+	G) GROUP=$OPTARG ;;
+	O) OWNER=$OPTARG ;;
 	h | \?) usage ;;
     esac
 done
