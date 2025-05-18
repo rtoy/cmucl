@@ -1597,6 +1597,7 @@
       (unless (null-alien result)
 	(free-alien result)))))
 
+#+nil
 (defun unix-resolve-links (pathname)
   _N"Returns the pathname with all symbolic links resolved."
   (declare (simple-string pathname))
