@@ -67,8 +67,6 @@ installit() {
     install ${GROUP:+ -g "$GROUP"} ${OWNER:+ -o "$OWNER"} "$@"
 }
 
-set -x
-# GTAR_OPTIONS="--exclude=.git --exclude='*.pot.~*~'"
 installit -d -m 0755 "$DESTDIR"/share/cmucl/"$VERSION"/
 installit -m 0755 bin/run-unit-tests.sh "$DESTDIR"/bin
 run_gtar -cf - src tests | (cd "$DESTDIR"/share/cmucl/"$VERSION" || exit 1; ${GTAR} xf -)
