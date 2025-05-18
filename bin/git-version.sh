@@ -5,7 +5,7 @@ usage()
     cat <<EOF
 git-version.sh [-hfv]
     -h    This help
-    -f    The version is ptined as a C file #define expression.
+    -f    The version is printed as a C file #define expression.
           Otherwise, the version is just printed to stdout
 
     -v    Use this as the version instead of using `git describe`, which
