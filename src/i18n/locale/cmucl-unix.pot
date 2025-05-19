@@ -628,11 +628,14 @@ msgid "Returns either :file, :directory, :link, :special, or NIL."
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Returns the pathname with all symbolic links resolved."
+msgid ""
+"Returns the pathname with all symbolic links expanded and\n"
+" references to '.' and '..' and extra '/' characters removed.  If\n"
+" expansion fails, NIL is returned and the errno."
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Error reading link ~S: ~S"
+msgid "Returns the pathname with all symbolic links resolved."
 msgstr ""
 
 #: src/code/unix.lisp
