@@ -135,6 +135,7 @@
     "target:code/alieneval"
     "target:code/c-call"
     "target:code/sap"
+    "target:code/errno"
     "target:code/unix"
     ,@(when (c:backend-featurep :mach)
 	'("target:code/mach"

@@ -125,6 +125,8 @@ public domain.
     * ~~#379~~ Support GNU-style command-line option names
     * ~~#382~~ Command-line options are case-sensitive
     * ~~#385~~ Fixed compiler warning about `%p` in Linux-os.c
+    * ~~#386~~ Generate `def-unix-error` forms from OS-specific files.
+      This replaces the original versions in unix.lisp.
     * ~~#394~~ Add `os_getcwd` to get the current directory
     * ~~#398~~ Update mk:defsystem to v3.9.2    
     * ~~#400~~ `unix-resolve-links` no longer breaks on some lengths
