@@ -1799,8 +1799,7 @@ in at a time in poll.")
 
 ;;;; Support routines for dealing with unix pathnames.
 
-(export '(unix-file-kind unix-maybe-prepend-current-directory
-	  unix-resolve-links unix-simplify-pathname))
+(export '(unix-file-kind unix-maybe-prepend-current-directory))
 
 ;;; Stuff not yet found in the header files...
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

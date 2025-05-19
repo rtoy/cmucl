@@ -33,3 +33,5 @@ src/docs/cmu-user/*.tnd
 src/docs/cmu-user/*.toc
 src/docs/cmu-user/*.vdx
 src/docs/cmu-user/*.vnd
+# Ignore generated errno.lisp
+src/code/errno.lisp
