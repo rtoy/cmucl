@@ -183,7 +183,7 @@ done
 
 # set -x
 # Create the directories for asdf and defsystem
-for f in asdf defsystem asdf/doc
+for f in asdf defsystem asdf/doc defsystem/docs
 do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/contrib/$f
 done
@@ -208,13 +208,6 @@ done
 for f in asdf defsystem
 do
     install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/$CMUCLLIBVER/lib/contrib/$f
-done
-
-# Install the docs for asdf
-for f in src/contrib/asdf/doc/*
-do
-    base=`basename $f`
-    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/$CMUCLLIBVER/lib/contrib/asdf/doc/$base
 done
 
 install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
