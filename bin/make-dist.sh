@@ -53,18 +53,18 @@ usage() {
 }
 
 def_arch_os () {
-    case `uname -s` in
+    case $(uname -s) in
       SunOS)
-	  case `uname -m` in
+	  case $(uname -m) in
 	    sun*)
 		ARCH=sparc ;;
 	    i*)
 		ARCH=x86
 		GTAR=gtar ;;
 	  esac
-	  uname_r=`uname -r`
+	  uname_r=$(uname -r)
 	  case $uname_r in
-	    5.*) rel=`echo $uname_r | sed 's/5\.//'`;;
+	    5.*) rel=$(echo "$uname_r" | sed 's/5\.//') ;;
 	    *) rel=$uname_r;;
 	  esac
 	  OS=solaris$rel
@@ -76,7 +76,7 @@ def_arch_os () {
       Darwin)
           OS=darwin
           # x86 or ppc?
-          case `uname -m` in
+          case $(uname -m) in
 	      i386|x86_64) ARCH=x86 ;;
 	      *) ARCH=ppc ;;
 	  esac ;;
@@ -86,7 +86,7 @@ def_arch_os () {
 	  ;;
       FreeBSD)
 	  ARCH=x86
-	  OS=freebsd_`uname -r | tr 'A-Z' 'a-z'`
+	  OS=freebsd_$(uname -r | tr '[:upper:]' '[:lower:]')
 	  ;;
       esac
 }
@@ -98,7 +98,6 @@ def_arch_os
 # other scripts via the environmen, so export them.
 COMPRESS=-J
 COMPRESS_EXT=xz
-COMPRESS_NAME=xz
 
 while getopts "C:G:O:I:M:hSA:o:V:?" arg
 do
@@ -112,11 +111,11 @@ do
         A) ARCH=$OPTARG ;;
         o) OS=$OPTARG ;;
         V) VERSION=$OPTARG ;;
-	h | \?) usage; exit 1 ;;
+	h | \?) usage ;;
     esac
 done
 
-shift `expr $OPTIND - 1`
+shift $((OPTIND - 1))
 
 # Directory is required; exit if not given
 if [ $# -lt 1 ]; then
@@ -129,16 +128,14 @@ if [ -n "$COMPRESS_ARG" ]; then
 	bzip2)
 	    COMPRESS=-j
 	    COMPRESS_EXT=bz2
-	    COMPRESS_NAME=bzip2
 	    ;;
 	xz) # Defaults work
 	    ;;
 	gzip)
 	    COMPRESS=-z
 	    COMPRESS_EXT=gz
-	    COMPRESS_NAME=gzip
 	    ;;
-	*) echo '-C option "'$COMPRESS_ARG'" must be one of bzip2, xz or gzip'
+	*) echo '-C option "'"$COMPRESS_ARG"'" must be one of bzip2, xz or gzip'
 	   exit 1
 	   ;;
     esac
@@ -162,12 +159,12 @@ if [ -z "$INSTALL_DIR" ]; then
     fi
 fi   
 
-TARGET="`echo $1 | sed 's:/*$::'`"
+TARGET="$(echo "$1" | sed 's:/*$::')"
 
 # Choose a version based on the git hash as the default version.  We
 # only compute a default if the git hash looks like a snapshot
 # ("snapshot-yyyy-mm") or a release number..
-DEFAULT_VERSION="`$TARGET/lisp/lisp --version`"
+DEFAULT_VERSION="$("$TARGET"/lisp/lisp --version)"
 
 if [ -z "$VERSION" ]; then
     # If a default version exists, use it. Otherwise this is an
@@ -180,22 +177,35 @@ if [ -z "$VERSION" ]; then
     fi
 fi
 
-echo INSTALL_DIR = $INSTALL_DIR
+echo INSTALL_DIR = "$INSTALL_DIR"
 
-echo cmucl-$VERSION-$ARCH-$OS
-ROOT=`dirname $0`
+echo cmucl-"$VERSION"-"$ARCH"-"$OS"
+ROOT=$(dirname "$0")
 
 GTAR_OPTS="-t ${GTAR:-tar}"
 EXTRA_OPTS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}}"
 INSTALL_OPTS="${INSTALL_DIR:+ -I ${INSTALL_DIR}}"
 MANDIR="${MANDIR:+ -M ${MANDIR}}"
-OPTIONS="${GTAR_OPTS} ${EXTRA_OPTS} ${INSTALL_OPTS} ${MANDIR}"
+OPTIONS="${GTAR_OPTS} ${EXTRA_OPTS} ${INSTALL_OPTS}"
 
 set -x
-echo Creating distribution for $ARCH $OS
-$ROOT/make-main-dist.sh -C $COMPRESS -E $COMPRESS_EXT $OPTIONS ${MANDIR} $TARGET $VERSION $ARCH $OS || exit 1
-$ROOT/make-extra-dist.sh -C $COMPRESS -E $COMPRESS_EXT $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
+echo Creating distribution for "$ARCH" "$OS"
+make_main () {
+    # shellcheck disable=SC2086
+    "$ROOT"/make-main-dist.sh -C "$COMPRESS" -E "$COMPRESS_EXT" $OPTIONS ${MANDIR} "$@"
+}
+make_extra () {
+    # shellcheck disable=SC2086
+    "$ROOT"/make-extra-dist.sh -C "$COMPRESS" -E "$COMPRESS_EXT" $OPTIONS "$@"
+}
+make_src () {
+    # shellcheck disable=SC2086
+    "$ROOT"/make-src-dist.sh -C "$COMPRESS" -E "$COMPRESS_EXT" $OPTIONS "$@"
+}
+
+make_main "$TARGET" "$VERSION" "$ARCH" "$OS" || exit 1
+make_extra "$TARGET" "$VERSION" "$ARCH" "$OS" || exit 2
 
 if [ X"$MAKE_SRC_DIST" = "Xyes" ]; then
-    $ROOT/make-src-dist.sh -C $COMPRESS -E $COMPRESS_EXT ${GTAR_OPTS} ${INSTALL_OPTS} $VERSION
+    make_src "$VERSION"
 fi
