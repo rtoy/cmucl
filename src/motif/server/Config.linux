@@ -1,5 +1,5 @@
 # Build 64-bit motifd now that it works as a 64-bit binary.
-CFLAGS += -g -std=gnu17 -O2 -I/usr/X11R6/include -I. -I$(VPATH)
+CFLAGS += -g -std=c89 -O2 -I/usr/X11R6/include -I. -I$(VPATH)
 LIBS = -lXm -lXt -lX11
 # This def assumes you are building in the same or parallel
 # tree to the CVS souce layout. Sites may need to customize
