@@ -26,7 +26,7 @@ then
 	exit 2
 fi
 
-TARGET="`echo $1 | sed 's:/*$::'`"
+TARGET="$(echo "$1" | sed 's:/*$::')"
 
 # If -p given, we want to skip loading of PCL.  Do this by pushing
 # :no-pcl onto *features*
@@ -40,7 +40,7 @@ if [ -n "$2" ]; then
     VERSION="$2"
 fi
 
-$TARGET/lisp/lisp -core $TARGET/lisp/kernel.core <<EOF
+"$TARGET"/lisp/lisp -core "$TARGET"/lisp/kernel.core <<EOF
 (in-package :cl-user)
 
 (setf (ext:search-list "target:")

@@ -17,7 +17,7 @@ usage()
     echo "Force recompiling all the C code in the specified directory".
 }
 
-shift `expr $OPTIND - 1`
+shift $((OPTIND - 1))
 
 if [ "$1" = "" ]
 then
@@ -31,15 +31,15 @@ then
 	exit 2
 fi
 
-TARGET="`echo $1 | sed 's:/*$::'`"
+TARGET="$(echo "$1" | sed 's:/*$::')"
 
 # Find GNU make:
 
 if [ "$MAKE" = "" ]
 then	
-	MAKE="`which gmake`" || MAKE="`which make`"
+	MAKE="$(which gmake)" || MAKE="$(which make)"
 fi
 
 export MAKE
 
-${MAKE} -C $TARGET/lisp clean && ${MAKE} -C $TARGET/lisp
+${MAKE} -C "$TARGET"/lisp clean && ${MAKE} -C "$TARGET"/lisp

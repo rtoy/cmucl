@@ -1,7 +1,7 @@
 #!/bin/sh
 
-diag() { echo "($prgm_name) $@" >&2; }
-quit() { diag "not OK: $@"; exit 1; }
+diag() { echo "($prgm_name)" "$@" >&2; }
+quit() { diag "not OK:" "$@"; exit 1; }
 usage() {
     echo "Usage: $prgm_name TARGET-DIR [LISP-VARIANT [MOTIF-VARIANT]]"
     echo ""
@@ -17,7 +17,7 @@ usage() {
 }
 
 ##--
-prgm_name=`basename $0` bld_dir=$1 lisp_variant=$2 motif_variant=$3
+prgm_name=$(basename "$0") bld_dir=$1 lisp_variant=$2 motif_variant=$3
 
 while getopts "h?" arg
 do
@@ -35,8 +35,8 @@ exec 2>&1
 
 [ -n "$bld_dir" ] || usage
 
-uname_s=`uname -s`
-uname_m=`uname -m 2>/dev/null`
+uname_s=$(uname -s)
+uname_m=$(uname -m 2>/dev/null)
 [ -n "$lisp_variant" ] || {
     case $uname_s in
 	Linux) lisp_variant=x86_linux ;;
@@ -58,7 +58,7 @@ uname_m=`uname -m 2>/dev/null`
     esac
 }
 [ -n "$lisp_variant" ] || quit "Can't determine lisp_variant"
-[ -f src/lisp/Config.$lisp_variant ] || quit "Config.$lisp_variant not found"
+[ -f src/lisp/Config."$lisp_variant" ] || quit "Config.$lisp_variant not found"
 
 case $lisp_variant in
     *linux*) lvshort=linux;;
@@ -86,7 +86,7 @@ case $uname_s in
 		*linux*) motif_variant=linux ;;
 	    esac
 	}
-	[ -f src/motif/server/Config.$motif_variant ] || quit "No such motif-variant could be found: Config.$motif_variant"
+	[ -f src/motif/server/Config."$motif_variant" ] || quit "No such motif-variant could be found: Config.$motif_variant"
 	;;
 esac
 
@@ -94,31 +94,31 @@ esac
 diag "Settings: bld_dir=$bld_dir lisp_variant=$lisp_variant ${motif_variant:+motif_variant=$motif_variant}"
 
 # Create a directory tree that mirrors the source directory tree
-[ -d "$bld_dir" -o -f "$bld_dir" ] && quit "Exists: `ls -ld $bld_dir`"
+[ -d "$bld_dir" ] || [ -f "$bld_dir" ] && quit "Exists: $(ls -ld "$bld_dir")"
 mkdir -p "$bld_dir"
-(cd src && find . -name .git -prune -o -type d -print) | (cd $bld_dir && xargs mkdir -p) ||
+(cd src && find . -name .git -prune -o -type d -print) | (cd "$bld_dir" && xargs mkdir -p) ||
 quit "Can't create target directories"
 
 top_dir=$PWD
-cd $bld_dir/lisp || quit "Can't cd $bld_dir/lisp"
+cd "$bld_dir"/lisp || quit "Can't cd $bld_dir/lisp"
 
 # Link Makefile and Config files
-ln -s ../../src/lisp/GNUmakefile ../../src/lisp/Config.$lisp_variant ../../src/lisp/Config.*_common .
-ln -s Config.$lisp_variant Config
+ln -s ../../src/lisp/GNUmakefile ../../src/lisp/Config."$lisp_variant" ../../src/lisp/Config.*_common .
+ln -s Config."$lisp_variant" Config
 [ -n "$motif_variant" ] && (
     cd ../motif/server || quit "Can't cd motif/server" # We will still continue in the outer shell
     ln -s ../../../src/motif/server/GNUmakefile ./Makefile
-    ln -s ../../../src/motif/server/Config.$motif_variant ./Config
+    ln -s ../../../src/motif/server/Config."$motif_variant" ./Config
 )
 
 echo 'Map file for lisp version 0' > lisp.nm # Empty initial map file
 echo '#error You need to run genesis (via build-world.sh) before compiling the startup code!' > internals.h
 (
     setenv_dir=$top_dir/src/tools/setenv-scripts
-    cat $setenv_dir/base-features.lisp 
+    cat "$setenv_dir"/base-features.lisp 
     case $lvshort in
-	linux|freebsd) gcname=":gencgc"; sed "s;@@gcname@@;$gcname;" $setenv_dir/$lvshort-features.lisp >> setenv.lisp;;
-	solaris) cat $setenv_dir/solaris-features.lisp;;
-	*) sed "s;@@LISP@@;$lisp_variant;" $setenv_dir/unknown.lisp;;
+	linux|freebsd) gcname=":gencgc"; sed "s;@@gcname@@;$gcname;" "$setenv_dir"/$lvshort-features.lisp >> setenv.lisp;;
+	solaris) cat "$setenv_dir"/solaris-features.lisp;;
+	*) sed "s;@@LISP@@;$lisp_variant;" "$setenv_dir"/unknown.lisp;;
     esac
 ) > ../setenv.lisp || quit "Can't create setenv.lisp"

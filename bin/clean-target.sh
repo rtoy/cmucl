@@ -1,19 +1,21 @@
 #!/bin/sh
 
 usage() {
-    echo "Usage: `basename $0` [-l] dir [dir1 dir2 ...]"
-    echo "  -h       This help"
-    echo "  -l       Clean out the C runtime as well"
-    echo "  -K what  Specify what to keep:  lib, core, all"
-    echo "             lib keeps the module libraries"
-    echo "             core keeps all lisp core files"
-    echo "             all keeps the libs and cores"
-    echo "           (for build.sh)"
-    echo ""
-    echo "Cleans out all Lisp fasls from the given directories"
-    echo "If -l is also given, the C runtime is cleared as well.  This includes"
-    echo "all object files, the lisp binary itself, and any selected configuration"
-    echo "files.  The motif server is also removed."
+    cat <<EOF
+Usage: (basename "$0") [-l] dir [dir1 dir2 ...]
+  -h       This help
+  -l       Clean out the C runtime as well
+  -K what  Specify what to keep:  lib, core, all
+             lib keeps the module libraries
+             core keeps all lisp core files
+             all keeps the libs and cores
+           (for build.sh)
+
+Cleans out all Lisp fasls from the given directories
+If -l is also given, the C runtime is cleared as well.  This includes
+all object files, the lisp binary itself, and any selected configuration
+files.  The motif server is also removed.
+EOF
     exit 1
 }
 
@@ -22,11 +24,11 @@ do
     case $arg in
 	l) CLEAN_C=1 ;;
         K) KEEP=$OPTARG ;;
-	h | \?) usage; exit 1 ;;
+	h | \?) usage ;;
     esac
 done
 	
-shift `expr $OPTIND - 1`
+shift $((OPTIND - 1))
 
 if [ $# -lt 1 ]; then
     usage
@@ -38,7 +40,7 @@ do
 	echo "$d isn't a directory"
 	exit 2
     fi
-    D="`echo $d | sed 's:/*$::'`"
+    D="$(echo "$d" | sed 's:/*$::')"
     TARGET="$TARGET $D"
 done
 
@@ -57,7 +59,7 @@ if [ -n "$KEEP" ]; then
     esac
 fi
 	  
-find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" \
+find "$TARGET" -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" \
 	-o -name "*.armf" \
 	-o -name "*.axpf" \
 	-o -name "*.hpf" \
@@ -67,14 +69,14 @@ find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" \
 	-o -name "*.sparcf" \
 	-o -name "*.sse2f" \
 	-o -name "*.x86f" \
-	$CORE |
-	$GREP $PATTERN | xargs rm 2> /dev/null
+	"$CORE" |
+	$GREP "$PATTERN" | xargs rm 2> /dev/null
 
 for d in $TARGET
 do
-    rm -f $d/compile-*.log $d/hemlock/spell-dictionary.bin 2> /dev/null
+    rm -f "$d"/compile-*.log "$d"/hemlock/spell-dictionary.bin 2> /dev/null
     if [ -n "$CLEAN_C" ]; then
-	rm -f $d/lisp/* $d/motif/server/*
+	rm -f "$d"/lisp/* "$d"/motif/server/*
     fi
 done
 
