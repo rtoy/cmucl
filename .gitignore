@@ -1,5 +1,7 @@
 # Ignore generated files
 /src/lisp/cmucl-version.h
+/src/code/errno.lisp
+/src/code/exports-errno.lisp
 # Ignore fasls
 *.fasl
 *.ppcf
@@ -33,5 +35,3 @@ src/docs/cmu-user/*.tnd
 src/docs/cmu-user/*.toc
 src/docs/cmu-user/*.vdx
 src/docs/cmu-user/*.vnd
-# Ignore generated errno.lisp
-src/code/errno.lisp
