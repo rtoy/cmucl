@@ -635,10 +635,6 @@ msgid ""
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Returns the pathname with all symbolic links resolved."
-msgstr ""
-
-#: src/code/unix.lisp
 msgid "Successful"
 msgstr ""
 

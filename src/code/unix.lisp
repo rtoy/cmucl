@@ -1597,16 +1597,6 @@
       (unless (null-alien result)
 	(free-alien result)))))
 
-#+nil
-(defun unix-resolve-links (pathname)
-  _N"Returns the pathname with all symbolic links resolved."
-  (declare (simple-string pathname))
-  (let ((resolved (unix:unix-realpath pathname)))
-    (if (and resolved (eq (unix-file-kind resolved) :directory))
-	;; Append a "/" if the path is a directory.
-	(concatenate 'string resolved "/")
-	resolved)))
-
 
 ;;;; Errno stuff.
 
