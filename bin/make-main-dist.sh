@@ -190,7 +190,7 @@ done
 # Create the directories for asdf and defsystem
 for f in asdf defsystem asdf/doc defsystem/docs
 do
-    installit -d -m 0755 "$DESTDIR"/"$CMUCLLIBVER"/lib/contrib/$f
+    installit -d -m 0755 "$DESTDIR"/"$CMUCLLIBVER"/lib/contrib/"$f"
 done
 
 case $(uname -s) in
