@@ -2,21 +2,26 @@
 
 usage()
 {
-    echo "load-world.sh [-?p] target-directory"
-    echo "   -p    Skip loading of PCL (Mostly for cross-compiling)"
-    echo "   -?    This help"
+    cat <<EOF
+load-world.sh [-?p] target-directory
+   -p    Skip loading of PCL (Mostly for cross-compiling)
+   -h    This help
+   -?    This help
+
+Load the world in target-directory
+EOF
     exit 1
 }
 
 SKIP_PCL=
 NO_PCL_FEATURE=
 
-while getopts "p" arg
+while getopts "ph?" arg
 do
   case $arg in
       p) SKIP_PCL="yes"
          shift;;
-      \?) usage ;;
+      h|\?) usage ;;
   esac
 done
 

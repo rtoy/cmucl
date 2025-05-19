@@ -3,12 +3,15 @@
 diag() { echo "($prgm_name)" "$@" >&2; }
 quit() { diag "not OK:" "$@"; exit 1; }
 usage() {
-    echo "Usage: $prgm_name TARGET-DIR [LISP-VARIANT [MOTIF-VARIANT]]"
-    echo ""
-    echo "Creates a directory structure in TARGET-DIR for use in building CMUCL."
-    echo "A simple logic is used to find the optional -VARIANT parameters."
-    echo ""
-    # List possible values for lisp-variant and motif-variant
+    cat <<EOF
+Usage: $prgm_name [-h?] TARGET-DIR [LISP-VARIANT [MOTIF-VARIANT]]
+      -h    This help
+      -?    This help
+ 
+Creates a directory structure in TARGET-DIR for use in building CMUCL.
+A simple logic is used to find the optional -VARIANT parameters.
+
+EOF
     echo "Possible LISP-VARIANTs:"
     ( cd src/lisp/ && ls -1 Config.* ) | sed 's;^Config[.];;g' | grep -v common | pr -3at -o 8 || quit "Can't list lisp-variants"
     echo "Possible MOTIF-VARIANTs:"

@@ -1,5 +1,16 @@
 #!/bin/sh
 
+usage() 
+{
+    cat <<EOF
+rebuild.-lisp.sh [-h?] target-directory
+    -h        this help
+    -?        this help
+
+Force recompiling all the C code in the specified directory.
+EOF
+}
+
 while getopts "h?" arg
 do
     case $arg in
@@ -7,15 +18,6 @@ do
       \?) usage ;;
     esac
 done
-
-usage() 
-{
-    echo "rebuild.-lisp.sh [-h?] target-directory"
-    echo "    -h        this help"
-    echo "    -?        this help"
-    echo ""
-    echo "Force recompiling all the C code in the specified directory".
-}
 
 shift $((OPTIND - 1))
 
