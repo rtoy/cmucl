@@ -29,6 +29,7 @@ public domain.
       different from before.  See ~~#276~~.
     * The layout of the distribution has changed.  Version numbers are
       added to files and directories.  For the exact layout, see !261.
+    * Update mk:defsystem to v3.9.2.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
@@ -125,6 +126,7 @@ public domain.
     * ~~#382~~ Command-line options are case-sensitive
     * ~~#385~~ Fixed compiler warning about `%p` in Linux-os.c
     * ~~#394~~ Add `os_getcwd` to get the current directory
+    * ~~#398~~ Update mk:defsystem to v3.9.2    
     * ~~#400~~ `unix-resolve-links` no longer breaks on some lengths
     * ~~#401~~ `file-position` now returns the correct value
   * Other changes:
