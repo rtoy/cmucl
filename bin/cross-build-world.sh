@@ -84,6 +84,9 @@ then
 		sed "s:^src:$CROSS:g" | xargs mkdir
 fi
 
+# Create the errno file containing all the def-unix-error forms.
+bin/create-errno.sh
+
 echo cross boot = $CROSSBOOT
 $LISP "$@" -noinit -nositeinit <<EOF
 (in-package :cl-user)

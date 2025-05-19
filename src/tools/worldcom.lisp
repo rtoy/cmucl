@@ -162,6 +162,7 @@
 (comf "target:code/string")
 (comf "target:code/mipsstrops")
 
+(comf "target:code/errno" :proceed t)
 (comf "target:code/unix" :proceed t)
 
 (when (c:backend-featurep :mach)

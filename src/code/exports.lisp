@@ -139,6 +139,7 @@
 (use-package '("SYSTEM" "ALIEN-INTERNALS" "ALIEN" "LISP") "C-CALL")
 (use-package '("KERNEL" "EXTENSIONS" "LISP") "INSPECT")
 (use-package '("LISP" "KERNEL") "BIGNUM")
+(use-package '("LISP") "ERRNO")
 (use-package '("LISP") "UNIX")
 (use-package '("KERNEL" "LISP" "EXTENSIONS") "FORMAT")
 (use-package '("EXTENSIONS" "SYSTEM" "DEBUG" "KERNEL" "BIGNUM") "LISP")
