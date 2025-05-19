@@ -28,8 +28,8 @@ do
     case $arg in
 	C) COMPRESS=$OPTARG ;;
 	E) COMPRESS_EXT=$OPTARG ;;
-	G) GROUP="-g $OPTARG" ;;
-	O) OWNER="-o $OPTARG" ;;
+	G) GROUP=$OPTARG ;;
+	O) OWNER=$OPTARG ;;
         I) INSTALL_DIR=$OPTARG ;;
 	t) GTAR=$OPTARG ;;
 	h | \?) usage ;;
