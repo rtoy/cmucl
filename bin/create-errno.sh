@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 # Generates the contents of the file code/errno.lisp.  The args
 # to this script, if supplied, must be a list of files containing the
@@ -59,13 +59,13 @@ TEMPLATE="bin/errno-template.lisp"
 # Set ERRNO_HEADERS to the files where we can find errno definitions.
 if [ -z "$DEFAULT" ]; then
     case $(uname -s) in
-	Linux) ERRNO_HEADERS=/usr/include/asm-generic/errno*.h
+	Linux) ERRNO_HEADERS=( /usr/include/asm-generic/errno*.h )
 	       ERRNO_FILE="bin/errno-linux.lisp"
 	       ;;
-	Darwin) ERRNO_HEADERS=/usr/include/sys/errno.h
+	Darwin) ERRNO_HEADERS=( /usr/include/sys/errno.h )
 		ERRNO_FILE="bin/errno-darwin.lisp"
 		;;
-	SunOS) ERRNO_HEADERS=/usr/include/sys/errno.h
+	SunOS) ERRNO_HEADERS=( /usr/include/sys/errno.h )
 	       ERRNO_FILE="bin/errno-solaris.lisp"
 	       ;;
 	*) # The default case where we use the defaults.  But also disable updating.
@@ -83,7 +83,7 @@ find_errno ()
     # Create appropriate DEF-UNIX-ERROR forms by reading header files
     # containing the C definitions.
 
-    awk -f bin/create-def-unix-error.awk ${ERRNO_HEADERS}
+    awk -f bin/create-def-unix-error.awk "${ERRNO_HEADERS[@]}"
 }
 
 if [ "$UPDATE" = "yes" ]; then
@@ -91,7 +91,7 @@ if [ "$UPDATE" = "yes" ]; then
    exit 0
 fi
 
-if [ -z "$DEFAULT" -a -n "$ERRNO_FILE" ]; then
+if [ -z "$DEFAULT" ] && [ -n "$ERRNO_FILE" ]; then
     # First check that the errno definitions haven't changed.  If they
     # have, exit with an error.
 
