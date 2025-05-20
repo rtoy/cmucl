@@ -52,12 +52,13 @@ SKIPUTILS=no
 
 # If gmake exists, assume it is GNU make and use it.
 if [ -z "$MAKE" ]; then
-    MAKE="`which gmake`"
+    MAKE="$(which gmake)"
 
     # Some versions of which set an error code if it fails.  Others
     # say "no foo in <path>".  In either of these cases, just assume
     # make is GNU make.
 
+    # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
 	MAKE="make"
     fi
@@ -102,10 +103,10 @@ usage ()
 }
 
 # Figure out if we need to run build-world twice
-case `uname -s` in
+case $(uname -s) in
   SunOS) BUILD_WORLD2=yes ;;
   Darwin)
-      case `uname -m` in
+      case $(uname -m) in
 	ppc) BUILD_WORLD2=yes ;;
       esac ;;
 esac
@@ -114,37 +115,37 @@ export LANG=en_US.UTF-8
 
 buildit ()
 {
-    if echo $INTERACTIVE_BUILD | grep $BUILD > /dev/null; then
+    if echo "$INTERACTIVE_BUILD" | grep $BUILD > /dev/null; then
 	INTERACTIVE=t
     else
 	INTERACTIVE=nil
     fi
 
-    if [ ! -d $TARGET ]; then
+    if [ ! -d "$TARGET" ]; then
 	if [ -n "$CREATE_DIRS" ]; then
-	    $TOOLDIR/create-target.sh $TARGET $CREATE_OPT
+	    $TOOLDIR/create-target.sh "$TARGET" $CREATE_OPT
 	fi
     fi
 
     if [ "$ENABLE" = "yes" ]; 
     then
-	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
-	time $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
+	$TOOLDIR/clean-target.sh $CLEAN_FLAGS "$TARGET" || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
+	time $BUILDWORLD "$TARGET" "$OLDLISP" $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
 	if [ "$REBUILD_LISP" = "yes" ]; then
-	    $TOOLDIR/rebuild-lisp.sh $TARGET
+	    $TOOLDIR/rebuild-lisp.sh "$TARGET"
 	fi
 	
 	# Set the LANG to C.  For whatever reason, if I (rtoy) don't do this on my openSuSE system,
 	# any messages from gcc are basically garbled.  This should be harmless on other systems.
-	LANG=C $MAKE -C $TARGET/lisp $MAKE_TARGET || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
+	LANG=C $MAKE -C "$TARGET"/lisp "$MAKE_TARGET" || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
 
 	if [ "$BUILD_WORLD2" = "yes" ];
 	then
-	    $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
+	    $BUILDWORLD "$TARGET" "$OLDLISP" "$BOOT" || { echo "Failed: $BUILDWORLD"; exit 1; }
 	fi
-	$TOOLDIR/load-world.sh $TARGET || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
+	$TOOLDIR/load-world.sh "$TARGET" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
 
-	$TARGET/lisp/lisp -lib $TARGET/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
+	"$TARGET"/lisp/lisp -lib "$TARGET"/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
 
 	return 0;
     fi
@@ -190,14 +191,14 @@ bin/git-version.sh -f ${VERSION:+ -v ${VERSION}} > src/lisp/cmucl-version.h
 
 # If -b not given, try to derive one instead of just using "build".
 if [ -z "$BASE" ]; then
-    case `uname -s` in
+    case $(uname -s) in
       Darwin)
-          case `uname -p` in
+          case $(uname -p) in
             powerpc) BASE=ppc ;;
             i386) BASE=darwin ;;
           esac ;;
       SunOS)
-	  case `uname -m` in
+	  case $(uname -m) in
 	    sun4*) BASE=sparc ;;
 	    i86pc) BASE=sol-x86 ;;
 	  esac ;;
@@ -207,7 +208,7 @@ if [ -z "$BASE" ]; then
     esac
 fi
 
-echo base = $BASE
+echo base = "$BASE"
 
 bootfiles_dir=$SRCDIR/bootfiles/$version
 if [ -n "$bootfiles" ]; then
@@ -216,7 +217,7 @@ if [ -n "$bootfiles" ]; then
     done
 fi
 
-build_started=`date`
+build_started=$(date)
 echo "//starting build: $build_started"
 
 TARGET=$BASE-2
@@ -260,7 +261,7 @@ buildit
 
 # Asdf and friends are part of the base install, so we need to build
 # them now.
-$TARGET/lisp/lisp -lib $TARGET/lisp -noinit -nositeinit -batch << EOF || exit 3
+"$TARGET"/lisp/lisp -lib "$TARGET"/lisp -noinit -nositeinit -batch << EOF || exit 3
 (in-package :cl-user)
 (setf (ext:search-list "target:")
       '("$TARGET/" "src/"))
@@ -281,10 +282,10 @@ EOF
 if [ "$SKIPUTILS" = "no" ];
 then
     OLDLISP="${BASE}-4/lisp/lisp -lib ${BASE}-4/lisp $OLDLISPFLAGS"
-    time $TOOLDIR/build-utils.sh $TARGET
+    time $TOOLDIR/build-utils.sh "$TARGET"
 fi
 
-build_finished=`date`
+build_finished=$(date)
 echo
 echo "//build started:  $build_started"
 echo "//build finished: $build_finished"

@@ -12,7 +12,7 @@ then
 	exit 2
 fi
 
-TARGET="`echo $1 | sed 's:/*$::'`"
+TARGET="$(echo "$1" | sed 's:/*$::')"
 LISP="${2:-lisp}"
 if [ $# -ge 2 ]
 then

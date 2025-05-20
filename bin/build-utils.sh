@@ -12,11 +12,11 @@ then
 	exit 2
 fi
 
-TARGET="`echo $1 | sed 's:/*$::'`"
+TARGET="$(echo "$1" | sed 's:/*$::')"
 shift
 
-$TARGET/lisp/lisp \
-	-lib $TARGET/lisp -noinit -nositeinit -batch "$@" <<EOF || exit 3
+"$TARGET"/lisp/lisp \
+	-lib "$TARGET"/lisp -noinit -nositeinit -batch "$@" <<EOF || exit 3
 (in-package :cl-user)
 
 (setf lisp::*enable-package-locked-errors* nil)
@@ -46,12 +46,13 @@ EOF
 
 if [ "$MAKE" = "" ]
 then    
-    MAKE="`which gmake`"
+    MAKE="$(which gmake)"
 
     # Some versions of which set an error code if it fails.  Others
     # say "no foo in <path>".  In either of these cases, just assume
     # make is GNU make.
 
+    # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
 	MAKE="make"
     fi
@@ -65,14 +66,14 @@ export MAKE
 # Don't bother building motifd on ppc; we'll probably never support that again.
 
 SKIPMOTIF=no
-case `uname -s` in
+case $(uname -s) in
   Darwin)
-      case `uname -p` in
+      case $(uname -p) in
 	powerpc) SKIPMOTIF=yes ;;
       esac ;;
 esac
 
 if [ "$SKIPMOTIF" = "no" ]; then
-    ${MAKE} -C $TARGET/motif/server clean && ${MAKE} -C $TARGET/motif/server
+    ${MAKE} -C "$TARGET"/motif/server clean && ${MAKE} -C "$TARGET"/motif/server
 fi
 
