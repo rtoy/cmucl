@@ -137,7 +137,7 @@ buildit ()
 	
 	# Set the LANG to C.  For whatever reason, if I (rtoy) don't do this on my openSuSE system,
 	# any messages from gcc are basically garbled.  This should be harmless on other systems.
-	LANG=C $MAKE -C "$TARGET"/lisp "$MAKE_TARGET" || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
+	LANG=C $MAKE -C "$TARGET"/lisp $MAKE_TARGET || { echo "Failed: $MAKE -C $TARGET/lisp"; exit 1; }
 
 	if [ "$BUILD_WORLD2" = "yes" ];
 	then
