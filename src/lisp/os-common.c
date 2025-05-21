@@ -784,65 +784,20 @@ again:
 char *
 os_file_author(const char *path)
 {
+    int status;
+    char *name;
+    char *dir;
     struct stat sb;
+
     if (stat(path, &sb) != 0) {
         return NULL;
     }
 
-#if 1
-    {
-	int status;
-	char *name;
-	char *dir;
-	
-	status = os_get_user_info(sb.st_uid, &name, &dir);
+    status = os_get_user_info(sb.st_uid, &name, &dir);
 
-	free(dir);
+    free(dir);
 
-	return (status == 0) ? name : NULL;
-    }
-#else    
-    char initial[1024];
-    char *buffer, *obuffer;
-    size_t size;
-    struct passwd pwd;
-    struct passwd *ppwd;
-    char *result;
-
-    result = NULL;
-    buffer = initial;
-    obuffer = NULL;
-    size = sizeof(initial) / sizeof(initial[0]);
-
-    /*
-     * Keep trying with larger buffers until a maximum is reached.  We
-     * assume (1 << 20) is large enough for any OS.
-     */
-again:
-    switch (getpwuid_r(sb.st_uid, &pwd, buffer, size, &ppwd)) {
-      case 0:
-	  /* Success, though we might not have a matching entry */
-	  result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
-	  break;
-      case ERANGE:
-	  /* Buffer is too small, double its size and try again */
-	  size *= 2;
-	  if (size > (1 << 20)) {
-	      break;
-	  }
-	  if ((buffer = realloc(obuffer, size)) == NULL) {
-	      break;
-	  }
-	  obuffer = buffer;
-	  goto again;
-      default:
-	/* All other errors */
-	break;
-    }
-    free(obuffer);
-    
-    return result;
-#endif
+    return (status == 0) ? name : NULL;
 }
 
 int
@@ -997,7 +952,6 @@ get_homedir_from_name(const char* name, int *status)
 static char *
 get_homedir_from_uid(int *status)
 {
-#if 1
     char *name;
     char *dir;
     uid_t uid;
@@ -1009,54 +963,6 @@ get_homedir_from_uid(int *status)
     free(name);
     
     return (*status == 0) ? dir : NULL;
-    
-#else    
-    char initial[1024];
-    char *buffer, *obuffer;
-    size_t size;
-    struct passwd pwd;
-    struct passwd *ppwd;
-    char *result;
-    uid_t uid;
-
-    uid = getuid();
-
-    result = NULL;
-    buffer = initial;
-    obuffer = NULL;
-    size = sizeof(initial) / sizeof(initial[0]);
-
-    /*
-     * Keep trying with larger buffers until a maximum is reached.  We
-     * assume (1 << 20) is large enough for any OS.
-     */
-again:
-    switch (getpwuid_r(uid, &pwd, buffer, size, &ppwd)) {
-      case 0:
-	  /* Success, though we might not have a matching entry */
-	  result = (ppwd == NULL) ? NULL : strdup(pwd.pw_dir);
-	  break;
-      case ERANGE:
-	  /* Buffer is too small, double its size and try again */
-	  size *= 2;
-	  if (size > (1 << 20)) {
-	      break;
-	  }
-	  if ((buffer = realloc(obuffer, size)) == NULL) {
-	      break;
-	  }
-	  obuffer = buffer;
-	  goto again;
-      default:
-	/* All other errors */
-	break;
-    }
-    free(obuffer);
-
-    *status = errno;
-    
-    return result;
-#endif
 }
 
 
@@ -1091,7 +997,6 @@ os_getcwd(void)
 char *
 os_get_username(uid_t uid)
 {
-#if 1
     int status;
     char *name;
     char *dir;
@@ -1101,46 +1006,4 @@ os_get_username(uid_t uid)
     free(dir);
     
     return (status == 0) ? name : NULL;
-#else    
-    char initial[1024];
-    char *buffer, *obuffer;
-    size_t size;
-    struct passwd pwd;
-    struct passwd *ppwd;
-    char *result;
-
-    result = NULL;
-    buffer = initial;
-    obuffer = NULL;
-    size = sizeof(initial) / sizeof(initial[0]);
-
-    /*
-     * Keep trying with larger buffers until a maximum is reached.  We
-     * assume (1 << 20) is large enough for any OS.
-     */
-again:
-    switch (getpwuid_r(uid, &pwd, buffer, size, &ppwd)) {
-      case 0:
-	  /* Success, though we might not have a matching entry */
-	  result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
-	  break;
-      case ERANGE:
-	  /* Buffer is too small, double its size and try again */
-	  size *= 2;
-	  if (size > (1 << 20)) {
-	      break;
-	  }
-	  if ((buffer = realloc(obuffer, size)) == NULL) {
-	      break;
-	  }
-	  obuffer = buffer;
-	  goto again;
-      default:
-	/* All other errors */
-	break;
-    }
-    free(obuffer);
-
-    return result;
-#endif
 }
