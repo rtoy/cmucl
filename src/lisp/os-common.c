@@ -725,6 +725,17 @@ os_lstat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uin
     return rc;
 }
 
+/*
+ * From the given UID, find the corresponding user name and home
+ * directory.
+ *
+ * NAME and DIR are set to the user name and home directory.  The
+ * caller must free these.  If no such uid exists, NAME and DIR are
+ * set to NULL.
+ *
+ * Returns the status of getpwuid.  Zero indicates success.  Otherwise
+ * the errno is returned.
+ */
 int
 os_get_user_info(uid_t uid, char **name, char **dir)
 {
@@ -775,6 +786,10 @@ again:
     return status;
 }
 
+/*
+ * Given the UID, return the user name.  If the uid does not exist,
+ * returns NULL.
+ */
 char *
 os_get_username(uid_t uid)
 {
@@ -956,13 +971,10 @@ get_homedir_from_name(const char* name, int *status)
 }
 
 static char *
-get_homedir_from_uid(int *status)
+get_homedir_from_uid(uid_t uid, int *status)
 {
     char *name;
     char *dir;
-    uid_t uid;
-
-    uid = getuid();
 	
     *status = os_get_user_info(uid, &name, &dir);
 
@@ -973,17 +985,18 @@ get_homedir_from_uid(int *status)
 
 
 /*
- * Return the home directory of the user named NAME.  If the user does
- * not exist, returns NULL.  Also returns NULL if the home directory
- * cannot be determined for any reason.  The parameter STATUS is 0 if
- * getpwnam_r was successful.  Otherwise it is the return value from
- * getpwnam_r or -1 if we ran out of memory for the buffer.
+ * Return the home directory of the user named NAME.  If NAME is the
+ * empty string, returns the home directory of the current user.  If
+ * the user does not exist, returns NULL.  Also returns NULL if the
+ * home directory cannot be determined for any reason.  The parameter
+ * STATUS is 0 if the home directory could be determined.  Otherwise
+ * it is the errno value.
  */
 char *
 os_get_user_homedir(const char* name, int *status)
 {
     if (strlen(name) == 0) {
-	return get_homedir_from_uid(status);
+	return get_homedir_from_uid(getuid(), status);
     }
 
     return get_homedir_from_name(name, status);
@@ -999,3 +1012,4 @@ os_getcwd(void)
 {
     return getcwd(NULL, 0);
 }
+
