@@ -725,6 +725,57 @@ os_lstat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uin
     return rc;
 }
 
+int
+os_get_user_info(uid_t uid, char **name, char **dir)
+{
+    char initial[1024];
+    char *buffer, *obuffer;
+    size_t size;
+    struct passwd pwd;
+    struct passwd *ppwd;
+    int status;
+
+    *name = NULL;
+    *dir = NULL;
+
+    buffer = initial;
+    obuffer = NULL;
+    size = sizeof(initial) / sizeof(initial[0]);
+
+    /*
+     * Keep trying with larger buffers until a maximum is reached.  We
+     * assume (1 << 20) is large enough for any OS.
+     */
+again:
+    switch (status = getpwuid_r(uid, &pwd, buffer, size, &ppwd)) {
+      case 0:
+	  /* Success, though we might not have a matching entry */
+	  if (ppwd) {
+	      *name = strdup(pwd.pw_name);
+	      *dir = strdup(pwd.pw_dir);
+	  }
+	  break;
+      case ERANGE:
+	  /* Buffer is too small, double its size and try again */
+	  size *= 2;
+	  if (size > (1 << 20)) {
+	      break;
+	  }
+	  if ((buffer = realloc(obuffer, size)) == NULL) {
+	      break;
+	  }
+	  obuffer = buffer;
+	  goto again;
+      default:
+	/* All other errors */
+	break;
+    }
+    free(obuffer);
+
+    return status;
+}
+
+    
 /*
  * Interface for file-author.  Given a pathname, returns a new string
  * holding the author of the file or NULL if some error occurred.  The
@@ -734,16 +785,29 @@ char *
 os_file_author(const char *path)
 {
     struct stat sb;
+    if (stat(path, &sb) != 0) {
+        return NULL;
+    }
+
+#if 1
+    {
+	int status;
+	char *name;
+	char *dir;
+	
+	status = os_get_user_info(sb.st_uid, &name, &dir);
+
+	free(dir);
+
+	return (status == 0) ? name : NULL;
+    }
+#else    
     char initial[1024];
     char *buffer, *obuffer;
     size_t size;
     struct passwd pwd;
     struct passwd *ppwd;
     char *result;
-
-    if (stat(path, &sb) != 0) {
-        return NULL;
-    }
 
     result = NULL;
     buffer = initial;
@@ -778,6 +842,7 @@ again:
     free(obuffer);
     
     return result;
+#endif
 }
 
 int
@@ -932,6 +997,20 @@ get_homedir_from_name(const char* name, int *status)
 static char *
 get_homedir_from_uid(int *status)
 {
+#if 1
+    char *name;
+    char *dir;
+    uid_t uid;
+
+    uid = getuid();
+	
+    *status = os_get_user_info(uid, &name, &dir);
+
+    free(name);
+    
+    return (*status == 0) ? dir : NULL;
+    
+#else    
     char initial[1024];
     char *buffer, *obuffer;
     size_t size;
@@ -977,6 +1056,7 @@ again:
     *status = errno;
     
     return result;
+#endif
 }
 
 
@@ -1011,6 +1091,17 @@ os_getcwd(void)
 char *
 os_get_username(uid_t uid)
 {
+#if 1
+    int status;
+    char *name;
+    char *dir;
+	
+    status = os_get_user_info(uid, &name, &dir);
+
+    free(dir);
+    
+    return (status == 0) ? name : NULL;
+#else    
     char initial[1024];
     char *buffer, *obuffer;
     size_t size;
@@ -1051,4 +1142,5 @@ again:
     free(obuffer);
 
     return result;
+#endif
 }
