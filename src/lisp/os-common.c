@@ -1007,3 +1007,48 @@ os_getcwd(void)
 {
     return getcwd(NULL, 0);
 }
+
+char *
+os_get_username(uid_t uid)
+{
+    char initial[1024];
+    char *buffer, *obuffer;
+    size_t size;
+    struct passwd pwd;
+    struct passwd *ppwd;
+    char *result;
+
+    result = NULL;
+    buffer = initial;
+    obuffer = NULL;
+    size = sizeof(initial) / sizeof(initial[0]);
+
+    /*
+     * Keep trying with larger buffers until a maximum is reached.  We
+     * assume (1 << 20) is large enough for any OS.
+     */
+again:
+    switch (getpwuid_r(uid, &pwd, buffer, size, &ppwd)) {
+      case 0:
+	  /* Success, though we might not have a matching entry */
+	  result = (ppwd == NULL) ? NULL : strdup(pwd.pw_name);
+	  break;
+      case ERANGE:
+	  /* Buffer is too small, double its size and try again */
+	  size *= 2;
+	  if (size > (1 << 20)) {
+	      break;
+	  }
+	  if ((buffer = realloc(obuffer, size)) == NULL) {
+	      break;
+	  }
+	  obuffer = buffer;
+	  goto again;
+      default:
+	/* All other errors */
+	break;
+    }
+    free(obuffer);
+
+    return result;
+}
