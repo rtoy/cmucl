@@ -866,15 +866,8 @@ os_software_version(void)
     return result;
 }
 
-/*
- * Return the home directory of the user named NAME.  If the user does
- * not exist, returns NULL.  Also returns NULL if the home directory
- * cannot be determined for any reason.  The parameter STATUS is 0 if
- * getpwnam_r was successful.  Otherwise it is the return value from
- * getpwnam_r or -1 if we ran out of memory for the buffer.
- */
-char *
-os_get_user_homedir(const char* name, int *status)
+static char *
+get_homedir_from_name(const char* name, int *status)
 {
     int buflen;
     char *buf = NULL;
@@ -934,6 +927,74 @@ os_get_user_homedir(const char* name, int *status)
     free(buf);
     *status = -1;
     return NULL;
+}
+
+static char *
+get_homedir_from_uid(int *status)
+{
+    char initial[1024];
+    char *buffer, *obuffer;
+    size_t size;
+    struct passwd pwd;
+    struct passwd *ppwd;
+    char *result;
+    uid_t uid;
+
+    uid = getuid();
+
+    result = NULL;
+    buffer = initial;
+    obuffer = NULL;
+    size = sizeof(initial) / sizeof(initial[0]);
+
+    /*
+     * Keep trying with larger buffers until a maximum is reached.  We
+     * assume (1 << 20) is large enough for any OS.
+     */
+again:
+    switch (getpwuid_r(uid, &pwd, buffer, size, &ppwd)) {
+      case 0:
+	  /* Success, though we might not have a matching entry */
+	  result = (ppwd == NULL) ? NULL : strdup(pwd.pw_dir);
+	  break;
+      case ERANGE:
+	  /* Buffer is too small, double its size and try again */
+	  size *= 2;
+	  if (size > (1 << 20)) {
+	      break;
+	  }
+	  if ((buffer = realloc(obuffer, size)) == NULL) {
+	      break;
+	  }
+	  obuffer = buffer;
+	  goto again;
+      default:
+	/* All other errors */
+	break;
+    }
+    free(obuffer);
+
+    *status = errno;
+    
+    return result;
+}
+
+
+/*
+ * Return the home directory of the user named NAME.  If the user does
+ * not exist, returns NULL.  Also returns NULL if the home directory
+ * cannot be determined for any reason.  The parameter STATUS is 0 if
+ * getpwnam_r was successful.  Otherwise it is the return value from
+ * getpwnam_r or -1 if we ran out of memory for the buffer.
+ */
+char *
+os_get_user_homedir(const char* name, int *status)
+{
+    if (strlen(name) == 0) {
+	return get_homedir_from_uid(status);
+    }
+
+    return get_homedir_from_name(name, status);
 }
     
 
