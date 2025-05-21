@@ -775,7 +775,20 @@ again:
     return status;
 }
 
-    
+char *
+os_get_username(uid_t uid)
+{
+    int status;
+    char *name;
+    char *dir;
+
+    status = os_get_user_info(uid, &name, &dir);
+
+    free(dir);
+
+    return (status == 0) ? name : NULL;
+}
+
 /*
  * Interface for file-author.  Given a pathname, returns a new string
  * holding the author of the file or NULL if some error occurred.  The
@@ -784,20 +797,13 @@ again:
 char *
 os_file_author(const char *path)
 {
-    int status;
-    char *name;
-    char *dir;
     struct stat sb;
 
     if (stat(path, &sb) != 0) {
         return NULL;
     }
 
-    status = os_get_user_info(sb.st_uid, &name, &dir);
-
-    free(dir);
-
-    return (status == 0) ? name : NULL;
+    return os_get_username(sb.st_uid);
 }
 
 int
@@ -992,18 +998,4 @@ char *
 os_getcwd(void)
 {
     return getcwd(NULL, 0);
-}
-
-char *
-os_get_username(uid_t uid)
-{
-    int status;
-    char *name;
-    char *dir;
-	
-    status = os_get_user_info(uid, &name, &dir);
-
-    free(dir);
-    
-    return (status == 0) ? name : NULL;
 }
