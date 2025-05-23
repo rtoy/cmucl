@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _VALIDATE_H_
-#define _VALIDATE_H_
+#ifndef VALIDATE_H
+#define VALIDATE_H
 
 #include "internals.h"
 
@@ -45,4 +45,4 @@
 extern void validate(void);
 extern void validate_stacks(void);
 
-#endif /* _VALIDATE_H_ */
+#endif /* VALIDATE_H */

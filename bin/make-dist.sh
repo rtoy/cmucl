@@ -12,10 +12,10 @@
 # $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/make-dist.sh,v 1.20 2011/04/11 16:34:49 rtoy Exp $
 
 usage() {
-    echo "make-dist.sh: [-hbg] [-G group] [-O owner] [-I destdir] [-M mandir] [-A arch] [-V version] [-o OS] dir"
+    echo "make-dist.sh: [-h] [-C compress] [-G group] [-O owner] [-I destdir] [-M mandir] [-A arch] [-V version] [-o OS] dir"
     echo "  -h           This help"
-    echo "  -b           Use bzip2 compression"
-    echo "  -g           Use gzip compression"
+    echo "  -C compress  Compression method to use for the tar archives.  Must be one of"
+    echo "                 bzip2, xz, or gzip.  The default depends on the OS"
     echo "  -G group     Group to use"
     echo "  -O owner     Owner to use"
     echo "  -I destdir   Install directly to given directory instead of creating a tarball"
@@ -59,7 +59,8 @@ def_arch_os () {
 	    sun*)
 		ARCH=sparc ;;
 	    i*)
-		ARCH=x86 ;;
+		ARCH=x86
+		GTAR=gtar ;;
 	  esac
 	  uname_r=`uname -r`
 	  case $uname_r in
@@ -93,30 +94,20 @@ def_arch_os () {
 # Figure out the architecture and OS in case options aren't given
 def_arch_os
 
-# Choose a version based on the git hash as the default version.  We
-# only compute a default if the git hash looks like a snapshot
-# ("snapshot-yyyy-mm") or a release number..
-GIT_HASH="`(cd src; git describe --dirty 2>/dev/null)`"
+# Default compression is -J (xz).  These variables are passed to the
+# other scripts via the environmen, so export them.
+COMPRESS=-J
+COMPRESS_EXT=xz
+COMPRESS_NAME=xz
 
-echo GIT_HASH = ${GIT_HASH}
-
-if expr "X${GIT_HASH}" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]' > /dev/null; then
-    DEFAULT_VERSION=`expr "${GIT_HASH}" : "snapshot-\(.*\)"`
-fi
-
-if expr "X${GIT_HASH}" : 'X[0-9][0-9][a-f]' > /dev/null; then
-    DEFAULT_VERSION="${GIT_HASH}"
-fi
-
-while getopts "G:O:I:M:bghSA:o:V:?" arg
+while getopts "C:G:O:I:M:hSA:o:V:?" arg
 do
     case $arg in
+	C) COMPRESS_ARG=$OPTARG ;;
 	G) GROUP=$OPTARG ;;
 	O) OWNER=$OPTARG ;;
         I) INSTALL_DIR=$OPTARG ;;
         M) MANDIR=$OPTARG ;;
-	b) ENABLE_BZIP=-b ;;
-	g) ENABLE_GZIP=-g  ;;
         S) MAKE_SRC_DIST=yes ;;
         A) ARCH=$OPTARG ;;
         o) OS=$OPTARG ;;
@@ -132,15 +123,25 @@ if [ $# -lt 1 ]; then
     usage
 fi
 
-if [ -z "$VERSION" ]; then
-    # If a default version exists, use it. Otherwise this is an
-    # error---at least one of these must not be empty.
-    if [ -z "${DEFAULT_VERSION}" ]; then
-	echo "Version (-V) must be specified because default version cannot be determined."
-	usage
-    else
-	VERSION=${DEFAULT_VERSION}
-    fi
+# Verify that the -C option is valid
+if [ -n "$COMPRESS_ARG" ]; then
+    case $COMPRESS_ARG in
+	bzip2)
+	    COMPRESS=-j
+	    COMPRESS_EXT=bz2
+	    COMPRESS_NAME=bzip2
+	    ;;
+	xz) # Defaults work
+	    ;;
+	gzip)
+	    COMPRESS=-z
+	    COMPRESS_EXT=gz
+	    COMPRESS_NAME=gzip
+	    ;;
+	*) echo '-C option "'$COMPRESS_ARG'" must be one of bzip2, xz or gzip'
+	   exit 1
+	   ;;
+    esac
 fi
 
 if [ ! -d "$1" ]
@@ -163,28 +164,38 @@ fi
 
 TARGET="`echo $1 | sed 's:/*$::'`"
 
-if [ -n "$INSTALL_DIR" ]; then
-    VERSION="today"
+# Choose a version based on the git hash as the default version.  We
+# only compute a default if the git hash looks like a snapshot
+# ("snapshot-yyyy-mm") or a release number..
+DEFAULT_VERSION="`$TARGET/lisp/lisp --version`"
+
+if [ -z "$VERSION" ]; then
+    # If a default version exists, use it. Otherwise this is an
+    # error---at least one of these must not be empty.
+    if [ -z "${DEFAULT_VERSION}" ]; then
+	echo "Version (-V) must be specified because default version cannot be determined."
+	usage
+    else
+	VERSION=${DEFAULT_VERSION}
+    fi
 fi
+
+echo INSTALL_DIR = $INSTALL_DIR
 
 echo cmucl-$VERSION-$ARCH-$OS
 ROOT=`dirname $0`
 
-# If no compression options given, default to bzip
-if [ -z "$ENABLE_GZIP" -a -z "$ENABLE_BZIP" ]; then
-    ENABLE_BZIP="-b"
-fi
-
-OPTIONS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}} ${INSTALL_DIR:+ -I ${INSTALL_DIR}} $ENABLE_GZIP $ENABLE_BZIP"
+GTAR_OPTS="-t ${GTAR:-tar}"
+EXTRA_OPTS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}}"
+INSTALL_OPTS="${INSTALL_DIR:+ -I ${INSTALL_DIR}}"
 MANDIR="${MANDIR:+ -M ${MANDIR}}"
+OPTIONS="${GTAR_OPTS} ${EXTRA_OPTS} ${INSTALL_OPTS} ${MANDIR}"
 
+set -x
 echo Creating distribution for $ARCH $OS
-$ROOT/make-main-dist.sh $OPTIONS ${MANDIR} $TARGET $VERSION $ARCH $OS || exit 1
-$ROOT/make-extra-dist.sh $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
+$ROOT/make-main-dist.sh -C $COMPRESS -E $COMPRESS_EXT $OPTIONS ${MANDIR} $TARGET $VERSION $ARCH $OS || exit 1
+$ROOT/make-extra-dist.sh -C $COMPRESS -E $COMPRESS_EXT $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
 
 if [ X"$MAKE_SRC_DIST" = "Xyes" ]; then
-    # If tar is not GNU tar, set the environment variable GTAR to
-    # point to GNU tar.
-    OPTIONS="${INSTALL_DIR:+ -I ${INSTALL_DIR}} $ENABLE_GZIP $ENABLE_BZIP"
-    $ROOT/make-src-dist.sh $OPTIONS -t ${GTAR:-tar} $VERSION
+    $ROOT/make-src-dist.sh -C $COMPRESS -E $COMPRESS_EXT ${GTAR_OPTS} ${INSTALL_OPTS} $VERSION
 fi

@@ -84,6 +84,9 @@ then
 		sed "s:^src:$CROSS:g" | xargs mkdir
 fi
 
+# Create the errno file containing all the def-unix-error forms.
+bin/create-errno.sh
+
 echo cross boot = $CROSSBOOT
 $LISP "$@" -noinit -nositeinit <<EOF
 (in-package :cl-user)
@@ -138,10 +141,11 @@ EOF
 
 if [ "$BUILD_RUNTIME" = "yes" ]; then
     echo Building runtime
+    bin/git-version.sh -f > src/lisp/cmucl-version.h
     (cd $TARGET/lisp; ${MAKE})
 fi
 
 if [ "$LOAD_KERNEL" = "yes" ]; then
     echo Load kernel.core
-    bin/load-world.sh -p $TARGET cross-compiled
+    bin/load-world.sh -p $TARGET
 fi

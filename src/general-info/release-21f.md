@@ -27,9 +27,13 @@ public domain.
     * The RNG has changed from an old version of xoroshiro128+ to
       xoroshiro128**.  This means sequences of random numbers will be
       different from before.  See ~~#276~~.
+    * The layout of the distribution has changed.  Version numbers are
+      added to files and directories.  For the exact layout, see !261.
+    * Update mk:defsystem to v3.9.2.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
+    * ~~#135~~ `(unix-namestring ".")` returns "" instead of "."
     * ~~#154~~ piglatin translation does not work anymore
     * ~~#171~~ Readably print `(make-pathname :name :unspecfic)`
     * ~~#180~~ Move `get-page-size` to C
@@ -52,6 +56,7 @@ public domain.
       available for Hemlock
     * ~~#261~~ Remove `get-system-info` from "bsd-os.lisp"
     * ~~#268~~ Can't clone ansi-test repo on Mac OS CI box
+    * ~~#262~~ [arch_skip_inst invalid code -55]
     * ~~#265~~ CI for mac os is broken
     * ~~#266~~ Support "~user" in namestrings
     * ~~#269~~ Add function to get user's home directory
@@ -75,12 +80,57 @@ public domain.
     * ~~#297~~ Pprint `new-assem:assemble` with less indentation.
     * ~~#298~~ Add `with-float-rounding-mode` macro
     * ~~#299~~ Enable xoroshiro assembly routine
+    * ~~#303~~ Variable `*assert-not-standard-readtable*` defined but
+      not used.
+    * ~~#309~~ obj_run_linker does unnecessary allocations
     * ~~#312~~ Compiler error building motif server on Fedora 40
     * ~~#314~~ tanh incorrect for large args
     * ~~#316~~ Support roundtrip character casing
     * ~~#320~~ Motif variant not defaulted for `x86_linux_clang` config
     * ~~#321~~ Rename Motif Config.x86 to Config.linux
     * ~~#323~~ Make string casing functions compliant
+    * ~~#327~~ Fix up weird CLRLF and LF line terminators in the same file
+    * ~~#329~~ Fix compiler warnings in os.lisp
+    * ~~#330~~ Fix typos in unicode.lisp
+    * ~~#333~~ `load` doesn't accept generalized boolean for
+      `:if-does-not-exist` arg
+    * ~~#338~~ Solaris/x86 build
+    * ~~#336~~ Clean up some compiler notes
+    * ~~#337~~ Cross-compile from x86 (linux) to x86 fails
+    * ~~#339~~ Solaris/x86 `nl_langinfo` returns "646"
+    * ~~#340~~ Use `+ascii-limit+` instead of `#x7f` in srctran.lisp
+      for consistency
+    * ~~#341~~ Update version feature in cross-compile script
+    * ~~#342~~ Add CI job to run gcc static analyer
+    * ~~#348~~ Solaris/x86: u_int64_t vs uint64_t
+    * ~~#347~~ Solaris/x86: Update cross-compile script
+    * ~~#350~~ Export warnings on Solaris
+    * ~~#351~~ Solaris does not recognize `-E` option for grep
+    * ~~#352~~ Always use bzip2 compression for tarballs
+    * ~~#353~~ Automatically use gtar on Solaris when making a distribution
+    * ~~#354~~ Check that executables can be created in CI
+    * ~~#356~~ Return value from `vm::x87-floating-point-modes` should
+      have status word in low part of result
+    * ~~#357~~ Solaris needs limits.h to get `PATH_MAX` in elf.c
+    * ~~#360~~ Adding site-init file
+    * ~~#361~~ Add herald item to mention where to report issues
+    * ~~#362~~ Simplify "library:" search-list
+    * ~~#363~~ Version numbers added to files and directories.  The
+      distribution layout has changed.
+    * ~~#364~~ Add interface to `mkdtemp` and `mkstemp`
+    * ~~#367~~ Add `stream:string-count-octets` to count octets in a string
+    * ~~#369~~ Improve docstring for `unix::unix-setlocale`
+    * ~~#375~~ `unix-mkstemp` and `unix-mkdtemp` actually returns the
+      file names now.
+    * ~~#379~~ Support GNU-style command-line option names
+    * ~~#382~~ Command-line options are case-sensitive
+    * ~~#385~~ Fixed compiler warning about `%p` in Linux-os.c
+    * ~~#386~~ Generate `def-unix-error` forms from OS-specific files.
+      This replaces the original versions in unix.lisp.
+    * ~~#394~~ Add `os_getcwd` to get the current directory
+    * ~~#398~~ Update mk:defsystem to v3.9.2    
+    * ~~#400~~ `unix-resolve-links` no longer breaks on some lengths
+    * ~~#401~~ `file-position` now returns the correct value
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

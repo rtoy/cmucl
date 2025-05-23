@@ -10,8 +10,8 @@
  * ====================================================
  */
 
-#ifndef FDLIBM_H_
-#define FDLIBM_H_
+#ifndef FDLIBM_H
+#define FDLIBM_H
 /* Sometimes it's necessary to define __LITTLE_ENDIAN explicitly
    but these catch some common cases. */
 

@@ -5,8 +5,8 @@
 
 */
 
-#ifndef _LISPREGS_H_
-#define _LISPREGS_H_
+#ifndef LISPREGS_H
+#define LISPREGS_H
 
 #if defined(mips) || defined(irix)
 #include "mips-lispregs.h"
@@ -60,4 +60,4 @@
 extern char *lisp_register_names[];
 #endif
 
-#endif /* _LISPREGS_H_ */
+#endif /* LISPREGS_H */

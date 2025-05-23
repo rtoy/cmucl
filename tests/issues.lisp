@@ -707,6 +707,33 @@
 		  ".txt")
      *test-path*))))
 
+(define-test issue.135
+    (:tag :issues)
+  (assert-equalp "./" (ext:unix-namestring "."))
+  (unwind-protect
+       (progn
+	 ;; Create a test file in the current directory.
+	 ;; unix-namestring requires files to exist to be able to
+	 ;; return the namestring.
+	 (with-open-file (f1 "foo.txt"
+			     :direction :output
+			     :if-exists :supersede)
+	   (print "foo" f1))
+	 ;; Check unix-namestring and verify that converting the
+	 ;; namestring to a pathname results in the same pathname
+	 ;; object as expected.
+	 (let ((foo (ext:unix-namestring "foo.txt")))
+	   (assert-equalp "foo.txt" foo)
+	   (assert-equalp (make-pathname :name "foo" :type "txt")
+			  (pathname foo)))
+	 (let ((bar (ext:unix-namestring "src/code/filesys.lisp")))
+	   (assert-equalp "./src/code/filesys.lisp" bar)
+	   (assert-equalp (make-pathname :directory '(:relative "src" "code")
+					 :name "filesys"
+					 :type "lisp")
+			  (pathname bar))))
+    (assert-true (delete-file "foo.txt"))))
+
 (define-test issue.139-default-external-format
     (:tag :issues)
   (assert-eq :utf-8 stream:*default-external-format*)
@@ -1105,3 +1132,37 @@
 	   (not (zerop n))))
     (dolist (x '(0 1 1000))
       (assert-equal (expected x) (fun x) x))))
+
+(define-test issue.333.if-does-not-exist
+    (:tag :issues)
+  ;; "unknown.lisp" should be a file that doesn't exist.  Verify that
+  ;; if :IF-DOES-NOT-EXIST is non-NIL we signal an error from LOAD.
+  ;; The first case is the old default value of :ERROR.
+  (assert-error 'file-error
+                 (load "unknown.lisp" :if-does-not-exist :error))
+  ;; :IF-DOES-NOT-EXIST is a generalized BOOLEAN, so non-NIL will
+  ;; signal an error too.
+  (assert-error 'file-error
+                 (load "unknown.lisp" :if-does-not-exist t))
+  (assert-false (load "unknown.lisp" :if-does-not-exist nil)))
+
+(define-test issue.339.646-external-format
+    (:tag :issues)
+  ;; Just verify that the external format :646 exists and is the same
+  ;; as :iso646-us.
+  (assert-true (stream::find-external-format :646 nil))
+  (assert-true (eq (stream::find-external-format :646 nil)
+		   (stream::find-external-format :iso646-us nil))))
+
+(define-test issue.400
+    (:tag :issues)
+  (let* ((pl 50)
+	 (nl 250)
+         (p (append (pathname-directory (ext:default-directory))
+                    (list "tmp")
+                    (list (make-string pl :initial-element #\a))))
+         (n (make-string nl :initial-element #\b))
+         (pn (make-pathname :name n :directory p)))
+    (ensure-directories-exist pn)
+    (close (open pn :direction :output :if-exists :supersede))
+    (assert-true (unix::unix-resolve-links (namestring pn)))))

@@ -6060,7 +6060,7 @@ msgstr ""
 #: src/code/commandline.lisp
 msgid ""
 "Evaluate the specified Lisp expression during the start up\n"
-"  sequence.  the value of the form will not be printed unless it is\n"
+"  sequence.  The value of the form will not be printed unless it is\n"
 "  wrapped in a form that does output."
 msgstr ""
 
@@ -6182,7 +6182,7 @@ msgstr ""
 #: src/code/commandline.lisp
 msgid ""
 "Causes Lisp to start up silently, disabling printing of the herald\n"
-"  and causing most unnecessary noise, like GC messages,load messages,\n"
+"  and causing most unnecessary noise, like GC messages, load messages,\n"
 "  etc. to be suppressed."
 msgstr ""
 
@@ -6197,7 +6197,7 @@ msgid "Specify the unidata.bin file to be used."
 msgstr ""
 
 #: src/code/commandline.lisp
-msgid "~&Usage: ~A <options>~2%"
+msgid "~&Usage: ~A <options> [-- [app-args]*]~2%"
 msgstr ""
 
 #: src/code/commandline.lisp
@@ -6205,15 +6205,7 @@ msgid "Print out the command line options and exit"
 msgstr ""
 
 #: src/code/commandline.lisp
-msgid "Same as -help."
-msgstr ""
-
-#: src/code/commandline.lisp
-msgid "Prints the cmucl version and exits"
-msgstr ""
-
-#: src/code/commandline.lisp
-msgid "Prints the cmucl version and exits; same as -version"
+msgid "Prints the cmucl version and exits, without loading the lisp core."
 msgstr ""
 
 #: src/code/env-access.lisp
@@ -6821,7 +6813,8 @@ msgid ""
 "\n"
 "  :site-init\n"
 "      If true, then the name of the site init file to load.  The default is\n"
-"  library:site-init.  No error if this does not exist.\n"
+"  library:site-init if it exists.  If not, library:default-site-init\n"
+"  is used if it exists.  No error if these files do not exist.\n"
 "\n"
 "  :print-herald\n"
 "      If true (the default), print out the lisp system herald when "
@@ -6897,7 +6890,7 @@ msgid " on "
 msgstr ""
 
 #: src/code/save.lisp
-msgid "See <http://www.cmucl.org/> for support information."
+msgid "Please visit https://cmucl.org/bugs to report bugs and ask questions."
 msgstr ""
 
 #: src/code/save.lisp
@@ -9301,6 +9294,13 @@ msgstr ""
 
 #: src/code/extfmts.lisp
 msgid ""
+"Compute the number of octets needed to convert String using the\n"
+"  specified External-format.  The string is bound by Start (defaulting\n"
+"  to 0) and End (defaulting to the end of the string)."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
 "Encode the given String using External-Format and return a new\n"
 "  string.  The characters of the new string are the octets of the\n"
 "  encoded result, with each octet converted to a character via\n"
@@ -9665,6 +9665,15 @@ msgstr ""
 msgid ""
 "When non-nil, attempt to load \"library:<host>.translations\" to resolve\n"
 "   an otherwise undefined logical host."
+msgstr ""
+
+#: src/code/pathname.lisp
+msgid ""
+"When non-NIL, pathnames are on Darwin are normalized when created.\n"
+"  Otherwise, the pathnames are unchanged.\n"
+"\n"
+"  This must be NIL during bootstrapping because Unicode is not yet\n"
+"  available."
 msgstr ""
 
 #: src/code/pathname.lisp

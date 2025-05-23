@@ -142,12 +142,18 @@ buildit ()
 	then
 	    $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
 	fi
-	$TOOLDIR/load-world.sh $TARGET "$VERSION" || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
+	$TOOLDIR/load-world.sh $TARGET || { echo "Failed: $TOOLDIR/load-world.sh"; exit 1; }
 
-	$TARGET/lisp/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
+	$TARGET/lisp/lisp -lib $TARGET/lisp -batch -noinit -nositeinit < /dev/null || { echo "Failed: $TARGET/lisp/lisp -batch -noinit"; exit 1; }
+
 	return 0;
     fi
 }
+
+# Create the errno file containing all the def-unix-error forms.  No
+# options mean we use the existing OS-specific template.  Exit if
+# there's an error in creating the errno file.
+bin/create-errno.sh || exit 1
 
 BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
@@ -177,6 +183,10 @@ do
 	    ;;
     esac
 done
+
+# Generate lisp/cmucl-version.h with the appropriate version.  The -v
+# option (if given) overrides the default that git-describe.sh uses.
+bin/git-version.sh -f ${VERSION:+ -v ${VERSION}} > src/lisp/cmucl-version.h
 
 # If -b not given, try to derive one instead of just using "build".
 if [ -z "$BASE" ]; then
@@ -221,7 +231,7 @@ buildit
 bootfiles=
 
 TARGET=$BASE-3
-OLDLISP="${BASE}-2/lisp/lisp $OLDLISPFLAGS"
+OLDLISP="${BASE}-2/lisp/lisp -lib ${BASE}-2/lisp $OLDLISPFLAGS"
 ENABLE=$ENABLE3
 
 BUILD=2
@@ -232,7 +242,7 @@ buildit
 
 TARGET=$BASE-4
 CLEAN_FLAGS="-K all"
-OLDLISP="${BASE}-3/lisp/lisp $OLDLISPFLAGS"
+OLDLISP="${BASE}-3/lisp/lisp -lib ${BASE}-3/lisp $OLDLISPFLAGS"
 ENABLE=$ENABLE4
 
 if [ "${BUILD_POT}" = "yes" ]; then
@@ -250,7 +260,7 @@ buildit
 
 # Asdf and friends are part of the base install, so we need to build
 # them now.
-$TARGET/lisp/lisp -noinit -nositeinit -batch << EOF || exit 3
+$TARGET/lisp/lisp -lib $TARGET/lisp -noinit -nositeinit -batch << EOF || exit 3
 (in-package :cl-user)
 (setf (ext:search-list "target:")
       '("$TARGET/" "src/"))
@@ -270,7 +280,7 @@ EOF
 
 if [ "$SKIPUTILS" = "no" ];
 then
-    OLDLISP="${BASE}-4/lisp/lisp $OLDLISPFLAGS"
+    OLDLISP="${BASE}-4/lisp/lisp -lib ${BASE}-4/lisp $OLDLISPFLAGS"
     time $TOOLDIR/build-utils.sh $TARGET
 fi
 

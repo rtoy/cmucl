@@ -1,25 +1,61 @@
 #!/bin/sh
 
-# set -x
-while getopts "G:O:I:M:bgh?" arg
+usage() {
+    cat <<EOF
+`basename $0`  -C option -E ext [-h?] [-t tar][-I destdir] [-G group] [-O owner] [-M mandir]
+        target-directory version arch os
+  -h           This help
+  -?           This help
+  -t tar       Tar program to use
+  -C option    Tar option for compressing the tarball; required.
+  -E ext       Extension to use for the tarball.  Must be consistent with
+                 -C option.  Required.
+  -I destdir   Install directly to given directory instead of creating a tarball
+  -G group     Group to use
+  -O owner     Owner to use
+  -M mandir    Install manpages in this subdirectory.  Default is man/man1
+
+This is generally called by make-dist.sh and not normally invoked by the user
+
+Create a tarball consisting of the main components needed to distribute
+a binary installation of cmucl.  This includes the C executable and support
+libraries; the subsystems like Gray streams, and simple streams; external
+formats; contribs like asdf and defsystem; manpages and READMEs."
+EOF
+    exit 1
+}
+    
+GTAR=tar
+while getopts "C:E:G:O:I:M:t:h?" arg
 do
     case $arg in
+	C) COMPRESS=$OPTARG ;;
+	E) COMPRESS_EXT=$OPTARG ;;
 	G) GROUP="-g $OPTARG" ;;
 	O) OWNER="-o $OPTARG" ;;
         I) INSTALL_DIR=$OPTARG ;;
         M) MANDIR=$OPTARG ;;
-	b) ENABLE_BZIP=-b ;;
-	g) ENABLE_GZIP=-g  ;;
+	t) GTAR=$OPTARG ;;
 	h | \?) usage; exit 1 ;;
     esac
 done
 
 shift `expr $OPTIND - 1`
 
+# -C and -E options are required
+if [ -z "$COMPRESS" ]; then
+    echo "-C option is required"
+    exit 2
+fi
+
+if [ -z "$COMPRESS_EXT" ]; then
+    echo "-E option is required"
+    exit 2
+fi
+
 if [ "$1" = "" -o "$2" = "" -o "$3" = "" -o "$4" = "" ]
 then
-	echo "Usage: $0 target-directory version arch os"
-	exit 1
+    usage
 fi
 
 if [ ! -d "$1" ]
@@ -28,13 +64,23 @@ then
 	exit 2
 fi
 
-DESTDIR=${INSTALL_DIR:-release-$$}
-DOCDIR=${DOCDIR:-doc/cmucl}
-MANDIR=${MANDIR:-man/man1}
-TARGET="`echo $1 | sed 's:/*$::'`"
 VERSION=$2
 ARCH=$3
 OS=$4
+
+# Where to install the main library of cmucl files
+CMUCLLIBVER="lib/cmucl/$VERSION"
+
+# Where to install everything
+DESTDIR=${INSTALL_DIR:-release-$$}
+
+# Where to install docs
+DOCDIR=${DOCDIR:-share/cmucl/$VERSION/doc}
+
+# Where to install man pages
+MANDIR=${MANDIR:-share/man/man1}
+
+TARGET="`echo $1 | sed 's:/*$::'`"
 
 # Core file to look for.
 CORE=lisp.core
@@ -87,52 +133,59 @@ fi
 # set -x
 echo Installing main components
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/bin
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/subsystems
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/ext-formats
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/subsystems
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/ext-formats
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${DOCDIR}
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/${MANDIR}
-install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/
+install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/lisp-$VERSION
+# Install symlink for lisp
+(cd $DESTDIR/bin; ln -fs lisp-$VERSION lisp)
+# Install symlink for man pages
+(cd $DESTDIR/${MANDIR}
+ ln -fs lisp-$VERSION.1 lisp.1
+ ln -fs cmucl-$VERSION.1 cmucl.1)
+
 if [ "$EXECUTABLE" = "true" ]
 then
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.a $DESTDIR/lib/cmucl/lib/
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/exec-init.o $DESTDIR/lib/cmucl/lib/
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/exec-final.o $DESTDIR/lib/cmucl/lib/
-    install ${GROUP} ${OWNER} -m 0755 src/tools/linker.sh $DESTDIR/lib/cmucl/lib/
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.a $DESTDIR/$CMUCLLIBVER/lib/
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/exec-init.o $DESTDIR/$CMUCLLIBVER/lib/
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/exec-final.o $DESTDIR/$CMUCLLIBVER/lib/
+    install ${GROUP} ${OWNER} -m 0755 src/tools/linker.sh $DESTDIR/$CMUCLLIBVER/lib/
     if [ -f src/tools/$SCRIPT-cmucl-linker-script ]; then
-	install ${GROUP} ${OWNER} -m 0755 src/tools/$SCRIPT-cmucl-linker-script $DESTDIR/lib/cmucl/lib/
+	install ${GROUP} ${OWNER} -m 0755 src/tools/$SCRIPT-cmucl-linker-script $DESTDIR/$CMUCLLIBVER/lib/
     fi
 fi
 for corefile in $TARGET/lisp/$CORE
 do
-  install ${GROUP} ${OWNER} -m 0644 $corefile $DESTDIR/lib/cmucl/lib/
+  install ${GROUP} ${OWNER} -m 0644 $corefile $DESTDIR/$CMUCLLIBVER/lib/
 done
 install ${GROUP} ${OWNER} -m 0755 src/tools/load-foreign.csh src/tools/config \
-	$DESTDIR/lib/cmucl/lib/
+	$DESTDIR/$CMUCLLIBVER/lib/
 install ${GROUP} ${OWNER} -m 0644 src/tools/config.lisp \
-	$DESTDIR/lib/cmucl/lib/
-install ${GROUP} ${OWNER} -m 0644 src/code/generic-site.lisp \
-	$DESTDIR/lib/cmucl/lib/
+	$DESTDIR/$CMUCLLIBVER/lib/
+install ${GROUP} ${OWNER} -m 0644 src/code/default-site-init.lisp \
+	$DESTDIR/$CMUCLLIBVER/lib/
 install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.nm $TARGET/lisp/lisp.map \
-	$TARGET/lisp/internals.h $TARGET/lisp/internals.inc $DESTDIR/lib/cmucl/
-install ${GROUP} ${OWNER} -m 0755 src/tools/sample-wrapper $DESTDIR/lib/cmucl/
+	$TARGET/lisp/internals.h $TARGET/lisp/internals.inc $DESTDIR/$CMUCLLIBVER/
+install ${GROUP} ${OWNER} -m 0755 src/tools/sample-wrapper $DESTDIR/$CMUCLLIBVER/
 
 for f in gray-streams gray-compat simple-streams iodefs
 do
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.$FASL $DESTDIR/lib/cmucl/lib/subsystems/
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.$FASL $DESTDIR/$CMUCLLIBVER/lib/subsystems/
 done
 
 for f in src/pcl/simple-streams/external-formats/*.lisp src/pcl/simple-streams/external-formats/aliases src/i18n/unidata.bin
 do
-    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
+    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/$CMUCLLIBVER/lib/ext-formats/
 done
 
 # set -x
 # Create the directories for asdf and defsystem
-for f in asdf defsystem asdf/doc
+for f in asdf defsystem asdf/doc defsystem/docs
 do
-    install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/$f
+    install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/contrib/$f
 done
 
 case `uname -s` in
@@ -140,34 +193,27 @@ case `uname -s` in
   *) UCONTRIB="unix" ;;
 esac
 
-install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/contrib/unix
-install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/unix/$UCONTRIB.$FASL $DESTDIR/lib/cmucl/lib/contrib/unix
-install ${GROUP} ${OWNER} -m 0644 src/contrib/load-unix.lisp $DESTDIR/lib/cmucl/lib/contrib
-install ${GROUP} ${OWNER} -m 0644 src/contrib/unix/${UCONTRIB}.lisp $DESTDIR/lib/cmucl/lib/contrib/unix
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/contrib/unix
+install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/unix/$UCONTRIB.$FASL $DESTDIR/$CMUCLLIBVER/lib/contrib/unix
+install ${GROUP} ${OWNER} -m 0644 src/contrib/load-unix.lisp $DESTDIR/$CMUCLLIBVER/lib/contrib
+install ${GROUP} ${OWNER} -m 0644 src/contrib/unix/${UCONTRIB}.lisp $DESTDIR/$CMUCLLIBVER/lib/contrib/unix
 
 # Copy the source files for asdf and defsystem
 for f in `(cd src; find contrib/asdf contrib/defsystem -type f -print | grep -v CVS)`
 do
-    install ${GROUP} ${OWNER} -m 0644 src/$f $DESTDIR/lib/cmucl/lib/$f
+    install ${GROUP} ${OWNER} -m 0644 src/$f $DESTDIR/$CMUCLLIBVER/lib/$f
 done
 
 # Install the fasl files for asdf and defsystem
 for f in asdf defsystem
 do
-    install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/lib/cmucl/lib/contrib/$f
-done
-
-# Install the docs for asdf
-for f in src/contrib/asdf/doc/*
-do
-    base=`basename $f`
-    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/contrib/asdf/doc/$base
+    install ${GROUP} ${OWNER} -m 0644 $TARGET/contrib/$f/$f.$FASL $DESTDIR/$CMUCLLIBVER/lib/contrib/$f
 done
 
 install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
-	$DESTDIR/${MANDIR}/
+	$DESTDIR/${MANDIR}/cmucl-$VERSION.1
 install ${GROUP} ${OWNER} -m 0644 src/general-info/lisp.1 \
-	$DESTDIR/${MANDIR}/
+	$DESTDIR/${MANDIR}/lisp-$VERSION.1
 install ${GROUP} ${OWNER} -m 0644 src/general-info/README $DESTDIR/${DOCDIR}
 if [ -f src/general-info/release-$VERSION.txt ] 
 then
@@ -178,16 +224,7 @@ fi
 if [ -z "$INSTALL_DIR" ]; then
     sync ; sleep 1 ; sync ; sleep 1 ; sync
     echo Tarring main components
-    if [ -n "$ENABLE_GZIP" ]; then
-	echo "  Compressing with gzip"
-	( cd $DESTDIR >/dev/null ; tar cf - . ) | \
-	  gzip -c > cmucl-$VERSION-$ARCH-$OS.tar.gz
-    fi
-    if [ -n "$ENABLE_BZIP" ]; then
-	echo "  Compressing with bzip"
-	( cd $DESTDIR >/dev/null ; tar cf - . ) | \
-	  bzip2 > cmucl-$VERSION-$ARCH-$OS.tar.bz2
-    fi
+    $GTAR -C $DESTDIR $COMPRESS -cf cmucl-$VERSION-$ARCH-$OS.tar.$COMPRESS_EXT .
 
     echo Cleaning $DESTDIR
     [ -d $DESTDIR ] && rm -rf $DESTDIR

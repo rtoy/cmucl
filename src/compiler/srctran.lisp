@@ -1809,8 +1809,7 @@
 			      (round-it pos)))))))
 
 (defun round-derive-type-quot (number-type divisor-type)
-  (let* ((rem-type (rem-result-type number-type divisor-type))
-	 (number-interval (numeric-type->interval number-type))
+  (let* ((number-interval (numeric-type->interval number-type))
 	 (divisor-interval (numeric-type->interval divisor-type)))
     (let ((quot (round-quotient-bound
 		 (interval-div number-interval
@@ -1819,9 +1818,7 @@
 				,(or (interval-high quot) '*))))))
 
 (defun round-derive-type-rem (number-type divisor-type)
-  (let* ((rem-type (rem-result-type number-type divisor-type))
-	 (number-interval (numeric-type->interval number-type))
-	 (divisor-interval (numeric-type->interval divisor-type)))
+  (let* ((rem-type (rem-result-type number-type divisor-type)))
     (multiple-value-bind (class format)
 	(ecase rem-type
 	  (integer
@@ -1835,13 +1832,6 @@
 	   (values 'float nil))
 	  (real
 	   (values nil nil)))
-      #+nil
-      (when (member rem-type '(float single-float double-float
-			       #+long-float long-float
-			       #+double-double double-double-float))
-	(setf rem (interval-func #'(lambda (x)
-				     (coerce x rem-type))
-				 rem)))
       (make-numeric-type :class class
 			 :format format
 			 :low nil
@@ -3323,8 +3313,8 @@
   #+(and unicode (not unicode-bootstrap))
   '(let* ((ac (char-code a))
 	  (bc (char-code b)))
-     (if (and (<= ac #x7f)
-	      (<= bc #x7f))
+     (if (and (<= ac +ascii-limit+)
+	      (<= bc +ascii-limit+))
 	 ;; ASCII
 	 (let ((sum (logxor ac bc)))
 	   (or (zerop sum)
@@ -3345,7 +3335,7 @@
   '(let ((m (char-code x)))
     (cond ((<= (char-code #\a) m (char-code #\z))
            (code-char (logxor m #x20)))
-          ((> m lisp::+ascii-limit+)
+          ((> m +ascii-limit+)
            (code-char (lisp::case-mapping-upper-case m)))
 	   (t x))))
 
@@ -3359,7 +3349,7 @@
   '(let ((m (char-code x)))
     (cond ((<= (char-code #\A) m (char-code #\Z))
            (code-char (logxor m #x20)))
-          ((> m lisp::+ascii-limit+)
+          ((> m +ascii-limit+)
            (code-char (lisp::case-mapping-lower-case m)))
 	  (t x))))
 

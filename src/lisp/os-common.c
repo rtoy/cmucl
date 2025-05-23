@@ -12,6 +12,7 @@
 #include <math.h>
 #include <netdb.h>
 #include <pwd.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -608,8 +609,8 @@ os_sleep(double seconds)
  * function that works across all OSes.
  */
 int
-os_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-        unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+os_stat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uint64_t *nlink,
+        unsigned int *uid, unsigned int *gid, uint64_t *rdev, int64_t *size,
         int64_t *atime, int64_t *mtime, int64_t *ctime,
         long *blksize, int64_t *blocks)
 {
@@ -661,8 +662,8 @@ os_stat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_
 }
 
 int
-os_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+os_fstat(int fd, uint64_t *dev, uint64_t *ino, unsigned int *mode, uint64_t *nlink,
+         unsigned int *uid, unsigned int *gid, uint64_t *rdev, int64_t *size,
          int64_t *atime, int64_t *mtime, int64_t *ctime,
          long *blksize, int64_t *blocks)
 {
@@ -693,8 +694,8 @@ os_fstat(int fd, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *
 }
 
 int
-os_lstat(const char* path, u_int64_t *dev, u_int64_t *ino, unsigned int *mode, u_int64_t *nlink,
-         unsigned int *uid, unsigned int *gid, u_int64_t *rdev, int64_t *size,
+os_lstat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uint64_t *nlink,
+         unsigned int *uid, unsigned int *gid, uint64_t *rdev, int64_t *size,
          int64_t *atime, int64_t *mtime, int64_t *ctime,
          long *blksize, int64_t *blocks)
 {
@@ -935,3 +936,13 @@ os_get_user_homedir(const char* name, int *status)
     return NULL;
 }
     
+
+/*
+ * Return a new string (or NULL) for the current working directory.
+ * The caller must free this space.
+ */
+char *
+os_getcwd(void)
+{
+    return getcwd(NULL, 0);
+}

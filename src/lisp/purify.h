@@ -5,9 +5,9 @@
 
 */
 
-#ifndef _PURIFY_H_
-#define _PURIFY_H_
+#ifndef PURIFY_H
+#define PURIFY_H
 
 extern int purify(lispobj static_roots, lispobj read_only_roots);
 
-#endif /* _PURIFY_H_ */
+#endif /* PURIFY_H */

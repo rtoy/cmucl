@@ -362,4 +362,3 @@ os_support_sse2()
     return TRUE;
 }
 #endif
-
