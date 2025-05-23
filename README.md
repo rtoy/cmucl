@@ -27,7 +27,7 @@ Here is a summary of its main features:
 * **generational garbage collection** on all supported
   architectures.  
 * **multiprocessing capability** on the x86 ports.
-* a [foreign function interface](ttps://cmucl.org/docs/cmu-user/html/Alien-Objects.html) which allows interfacing with C code
+* a [foreign function interface](https://cmucl.org/docs/cmu-user/html/Alien-Objects.html) which allows interfacing with C code
   and system libraries, including shared libraries on most platforms,
   and direct access to Unix system calls.
 * support for [interprocess communication](https://cmucl.org/docs/cmu-user/html/Interprocess-Communication-under-LISP.html) and remote procedure calls.
