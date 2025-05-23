@@ -53,6 +53,7 @@ void fatal_error(char *message)
     exit(-1);
 }
 
+_X_NORETURN
 void MyErrorHandler(String errmsg)
 {
   message_t reply = message_new(next_serial++);
