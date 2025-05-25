@@ -258,7 +258,10 @@ osx:benchmark:
 # the linux-4 directory built in the linux:build job.
 linux:static-analyzer:
   stage: analyze
-  when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      # when: always is the default
+    - when: manual
   tags:
     - linux
   artifacts:
