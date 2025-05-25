@@ -118,6 +118,7 @@ linux:install:
       # when: always is the default
     - when: manual
     - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 linux:build:
   <<: *build_configuration
@@ -131,6 +132,7 @@ linux:build:
       # when: always is the default
     - when: manual
     - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 linux:cross-build:
   stage: build
@@ -270,8 +272,12 @@ linux:static-analyzer:
   stage: analyze
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
-      # when: always is the default
-    - when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      
+      
   tags:
     - linux
   artifacts:
