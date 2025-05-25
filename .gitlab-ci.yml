@@ -113,12 +113,10 @@ linux:install:
   variables:
     osname: "linux"
     CURL: "curl"
-#  rules:
-#    - if: $CI_PIPELINE_SOURCE == "schedule"
-#      # when: always is the default
-#    - when: manual
-#    - if: $CI_PIPELINE_SOURCE == "push"
-#    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 linux:build:
   <<: *build_configuration
@@ -127,12 +125,10 @@ linux:build:
   needs:
     - job: linux:install
       artifacts: true
-#  rules:
-#    - if: $CI_PIPELINE_SOURCE == "schedule"
-#      # when: always is the default
-#    - when: manual
-#    - if: $CI_PIPELINE_SOURCE == "push"
-#    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 linux:cross-build:
   stage: build
