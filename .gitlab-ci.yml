@@ -121,6 +121,10 @@ linux:build:
   needs:
     - job: linux:install
       artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      # when: always is the default
+    - when: manual
 
 linux:cross-build:
   stage: build
