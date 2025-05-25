@@ -117,6 +117,7 @@ linux:install:
     - if: $CI_PIPELINE_SOURCE == "schedule"
       # when: always is the default
     - when: manual
+    - if: $CI_PIPELINE_SOURCE == "push"
 
 linux:build:
   <<: *build_configuration
@@ -129,6 +130,7 @@ linux:build:
     - if: $CI_PIPELINE_SOURCE == "schedule"
       # when: always is the default
     - when: manual
+    - if: $CI_PIPELINE_SOURCE == "push"
 
 linux:cross-build:
   stage: build
