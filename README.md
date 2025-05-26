@@ -1,23 +1,24 @@
 [![pipeline status](https://gitlab.common-lisp.net/cmucl/cmucl/badges/master/pipeline.svg)](https://gitlab.common-lisp.net/cmucl/cmucl/commits/master)
 
-CMUCL is a free, high performance implementation of the Common Lisp
-programming language which runs on most major Unix platforms. It
-mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
-sophisticated native code compiler; a powerful foreign function
-interface; an implementation of CLOS; the Common Lisp Object System;
-which includes multimethods; a metaobject protocol; a source-level
-debugger and code profiler; and an Emacs-like editor implemented in
-Common Lisp. CMUCL is maintained by a team of volunteers collaborating
-over the Internet, and is mostly in the public domain.
+CMUCL is a free, high performance implementation of the [Common
+Lisp](http://en.wikipedia.org/wiki/Common_Lisp) programming language
+which runs on most major Unix platforms. It mainly conforms to the
+[ANSI Common Lisp standard](http://www.lispworks.com/documentation/HyperSpec/Front/index.htm). CMUCL provides a sophisticated native code
+compiler; a powerful foreign function interface; an implementation of
+CLOS; the Common Lisp Object System; which includes multimethods; a
+metaobject protocol; a source-level debugger and code profiler; and an
+Emacs-like editor implemented in Common Lisp. CMUCL is maintained by a
+team of volunteers collaborating over the Internet, and is mostly in
+the public domain.
 
 Here is a summary of its main features:
 
-* support for **static arrays** that are never moved by GC but are
+* support for [**static arrays**](https://cmucl.org/docs/cmu-user/html/Static-Arrays.html) that are never moved by GC but are
   properly removed when no longer referenced.
-* **Unicode** support, including many of the most common external
+* [**Unicode**](https://cmucl.org/docs/cmu-user/html/Internationalization.html) support, including many of the most common external
   formats such as UTF-8 and support for handling Unix, DOS, and
   Mac end-of-line schemes.
-* native **double-double floats** including complex double-double
+* native [**double-double floats**](https://cmucl.org/docs/cmu-user/html/Extended-Floats.html) including complex double-double
   floats and specialized arrays for double-double floats and and
   complex double-double floats that give approximately 106 bits
   (32 digits) of precision.
@@ -27,16 +28,16 @@ Here is a summary of its main features:
 * **generational garbage collection** on all supported
   architectures.  
 * **multiprocessing capability** on the x86 ports.
-* a foreign function interface which allows interfacing with C code
+* a [foreign function interface](https://cmucl.org/docs/cmu-user/html/Alien-Objects.html) which allows interfacing with C code
   and system libraries, including shared libraries on most platforms,
   and direct access to Unix system calls.
-* support for interprocess communication and remote procedure calls.
+* support for [interprocess communication](https://cmucl.org/docs/cmu-user/html/Interprocess-Communication-under-LISP.html) and remote procedure calls.
 * an implementation of CLOS, the [Common Lisp Object
   System](http://en.wikipedia.org/wiki/Common_Lisp_Object_System),
   which includes multimethods and a metaobject protocol.
-* a graphical source-level debugger using a Motif interface, and a
-  code profiler.
-* an interface to the X11 Window System (CLX), and a sophisticated
+* a graphical source-level debugger using a [Motif interface](https://cmucl.org/docs/interface/toolkit/html/index.html), and a
+  [code profiler](https://cmucl.org/docs/cmu-user/html/Profiling.html).
+* an interface to the X11 Window System ([CLX](https://sharplispers.github.io/clx/)), and a sophisticated
   graphical widget library ([Garnet](https://www.cs.cmu.edu/~garnet/),
   available separately).
 * programmer-extensible input and output streams ([Gray

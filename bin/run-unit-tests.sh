@@ -6,10 +6,11 @@
 # then just those tests are run.
 
 usage() {
-    echo "run-tests.sh [?] [-d test-dir] [-l lisp] [tests]"
+    echo "run-tests.sh [-?h] [-d test-dir] [-l lisp] [tests]"
     echo "    -d test-dir  Directory containing the unit test files"
     echo "    -l lisp      Lisp to use for the tests; defaults to lisp"
     echo "    -?           This help message"
+    echo "    -h           This help message"
     echo ""
     echo "Run the test suite"
     echo ""
@@ -29,12 +30,12 @@ do
     case $arg in
       l) LISP=$OPTARG ;;
       d) TESTDIR=$OPTARG ;;
-      \?) usage ;;
+      h|\?) usage ;;
     esac
 done
 
 # Shift out the options
-shift $[$OPTIND - 1]
+shift $((OPTIND - 1))
 
 # Create the test directory needed by the issue.45 test.
 rm -rf test-tmp
@@ -58,7 +59,7 @@ fi
 # Compile up the C file that is used for testing alien funcalls to
 # functions that return integer types of different lengths.  We use
 # gcc since clang isn't always available.
-(cd "$TESTDIR"; gcc -m32 -O3 -c test-return.c)
+(cd "$TESTDIR" || exit 1 ; gcc -m32 -O3 -c test-return.c)
 
 if [ $# -eq 0 ]; then
     # Test directory arg for run-all-tests if a non-default 
@@ -67,9 +68,9 @@ if [ $# -eq 0 ]; then
 else
     # Run selected files.  Convert each file name to uppercase and append "-TESTS"
     result=""
-    for f in $*
+    for f in "$@"
     do
-	new=`echo $f | tr '[a-z]' '[A-Z]'`
+	new=$(echo "$f" | tr '[:lower:]' '[:upper:]')
         result="$result "\"$new-TESTS\"
     done
     $LISP -nositeinit -noinit -load "$TESTDIR"/run-tests.lisp -eval "(progn (cmucl-test-runner:load-test-files) (cmucl-test-runner:run-test $result))"

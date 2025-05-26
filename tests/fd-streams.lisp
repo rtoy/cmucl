@@ -48,7 +48,7 @@
     (with-open-file (s test-file)
       (read-line s)
       (assert-true (file-position s 0))
-      (assert-equal (file-position s) 0))))
+      (assert-equal 0 (file-position s)))))
 
 (define-test file-position.2
     (:tag :issues)
@@ -65,7 +65,7 @@
     (with-open-file (s test-file)
       (read-line s)
       (assert-true (file-position s 0))
-      (assert-equal (file-position s) 0))))
+      (assert-equal 0 (file-position s)))))
 
 (define-test file-position.3
     (:tag :issues)
@@ -90,4 +90,4 @@
     (with-open-file (s test-file :external-format :utf-8)
       (read-line s)
       (assert-true (file-position s 0))
-      (assert-equal (file-position s) 0))))
+      (assert-equal 0 (file-position s)))))
