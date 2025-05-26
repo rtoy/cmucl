@@ -113,6 +113,9 @@ linux:install:
   variables:
     osname: "linux"
     CURL: "curl"
+  # These rules are needed so that the static analyzer job can run on a
+  # schedule because this is a prerequisite of the analyzer build.  A
+  # regular push or merge request does the normal stuff.
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "push"
@@ -125,6 +128,9 @@ linux:build:
   needs:
     - job: linux:install
       artifacts: true
+  # These rules is needed so that the static analyzer job can run on a
+  # schedule because this is a prerequisite of the analyzer build.  A
+  # regular push or merge request does the normal stuff.
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "push"
@@ -266,6 +272,9 @@ osx:benchmark:
 # the linux-4 directory built in the linux:build job.
 linux:static-analyzer:
   stage: analyze
+  # The analyzer is a manual job that isn't normally run.  These rules
+  # make that happen, but when the pipeline is scheduled we do run the
+  # analyzer. 
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
