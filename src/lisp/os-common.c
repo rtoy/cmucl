@@ -939,7 +939,6 @@ os_get_user_homedir(const char* name, int *status)
     return NULL;
 }
 
-
 /*
  * Return a new string (or NULL) for the current working directory.
  * The caller must free this space.
@@ -972,7 +971,7 @@ os_temp_path()
     if (pathSize == 0 || pathSize > PATH_MAX) {
 	strlcpy(path, "/tmp", sizeof(path));
     }
-    
+
     return strdup(path);
 #else
     /*
@@ -984,7 +983,7 @@ os_temp_path()
     if (tmp_path == NULL) {
 	tmp_path = "/tmp";
     }
-    
+
     return strdup(tmp_path);
-#endif    
+#endif
 }
