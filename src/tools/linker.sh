@@ -11,8 +11,6 @@
 # This is used for Linux/x86, Darwin/x86, and Solaris/sparc, as
 # specified in src/lisp/elf.h.
 
-OPSYS=`uname`
-
 if [ "X$CMU_DEBUG_LINKER" != "X" ]; then
     # Enable debugging if CMU_DEBUG_LINKER is defined and not empty.
     set -x
@@ -26,7 +24,7 @@ fi
 # - the address of the start of the static space
 # - the address of the start of the dynamic space
 if [ $# -ne 6 ]; then
-    echo "Usage: `basename $0` <c-compiler> <initial-func-addr> <executable> <ro-addr> <static-addr> <dyn-addr>"
+    echo "Usage: $(basename "$0") <c-compiler> <initial-func-addr> <executable> <ro-addr> <static-addr> <dyn-addr>"
     exit 1
 fi
 
@@ -35,19 +33,18 @@ IFADDR=$2
 EXEC=$3
 
 # Figure out the directory and file name of the executable.
-OUTDIR=`dirname $EXEC`
-OUTNAME=`basename $EXEC`
+OUTDIR=$(dirname "$EXEC")
+OUTNAME=$(basename "$EXEC")
 
 # This tells us where the cmu lisp executable is and also the
 # locations of lisp.a.
-CMUCLLIB=`dirname $0`
-
+CMUCLLIB=$(dirname "$0")
 # Name of file where we write the actual initial function address.
 OPT_IFADDR="cmu-ifaddr-$$.c"
 # Names of the core sections from Lisp.
 OPT_CORE="CORRO.o CORSTA.o CORDYN.o"
 
-uname_s=`uname`
+uname_s=$(uname)
 case $uname_s in
   Linux|FreeBSD|NetBSD)
       # How to specify the starting address for each of the sections
@@ -87,7 +84,7 @@ case $uname_s in
       # Specify how to link the entire lisp.a library
       OPT_ARCHIVE="-all_load $CMUCLLIB/lisp.a"
 
-      case `uname -p` in
+      case $(uname -p) in
 	i386)
 	    # Extra stuff.  For some reason one __LINKEDIT segment is
 	    # mapped just past the dynamic space.  This messes things
@@ -133,7 +130,7 @@ esac
 # Remove the C file and core section files when we're done.
 trap 'rm -f $OUTDIR/$OPT_IFADDR $OUTDIR/CORRO.o $OUTDIR/CORSTA.o $OUTDIR/CORDYN.o' 0
 
-(cd $OUTDIR
+(cd "$OUTDIR" || exit
 echo "long initial_function_addr = $IFADDR;" > $OPT_IFADDR
 $CCOMPILER -m32 -o $OUTNAME $OPT_IFADDR $OPT_ARCHIVE $CMUCLLIB/exec-final.o $OPT_CORE $RO_ADDR $STATIC_ADDR $DYN_ADDR $OPT_EXTRA $OS_LIBS -lm)
 
