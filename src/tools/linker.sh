@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # $Id: linker.sh,v 1.16 2010/12/23 03:16:56 rtoy Exp $
 
@@ -42,7 +42,7 @@ CMUCLLIB=$(dirname "$0")
 # Name of file where we write the actual initial function address.
 OPT_IFADDR="cmu-ifaddr-$$.c"
 # Names of the core sections from Lisp.
-OPT_CORE="CORRO.o CORSTA.o CORDYN.o"
+OPT_CORE=(CORRO.o CORSTA.o CORDYN.o)
 
 uname_s=$(uname)
 case $uname_s in
@@ -58,16 +58,16 @@ case $uname_s in
       #OPT_IF ADDR="-Wl,--defsym -Wl,initial_function_addr=$IFADDR"
 
       # Specify how to link the entire lisp.a library
-      OPT_ARCHIVE="-Wl,--whole-archive -Wl,$CMUCLLIB/lisp.a -Wl,--no-whole-archive"
+      OPT_ARCHIVE=("-Wl,--whole-archive" "-Wl,""$CMUCLLIB"/lisp.a "-Wl,--no-whole-archive")
 
       # Extra stuff.
 
-      OPT_EXTRA="-rdynamic"
+      OPT_EXTRA=(-rdynamic)
 
       # See Config.x86_${uname_s}
       case $uname_s in
-	Linux) OS_LIBS=-ldl;;
-	FreeBSD) OS_LIBS="-B/usr/lib32 -lutil";;
+	Linux) OS_LIBS=(-ldl);;
+	FreeBSD) OS_LIBS=(-B/usr/lib32 -lutil);;
       esac
       ;;
   Darwin)
@@ -77,12 +77,12 @@ case $uname_s in
       # if we don't set them up correctly, vmmap complains when run on
       # the resulting executable.  There's no harm in specifying them
       # here, though; the addresses are ignored by map_core_sections.
-      RO_ADDR="-segaddr CORRO $4"
-      STATIC_ADDR="-segaddr CORSTA $5"
-      DYN_ADDR="-segaddr CORDYN $6"
+      RO_ADDR=(-segaddr CORRO "$4")
+      STATIC_ADDR=(-segaddr CORSTA "$5")
+      DYN_ADDR=(-segaddr CORDYN "$6")
 
       # Specify how to link the entire lisp.a library
-      OPT_ARCHIVE="-all_load $CMUCLLIB/lisp.a"
+      OPT_ARCHIVE=(-all_load "$CMUCLLIB"/lisp.a)
 
       case $(uname -p) in
 	i386)
@@ -91,16 +91,16 @@ case $uname_s in
 	    # up, so we move it to another address.  This seems to be
 	    # free, at least on 10.5.  -no_pie is to get rid of the
 	    # linker warning about PIE.
-	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -rdynamic -Wl,-no_pie"
-	    OS_LIBS=
+	    OPT_EXTRA=(-segaddr __LINKEDIT 0x99000000 -rdynamic "-Wl,-no_pie")
+	    OS_LIBS=()
 	    ;;
 	powerpc)
 	    # See Config.ppc_darwin Like i386, __LINKEDIT is linked
 	    # just after the dynamic space which messes things up, so
 	    # we move it to a diffferent address. The address below
 	    # appears to be free.
-	    OPT_EXTRA="-segaddr __LINKEDIT 0x99000000 -static-libgcc"
-	    OS_LIBS="-lSystem -lc -lm"
+	    OPT_EXTRA=(-segaddr __LINKEDIT 0x99000000 -static-libgcc)
+	    OS_LIBS=(-lSystem -lc -lm)
 	    ;;
       esac
       ;;
@@ -115,14 +115,14 @@ case $uname_s in
       # map_core_sections does that for us on sparc.
 
       # Specify how to link the entire lisp.a library
-      OPT_ARCHIVE="-Xlinker -z -Xlinker allextract -Xlinker $CMUCLLIB/lisp.a -Xlinker -z -Xlinker defaultextract"
+      OPT_ARCHIVE=(-Xlinker -z -Xlinker allextract -Xlinker "$CMUCLLIB"/lisp.a -Xlinker -z -Xlinker defaultextract)
 
       # Extra stuff.
 
-      OPT_EXTRA="-Bdynamic"
+      OPT_EXTRA=(-Bdynamic)
 
       # See Config.sparc_sunc
-      OS_LIBS="-lsocket -lnsl -ldl -lrt"
+      OS_LIBS=(-lsocket -lnsl -ldl -lrt)
       ;;
 
 esac
@@ -132,5 +132,5 @@ trap 'rm -f $OUTDIR/$OPT_IFADDR $OUTDIR/CORRO.o $OUTDIR/CORSTA.o $OUTDIR/CORDYN.
 
 (cd "$OUTDIR" || exit
 echo "long initial_function_addr = $IFADDR;" > $OPT_IFADDR
-$CCOMPILER -m32 -o $OUTNAME $OPT_IFADDR $OPT_ARCHIVE $CMUCLLIB/exec-final.o $OPT_CORE $RO_ADDR $STATIC_ADDR $DYN_ADDR $OPT_EXTRA $OS_LIBS -lm)
+$CCOMPILER -m32 -o "$OUTNAME" $OPT_IFADDR "${OPT_ARCHIVE[@]}" "$CMUCLLIB"/exec-final.o "${OPT_CORE[@]}" "${RO_ADDR[@]}" "${STATIC_ADDR[@]}" "${DYN_ADDR[@]}" "${OPT_EXTRA[@]}" "${OS_LIBS[@]}" -lm)
 
