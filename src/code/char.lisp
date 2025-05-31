@@ -95,13 +95,21 @@
          (stage2-offset (alien:deref case-mapping index1)))
     (alien:deref stage2 (+ stage2-offset index2))))
 
+(declaim (inline get-lower-case-entry))
+(defun get-lower-case-entry (code)
+  (ldb +lower-case-entry+ (case-mapping-entry code)))
+
 (declaim (inline case-mapping-lower-case))
 (defun case-mapping-lower-case (code)
   "Compute the lower-case character code for the given character CODE.
   If no lower-case code exists, just return CODE."
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3)))
-  (ldb (byte 16 0) (- code (ldb +lower-case-entry+ (case-mapping-entry code)))))
+  (ldb (byte 16 0) (- code (get-lower-case-entry code))))
+
+(declaim (inline get-upper-case-entry))
+(defun get-upper-case-entry (code)
+  (ldb +upper-case-entry+ (case-mapping-entry code)))
 
 (declaim (inline case-mapping-upper-case))
 (defun case-mapping-upper-case (code)
@@ -109,7 +117,7 @@
   If no upper-case code exists, just return CODE."
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3)))
-  (ldb (byte 16 0) (- code (ldb +upper-case-entry+ (case-mapping-entry code)))))
+  (ldb (byte 16 0) (- code (get-upper-case-entry code))))
 
 (macrolet ((frob (char-names-list)
 	     (collect ((results))
@@ -285,7 +293,7 @@
     (or (<= (char-code #\A) m (char-code #\Z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
-             (not (zerop (ldb +lower-case-entry+ (case-mapping-entry m))))))))
+             (not (zerop (get-lower-case-entry m)))))))
 
 
 (defun lower-case-p (char)
@@ -296,7 +304,7 @@
     (or (<= (char-code #\a) m (char-code #\z))
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
-             (not (zerop (ldb +upper-case-entry+ (case-mapping-entry m))))))))
+             (not (zerop (get-upper-case-entry m)))))))
 
 (defun both-case-p (char)
   "The argument must be a character object.  Both-case-p returns T if the
