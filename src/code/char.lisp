@@ -96,6 +96,7 @@
          (stage2-offset (alien:deref case-mapping index1)))
     (+ stage2-offset index2)))
 
+#+nil
 (declaim (inline case-mapping-entry))
 #+nil
 (defun case-mapping-entry (code)
@@ -110,6 +111,7 @@
                       code))
          (stage2-offset (alien:deref case-mapping index1)))
     (alien:deref stage2 (+ stage2-offset index2))))
+#+nil
 (defun case-mapping-entry (code)
   "For the character code, CODE, the 32-bit value from the
   case mapping table that indicates the delta between CODE and the
@@ -120,7 +122,8 @@
 
 (declaim (inline get-lower-case-entry))
 (defun get-lower-case-entry (code)
-  (ldb +lower-case-entry+ (case-mapping-entry code)))
+  (ldb +lower-case-entry+
+       (alien:deref stage2 (case-mapping-offset code))))
 
 (declaim (inline case-mapping-lower-case))
 (defun case-mapping-lower-case (code)
@@ -132,7 +135,8 @@
 
 (declaim (inline get-upper-case-entry))
 (defun get-upper-case-entry (code)
-  (ldb +upper-case-entry+ (case-mapping-entry code)))
+  (ldb +upper-case-entry+
+       (alien:deref stage2 (case-mapping-offset code))))
 
 (declaim (inline case-mapping-upper-case))
 (defun case-mapping-upper-case (code)
