@@ -81,7 +81,23 @@
   "Number of bits used for the index of the second stage table of the
   case mapping table.")
 
+
+(declaim (inline case-mapping-offset))
+(defun case-mapping-offset (code)
+  "For the character code, CODE, the 32-bit value from the
+  case mapping table that indicates the delta between CODE and the
+  corresponding upper or lower case character for CODE."
+  (declare (type (integer 0 (#.char-code-limit)) code)
+           (optimize (speed 3) (safety 0)))
+  (let* ((index1 (ldb (byte (- 16 +stage2-size+) +stage2-size+)
+                      code))
+         (index2 (ldb (byte +stage2-size+ 0)
+                      code))
+         (stage2-offset (alien:deref case-mapping index1)))
+    (+ stage2-offset index2)))
+
 (declaim (inline case-mapping-entry))
+#+nil
 (defun case-mapping-entry (code)
   "For the character code, CODE, the 32-bit value from the
   case mapping table that indicates the delta between CODE and the
@@ -94,6 +110,13 @@
                       code))
          (stage2-offset (alien:deref case-mapping index1)))
     (alien:deref stage2 (+ stage2-offset index2))))
+(defun case-mapping-entry (code)
+  "For the character code, CODE, the 32-bit value from the
+  case mapping table that indicates the delta between CODE and the
+  corresponding upper or lower case character for CODE."
+  (declare (type (integer 0 (#.char-code-limit)) code)
+           (optimize (speed 3) (safety 0)))
+  (alien:deref stage2 (case-mapping-offset code)))
 
 (declaim (inline get-lower-case-entry))
 (defun get-lower-case-entry (code)
