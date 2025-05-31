@@ -329,6 +329,7 @@
 	(and (> m +ascii-limit+)
              (not (zerop (get-upper-case-entry m)))))))
 
+#+nil
 (defun both-case-p (char)
   "The argument must be a character object.  Both-case-p returns T if the
   argument is an alphabetic character and if the character exists in
@@ -340,6 +341,19 @@
 	#+(and unicode (not unicode-bootstrap))
 	(and (> m +ascii-limit+)
              (not (zerop (case-mapping-entry m)))))))
+
+(defun both-case-p (char)
+  "The argument must be a character object.  Both-case-p returns T if the
+  argument is an alphabetic character and if the character exists in
+  both upper and lower case.  For ASCII, this is the same as Alpha-char-p."
+  (declare (character char))
+  (let ((m (char-code char)))
+    (or (<= (char-code #\A) m (char-code #\Z))
+        (<= (char-code #\a) m (char-code #\z))
+	#+(and unicode (not unicode-bootstrap))
+	(and (> m +ascii-limit+)
+             (not (and (zerop (get-lower-case-entry m))
+		       (zerop (get-upper-case-entry m))))))))
 
 
 (defun digit-char-p (char &optional (radix 10.))
