@@ -70,7 +70,7 @@
     (alien:array c-call:unsigned-short 1024))
 
 (alien:def-alien-variable "stage2"
-    (alien:array c-call:unsigned-int nil))
+    (alien:array c-call:unsigned-short nil))
 
 ;; Each entry in the case mapping table consists of the code for
 ;; either an upper case or lower case character code.
@@ -121,9 +121,12 @@
   (alien:deref stage2 (case-mapping-offset code)))
 
 (declaim (inline get-lower-case-entry))
+#+nil
 (defun get-lower-case-entry (code)
   (ldb +lower-case-entry+
        (alien:deref stage2 (case-mapping-offset code))))
+(defun get-lower-case-entry (code)
+  (alien:deref stage2 (* 2 (case-mapping-offset code))))
 
 (declaim (inline case-mapping-lower-case))
 (defun case-mapping-lower-case (code)
@@ -134,9 +137,12 @@
   (ldb (byte 16 0) (- code (get-lower-case-entry code))))
 
 (declaim (inline get-upper-case-entry))
+#+nil
 (defun get-upper-case-entry (code)
   (ldb +upper-case-entry+
        (alien:deref stage2 (case-mapping-offset code))))
+(defun get-upper-case-entry (code)
+  (alien:deref stage2 (+ 1 (* 2 (case-mapping-offset code)))))
 
 (declaim (inline case-mapping-upper-case))
 (defun case-mapping-upper-case (code)
