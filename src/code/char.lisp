@@ -126,7 +126,7 @@
   (ldb +lower-case-entry+
        (alien:deref stage2 (case-mapping-offset code))))
 (defun get-lower-case-entry (code)
-  (alien:deref stage2 (* 2 (case-mapping-offset code))))
+  (alien:deref stage2 (+ 1 (* 2 (case-mapping-offset code)))))
 
 (declaim (inline case-mapping-lower-case))
 (defun case-mapping-lower-case (code)
@@ -142,7 +142,7 @@
   (ldb +upper-case-entry+
        (alien:deref stage2 (case-mapping-offset code))))
 (defun get-upper-case-entry (code)
-  (alien:deref stage2 (+ 1 (* 2 (case-mapping-offset code)))))
+  (alien:deref stage2 (* 2 (case-mapping-offset code))))
 
 (declaim (inline case-mapping-upper-case))
 (defun case-mapping-upper-case (code)
