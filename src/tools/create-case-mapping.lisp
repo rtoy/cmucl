@@ -107,13 +107,10 @@
   ;; the all-zeroes array because of the sparse entries in the table.
   (assert (null (aref table 0)))
 
-  (format stream "~2%const uint16_t stage2_~A[~D] = {~%"
+  (format stream "~2%const uint16_t stage2_~A[] = {~%"
 	  (if (eq case-table :lower)
 	      "lowercase"
-	      "uppercase")
-	  (loop for s2 across table
-		when s2
-		  sum (length s2)))
+	      "uppercase"))
   (flet ((print-table (header table stream)
 	   
 	   (let ((table-byte (if (eq case-table :lower)
