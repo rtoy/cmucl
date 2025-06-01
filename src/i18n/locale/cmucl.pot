@@ -5457,9 +5457,24 @@ msgstr ""
 
 #: src/code/char.lisp
 msgid ""
-"For the character code, CODE, the 32-bit value from the\n"
-"  case mapping table that indicates the delta between CODE and the\n"
-"  corresponding upper or lower case character for CODE."
+"For the character code, CODE, returns the index from the\n"
+"  case mapping table that can be used as the index into the upper or\n"
+"  lower case tables to find the offset to be applied to CODE to\n"
+"  produce the desired upper or lower case character."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"Given the character code CODE, returns the entry from the lowercase\n"
+" table that can be applied to CODE to give the lowercase version of\n"
+" CODE."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"Given the character code CODE, returns the entry from the uppercase\n"
+" table that can be applied to CODE to give the lowercase version of\n"
+" CODE."
 msgstr ""
 
 #: src/code/char.lisp
