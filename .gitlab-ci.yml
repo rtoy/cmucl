@@ -102,6 +102,7 @@ stages:
   - ansi-test
   - benchmark
   - analyze
+  - markdown-link-check
 
 cache:
 
@@ -336,3 +337,25 @@ opensuse:ansi-test:
     - job: opensuse:build
       artifacts: true
 
+# Optional job that runs the markdown link checker.  This is optional
+# because it's very slow, of course; you have to run it manually.
+#
+# From https://github.com/tcort/markdown-link-check
+# Checks links on the wiki pages whenever any wiki markdown pages change. 
+markdown-link-check:
+  stage: markdown-link-check
+  when: manual
+  # Only the linux runner has markdown-link-check installed
+  tags:
+    - linux
+  # It's ok if this fails; we don't want to declare the entire
+  # pipeline as having failed.
+  allow_failure: true
+  script:
+    # Check links in the main repo
+    - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
+    # Clone the wiki pages and check the links there.  Lots of
+    # failures here because of
+    # https://gitlab.com/gitlab-org/gitlab/-/issues/17845.
+    - git clone https://gitlab.common-lisp.net/cmucl/cmucl.wiki.git
+    - find cmucl.wiki -name \*.md -print0 | xargs -0 -n1 markdown-link-check
