@@ -1597,15 +1597,6 @@
       (unless (null-alien result)
 	(free-alien result)))))
 
-(defun unix-resolve-links (pathname)
-  _N"Returns the pathname with all symbolic links resolved."
-  (declare (simple-string pathname))
-  (let ((resolved (unix:unix-realpath pathname)))
-    (if (and resolved (eq (unix-file-kind resolved) :directory))
-	;; Append a "/" if the path is a directory.
-	(concatenate 'string resolved "/")
-	resolved)))
-
 
 (def-alien-routine ("os_get_errno" unix-get-errno) int)
 (def-alien-routine ("os_set_errno" unix-set-errno) int (newvalue int))

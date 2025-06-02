@@ -1154,15 +1154,3 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
-(define-test issue.400
-    (:tag :issues)
-  (let* ((pl 50)
-	 (nl 250)
-         (p (append (pathname-directory (ext:default-directory))
-                    (list "tmp")
-                    (list (make-string pl :initial-element #\a))))
-         (n (make-string nl :initial-element #\b))
-         (pn (make-pathname :name n :directory p)))
-    (ensure-directories-exist pn)
-    (close (open pn :direction :output :if-exists :supersede))
-    (assert-true (unix::unix-resolve-links (namestring pn)))))
