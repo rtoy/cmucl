@@ -316,8 +316,8 @@ opensuse:ansi-test:
 #
 # From https://github.com/tcort/markdown-link-check
 # Checks links on the wiki pages whenever any wiki markdown pages change. 
-linkchecker:
-  stage: link-check
+markdown-link-check:
+  stage: markdown-link-check
   when: manual
   # Only the linux runner has markdown-link-check installed
   tags:
