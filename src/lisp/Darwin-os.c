@@ -589,8 +589,8 @@ os_temporary_directory(void)
      */
     char path[PATH_MAX];
 
-    int pathSize = confstr(_CS_DARWIN_USER_TEMP_DIR, path, PATH_MAX);
-    if (pathSize == 0 || pathSize > PATH_MAX) {
+    int path_size = confstr(_CS_DARWIN_USER_TEMP_DIR, path, PATH_MAX);
+    if (path_size == 0 || path_size > PATH_MAX) {
 	strlcpy(path, "/tmp", sizeof(path));
     }
 
