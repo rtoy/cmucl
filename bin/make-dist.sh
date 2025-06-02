@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Build a binary distribution of CMUCL.  This script takes the result
 # from build.sh and packages up everything into two tarballs.  One
@@ -164,7 +164,7 @@ TARGET="$(echo "$1" | sed 's:/*$::')"
 # Choose a version based on the git hash as the default version.  We
 # only compute a default if the git hash looks like a snapshot
 # ("snapshot-yyyy-mm") or a release number..
-DEFAULT_VERSION="$("$TARGET"/lisp/lisp --version)"
+DEFAULT_VERSION="$("$TARGET/lisp/lisp" --version)"
 
 if [ -z "$VERSION" ]; then
     # If a default version exists, use it. Otherwise this is an
@@ -179,28 +179,29 @@ fi
 
 echo INSTALL_DIR = "$INSTALL_DIR"
 
-echo cmucl-"$VERSION"-"$ARCH"-"$OS"
+echo "cmucl-$VERSION-$ARCH-$OS"
 ROOT=$(dirname "$0")
 
-GTAR_OPTS="-t ${GTAR:-tar}"
-EXTRA_OPTS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}}"
-INSTALL_OPTS="${INSTALL_DIR:+ -I ${INSTALL_DIR}}"
-MANDIR="${MANDIR:+ -M ${MANDIR}}"
-OPTIONS="${GTAR_OPTS} ${EXTRA_OPTS} ${INSTALL_OPTS}"
+GTAR_OPTS=(-t "${GTAR:-tar}")
+EXTRA_OPTS=(${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}})
+INSTALL_OPTS=(${INSTALL_DIR:+ -I ${INSTALL_DIR}})
+OPTIONS=("${GTAR_OPTS[@]}" "${EXTRA_OPTS[@]}" "${INSTALL_OPTS[@]}")
 
 set -x
 echo Creating distribution for "$ARCH" "$OS"
+
+run_script () {
+    "$ROOT"/"$SCRIPT" -C "$COMPRESS" -E "$COMPRESS_EXT" "${OPTIONS[@]}" "$@"
+}
+
 make_main () {
-    # shellcheck disable=SC2086
-    "$ROOT"/make-main-dist.sh -C "$COMPRESS" -E "$COMPRESS_EXT" $OPTIONS ${MANDIR} "$@"
+    SCRIPT=make-main-dist.sh run_script ${MANDIR:+ -M ${MANDIR}} "$@"
 }
 make_extra () {
-    # shellcheck disable=SC2086
-    "$ROOT"/make-extra-dist.sh -C "$COMPRESS" -E "$COMPRESS_EXT" $OPTIONS "$@"
+    SCRIPT=make-extra-dist.sh run_script "$@"
 }
 make_src () {
-    # shellcheck disable=SC2086
-    "$ROOT"/make-src-dist.sh -C "$COMPRESS" -E "$COMPRESS_EXT" $OPTIONS "$@"
+    SCRIPT=make-src-dist.sh run_script "$@"
 }
 
 make_main "$TARGET" "$VERSION" "$ARCH" "$OS" || exit 1

@@ -53,7 +53,7 @@ if [ -z "$COMPRESS_EXT" ]; then
     exit 2
 fi
 
-if [ "$1" = "" ] || [ "$2" = "" ] || [ "$3" = "" ] || [ "$4" = "" ]
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]
 then
     usage
 fi
@@ -142,13 +142,13 @@ installit -d -m 0755 "$DESTDIR"/"$CMUCLLIBVER"
 installit -d -m 0755 "$DESTDIR"/"$CMUCLLIBVER"/lib
 installit -d -m 0755 "$DESTDIR"/"$CMUCLLIBVER"/lib/subsystems
 installit -d -m 0755 "$DESTDIR"/"$CMUCLLIBVER"/lib/ext-formats
-installit -d -m 0755 "$DESTDIR"/"${DOCDIR}"
-installit -d -m 0755 "$DESTDIR"/"${MANDIR}"
+installit -d -m 0755 "$DESTDIR"/"$DOCDIR"
+installit -d -m 0755 "$DESTDIR"/"$MANDIR"
 installit -m 0755 "$TARGET"/lisp/lisp "$DESTDIR"/bin/lisp-"$VERSION"
 # Install symlink for lisp
 (cd "$DESTDIR"/bin || exit 1; ln -fs lisp-"$VERSION" lisp)
 # Install symlink for man pages
-(cd "$DESTDIR"/"${MANDIR}" || exit 1
+(cd "$DESTDIR"/"$MANDIR" || exit 1
  ln -fs lisp-"$VERSION".1 lisp.1
  ln -fs cmucl-"$VERSION".1 cmucl.1)
 
