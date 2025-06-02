@@ -571,3 +571,28 @@ os_support_sse2()
     return TRUE;
 }
 #endif
+
+/*
+ * Return a new string containing the path to an OS-dependent location
+ * where temporary files/directories can be stored.  If NULL is
+ * returned, such a location could not be found or some other error
+ * happened.
+ *
+ * Caller must call free() on the string returned.
+ */
+char *
+os_temporary_directory(void)
+{
+    /*
+     * macosx has a secure per-user temporary directory.
+     * Don't cache the result as this is only called once.
+     */
+    char path[PATH_MAX];
+
+    int pathSize = confstr(_CS_DARWIN_USER_TEMP_DIR, path, PATH_MAX);
+    if (pathSize == 0 || pathSize > PATH_MAX) {
+	strlcpy(path, "/tmp", sizeof(path));
+    }
+
+    return strdup(path);
+}

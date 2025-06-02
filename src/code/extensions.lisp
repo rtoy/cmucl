@@ -618,7 +618,7 @@
   "Get a path to an appropriate temporary location from the OS.  A string
   is returned to that path.  The path ends with a \"/\" character."
   (let ((path (alien:alien-funcall
-	       (alien:extern-alien "os_temp_path"
+	       (alien:extern-alien "os_temporary_directory"
 				   (function (alien:* c-call:char))))))
     (when (alien:null-alien path)
       (error "Unable to find path to temporary directory"))

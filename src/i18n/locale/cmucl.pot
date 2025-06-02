@@ -5992,6 +5992,33 @@ msgid ""
 "  course) change at arbitary times."
 msgstr ""
 
+#: src/code/extensions.lisp
+msgid ""
+"Get a path to an appropriate temporary location from the OS.  A string\n"
+"  is returned to that path.  The path ends with a \"/\" character."
+msgstr ""
+
+#: src/code/extensions.lisp
+msgid "Return a stream to a temporary file that is automatically created."
+msgstr ""
+
+#: src/code/extensions.lisp
+msgid ""
+"Creates a temporary file with a name bound to Filename which a\n"
+" namestring.  If Prefix is not provided, the temporary file is created\n"
+" in a OS-dependent location.  Otherwise the prefix is used as a prefix\n"
+" for the name.  On completion, the file is automatically removed."
+msgstr ""
+
+#: src/code/extensions.lisp
+msgid ""
+"Return a namestring to a temporary directory.  If Prefix is not\n"
+" provided, the directory is created in an OS-dependent location.\n"
+" Otherwise, the Prefix is a string that is used as a prefix for the\n"
+" name of the temporary directory.  The directory and all its contents\n"
+" are automatically removed afterward."
+msgstr ""
+
 #: src/code/commandline.lisp
 msgid "A list of all the command line arguments after --"
 msgstr ""

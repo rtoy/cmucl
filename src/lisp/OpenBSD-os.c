@@ -190,3 +190,27 @@ os_install_interrupt_handlers(void)
     interrupt_install_low_level_handler(SIGSEGV, sigsegv_handler);
     interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
 }
+
+/*
+ * Return a new string containing the path to an OS-dependent location
+ * where temporary files/directories can be stored.  If NULL is
+ * returned, such a location could not be found or some other error
+ * happened.
+ *
+ * Caller must call free() on the string returned.
+ */
+char *
+os_temporary_directory(void)
+{
+    /*
+     * If the TMP envvar is set, use that as the temporary directory.
+     * Otherwise, just assume "/tmp" will work.
+     */
+    char *tmp_path = getenv("TMP");
+
+    if (tmp_path == NULL) {
+	tmp_path = "/tmp";
+    }
+
+    return strdup(tmp_path);
+}
