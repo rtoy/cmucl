@@ -23,6 +23,7 @@
 #include <dlfcn.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include "os.h"
 #include "arch.h"
