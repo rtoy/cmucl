@@ -102,7 +102,7 @@ stages:
   - ansi-test
   - benchmark
   - analyze
-  - link-check
+  - markdown-link-check
 
 cache:
 
