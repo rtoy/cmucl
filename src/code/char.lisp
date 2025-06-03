@@ -94,7 +94,9 @@
          (index2 (ldb (byte +stage2-size+ 0)
                       code))
          (stage2-offset (alien:deref case-mapping index1)))
-    (+ stage2-offset index2)))
+    ;; stage2-offset is offset into stage2 assuming stage2 has 32-bit
+    ;; entries.  Multiply by 2 to get a 16-bit offset.
+    (* 2 (+ stage2-offset index2))))
 
 #+nil
 (declaim (inline case-mapping-entry))
@@ -126,7 +128,7 @@
   (ldb +lower-case-entry+
        (alien:deref stage2 (case-mapping-offset code))))
 (defun get-lower-case-entry (code)
-  (alien:deref stage2 (+ 1 (* 2 (case-mapping-offset code)))))
+  (alien:deref stage2 (+ 1 (case-mapping-offset code))))
 
 (declaim (inline case-mapping-lower-case))
 (defun case-mapping-lower-case (code)
