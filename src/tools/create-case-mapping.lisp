@@ -119,7 +119,7 @@
 	    stage2-size)
     (format stream "#include <stdint.h>~%")
     (format stream "#include <stddef.h>~%")
-    (format stream "~2%const uint32_t stage2[] = {~%")
+    (format stream "~2%const uint16_t stage2[] = {~%")
     (flet ((print-table (header table stream)
              ;; Neatly print the table TABLE to STREAM.  Each table is
              ;; preceded by a C comment in HEADER.  The entries are
@@ -131,8 +131,12 @@
 		 (write-char #\, stream)
 		 (write-char #\space stream)
 		 (pprint-newline :fill stream))
-	       ;;(pprint-pop)
-	       (format stream "0x~8,'0x" (aref table n)))
+	       ;; Print the table entry as 2 16-bit words.  The first
+	       ;; word is for the upper case offset and the second
+	       ;; word is for the lower case entry.
+	       (format stream "0x~4,'0x" (ldb (byte 16 0) (aref table n)))
+	       (format stream ", 0x~4,'0x" (ldb (byte 16 16) (aref table n)))
+	       )
 	     (princ #\, stream)
 	     (pprint-newline :mandatory stream)))
       (let ((index 0)
@@ -153,7 +157,10 @@
 				    stream))))
 	(format stream "};~%")
     
-	;; Now dump the stage1 table
+	;; Now dump the stage1 table.  Each entry is a 32-bit word
+	;; offset into stage2 table.  Thus increasing the offset by
+	;; one skips over both the upper case and lower case entries
+	;; in the stage2 table.
 	(format stream "~2%const uint16_t case_mapping[~D] = {~%"
 		(length table))
 	(setf offsets (nreverse offsets))
