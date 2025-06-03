@@ -69,22 +69,24 @@
 (alien:def-alien-variable "case_mapping" 
     (alien:array c-call:unsigned-short 1024))
 
-(alien:def-alien-variable "stage2_lowercase"
-    (alien:array c-call:unsigned-short nil))
-(alien:def-alien-variable "stage2_uppercase"
+(alien:def-alien-variable "stage2"
     (alien:array c-call:unsigned-short nil))
 
-;; This MUST match the value used in creating the case tables in C.
+;; Each entry in the case mapping table consists of the code for
+;; either an upper case or lower case character code.
+(defconstant +upper-case-entry+ (byte 16 0))
+(defconstant +lower-case-entry+ (byte 16 16))
+
 (defconstant +stage2-size+ 6
   "Number of bits used for the index of the second stage table of the
   case mapping table.")
 
+
 (declaim (inline case-mapping-offset))
 (defun case-mapping-offset (code)
-  "For the character code, CODE, returns the index from the
-  case mapping table that can be used as the index into the upper or
-  lower case tables to find the offset to be applied to CODE to
-  produce the desired upper or lower case character."
+  "For the character code, CODE, the 32-bit value from the
+  case mapping table that indicates the delta between CODE and the
+  corresponding upper or lower case character for CODE."
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3) (safety 0)))
   (let* ((index1 (ldb (byte (- 16 +stage2-size+) +stage2-size+)
@@ -94,18 +96,37 @@
          (stage2-offset (alien:deref case-mapping index1)))
     (+ stage2-offset index2)))
 
-(declaim (inline get-lower-case-entry get-upper-case-entry))
-(defun get-lower-case-entry (code)
-  "Given the character code CODE, returns the entry from the lowercase
- table that can be applied to CODE to give the lowercase version of
- CODE."
-  (alien:deref stage2-lowercase (case-mapping-offset code)))
+#+nil
+(declaim (inline case-mapping-entry))
+#+nil
+(defun case-mapping-entry (code)
+  "For the character code, CODE, the 32-bit value from the
+  case mapping table that indicates the delta between CODE and the
+  corresponding upper or lower case character for CODE."
+  (declare (type (integer 0 (#.char-code-limit)) code)
+           (optimize (speed 3) (safety 0)))
+  (let* ((index1 (ldb (byte (- 16 +stage2-size+) +stage2-size+)
+                      code))
+         (index2 (ldb (byte +stage2-size+ 0)
+                      code))
+         (stage2-offset (alien:deref case-mapping index1)))
+    (alien:deref stage2 (+ stage2-offset index2))))
+#+nil
+(defun case-mapping-entry (code)
+  "For the character code, CODE, the 32-bit value from the
+  case mapping table that indicates the delta between CODE and the
+  corresponding upper or lower case character for CODE."
+  (declare (type (integer 0 (#.char-code-limit)) code)
+           (optimize (speed 3) (safety 0)))
+  (alien:deref stage2 (case-mapping-offset code)))
 
-(defun get-upper-case-entry (code)
-  "Given the character code CODE, returns the entry from the uppercase
- table that can be applied to CODE to give the lowercase version of
- CODE."
-  (alien:deref stage2-uppercase (case-mapping-offset code)))
+(declaim (inline get-lower-case-entry))
+#+nil
+(defun get-lower-case-entry (code)
+  (ldb +lower-case-entry+
+       (alien:deref stage2 (case-mapping-offset code))))
+(defun get-lower-case-entry (code)
+  (alien:deref stage2 (* 2 (case-mapping-offset code))))
 
 (declaim (inline case-mapping-lower-case))
 (defun case-mapping-lower-case (code)
@@ -114,6 +135,14 @@
   (declare (type (integer 0 (#.char-code-limit)) code)
            (optimize (speed 3)))
   (ldb (byte 16 0) (- code (get-lower-case-entry code))))
+
+(declaim (inline get-upper-case-entry))
+#+nil
+(defun get-upper-case-entry (code)
+  (ldb +upper-case-entry+
+       (alien:deref stage2 (case-mapping-offset code))))
+(defun get-upper-case-entry (code)
+  (alien:deref stage2 (+ 1 (* 2 (case-mapping-offset code)))))
 
 (declaim (inline case-mapping-upper-case))
 (defun case-mapping-upper-case (code)
