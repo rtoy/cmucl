@@ -210,11 +210,10 @@
     (let (errno-symbols)
       (do-external-symbols (sym "ERRNO")
 	(push (symbol-name sym) errno-symbols))
-      `(ext:without-package-locks
-	 (defpackage "UNIX"
-	   (:shadowing-import-from "ERRNO" ,@errno-symbols)
-	   (:export ,@errno-symbols)
-	   ,@body)))))
+      `(defpackage "UNIX"
+	 (:shadowing-import-from "ERRNO" ,@errno-symbols)
+	 (:export ,@errno-symbols)
+	 ,@body))))
 
 (define-unix-package
   (:export "UNIX-CURRENT-DIRECTORY"
