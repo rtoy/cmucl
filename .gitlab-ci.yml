@@ -344,13 +344,22 @@ opensuse:ansi-test:
 # Checks links on the wiki pages whenever any wiki markdown pages change. 
 markdown-link-check:
   stage: markdown-link-check
-  when: manual
+  # Run the checker when the pipeline is scheduled to run.
+  # It's ok if this fails; we don't want to declare the entire
+  # pipeline as having failed.
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
+
   # Only the linux runner has markdown-link-check installed
   tags:
     - linux
-  # It's ok if this fails; we don't want to declare the entire
-  # pipeline as having failed.
-  allow_failure: true
   script:
     # Check links in the main repo
     - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
