@@ -91,6 +91,9 @@
   (lock nil :type boolean)
   (definition-lock nil :type boolean)
 
+  ;; Package local nicknames
+  (%local-nicknames () :type list)
+
   ;; Documentation string for this package
   (doc-string nil :type (or simple-string null)))
 
@@ -923,8 +926,10 @@
      (:EXPORT {symbol-name}*)
      (:INTERN {symbol-name}*)
      (:SIZE <integer>)
+     (:LOCAL-NICKNAMES {({nickname package}*)})
    All options except :SIZE and :DOCUMENTATION can be used multiple times."
   (let ((nicknames nil)
+	(local-nicknames nil)
 	(size nil)
 	(shadows nil)
 	(shadowing-imports nil)
@@ -940,6 +945,12 @@
       (case (car option)
 	(:nicknames
 	 (setf nicknames (stringify-names (cdr option) "package")))
+	(:local-nicknames
+	 (format t "cdr option = ~A~%" (cdr option))
+	 (setf local-nicknames
+	       (mapcar #'(lambda (o)
+			   (stringify-names o "package"))
+		       (cdr option))))
 	(:size
 	 (cond (size
 		(simple-program-error (intl:gettext "Can't specify :SIZE twice.")))
@@ -994,9 +1005,9 @@
 		    `(:shadowing-import-from
 		      ,@(apply #'append (mapcar #'rest shadowing-imports))))
     `(eval-when (compile load eval)
-       (%defpackage ,(stringify-name package "package") ',nicknames ',size
-		    ',shadows ',shadowing-imports ',(if use-p use :default)
-		    ',imports ',interns ',exports ',doc))))
+       (%defpackage ,(stringify-name package "package") ',nicknames 
+		    ',size ',shadows ',shadowing-imports ',(if use-p use :default)
+		    ',imports ',interns ',exports ',doc ',local-nicknames))))
 
 (defun check-disjoint (&rest args)
   ;; Check whether all given arguments specify disjoint sets of symbols.
@@ -1014,9 +1025,9 @@
 				    key1 key2 common))))
 
 (defun %defpackage (name nicknames size shadows shadowing-imports
-			 use imports interns exports doc-string)
+			 use imports interns exports doc-string &optional local-nicknames)
   (declare (type simple-base-string name)
-	   (type list nicknames shadows shadowing-imports
+	   (type list nicknames local-nicknames shadows shadowing-imports
 		 imports interns exports)
 	   (type (or list (member :default)) use)
 	   (type (or simple-base-string null) doc-string))
@@ -1034,6 +1045,7 @@
 	     :format-control (intl:gettext "~A is a nick-name for the package ~A")
 	     :format-arguments (list name (package-name name))))
     (enter-new-nicknames package nicknames)
+    (enter-new-local-nicknames package local-nicknames)
     ;; Shadows and Shadowing-imports.
     (let ((old-shadows (package-%shadowing-symbols package)))
       (shadow shadows package)
@@ -1127,6 +1139,10 @@
 		      :format-arguments (list n (package-%name found))))
 	     (setf (gethash n *package-names*) package)
 	     (push n (package-%nicknames package)))))))
+
+(defun enter-new-local-nicknames (package local-nicknames)
+  ;; What kind of error checking is needed here?
+  (setf (package-%local-nicknames package) local-nicknames))
 
 
 ;;; Make-Package  --  Public
