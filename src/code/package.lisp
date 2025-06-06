@@ -432,7 +432,8 @@
 	 thing)
 	(t
 	 (let ((thing (package-namify thing)))
-	   (cond ((package-name-to-package thing))
+	   (cond ((local-nickname-to-package thing))
+		 ((package-name-to-package thing))
 		 (t
 		  ;; ANSI spec's type-error where this is called. But,
 		  ;; but the resulting message is somewhat unclear.
