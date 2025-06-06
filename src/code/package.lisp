@@ -400,6 +400,14 @@
                    (setq package tmp))
                  (relative-to package name))))))))
 
+(defun local-nickname-to-package (name)
+  ;; Skip all of this if we're doing package-init!
+  (unless *in-package-init*
+    (let ((nickname (assoc name (package-%local-nicknames *package*)
+			   :test #'string=)))
+      (when nickname
+	(package-name-to-package (second nickname))))))
+
 ;;; find-package  --  Public
 ;;;
 ;;;
@@ -408,7 +416,8 @@
   (if (packagep name)
       name
       (let ((name (package-namify name)))
-	(or (package-name-to-package name)
+	(or (local-nickname-to-package name)
+	    (package-name-to-package name)
 	    #+relative-package-names
 	    (relative-package-name-to-package name)))))
 
