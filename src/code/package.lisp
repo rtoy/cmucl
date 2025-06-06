@@ -2006,10 +2006,10 @@
 ;;; PACKAGE-LOCALLY-NICKNAMED-BY-LIST -- public
 ;;;
 (defun package-locally-nicknamed-by-list (package)
-  (let ((pkg-name (lisp::package-namestring package)))
+  (let ((pkg-name (package-namestring package)))
     (loop for p in (list-all-packages)
-	  when (find pkg-name (lisp::package-%local-nicknames p)
-		     :key #'second)
+	  when (find pkg-name (package-%local-nicknames p)
+		     :key #'cdr)
 	    collect p)))
 
 
