@@ -403,10 +403,8 @@
 (defun local-nickname-to-package (name)
   ;; Skip all of this if we're doing package-init!
   (unless *in-package-init*
-    (let ((nickname (assoc name (package-%local-nicknames *package*)
-			   :test #'string=)))
-      (when nickname
-	(package-name-to-package (second nickname))))))
+    (cdr (assoc name (package-%local-nicknames *package*)
+		:test #'string=))))
 
 ;;; find-package  --  Public
 ;;;
@@ -956,7 +954,6 @@
 	(:nicknames
 	 (setf nicknames (stringify-names (cdr option) "package")))
 	(:local-nicknames
-	 (format t "cdr option = ~A~%" (cdr option))
 	 (setf local-nicknames
 	       (mapcar #'(lambda (o)
 			   (stringify-names o "package"))
@@ -1151,8 +1148,17 @@
 	     (push n (package-%nicknames package)))))))
 
 (defun enter-new-local-nicknames (package local-nicknames)
-  ;; What kind of error checking is needed here?
-  (setf (package-%local-nicknames package) local-nicknames))
+  ;; What kind of error checking is needed here?  Convert the actual
+  ;; package to a package object if it isn't already.
+  (setf (package-%local-nicknames package)
+	(mapcar #'(lambda (entry)
+		    (destructuring-bind (nickname actual)
+			entry
+		      (cons nickname
+			    (if (packagep actual)
+				actual
+				(package-name-to-package (package-namify actual))))))
+		local-nicknames)))
 
 
 ;;; Make-Package  --  Public
@@ -1280,6 +1286,11 @@
 			      (mapcar #'package-name use-list))))
 	       (dolist (p use-list)
 		 (unuse-package package p))))
+	   (dolist (pkg (package-locally-nicknamed-by-list package))
+	     (setf (package-%local-nicknames pkg)
+		   (delete pkg
+			   (package-%local-nicknames pkg)
+			   :key #'cdr)))
 	   (dolist (used (package-use-list package))
 	     (unuse-package used package))
 	   (do-symbols (sym package)
@@ -1962,41 +1973,53 @@
 (defun package-local-nicknames (package)
   "Returns an alist of (local-nickname . actual-package) describing the
   nicknames local to Package."
-  (mapcar #'(lambda (pair)
-	      (cons (first pair)
-		    (lisp::package-name-to-package (second pair))))
-	  (lisp::package-%local-nicknames (lisp::package-name-to-package
-					   (lisp::stringify-name package "package")))))
+  ;; 
+  (copy-list (package-%local-nicknames
+	      (if (packagep package)
+		  package
+		  (package-name-to-package (package-namify package))))))
 
 ;;; ADD-PACKAGE-LOCAL-NICKNAME -- public.
 ;;;
-(defun add-package-local-nickname (local-nickname actual-package &optional package)
-  (let* ((pkg (lisp::package-name-to-package
-	       (lisp::stringify-name (or package *package*) "package")))
-	 (nicks (lisp::package-%local-nicknames pkg))
-	 (local-nickname (lisp::stringify-name local-nickname "package")))
+(defun add-package-local-nickname (local-nickname actual-package &optional (package *package*))
+  (let* ((pkg (if (packagep package)
+		  package
+		  (package-name-to-package (package-namify package))))
+	 (nicks (package-%local-nicknames pkg))
+	 (local-nickname (stringify-name local-nickname "package")))
     (when (find-if #'(lambda (nick)
 		       (string= nick local-nickname))
 		   nicks :key #'car)
-      (error "~A is already a local nickname in the package ~A"
-	     local-nickname pkg))
+      (error 'simple-package-error
+	     :package pkg
+	     :format-control (intl:gettext "~A is already a local nickname in the package ~A")
+	     :format-arguments (list local-nickname pkg)))
+
+    ;; The new LOCAL-NICKNAME can't be the same as PACKAGE.
+    (when (string= local-nickname (package-name pkg))
+      (error 'simple-package-error
+	     :package pkg
+	     :format-control (intl:gettext "~A cannot be a nickname for the package ~A")
+	     :format-arguments (list local-nickname pkg)))
     
-    (setf (lisp::package-%local-nicknames pkg)
-	  (push (list (lisp::stringify-name local-nickname "package")
-		      (lisp::stringify-name actual-package "package"))
+    (setf (package-%local-nicknames pkg)
+	  (push (cons (stringify-name local-nickname "package")
+		      (if (packagep actual-package)
+			  actual-package
+			  (package-name-to-package (package-namify actual-package))))
 		nicks))
     pkg))
 
 ;;; REMOVE-PACKAGE-LOCAL-NICKNAME -- public.
 ;;;
-(defun remove-package-local-nickname (old-nickname &optional package)
-  (let* ((old-nick (lisp::stringify-name old-nickname "package"))
-	 (pkg (if package
-		  (lisp::package-name-to-package (lisp::stringify-name package "package"))
-		  *package*))
-	 (nicks (lisp::package-%local-nicknames pkg))
+(defun remove-package-local-nickname (old-nickname &optional (package *package*))
+  (let* ((old-nick (stringify-name old-nickname "package"))
+	 (pkg (if (packagep package)
+		  package
+		  (package-name-to-package (package-namify package))))
+	 (nicks (package-%local-nicknames pkg))
 	 deletedp)
-    (setf (lisp::package-%local-nicknames pkg)
+    (setf (package-%local-nicknames pkg)
 	  (delete-if #'(lambda (local-nick)
 			 (when (string= local-nick old-nick)
 			   (setf deletedp t)))
