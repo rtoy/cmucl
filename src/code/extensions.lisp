@@ -658,6 +658,6 @@
   (let ((pkg-name (lisp::package-namestring package)))
     (loop for p in (list-all-packages)
 	  when (find pkg-name (lisp::package-%local-nicknames p)
-		     :key #'car)
+		     :key #'second)
 	    collect p)))
 		     
