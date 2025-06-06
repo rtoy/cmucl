@@ -12,6 +12,11 @@
 ;;; Bootstrap for adding %local-nicknames to package structure.
 (in-package :lisp)
 
+(intern "PACKAGE-LOCAL-NICKNAMES" "LISP")
+(intern	"ADD-PACKAGE-LOCAL-NICKNAME" "LISP")
+(intern	"REMOVE-PACKAGE-LOCAL-NICKNAME" "LISP")
+(intern	"PACKAGE-LOCALLY-NICKNAMED-BY-LIST" "LISP")
+
 ;; Make sure we don't accidentally load fasls from somewhere.
 (setf (ext:search-list "target:")
       '("src/"))

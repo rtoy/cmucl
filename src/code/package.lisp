@@ -1954,7 +1954,63 @@
 		     (result symbol))
 		 string package)
     (result)))
+
+;;;; Support for package local nicknames
 
+;;; PACKAGE-LOCAL-NICKNAMES  -- public.
+;;;
+(defun package-local-nicknames (package)
+  "Returns an alist of (local-nickname . actual-package) describing the
+  nicknames local to Package."
+  (mapcar #'(lambda (pair)
+	      (cons (first pair)
+		    (lisp::package-name-to-package (second pair))))
+	  (lisp::package-%local-nicknames (lisp::package-name-to-package
+					   (lisp::stringify-name package "package")))))
+
+;;; ADD-PACKAGE-LOCAL-NICKNAME -- public.
+;;;
+(defun add-package-local-nickname (local-nickname actual-package &optional package)
+  (let* ((pkg (lisp::package-name-to-package
+	       (lisp::stringify-name (or package *package*) "package")))
+	 (nicks (lisp::package-%local-nicknames pkg))
+	 (local-nickname (lisp::stringify-name local-nickname "package")))
+    (when (find-if #'(lambda (nick)
+		       (string= nick local-nickname))
+		   nicks :key #'car)
+      (error "~A is already a local nickname in the package ~A"
+	     local-nickname pkg))
+    
+    (setf (lisp::package-%local-nicknames pkg)
+	  (push (list (lisp::stringify-name local-nickname "package")
+		      (lisp::stringify-name actual-package "package"))
+		nicks))
+    pkg))
+
+;;; REMOVE-PACKAGE-LOCAL-NICKNAME -- public.
+;;;
+(defun remove-package-local-nickname (old-nickname &optional package)
+  (let* ((old-nick (lisp::stringify-name old-nickname "package"))
+	 (pkg (if package
+		  (lisp::package-name-to-package (lisp::stringify-name package "package"))
+		  *package*))
+	 (nicks (lisp::package-%local-nicknames pkg))
+	 deletedp)
+    (setf (lisp::package-%local-nicknames pkg)
+	  (delete-if #'(lambda (local-nick)
+			 (when (string= local-nick old-nick)
+			   (setf deletedp t)))
+		     nicks :key #'car))
+    deletedp))
+
+;;; PACKAGE-LOCALLY-NICKNAMED-BY-LIST -- public
+;;;
+(defun package-locally-nicknamed-by-list (package)
+  (let ((pkg-name (lisp::package-namestring package)))
+    (loop for p in (list-all-packages)
+	  when (find pkg-name (lisp::package-%local-nicknames p)
+		     :key #'second)
+	    collect p)))
 
 
 ;;; Initialization.
