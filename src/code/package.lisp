@@ -1288,7 +1288,7 @@
 		 (unuse-package package p))))
 	   (dolist (pkg (package-locally-nicknamed-by-list package))
 	     (setf (package-%local-nicknames pkg)
-		   (delete pkg
+		   (delete package
 			   (package-%local-nicknames pkg)
 			   :key #'cdr)))
 	   (dolist (used (package-use-list package))
@@ -1986,24 +1986,26 @@
 		  package
 		  (package-name-to-package (package-namify package))))
 	 (nicks (package-%local-nicknames pkg))
-	 (local-nickname (stringify-name local-nickname "package")))
+	 (local-nickname (package-namify local-nickname)))
     (when (find-if #'(lambda (nick)
 		       (string= nick local-nickname))
 		   nicks :key #'car)
-      (error 'simple-package-error
-	     :package pkg
-	     :format-control (intl:gettext "~A is already a local nickname in the package ~A")
-	     :format-arguments (list local-nickname pkg)))
+      (cerror "Add nickname anyway"
+	      'simple-package-error
+	      :package pkg
+	      :format-control (intl:gettext "~A is already a local nickname in the package ~A")
+	      :format-arguments (list local-nickname pkg)))
 
     ;; The new LOCAL-NICKNAME can't be the same as PACKAGE.
     (when (string= local-nickname (package-name pkg))
-      (error 'simple-package-error
+      (cerror "Add nickname anyway"
+	      'simple-package-error
 	     :package pkg
 	     :format-control (intl:gettext "~A cannot be a nickname for the package ~A")
 	     :format-arguments (list local-nickname pkg)))
     
     (setf (package-%local-nicknames pkg)
-	  (push (cons (stringify-name local-nickname "package")
+	  (push (cons local-nickname
 		      (if (packagep actual-package)
 			  actual-package
 			  (package-name-to-package (package-namify actual-package))))
@@ -2013,7 +2015,9 @@
 ;;; REMOVE-PACKAGE-LOCAL-NICKNAME -- public.
 ;;;
 (defun remove-package-local-nickname (old-nickname &optional (package *package*))
-  (let* ((old-nick (stringify-name old-nickname "package"))
+  (let* ((old-nick (if (packagep old-nickname)
+		       (package-namestring old-nickname)
+		       (package-namify old-nickname)))
 	 (pkg (if (packagep package)
 		  package
 		  (package-name-to-package (package-namify package))))
@@ -2029,10 +2033,14 @@
 ;;; PACKAGE-LOCALLY-NICKNAMED-BY-LIST -- public
 ;;;
 (defun package-locally-nicknamed-by-list (package)
-  (let ((pkg-name (package-namestring package)))
+  (let ((pkg (if (packagep package)
+		 package
+		 (package-name-to-package (package-namify package)))))
     (loop for p in (list-all-packages)
-	  when (find pkg-name (package-%local-nicknames p)
-		     :key #'cdr)
+	  when (find pkg
+		     (package-%local-nicknames p)
+		     :key #'cdr
+		     :test #'eq)
 	    collect p)))
 
 
