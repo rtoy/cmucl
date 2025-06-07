@@ -1985,16 +1985,36 @@
   (let* ((pkg (if (packagep package)
 		  package
 		  (package-name-to-package (package-namify package))))
+	 (actual-pkg (if (packagep actual-package)
+			 actual-package
+			 (package-name-to-package (package-namify actual-package))))
 	 (nicks (package-%local-nicknames pkg))
 	 (local-nickname (package-namify local-nickname)))
-    (when (find-if #'(lambda (nick)
-		       (string= nick local-nickname))
-		   nicks :key #'car)
-      (cerror "Add nickname anyway"
-	      'simple-package-error
-	      :package pkg
-	      :format-control (intl:gettext "~A is already a package local nickname in the package ~A")
-	      :format-arguments (list local-nickname pkg)))
+    (let ((found-it (find-if #'(lambda (nick)
+				 (string= nick local-nickname))
+			     nicks :key #'car)))
+      (when found-it
+	;; If the local nickname alread exists and it's the same
+	;; package, there's nothing to do.
+	(when (eq (cdr found-it) actual-pkg)
+	  (return-from add-package-local-nickname pkg))
+	;; Otherwise, signal an error that the packages don't match.
+	(restart-case 
+	    (error 'simple-package-error
+		   :package pkg
+		   :format-control (intl:gettext "~A as already a local nickname for the package ~A in ~A")
+		   :format-arguments (list local-nickname actual-pkg pkg))
+	  (keep-old-nickname ()
+	    :report (lambda (stream)
+		      (format stream "Keep ~A as a local nickname for ~A~%"
+			      local-nickname (cdr found-it)))
+	    (return-from add-package-local-nickname (cdr found-it)))
+	  (use-new-nickname ()
+	    :report (lambda (stream)
+		      (format stream "Use ~A as a local nickname for ~A instead~%"
+			      local-nickname actual-pkg))
+	    (setf (cdr found-it) actual-pkg)
+	    (return-from add-package-local-nickname actual-pkg)))))
 
     ;; The new LOCAL-NICKNAME can't be the same as PACKAGE.
     (when (string= local-nickname (package-name pkg))
