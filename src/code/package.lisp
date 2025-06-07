@@ -1993,7 +1993,7 @@
       (cerror "Add nickname anyway"
 	      'simple-package-error
 	      :package pkg
-	      :format-control (intl:gettext "~A is already a local nickname in the package ~A")
+	      :format-control (intl:gettext "~A is already a package local nickname in the package ~A")
 	      :format-arguments (list local-nickname pkg)))
 
     ;; The new LOCAL-NICKNAME can't be the same as PACKAGE.
@@ -2001,7 +2001,7 @@
       (cerror "Add nickname anyway"
 	      'simple-package-error
 	     :package pkg
-	     :format-control (intl:gettext "~A cannot be a nickname for the package ~A")
+	     :format-control (intl:gettext "~A cannot be a package local nickname for the package ~A with the same name")
 	     :format-arguments (list local-nickname pkg)))
     
     (setf (package-%local-nicknames pkg)
