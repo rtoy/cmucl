@@ -1252,6 +1252,14 @@
     (enter-new-nicknames package new-nicknames)
     package))
 
+;; Given a package designator, convert it to the corresponding package
+;; object.
+(declaim (inline designator-package))
+(defun designator-package (designator)
+  (if (packagep designator)
+      designator
+      (package-name-to-package (package-namify designator))))
+
 ;;; Delete-Package -- Public
 ;;;
 (defun delete-package (package-or-name)
@@ -1970,11 +1978,8 @@
 (defun package-local-nicknames (package)
   "Returns an alist of (local-nickname . actual-package) describing the
   nicknames local to Package."
-  ;; 
-  (copy-list (package-%local-nicknames
-	      (if (packagep package)
-		  package
-		  (package-name-to-package (package-namify package))))))
+  ;; Should we return a new list?
+  (copy-list (package-%local-nicknames (designator-package package))))
 
 ;;; ADD-PACKAGE-LOCAL-NICKNAME -- public.
 ;;;
@@ -1991,12 +1996,8 @@
     - Local-Nickname is one of \"CL\", \"COMMON-LISP\", or \"KEYWORD\"
     - Local-Nickname is a global name or nickname for designated package"
 
-  (let* ((pkg (if (packagep package)
-		  package
-		  (package-name-to-package (package-namify package))))
-	 (actual-pkg (if (packagep actual-package)
-			 actual-package
-			 (package-name-to-package (package-namify actual-package))))
+  (let* ((pkg (designator-package package))
+	 (actual-pkg (designator-package actual-package))
 	 (nicks (package-%local-nicknames pkg))
 	 (local-nickname (package-namify local-nickname)))
   (when (member local-nickname '("CL" "COMMON-LISP" "KEYWORD")
@@ -2052,9 +2053,7 @@
     
     (setf (package-%local-nicknames pkg)
 	  (push (cons local-nickname
-		      (if (packagep actual-package)
-			  actual-package
-			  (package-name-to-package (package-namify actual-package))))
+		      (designator-package actual-package))
 		nicks))
     pkg))
 
@@ -2067,9 +2066,7 @@
   (let* ((old-nick (if (packagep old-nickname)
 		       (package-namestring old-nickname)
 		       (package-namify old-nickname)))
-	 (pkg (if (packagep package)
-		  package
-		  (package-name-to-package (package-namify package))))
+	 (pkg (designator-package package))
 	 (nicks (package-%local-nicknames pkg))
 	 deletedp)
     (setf (package-%local-nicknames pkg)
@@ -2088,9 +2085,7 @@
 ;;; %used-by-list.
 (defun package-locally-nicknamed-by-list (package)
   "Returns a list of packages which have a local nickname for Package."
-  (let ((pkg (if (packagep package)
-		 package
-		 (package-name-to-package (package-namify package)))))
+  (let ((pkg (designator-package package)))
     (loop for p in (list-all-packages)
 	  when (find pkg
 		     (package-%local-nicknames p)
