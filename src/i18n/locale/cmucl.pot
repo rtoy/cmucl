@@ -8574,6 +8574,10 @@ msgid ""
 msgstr ""
 
 #: src/code/package.lisp
+msgid "Local nickname cannot be \"CL\", \"COMMON-LISP\" or \"KEYWORD\""
+msgstr ""
+
+#: src/code/package.lisp
 msgid "~A as already a local nickname for the package ~A in ~A"
 msgstr ""
 

@@ -612,4 +612,3 @@
   "Return an EQ hash of X.  The value of this hash for any given object can (of
   course) change at arbitary times."
   `(lisp::pointer-hash ,x))
-
