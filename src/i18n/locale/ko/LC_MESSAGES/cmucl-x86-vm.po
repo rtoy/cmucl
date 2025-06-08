@@ -297,6 +297,10 @@ msgid "inline (signed-byte 32) integer-length"
 msgstr ""
 
 #: src/compiler/x86/arith.lisp
+msgid "inline (unsigned-byte 32) integer-length"
+msgstr ""
+
+#: src/compiler/x86/arith.lisp
 msgid "inline (unsigned-byte 32) logcount"
 msgstr ""
 

@@ -15,10 +15,6 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/code/linux-os.lisp
-msgid "Getpagesize failed: ~A"
-msgstr ""
-
 #: src/code/signal.lisp
 msgid "Stack fault on coprocessor"
 msgstr ""
