@@ -696,7 +696,12 @@
 	    ;; qualified.  This can happen if the symbol has been inherited
 	    ;; from a package other than its home package.
 	    (unless (and accessible (eq symbol object))
-	      (output-symbol-name (package-name package) stream)
+	      (let ((local-nicks (package-%local-nicknames *package*))
+		    (pkg-name (package-name package)))
+		(when local-nicks
+		  (setf pkg-name (or (car (rassoc package local-nicks))
+				     pkg-name)))
+		(output-symbol-name pkg-name stream))
 	      (multiple-value-bind (symbol externalp)
 				   (find-external-symbol name package)
 		(declare (ignore symbol))
