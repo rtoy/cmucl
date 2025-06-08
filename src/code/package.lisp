@@ -1995,6 +1995,7 @@
     - Local-Nickname is already a local nickname for a different package
     - Local-Nickname is one of \"CL\", \"COMMON-LISP\", or \"KEYWORD\"
     - Local-Nickname is a global name or nickname for designated package"
+
   (let* ((pkg (if (packagep package)
 		  package
 		  (package-name-to-package (package-namify package))))
@@ -2003,6 +2004,13 @@
 			 (package-name-to-package (package-namify actual-package))))
 	 (nicks (package-%local-nicknames pkg))
 	 (local-nickname (package-namify local-nickname)))
+  (when (member local-nickname '("CL" "COMMON-LISP" "KEYWORD")
+		:test #'string=)
+    (cerror "Add nickname anyway"
+	    'simple-package-error
+	    :package pkg
+	    :format-control (intl:gettext "Local nickname cannot be \"CL\", \"COMMON-LISP\" or \"KEYWORD\"")
+	    :format-arguments (list local-nickname)))
     (let ((found-it (find-if #'(lambda (nick)
 				 (string= nick local-nickname))
 			     nicks :key #'car)))
