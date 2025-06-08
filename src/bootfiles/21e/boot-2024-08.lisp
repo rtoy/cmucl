@@ -23,7 +23,7 @@
 
 ;; Ensure all packages have been set up, since package definition is broken
 ;; once this file has been loaded:
-(load "target:code/exports-errno")
+(load "target:code/exports-errno" :if-does-not-exist nil)
 (load "target:code/exports")
 
 (setf *enable-package-locked-errors* nil)
