@@ -1150,17 +1150,10 @@
 	     (push n (package-%nicknames package)))))))
 
 (defun enter-new-local-nicknames (package local-nicknames)
-  ;; What kind of error checking is needed here?  Convert the actual
-  ;; package to a package object if it isn't already.
-  (setf (package-%local-nicknames package)
-	(mapcar #'(lambda (entry)
-		    (destructuring-bind (nickname actual)
-			entry
-		      (cons nickname
-			    (if (packagep actual)
-				actual
-				(package-name-to-package (package-namify actual))))))
-		local-nicknames)))
+  (dolist (entry local-nicknames)
+    (destructuring-bind (nick actual)
+	entry
+      (add-package-local-nickname nick actual package))))
 
 
 ;;; Make-Package  --  Public
