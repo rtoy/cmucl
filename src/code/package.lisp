@@ -1984,6 +1984,17 @@
 ;;; ADD-PACKAGE-LOCAL-NICKNAME -- public.
 ;;;
 (defun add-package-local-nickname (local-nickname actual-package &optional (package *package*))
+  "For the designated package Package (defaulting to *PACKAGE*), add
+  Local-Nickname as a package local nickname to the package
+  Actual-Package. Actual-Package and Package must be an package
+  designator. Local-Nickname should be a string designator.
+
+  Returns the designated package.
+
+  Signals a continuable error if any of the following are true:
+    - Local-Nickname is already a local nickname for a different package
+    - Local-Nickname is one of \"CL\", \"COMMON-LISP\", or \"KEYWORD\"
+    - Local-Nickname is a global name or nickname for designated package"
   (let* ((pkg (if (packagep package)
 		  package
 		  (package-name-to-package (package-namify package))))
@@ -2022,9 +2033,9 @@
     (when (string= local-nickname (package-name pkg))
       (cerror "Add nickname anyway"
 	      'simple-package-error
-	     :package pkg
-	     :format-control (intl:gettext "~A cannot be a package local nickname for the global package~_ ~A with the same name")
-	     :format-arguments (list local-nickname pkg)))
+	      :package pkg
+	      :format-control (intl:gettext "~A cannot be a package local nickname for the global package~_ ~A with the same name")
+	      :format-arguments (list local-nickname pkg)))
 
     ;; Can't be a local nickname for any of the nicknames
     (let ((found-it (find local-nickname
@@ -2047,6 +2058,9 @@
 ;;; REMOVE-PACKAGE-LOCAL-NICKNAME -- public.
 ;;;
 (defun remove-package-local-nickname (old-nickname &optional (package *package*))
+  "If Package has Old-Nickname as a local nickname, it is removed.
+  Returns true if the nickname existed and was removed.  Otherwise
+ returns NIL."
   (let* ((old-nick (if (packagep old-nickname)
 		       (package-namestring old-nickname)
 		       (package-namify old-nickname)))
@@ -2065,6 +2079,7 @@
 ;;; PACKAGE-LOCALLY-NICKNAMED-BY-LIST -- public
 ;;;
 (defun package-locally-nicknamed-by-list (package)
+  "Returns a list of packages which have a local nickname for Package."
   (let ((pkg (if (packagep package)
 		 package
 		 (package-name-to-package (package-namify package)))))
