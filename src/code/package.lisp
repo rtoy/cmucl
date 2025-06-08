@@ -41,6 +41,8 @@
 #+relative-package-names
 (sys:register-lisp-feature :relative-package-names)
 
+(sys:register-lisp-feature :package-local-nicknames)
+
 (defvar *default-package-use-list* '("COMMON-LISP")
   "The list of packages to use by default of no :USE argument is supplied
    to MAKE-PACKAGE or other package creation forms.")
@@ -2021,8 +2023,18 @@
       (cerror "Add nickname anyway"
 	      'simple-package-error
 	     :package pkg
-	     :format-control (intl:gettext "~A cannot be a package local nickname for the package ~A with the same name")
+	     :format-control (intl:gettext "~A cannot be a package local nickname for the global package~_ ~A with the same name")
 	     :format-arguments (list local-nickname pkg)))
+
+    ;; Can't be a local nickname for any of the nicknames
+    (let ((found-it (find local-nickname
+			  (package-nicknames pkg)
+			  :test #'string=)))
+      (when found-it
+	(cerror "Use it as a local nickname anyway"
+		'simple-package-error
+		:format-control (intl:gettext "~A cannot be a package local nickname for the global package~_ ~A with nickname ~A")
+		:format-arguments (list local-nickname pkg found-it))))
     
     (setf (package-%local-nicknames pkg)
 	  (push (cons local-nickname
