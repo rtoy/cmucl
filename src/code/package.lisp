@@ -1281,6 +1281,8 @@
 			      (mapcar #'package-name use-list))))
 	       (dolist (p use-list)
 		 (unuse-package package p))))
+	   ;; Find all the packages that have a local nickname to this
+	   ;; package and remove the local nickname entry.
 	   (dolist (pkg (package-locally-nicknamed-by-list package))
 	     (setf (package-%local-nicknames pkg)
 		   (delete package
@@ -2079,6 +2081,11 @@
 
 ;;; PACKAGE-LOCALLY-NICKNAMED-BY-LIST -- public
 ;;;
+;;; FIXME: This is pretty inefficient because we have list all the
+;;; packages and look throught the %local-nicknames to find the
+;;; packages.  We could probably make it faster if we added a new slot
+;;; to the package structure similar to how we have %use-list and
+;;; %used-by-list.
 (defun package-locally-nicknamed-by-list (package)
   "Returns a list of packages which have a local nickname for Package."
   (let ((pkg (if (packagep package)
