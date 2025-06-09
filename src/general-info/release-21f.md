@@ -131,6 +131,8 @@ public domain.
     * #398 Update mk:defsystem to v3.9.2    
     * #400 `unix-resolve-links` no longer breaks on some lengths
     * #401 `file-position` now returns the correct value
+    * #404 Use `realpath(3)` to implement `unix::unix-resolve-links`
+    * #405 `unix::unix-resolve-links` has been removed.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
