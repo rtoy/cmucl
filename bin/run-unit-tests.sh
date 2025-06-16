@@ -76,3 +76,23 @@ else
     $LISP -nositeinit -noinit -load "$TESTDIR"/run-tests.lisp -eval "(progn (cmucl-test-runner:load-test-files) (cmucl-test-runner:run-test $result))"
 fi
 
+## Now run tests for trivial-package-local-nicknames
+REPO=trivial-package-local-nicknames-mirror
+BRANCH=main
+
+set -x
+if [ -d ../$REPO ]; then
+    (cd ../$REPO || exit 1; git stash; git checkout $BRANCH; git pull --rebase)
+else
+    (cd ..; git clone https://gitlab.common-lisp.net/cmucl/trivial-package-local-nicknames-mirror.git)
+fi
+
+cd ../$REPO || exit 1
+git checkout $BRANCH
+
+# Run the tests.  Exits with a non-zero code if there's a failure.
+$LISP -noinit -nositeinit -batch <<'EOF'
+(require :asdf)
+(push (default-directory) asdf:*central-registry*)
+(asdf:test-system :trivial-package-local-nicknames)
+EOF
