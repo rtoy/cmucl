@@ -78,7 +78,7 @@ fi
 
 ## Now run tests for trivial-package-local-nicknames
 REPO=trivial-package-local-nicknames-mirror
-BRANCH=main
+BRANCH=cmucl-updates
 
 set -x
 if [ -d ../$REPO ]; then
@@ -87,6 +87,7 @@ else
     (cd ..; git clone https://gitlab.common-lisp.net/cmucl/trivial-package-local-nicknames-mirror.git)
 fi
 
+LISP=$PWD/$LISP
 cd ../$REPO || exit 1
 git checkout $BRANCH
 
