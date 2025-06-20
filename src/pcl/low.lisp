@@ -357,11 +357,12 @@ the compiler as completely as possible.  Currently this means that
     (when morep
       (simple-program-error "~@<~s not allowed here~@:>" 'c:&more))
     (collect ((vars))
-      (labels ((check-var (var)
+      (labels ((check-var (var &optional allow-repeated-lambda-vars)
 		 (cond ((not (symbolp var))
 			(simple-program-error
 			 "~@<Invalid lambda variable: ~s~@:>" var))
-		       ((memq var (vars))
+		       ((and (not allow-repeated-lambda-vars)
+			     (memq var (vars)))
 			(simple-program-error
 			 "~@<Repeated lambda variable: ~s~@:>" var))
 		       (t
@@ -370,22 +371,27 @@ the compiler as completely as possible.  Currently this means that
 		 (if (and (consp var) specialized-p)
 		     (check-var (car var))
 		     (check-var var)))
-	       (check-optional (var)
+	       (check-optional (var &optional allow-repeated-lambda-vars)
 		 (if (consp var)
 		     (destructuring-bind (var &optional value supplied-p)
 			 var
 		       (declare (ignore value))
 		       (if (consp var)
-			   (check-var (cadr var))
-			   (check-var var))
+			   (check-var (cadr var) allow-repeated-lambda-vars)
+			   (check-var var allow-repeated-lambda-vars))
 		       (when supplied-p
-			 (check-var supplied-p)))
+			 (check-var supplied-p allow-repeated-lambda-vars)))
 		     (check-var var))))
 	(mapc #'check-required required)
 	(mapc #'check-optional optional)
 	(mapc #'check-optional keys)
 	(when restp (check-var rest))
-	(mapc #'check-optional aux)
+	(mapc #'(lambda (v)
+		  ;; Aux variables in DEFMETHODs can, of course, have
+		  ;; repeated lambda vars, just like DEFUN allows
+		  ;; them.
+		  (check-optional v t))
+	      aux)
 	(values required optional restp rest keyp keys
 		allow-other-keys-p aux)))))
 

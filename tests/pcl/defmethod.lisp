@@ -74,6 +74,7 @@
 (define-defmethod-test-1 defmethod.20 dm2 nil (x))
 (define-defmethod-test-1 defmethod.21 dm2 nil (x &optional y z))
 (define-defmethod-test-1 defmethod.22 dm2 nil (x &key y))
+(define-defmethod-test-1 defmethod.23 dm2 nil (x y &aux (x x) (y y)))
 
 ;;;
 ;;; A forward-referenced class used as specializer signaled an
