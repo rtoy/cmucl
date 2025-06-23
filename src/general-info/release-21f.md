@@ -23,7 +23,7 @@ public domain.
     * Add support for Gray streams implementation of file-length via
       `ext:stream-file-length` generic function.
   * Changes:
-    * Update to ASDF 3.3.7
+    * Update to ASDF 3.3.7.4
     * The RNG has changed from an old version of xoroshiro128+ to
       xoroshiro128**.  This means sequences of random numbers will be
       different from before.  See ~~#276~~.
