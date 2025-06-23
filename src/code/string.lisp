@@ -90,7 +90,7 @@
 (defmacro with-string-codepoint-iterator ((next string) &body body)
   _N"WITH-STRING-CODEPOINT-ITERATOR ((next string) &body body)
   provides a method of looping through a string from the beginning to
-  the end of the string prodcucing successive codepoints from the
+  the end of the string producing successive codepoints from the
   string.  NEXT is bound to a generator macro that, within the scope
   of the invocation, returns one or two values. The first value tells
   whether any objects remain in the string. When the first value is
@@ -989,7 +989,7 @@
 (defmacro with-string-glyph-iterator ((next string) &body body)
   _N"WITH-STRING-GLYPH-ITERATOR ((next string) &body body)
   provides a method of looping through a string from the beginning to
-  the end of the string prodcucing successive glyphs from the string.
+  the end of the string producing successive glyphs from the string.
   NEXT is bound to a generator macro that, within the scope of the
   invocation, returns one or three values. The first value tells
   whether any objects remain in the string. When the first value is

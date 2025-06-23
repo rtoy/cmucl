@@ -23,7 +23,7 @@ public domain.
     * Add support for Gray streams implementation of file-length via
       `ext:stream-file-length` generic function.
   * Changes:
-    * Update to ASDF 3.3.7
+    * Update to ASDF 3.3.7.4
     * The RNG has changed from an old version of xoroshiro128+ to
       xoroshiro128**.  This means sequences of random numbers will be
       different from before.  See ~~#276~~.
@@ -131,6 +131,8 @@ public domain.
     * #398 Update mk:defsystem to v3.9.2    
     * #400 `unix-resolve-links` no longer breaks on some lengths
     * #401 `file-position` now returns the correct value
+    * #404 Use `realpath(3)` to implement `unix::unix-resolve-links`
+    * #405 `unix::unix-resolve-links` has been removed.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
