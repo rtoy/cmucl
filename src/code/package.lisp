@@ -2019,7 +2019,7 @@
 	(restart-case 
 	    (error 'simple-package-error
 		   :package pkg
-		   :format-control (intl:gettext "~A as already a local nickname for the package ~A in ~A")
+		   :format-control (intl:gettext "~A is already a local nickname for the package ~A in ~A")
 		   :format-arguments (list local-nickname actual-pkg pkg))
 	  (keep-old-nickname ()
 	    :report (lambda (stream)

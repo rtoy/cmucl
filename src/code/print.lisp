@@ -697,7 +697,7 @@
 	    ;; from a package other than its home package.
 	    (unless (and accessible (eq symbol object))
 	      ;; If the actual symbol package has a local nickname in
-	      ;; *package*, use that as the symbol name instead of the
+	      ;; *package*, use that as the package name instead of the
 	      ;; actual symbol package name.
 	      (let ((local-nicks (package-%local-nicknames *package*))
 		    (pkg-name (package-name package)))
