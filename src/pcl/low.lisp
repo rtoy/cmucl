@@ -357,41 +357,40 @@ the compiler as completely as possible.  Currently this means that
     (when morep
       (simple-program-error "~@<~s not allowed here~@:>" 'c:&more))
     (collect ((vars))
-      (labels ((check-var (var &optional allow-repeated-lambda-vars)
-		 (cond ((not (symbolp var))
-			(simple-program-error
-			 "~@<Invalid lambda variable: ~s~@:>" var))
-		       ((and (not allow-repeated-lambda-vars)
-			     (memq var (vars)))
-			(simple-program-error
-			 "~@<Repeated lambda variable: ~s~@:>" var))
-		       (t
-			(vars var))))
+      (labels ((check-lambda-variable (var)
+		 (unless (symbolp var)
+		   (simple-program-error
+		    "~@<Invalid lambda variable: ~s~@:>" var)))
+	       (check-var (var)
+		 (check-lambda-variable var)
+		 (if (memq var (vars))
+		     (simple-program-error
+		      "~@<Repeated lambda variable: ~s~@:>" var)
+		     (vars var)))
+	       (check-aux (var)
+		 (if (consp var)
+		     (check-lambda-variable (car var))
+		     (check-lambda-variable var)))
 	       (check-required (var)
 		 (if (and (consp var) specialized-p)
 		     (check-var (car var))
 		     (check-var var)))
-	       (check-optional (var &optional allow-repeated-lambda-vars)
+	       (check-optional (var)
 		 (if (consp var)
 		     (destructuring-bind (var &optional value supplied-p)
 			 var
 		       (declare (ignore value))
 		       (if (consp var)
-			   (check-var (cadr var) allow-repeated-lambda-vars)
-			   (check-var var allow-repeated-lambda-vars))
+			   (check-var (cadr var))
+			   (check-var var))
 		       (when supplied-p
-			 (check-var supplied-p allow-repeated-lambda-vars)))
+			 (check-var supplied-p)))
 		     (check-var var))))
 	(mapc #'check-required required)
 	(mapc #'check-optional optional)
 	(mapc #'check-optional keys)
 	(when restp (check-var rest))
-	(mapc #'(lambda (v)
-		  ;; Aux variables in DEFMETHODs can, of course, have
-		  ;; repeated lambda vars, just like DEFUN allows
-		  ;; them.
-		  (check-optional v t))
-	      aux)
+	(mapc #'check-aux aux)
 	(values required optional restp rest keyp keys
 		allow-other-keys-p aux)))))
 
