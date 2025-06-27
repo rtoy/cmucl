@@ -788,7 +788,8 @@ again:
 
 /*
  * Given the UID, return the user name.  If the uid does not exist,
- * returns NULL.
+ * returns NULL.  The caller must call free on the string that is
+ * returned.
  */
 char *
 os_get_username(uid_t uid)
@@ -970,6 +971,13 @@ get_homedir_from_name(const char* name, int *status)
     return NULL;
 }
 
+/*
+ * Return the home directory for the given UID.  If the home directory
+ * does not exist, NULL is returned.  STATUS is set to 0 if the home
+ * directory could be found.  Otherwise, it is the errno.
+ *
+ * The caller must free the memory returned.
+ */
 static char *
 get_homedir_from_uid(uid_t uid, int *status)
 {
@@ -991,6 +999,8 @@ get_homedir_from_uid(uid_t uid, int *status)
  * home directory cannot be determined for any reason.  The parameter
  * STATUS is 0 if the home directory could be determined.  Otherwise
  * it is the errno value.
+ *
+ * The caller must free the memory returned for the result.
  */
 char *
 os_get_user_homedir(const char* name, int *status)
