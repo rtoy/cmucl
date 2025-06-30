@@ -41,6 +41,8 @@
 #+relative-package-names
 (sys:register-lisp-feature :relative-package-names)
 
+(sys:register-lisp-feature :package-local-nicknames)
+
 (defvar *default-package-use-list* '("COMMON-LISP")
   "The list of packages to use by default of no :USE argument is supplied
    to MAKE-PACKAGE or other package creation forms.")
@@ -90,6 +92,9 @@
   ;; PACKAGE-LOCKS-INIT during after-save-initializations. 
   (lock nil :type boolean)
   (definition-lock nil :type boolean)
+
+  ;; Package local nicknames
+  (%local-nicknames () :type list)
 
   ;; Documentation string for this package
   (doc-string nil :type (or simple-string null)))
@@ -397,6 +402,12 @@
                    (setq package tmp))
                  (relative-to package name))))))))
 
+(defun local-nickname-to-package (name)
+  ;; Skip all of this if we're doing package-init!
+  (unless *in-package-init*
+    (cdr (assoc name (package-%local-nicknames *package*)
+		:test #'string=))))
+
 ;;; find-package  --  Public
 ;;;
 ;;;
@@ -405,7 +416,8 @@
   (if (packagep name)
       name
       (let ((name (package-namify name)))
-	(or (package-name-to-package name)
+	(or (local-nickname-to-package name)
+	    (package-name-to-package name)
 	    #+relative-package-names
 	    (relative-package-name-to-package name)))))
 
@@ -420,7 +432,8 @@
 	 thing)
 	(t
 	 (let ((thing (package-namify thing)))
-	   (cond ((package-name-to-package thing))
+	   (cond ((local-nickname-to-package thing))
+		 ((package-name-to-package thing))
 		 (t
 		  ;; ANSI spec's type-error where this is called. But,
 		  ;; but the resulting message is somewhat unclear.
@@ -923,8 +936,10 @@
      (:EXPORT {symbol-name}*)
      (:INTERN {symbol-name}*)
      (:SIZE <integer>)
+     (:LOCAL-NICKNAMES {({nickname package}*)})
    All options except :SIZE and :DOCUMENTATION can be used multiple times."
   (let ((nicknames nil)
+	(local-nicknames nil)
 	(size nil)
 	(shadows nil)
 	(shadowing-imports nil)
@@ -940,6 +955,11 @@
       (case (car option)
 	(:nicknames
 	 (setf nicknames (stringify-names (cdr option) "package")))
+	(:local-nicknames
+	 (setf local-nicknames
+	       (mapcar #'(lambda (o)
+			   (stringify-names o "package"))
+		       (cdr option))))
 	(:size
 	 (cond (size
 		(simple-program-error (intl:gettext "Can't specify :SIZE twice.")))
@@ -994,9 +1014,9 @@
 		    `(:shadowing-import-from
 		      ,@(apply #'append (mapcar #'rest shadowing-imports))))
     `(eval-when (compile load eval)
-       (%defpackage ,(stringify-name package "package") ',nicknames ',size
-		    ',shadows ',shadowing-imports ',(if use-p use :default)
-		    ',imports ',interns ',exports ',doc))))
+       (%defpackage ,(stringify-name package "package") ',nicknames 
+		    ',size ',shadows ',shadowing-imports ',(if use-p use :default)
+		    ',imports ',interns ',exports ',doc ',local-nicknames))))
 
 (defun check-disjoint (&rest args)
   ;; Check whether all given arguments specify disjoint sets of symbols.
@@ -1014,9 +1034,9 @@
 				    key1 key2 common))))
 
 (defun %defpackage (name nicknames size shadows shadowing-imports
-			 use imports interns exports doc-string)
+			 use imports interns exports doc-string &optional local-nicknames)
   (declare (type simple-base-string name)
-	   (type list nicknames shadows shadowing-imports
+	   (type list nicknames local-nicknames shadows shadowing-imports
 		 imports interns exports)
 	   (type (or list (member :default)) use)
 	   (type (or simple-base-string null) doc-string))
@@ -1034,6 +1054,7 @@
 	     :format-control (intl:gettext "~A is a nick-name for the package ~A")
 	     :format-arguments (list name (package-name name))))
     (enter-new-nicknames package nicknames)
+    (enter-new-local-nicknames package local-nicknames)
     ;; Shadows and Shadowing-imports.
     (let ((old-shadows (package-%shadowing-symbols package)))
       (shadow shadows package)
@@ -1127,6 +1148,12 @@
 		      :format-arguments (list n (package-%name found))))
 	     (setf (gethash n *package-names*) package)
 	     (push n (package-%nicknames package)))))))
+
+(defun enter-new-local-nicknames (package local-nicknames)
+  (dolist (entry local-nicknames)
+    (destructuring-bind (nick actual)
+	entry
+      (add-package-local-nickname nick actual package))))
 
 
 ;;; Make-Package  --  Public
@@ -1225,6 +1252,14 @@
     (enter-new-nicknames package new-nicknames)
     package))
 
+;; Given a package designator, convert it to the corresponding package
+;; object.
+(declaim (inline designator-package))
+(defun designator-package (designator)
+  (if (packagep designator)
+      designator
+      (package-name-to-package (package-namify designator))))
+
 ;;; Delete-Package -- Public
 ;;;
 (defun delete-package (package-or-name)
@@ -1254,6 +1289,13 @@
 			      (mapcar #'package-name use-list))))
 	       (dolist (p use-list)
 		 (unuse-package package p))))
+	   ;; Find all the packages that have a local nickname to this
+	   ;; package and remove the local nickname entry.
+	   (dolist (pkg (package-locally-nicknamed-by-list package))
+	     (setf (package-%local-nicknames pkg)
+		   (delete package
+			   (package-%local-nicknames pkg)
+			   :key #'cdr)))
 	   (dolist (used (package-use-list package))
 	     (unuse-package used package))
 	   (do-symbols (sym package)
@@ -1928,7 +1970,128 @@
 		     (result symbol))
 		 string package)
     (result)))
+
+;;;; Support for package local nicknames
 
+;;; PACKAGE-LOCAL-NICKNAMES  -- public.
+;;;
+(defun package-local-nicknames (package)
+  "Returns an alist of (local-nickname . actual-package) describing the
+  nicknames local to Package."
+  ;; Should we return a new list?
+  (copy-list (package-%local-nicknames (designator-package package))))
+
+;;; ADD-PACKAGE-LOCAL-NICKNAME -- public.
+;;;
+(defun add-package-local-nickname (local-nickname actual-package &optional (package *package*))
+  "For the designated package Package (defaulting to *PACKAGE*), add
+  Local-Nickname as a package local nickname to the package
+  Actual-Package. Actual-Package and Package must be an package
+  designator. Local-Nickname should be a string designator.
+
+  Returns the designated package.
+
+  Signals a continuable error if any of the following are true:
+    - Local-Nickname is already a local nickname for a different package
+    - Local-Nickname is one of \"CL\", \"COMMON-LISP\", or \"KEYWORD\"
+    - Local-Nickname is a global name or nickname for designated package"
+
+  (let* ((pkg (designator-package package))
+	 (actual-pkg (designator-package actual-package))
+	 (nicks (package-%local-nicknames pkg))
+	 (local-nickname (package-namify local-nickname)))
+  (when (member local-nickname '("CL" "COMMON-LISP" "KEYWORD")
+		:test #'string=)
+    (cerror "Add nickname anyway"
+	    'simple-package-error
+	    :package pkg
+	    :format-control (intl:gettext "Local nickname cannot be \"CL\", \"COMMON-LISP\" or \"KEYWORD\"")
+	    :format-arguments (list local-nickname)))
+    (let ((found-it (find-if #'(lambda (nick)
+				 (string= nick local-nickname))
+			     nicks :key #'car)))
+      (when found-it
+	;; If the local nickname alread exists and it's the same
+	;; package, there's nothing to do.
+	(when (eq (cdr found-it) actual-pkg)
+	  (return-from add-package-local-nickname pkg))
+	;; Otherwise, signal an error that the packages don't match.
+	(restart-case 
+	    (error 'simple-package-error
+		   :package pkg
+		   :format-control (intl:gettext "~A is already a local nickname for the package ~A in ~A")
+		   :format-arguments (list local-nickname actual-pkg pkg))
+	  (keep-old-nickname ()
+	    :report (lambda (stream)
+		      (format stream "Keep ~A as a local nickname for ~A~%"
+			      local-nickname (cdr found-it)))
+	    (return-from add-package-local-nickname (cdr found-it)))
+	  (use-new-nickname ()
+	    :report (lambda (stream)
+		      (format stream "Use ~A as a local nickname for ~A instead~%"
+			      local-nickname actual-pkg))
+	    (setf (cdr found-it) actual-pkg)
+	    (return-from add-package-local-nickname actual-pkg)))))
+
+    ;; The new LOCAL-NICKNAME can't be the same as PACKAGE.
+    (when (string= local-nickname (package-name pkg))
+      (cerror "Add nickname anyway"
+	      'simple-package-error
+	      :package pkg
+	      :format-control (intl:gettext "~A cannot be a package local nickname for the global package~_ ~A with the same name")
+	      :format-arguments (list local-nickname pkg)))
+
+    ;; Can't be a local nickname for any of the nicknames
+    (let ((found-it (find local-nickname
+			  (package-nicknames pkg)
+			  :test #'string=)))
+      (when found-it
+	(cerror "Use it as a local nickname anyway"
+		'simple-package-error
+		:format-control (intl:gettext "~A cannot be a package local nickname for the global package~_ ~A with nickname ~A")
+		:format-arguments (list local-nickname pkg found-it))))
+    
+    (setf (package-%local-nicknames pkg)
+	  (push (cons local-nickname
+		      (designator-package actual-package))
+		nicks))
+    pkg))
+
+;;; REMOVE-PACKAGE-LOCAL-NICKNAME -- public.
+;;;
+(defun remove-package-local-nickname (old-nickname &optional (package *package*))
+  "If Package has Old-Nickname as a local nickname, it is removed.
+  Returns true if the nickname existed and was removed.  Otherwise
+ returns NIL."
+  (let* ((old-nick (if (packagep old-nickname)
+		       (package-namestring old-nickname)
+		       (package-namify old-nickname)))
+	 (pkg (designator-package package))
+	 (nicks (package-%local-nicknames pkg))
+	 deletedp)
+    (setf (package-%local-nicknames pkg)
+	  (delete-if #'(lambda (local-nick)
+			 (when (string= local-nick old-nick)
+			   (setf deletedp t)))
+		     nicks :key #'car))
+    deletedp))
+
+;;; PACKAGE-LOCALLY-NICKNAMED-BY-LIST -- public
+;;;
+;;; FIXME: This is pretty inefficient because we have list all the
+;;; packages and look throught the %local-nicknames to find the
+;;; packages.  We could probably make it faster if we added a new slot
+;;; to the package structure similar to how we have %use-list and
+;;; %used-by-list.
+(defun package-locally-nicknamed-by-list (package)
+  "Returns a list of packages which have a local nickname for Package."
+  (let ((pkg (designator-package package)))
+    (loop for p in (list-all-packages)
+	  when (find pkg
+		     (package-%local-nicknames p)
+		     :key #'cdr
+		     :test #'eq)
+	    collect p)))
 
 
 ;;; Initialization.
