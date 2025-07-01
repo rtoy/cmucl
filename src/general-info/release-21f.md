@@ -133,6 +133,10 @@ public domain.
     * #401 `file-position` now returns the correct value
     * #404 Use `realpath(3)` to implement `unix::unix-resolve-links`
     * #405 `unix::unix-resolve-links` has been removed.
+    * #415 Support package-local-nicknames
+    * #417 PCL complains about repeated aux variables in defmethod
+    * #418 Update asdf to version 3.3.7.4 (for
+      package-local-nicknames)
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
