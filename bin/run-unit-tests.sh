@@ -77,14 +77,14 @@ else
 fi
 
 ## Now run tests for trivial-package-local-nicknames
-REPO=trivial-package-local-nicknames-mirror
+REPO=trivial-package-local-nicknames
 BRANCH=cmucl-updates
 
 set -x
 if [ -d ../$REPO ]; then
     (cd ../$REPO || exit 1; git stash; git checkout $BRANCH; git pull --rebase)
 else
-    (cd ..; git clone https://gitlab.common-lisp.net/cmucl/trivial-package-local-nicknames-mirror.git)
+    (cd ..; git clone git@gitlab.common-lisp.net:cmucl/$REPO.git)
 fi
 
 LISP=$PWD/$LISP
