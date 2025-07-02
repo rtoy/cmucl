@@ -84,7 +84,7 @@ set -x
 if [ -d ../$REPO ]; then
     (cd ../$REPO || exit 1; git stash; git checkout $BRANCH; git pull --rebase)
 else
-    (cd ..; git clone git@gitlab.common-lisp.net:cmucl/$REPO.git)
+    (cd ..; git clone https://gitlab.common-lisp.net/cmucl/$REPO.git)
 fi
 
 LISP=$PWD/$LISP
