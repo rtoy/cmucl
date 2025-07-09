@@ -1993,8 +1993,7 @@
 
   Signals a continuable error if any of the following are true:
     - Local-Nickname is already a local nickname for a different package
-    - Local-Nickname is one of \"CL\", \"COMMON-LISP\", or \"KEYWORD\"
-    - Local-Nickname is a global name or nickname for designated package"
+    - Local-Nickname is one of \"CL\", \"COMMON-LISP\", or \"KEYWORD\""
 
   (let* ((pkg (designator-package package))
 	 (actual-pkg (designator-package actual-package))
