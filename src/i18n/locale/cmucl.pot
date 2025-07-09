@@ -8569,8 +8569,7 @@ msgid ""
 "\n"
 "  Signals a continuable error if any of the following are true:\n"
 "    - Local-Nickname is already a local nickname for a different package\n"
-"    - Local-Nickname is one of \"CL\", \"COMMON-LISP\", or \"KEYWORD\"\n"
-"    - Local-Nickname is a global name or nickname for designated package"
+"    - Local-Nickname is one of \"CL\", \"COMMON-LISP\", or \"KEYWORD\""
 msgstr ""
 
 #: src/code/package.lisp
