@@ -33,6 +33,7 @@ variables:
       - build-2/*.log
       - build-3/*.log
       - build-4/
+      - cmucl*
       # Needed by Linux analyzer stage
       - src/lisp/cmucl-version.h
       # Save this so we can see the generated errno
