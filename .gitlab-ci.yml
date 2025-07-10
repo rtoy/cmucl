@@ -49,6 +49,8 @@ variables:
     # When the result of `git describe` cannot be used as a version
     # string, an alternative can be provided with the -V flag
     - bin/make-dist.sh -I dist build-4
+    # Also make some tarballs so it's easy to download the artifacts.
+    - bin/make-dist.sh -S build-4
 
 # Default configuration for running the ansi-tests.
 .ansi_test_template: &ansi_test_configuration
