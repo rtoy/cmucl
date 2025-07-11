@@ -29,6 +29,7 @@ variables:
   stage: build
   artifacts:
     paths:
+      - dist/
       - build-2/*.log
       - build-3/*.log
       - build-4/
@@ -48,7 +49,8 @@ variables:
     - bin/build.sh $bootstrap -b build -R -C "" -o snapshot/bin/lisp
     # When the result of `git describe` cannot be used as a version
     # string, an alternative can be provided with the -V flag
-    # Make some tarballs so it's easy to download the artifacts.
+    - bin/make-dist.sh -I dist build-4
+    # Also make some tarballs so it's easy to download the artifacts.
     - bin/make-dist.sh -S build-4
 
 # Default configuration for running the ansi-tests.
