@@ -33,6 +33,7 @@ variables:
       - build-2/*.log
       - build-3/*.log
       - build-4/
+      - cmucl*
       # Needed by Linux analyzer stage
       - src/lisp/cmucl-version.h
       # Save this so we can see the generated errno
@@ -48,7 +49,10 @@ variables:
     - bin/build.sh $bootstrap -b build -R -C "" -o snapshot/bin/lisp
     # When the result of `git describe` cannot be used as a version
     # string, an alternative can be provided with the -V flag
+    # The following stages need this to run tests and such.
     - bin/make-dist.sh -I dist build-4
+    # Also make some tarballs so it's easy to download the artifacts.
+    - bin/make-dist.sh -S build-4
 
 # Default configuration for running the ansi-tests.
 .ansi_test_template: &ansi_test_configuration
