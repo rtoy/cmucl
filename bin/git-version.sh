@@ -46,6 +46,11 @@ else
 	# The git hash looks like a release which is 3 hex digits.  Use it as is.
 	DEFAULT_VERSION="${GIT_HASH}"
     fi
+
+    if [ -z "$DEFAULT_VERSION" ]; then
+	echo "Unable to determine a default version from hash $GIT_HASH"
+	exit 1;
+    fi
 fi
 
 if [ -z "$FILE" ]; then

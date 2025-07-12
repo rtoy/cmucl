@@ -50,6 +50,7 @@ variables:
     # When the result of `git describe` cannot be used as a version
     # string, an alternative can be provided with the -V flag
     # The following stages need this to run tests and such.
+    - sh -x bin/git-version.sh
     - bin/make-dist.sh -I dist build-4
     # Also make some tarballs so it's easy to download the artifacts.
     - bin/make-dist.sh -S build-4
