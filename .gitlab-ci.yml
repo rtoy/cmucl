@@ -1,7 +1,10 @@
 variables:
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2024/08"
-  version: "2024-08-x86"
-  bootstrap: "-B boot-2024-08"
+  year: "2025"
+  month: "07"
+  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/$year/$month"
+  version: "$year-$month-x86"
+  tar_ext: "xz"
+  bootstrap: ""
 
 # Default install configuration to download the cmucl tarballs to use
 # for building.
@@ -15,10 +18,10 @@ variables:
     - ls -F /usr/local/bin
     - type -all gitlab-runner
     # Download binaries.  (Do we really need the extras tarball?)
-    - $CURL -o cmucl-$version-$osname.tar.bz2 $download_url/cmucl-$version-$osname.tar.bz2
-    - $CURL -o cmucl-$version-$osname.extra.tar.bz2 $download_url/cmucl-$version-$osname.extra.tar.bz2
+    - $CURL -o cmucl-$version-$osname.tar.$tar_ext $download_url/cmucl-$version-$osname.tar.$tar_ext
+    - $CURL -o cmucl-$version-$osname.extra.tar.$tar_ext $download_url/cmucl-$version-$osname.extra.tar.$tar_ext
     - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-$osname.tar.bz2; tar xjf ../cmucl-$version-$osname.extra.tar.bz2)
+    - (cd snapshot; tar xf ../cmucl-$version-$osname.tar.$tar_ext; tar xf ../cmucl-$version-$osname.extra.tar.$tar_ext)
 
 # Default build configuration to be added to each build stage for each
 # OS.  This assumes we don't need anything special between OSes, and
