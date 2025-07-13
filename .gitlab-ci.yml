@@ -18,7 +18,7 @@ variables:
     - $CURL -o cmucl-$version-$osname.tar.bz2 $download_url/cmucl-$version-$osname.tar.bz2
     - $CURL -o cmucl-$version-$osname.extra.tar.bz2 $download_url/cmucl-$version-$osname.extra.tar.bz2
     - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-$osname.tar.bz2; tar xjf ../cmucl-$version-$osname.extra.tar.bz2)
+    - (cd snapshot; tar xf ../cmucl-$version-$osname.tar.xz; tar xf ../cmucl-$version-$osname.extra.tar.xz)
 
 # Default build configuration to be added to each build stage for each
 # OS.  This assumes we don't need anything special between OSes, and
