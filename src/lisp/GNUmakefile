@@ -36,6 +36,31 @@ SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	runprog.c time.c case-mapping.c exec-init.c \
 	${FDLIBM} ${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC} ${GC_SRC}
 
+CORE_MATH_64=core-math/src/binary64
+
+CORE64_OBJS=\
+	$(CORE_MATH_64)/sin/sin.o \
+	$(CORE_MATH_64)/cos/cos.o \
+	$(CORE_MATH_64)/tan/tan.o \
+	$(CORE_MATH_64)/atan2/atan2.o \
+	$(CORE_MATH_64)/asin/asin.o \
+	$(CORE_MATH_64)/acos/acos.o \
+	$(CORE_MATH_64)/atan/atan.o \
+	$(CORE_MATH_64)/sinh/sinh.o \
+	$(CORE_MATH_64)/cosh/cosh.o \
+	$(CORE_MATH_64)/tanh/tanh.o \
+	$(CORE_MATH_64)/asinh/asinh.o \
+	$(CORE_MATH_64)/acosh/acosh.o \
+	$(CORE_MATH_64)/atanh/atanh.o \
+	$(CORE_MATH_64)/exp/exp.o \
+	$(CORE_MATH_64)/log/log.o \
+	$(CORE_MATH_64)/log10/log10.o \
+	$(CORE_MATH_64)/log2/log2.o \
+	$(CORE_MATH_64)/pow/pow.o \
+	$(CORE_MATH_64)/hypot/hypot.o \
+	$(CORE_MATH_64)/log1p/log1p.o \
+	$(CORE_MATH_64)/expm1/expm1.o
+
 OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 
 ### Don't look in RCS for the files, because we might not want the latest.
@@ -51,18 +76,20 @@ version.o : version.c version
 	mv ,version version
 	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
 
-lisp: ${OBJS} version.o
+lisp: ${OBJS} ${CORE64_OBJS} version.o
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp $^ ${OS_LIBS} -lm
 	mv -f ,lisp lisp
 
 # Create a library out of all the object files so we can build an
 # executable.  However, we need to remove exec-init.o from the library
-lisp.a:	version.o ${OBJS} ${EXEC_FINAL_OBJ}
+lisp.a:	version.o ${OBJS} ${CORE64_OBJS} ${EXEC_FINAL_OBJ}
 	$(AR) crs lisp.a ${OBJS} version.o
 ifneq (${EXEC_FINAL_OBJ},)
 	$(AR) d lisp.a exec-init.o
 endif
 
+#libcore-math.a : $(CORE64_OBJ)
+#	$(AR) crs libcore-math.a $^
 version:
 	echo 0 > version
 

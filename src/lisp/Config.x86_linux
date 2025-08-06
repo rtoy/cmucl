@@ -1,6 +1,9 @@
 # -*- Mode: makefile -*-
 include Config.x86_common
 
+# We want errno support because we used to have that.
+CORE_MATH = -DCORE_MATH_SUPPORT_ERRNO
+
 CFLAGS += $(COPT)
 CPPFLAGS += -m32
 CFLAGS += -rdynamic  -march=pentium4 -mfpmath=sse -mtune=generic
