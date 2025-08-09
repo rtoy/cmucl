@@ -25,6 +25,7 @@
 (register-lisp-feature :linux)
 (register-lisp-feature :elf)
 (register-lisp-runtime-feature :executable)
+(register-lisp-runtime-feature :core-math)
 
 (setq *software-type* "Linux")
 
