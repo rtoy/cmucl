@@ -36,12 +36,23 @@
 		   :from :eval :to :result) edx)
   (:temporary (:sc single-stack) temp-single)
   (:temporary (:sc double-stack) temp-double)
+  (:temporary (:sc unsigned-stack) save-fpu-cw)
+  (:temporary (:sc unsigned-stack) fpu-cw)
   (:node-var node)
   (:vop-var vop)
   (:save-p t)
-  (:ignore args ecx edx)
+  (:ignore args ecx #+nil edx)
   (:guard (backend-featurep :sse2))
-  (:generator 0 
+  (:generator 0
+    ;; Save the x87 FPU control word.  Then modify it to set the
+    ;; precision bits to double (2).
+    (inst fnstcw save-fpu-cw)
+    (move edx save-fpu-cw)
+    (inst and edx (dpb 0 (byte 2 8) #xffff))	; Zap the precision control bits
+    (inst or edx (dpb 2 (byte 2 8) 0))		; Set precision control to double
+    (move fpu-cw edx)
+    (inst fldcw fpu-cw)			; New CW
+
     (cond ((policy node (> space speed))
 	   (move eax function)
 	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign)))
@@ -63,7 +74,9 @@
 	 (inst movss xmm0-tn (ea-for-sf-stack temp-single)))
 	(double-reg
 	 (inst fstpd (ea-for-df-stack temp-double))
-	 (inst movsd xmm0-tn (ea-for-df-stack temp-double)))))))
+	 (inst movsd xmm0-tn (ea-for-df-stack temp-double)))))
+    ;; Restore the x87 FPU control settings
+    (inst fldcw save-fpu-cw)))
 
 (define-vop (alloc-number-stack-space)
   (:info amount)
