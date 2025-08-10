@@ -63,7 +63,8 @@ CORE64_OBJS=\
 	$(CORE_MATH_64)/pow/pow.o \
 	$(CORE_MATH_64)/hypot/hypot.o \
 	$(CORE_MATH_64)/log1p/log1p.o \
-	$(CORE_MATH_64)/expm1/expm1.o
+	$(CORE_MATH_64)/expm1/expm1.o \
+	$(CORE_MATH_64)/sincos/sincos.o
 endif
 
 ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
