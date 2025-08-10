@@ -5,6 +5,7 @@ variables:
   version: "$year-$month-x86"
   tar_ext: "xz"
   bootstrap: ""
+  build_config: ""
 
 # Default install configuration to download the cmucl tarballs to use
 # for building.
@@ -49,7 +50,7 @@ variables:
     # Regular build using the cross-compiled result or snapshot.  The
     # analyzer job requires gcc, so make sure we build with gcc here
     # instead of clang. 
-    - bin/build.sh $bootstrap -b build -R -C "" -o snapshot/bin/lisp
+    - bin/build.sh $bootstrap -b build -R -C "$build_config" -o snapshot/bin/lisp
     # When the result of `git describe` cannot be used as a version
     # string, an alternative can be provided with the -V flag
     # The following stages need this to run tests and such.
@@ -137,6 +138,11 @@ linux:build:
   needs:
     - job: linux:install
       artifacts: true
+  variables:
+    # The CI on linux needs to use clang to build the core-math
+    # routines.  Gcc gets an internal compiler error for the OS
+    # running the linux builder.
+    build_config: "x86_linux_clang"
   # These rules is needed so that the static analyzer job can run on a
   # schedule because this is a prerequisite of the analyzer build.  A
   # regular push or merge request does the normal stuff.
@@ -326,6 +332,11 @@ opensuse:build:
   needs:
     - job: opensuse:install
       artifacts: true
+  variables:
+    # The CI on linux needs to use clang to build the core-math
+    # routines.  Gcc gets an internal compiler error for the OS
+    # running the linux builder.
+    build_config: "x86_linux_clang"
 
 opensuse:test:
   <<: *unit_test_configuration

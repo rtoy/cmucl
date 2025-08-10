@@ -1,9 +1,6 @@
 # -*- Mode: makefile -*-
 include Config.x86_common
 
-# TEMP FIX!
-CC = clang
-
 # We want errno support because we used to have that.
 CORE_MATH = -DCORE_MATH_SUPPORT_ERRNO
 
