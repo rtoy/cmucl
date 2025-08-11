@@ -5,6 +5,8 @@ variables:
   version: "$year-$month-x86"
   tar_ext: "xz"
   bootstrap: ""
+  # Value to use for build.sh -C option.  Allows choosing a different
+  # config, if needed.
   build_config: ""
 
 # Default install configuration to download the cmucl tarballs to use
