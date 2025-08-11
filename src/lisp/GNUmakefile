@@ -74,7 +74,7 @@ internals.h internals.inc:
 	@false
 
 clean:
-	$(RM) Depends *.o lisp lisp.nm core lisp.a
+	$(RM) Depends *.o $(CORE64_OBJS) lisp lisp.nm core lisp.a
 	echo 'Map file for lisp version 0' > lisp.nm
 
 depend: Depends
