@@ -64,8 +64,6 @@ ifneq (${EXEC_FINAL_OBJ},)
 	$(AR) d lisp.a exec-init.o
 endif
 
-#libcore-math.a : $(CORE64_OBJ)
-#	$(AR) crs libcore-math.a $^
 version:
 	echo 0 > version
 
