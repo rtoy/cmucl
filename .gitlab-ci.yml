@@ -182,10 +182,10 @@ linux:cross-build:
   script:
     # Use x86_linux_clang to build because x86_linux with gcc gives an
     # internal compiler error building core-math.
-    - bin/create-target.sh xtarget x86_linux_clang
-    - bin/create-target.sh xcross x86_linux_clang
+    - bin/create-target.sh xtarget "$build_config"
+    - bin/create-target.sh xcross "$build_config"
     - bin/cross-build-world.sh -crl xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp dist/bin/lisp
-    - bin/build.sh -b xlinux $bootstrap -R -C "" -o "xtarget/lisp/lisp -lib xtarget/lisp"
+    - bin/build.sh -b xlinux $bootstrap -R -C "$build_config" -o "xtarget/lisp/lisp -lib xtarget/lisp"
     - bin/make-dist.sh -I xdist xlinux-4
 
 linux:test:
