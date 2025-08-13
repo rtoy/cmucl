@@ -41,7 +41,7 @@
   #+core-math
   (:temporary (:sc unsigned-stack) fpu-cw)
   #+core-math
-  (:temporary (:sc unsigned-reg) temp-cw)
+  (:temporary (:sc unsigned-reg :offset esi-offset) temp-cw)
   (:node-var node)
   (:vop-var vop)
   (:save-p t)
@@ -51,11 +51,14 @@
     #+core-math
     (progn
       ;; Save the x87 FPU control word.  Then modify it to set the
-      ;; precision bits to double (2).
+      ;; precision bits to 3 for 64-bit mantissas for 80-bit
+      ;; arithmetic.  If we don't some of some special functions
+      ;; return incorrect values because the x87 precision was set to
+      ;; single.
       (inst fnstcw save-fpu-cw)
       (move temp-cw save-fpu-cw)
       (inst and temp-cw (dpb 0 (byte 2 8) #xffff)) ; Zap the precision control bits
-      (inst or temp-cw (dpb 2 (byte 2 8) 0)) ; Set precision control to double
+      (inst or temp-cw (dpb 3 (byte 3 8) 0)) ; Set precision control bits
       (move fpu-cw temp-cw)
       (inst fldcw fpu-cw)		; New CW
       )
