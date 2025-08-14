@@ -1265,7 +1265,7 @@
 
 ;;;; Float mode hackery:
 
-(deftype float-modes () '(unsigned-byte 24))
+(deftype float-modes () '(unsigned-byte 30))
 
 ;; For the record, here is the format of the MXCSR register.
 ;;
