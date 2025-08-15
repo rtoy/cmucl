@@ -109,6 +109,7 @@
 			       (ash x87-enables 7))))
 
       final-mode))
+  #+nil
   (defun (setf floating-point-modes) (new-mode)
     (declare (type (unsigned-byte 32) new-mode))
     ;; Set the floating point modes for both X87 and SSE2.  This
@@ -127,6 +128,31 @@
 		    (ash 3 (+ 8 16)))))
       (setf (vm::sse2-floating-point-modes) (ldb (byte 24 0) new-mode))
       (setf (vm::x87-floating-point-modes) (ldb (byte 24 0) x87-modes)))
+    new-mode)
+  (defun (setf floating-point-modes) (new-mode)
+    (declare (type (unsigned-byte 32) new-mode))
+    ;; Set the floating point modes for both X87 and SSE2.  This
+    ;; include the rounding control bits.
+    #+nil
+    (format t "new-mode = ~8,'0x~%" new-mode)
+    (let* ((rc (ldb float-rounding-mode new-mode))
+	   (new-exceptions (ldb float-exceptions-byte new-mode))
+	   (new-enables (ldb float-traps-byte new-mode))
+	   (x87-modes 0))
+      ;; From the new mode, update the x87 FPU mode with the same set
+      ;; of accrued exceptions, enabled exceptions, and rounding mode.
+      (setf x87-modes (dpb new-exceptions x87-exceptions-byte x87-modes))
+      (setf x87-modes (dpb new-enables x87-exceptions-mask-byte x87-modes))
+      (setf x87-modes (dpb rc x87-rounding-control-byte x87-modes))
+
+      ;; Set precision to 64-bits (double-extended).
+      (setf x87-modes
+	    (dpb (cdr (assoc :64-bits x87-precision-control-alist))
+		 x87-precision-control-byte
+		 x87-modes))
+
+      (setf (vm::sse2-floating-point-modes) (ldb (byte 16 0) new-mode))
+      (setf (vm::x87-floating-point-modes) (ldb (byte 30 0) x87-modes)))
     new-mode)
   )
 
