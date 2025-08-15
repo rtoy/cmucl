@@ -1292,7 +1292,7 @@
 ;; Also see float-rounding-mode, float-sticky-bits, float-traps-byte,
 ;; and float-exceptions-byte in compiler/x86/parms.lisp.
 
-(defun print-sse2-modes (&optional (sse-mode (sse2-floating-point-modes)))
+(defun print-sse2-fp-modes (&optional (sse-mode (sse2-floating-point-modes)))
   "Print SSE2 modes word in a readable fashion."
   ;; Note that Intel uses masks to disable the exception, but to match
   ;; the rest of cmucl, these bits are represented as enable bits.
@@ -1418,7 +1418,7 @@
     (:53-bits . 2)
     (:64-bits . 3)))
 
-(defun print-x87-modes (&optional (x87-mode (x87-floating-point-modes)))
+(defun print-x87-fp-modes (&optional (x87-mode (x87-floating-point-modes)))
   "Print X87 floating modes word in a readable fashion."
   ;; Note that Intel uses masks to disable the exception, but to match
   ;; the rest of cmucl, these bits are represented as enable bits.
