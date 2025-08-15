@@ -87,6 +87,14 @@ msgid "inline ftruncate"
 msgstr ""
 
 #: src/compiler/x86/float-sse2.lisp
+msgid "Print SSE2 modes word in a readable fashion."
+msgstr ""
+
+#: src/compiler/x86/float-sse2.lisp
+msgid "Print X87 floating modes word in a readable fashion."
+msgstr ""
+
+#: src/compiler/x86/float-sse2.lisp
 msgid "inline complex single-float creation"
 msgstr ""
 
