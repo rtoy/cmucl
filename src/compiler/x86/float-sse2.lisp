@@ -1288,6 +1288,33 @@
 ;;  0         invalid operation flag
 ;;
 ;; See below for rounding control
+;;
+;; Also see float-rounding-mode, float-sticky-bits, float-traps-byte,
+;; and float-exceptions-byte in compiler/x86/parms.lisp.
+
+(defun print-sse2-modes (&optional (sse-mode (sse2-floating-point-modes)))
+  "Print SSE2 modes word in a readable fashion."
+  ;; Note that Intel uses masks to disable the exception, but to match
+  ;; the rest of cmucl, these bits are represented as enable bits.
+  (format t "Flush-to-zero:          ~A~%" (ldb (byte 1 15) sse-mode))
+  (let ((rc (ldb (byte 2 13) sse-mode)))
+    (format t "Rounding control:       ~A ~A~%"
+	    rc
+	    (car (rassoc rc rounding-mode-alist))))
+  (format t "Precision enable:       ~A~%" (ldb (byte 1 12) sse-mode))
+  (format t "Underflow enable:       ~A~%" (ldb (byte 1 11) sse-mode))
+  (format t "Overflow enable:        ~A~%" (ldb (byte 1 10) sse-mode))
+  (format t "Divide-by-zero enable:  ~A~%" (ldb (byte 1 9) sse-mode))
+  (format t "Denormal op enable:     ~A~%" (ldb (byte 1 8) sse-mode))
+  (format t "Invalid op enable:      ~A~%" (ldb (byte 1 7) sse-mode))
+  (format t "Denormals-are-zero      ~A~%" (ldb (byte 1 6) sse-mode))
+  (format t "Precision flag:         ~A~%" (ldb (byte 1 5) sse-mode))
+  (format t "Underflow flag:         ~A~%" (ldb (byte 1 4) sse-mode))
+  (format t "Overflow flag:          ~A~%" (ldb (byte 1 3) sse-mode))
+  (format t "Divide-by-zero flag:    ~A~%" (ldb (byte 1 2) sse-mode))
+  (format t "Denormal op flag:       ~A~%" (ldb (byte 1 1) sse-mode))
+  (format t "Invalid op flag:        ~A~%" (ldb (byte 1 0) sse-mode)))
+
 (defknown sse2-floating-point-modes () float-modes (flushable))
 (defknown ((setf sse2-floating-point-modes)) (float-modes) float-modes)
 
@@ -1374,6 +1401,58 @@
 ;; 01   reserved
 ;; 10   double precision (53 bits)
 ;; 11   double extended precision (64 bits)
+
+(defconstant x87-exceptions-byte
+  (byte 6 0))
+(defconstant x87-infinity-control-byte
+  (byte 1 (+ 12 16)))
+(defconstant x87-rounding-control-byte
+  (byte 2 (+ 10 16)))
+(defconstant x87-precision-control-byte
+  (byte 2 (+ 8 16)))
+(defconstant x87-exceptions-mask-byte
+  (byte 6 16))
+(defconstant x87-precision-control-alist
+  `((:24-bits . 0)
+    (:reserved . 1)
+    (:53-bits . 2)
+    (:64-bits . 3)))
+
+(defun print-x87-modes (&optional (x87-mode (x87-floating-point-modes)))
+  "Print X87 floating modes word in a readable fashion."
+  ;; Note that Intel uses masks to disable the exception, but to match
+  ;; the rest of cmucl, these bits are represented as enable bits.
+  (format t "SW: FPU busy:              ~A~%" (ldb (byte 1 15) x87-mode))
+  (format t "SW: Condition code C3:     ~A~%" (ldb (byte 1 14) x87-mode))
+  (format t "SW: Top of stack:          ~D~%" (ldb (byte 3 11) x87-mode))
+  (format t "SW: Condition code C2:     ~A~%" (ldb (byte 1 10) x87-mode))
+  (format t "SW: Condition code C1:     ~A~%" (ldb (byte 1 9) x87-mode))
+  (format t "SW: Condition code C0:     ~A~%" (ldb (byte 1 8) x87-mode))
+  (format t "SW: Error summary:         ~A~%" (ldb (byte 1 7) x87-mode))
+  (format t "SW: Stack fault:           ~A~%" (ldb (byte 1 6) x87-mode))
+  (format t "SW: Precision flag:        ~A~%" (ldb (byte 1 5) x87-mode))
+  (format t "SW: Underflow flag:        ~A~%" (ldb (byte 1 4) x87-mode))
+  (format t "SW: Overflow flag:         ~A~%" (ldb (byte 1 3) x87-mode))
+  (format t "SW: Divide-by-zero flag:   ~A~%" (ldb (byte 1 2) x87-mode))
+  (format t "SW: Denormal op flag:      ~A~%" (ldb (byte 1 1) x87-mode))
+  (format t "SW: Invalid op flag:       ~A~%" (ldb (byte 1 0) x87-mode))
+  (format t "CW: Reserved:              ~A~%" (ldb (byte 2 (+ 13 16)) x87-mode))
+  (format t "CW: Infinity control:      ~A~%" (ldb (byte 1 (+ 12 16)) x87-mode))
+  (let ((rc (ldb (byte 2 (+ 10 16)) x87-mode)))
+    (format t "CW: Rounding control:      ~A ~A~%"
+	    rc
+	    (car (rassoc rc rounding-mode-alist))))
+  (let ((pc (ldb (byte 2 (+ 8 16)) x87-mode)))
+    (format t "CW: Precision control:     ~A ~A~%"
+	    pc
+	    (car (rassoc pc x87-precision-control-alist))))
+  (format t "CW: Reserved:              ~A~%" (ldb (byte 2 (+ 6 16)) x87-mode))
+  (format t "CW: Precision enable:      ~A~%" (ldb (byte 1 (+ 5 16)) x87-mode))
+  (format t "CW: Underflow enable:      ~A~%" (ldb (byte 1 (+ 4 16)) x87-mode))
+  (format t "CW: Overflow enable:       ~A~%" (ldb (byte 1 (+ 3 16)) x87-mode))
+  (format t "CW: Divide-by-zero enable: ~A~%" (ldb (byte 1 (+ 2 16)) x87-mode))
+  (format t "CW: Denormal op enable:    ~A~%" (ldb (byte 1 (+ 1 16)) x87-mode))
+  (format t "CW: Invalid op enable:     ~A~%" (ldb (byte 1 (+ 0 16)) x87-mode)))
 
 (defknown x87-floating-point-modes () float-modes (flushable))
 (defknown ((setf x87-floating-point-modes)) (float-modes)
