@@ -355,11 +355,12 @@
 						  :divide-by-zero)
 					 :rounding-mode :zero)
 	   (let* ((x87-modes (x86::x87-floating-point-modes))
-		  (x87-exceptions-enabled (ldb x86::x87-exceptions-mask-byte x87-modes))
-		  (x87-rc (ldb x86::x87-rounding-control-byte x87-modes))
+		  (x87-exceptions-enabled (ldb x86::x87-float-traps-byte x87-modes))
+		  (x87-rc (ldb x86::x87-float-rounding-mode x87-modes))
 		  (sse2-modes (x86::sse2-floating-point-modes))
 		  (sse2-exceptions-enabled (ldb x86::float-traps-byte sse2-modes))
 		  (sse2-rc (ldb x86::float-rounding-mode sse2-modes)))
+	     (x86::print-x87-fp-modes x87-modes)
 	     ;; Verify that we set the enabled exceptions
 	     ;; correctly. First for sse2, then for x87.
 	     (assert-false (logbitp 5 sse2-exceptions-enabled)) ; precision
@@ -369,7 +370,7 @@
 	     (assert-false (logbitp 1 sse2-exceptions-enabled))	; denormal
 	     (assert-true (logbitp 0 sse2-exceptions-enabled))	; invalid
 	   
-	     (assert-false (logbitp 5 x87-exceptions-enabled)) ; precision
+	     (assert-false (logbitp 5 x87-exceptions-enabled))  ; precision
 	     (assert-true (logbitp 4 x87-exceptions-enabled))	; underflow
 	     (assert-true (logbitp 3 x87-exceptions-enabled))	; overflow
 	     (assert-true (logbitp 2 x87-exceptions-enabled))	; divide-by-zero
@@ -382,8 +383,8 @@
 
 	     ;; Verify precision for x87
 	     (assert-eql :64-bits
-			 (car (rassoc (ldb x86::x87-precision-control-byte x87-modes)
-				      x86::x87-precision-control-alist)))))
+			 (car (rassoc (ldb x86::x87-float-precision-control-byte x87-modes)
+				      x86::x87-float-precision-control-alist)))))
 
       (setf (x86::x87-floating-point-modes) old-x87-modes)
       (setf (x86::sse2-floating-point-modes) old-sse2-modes))))
