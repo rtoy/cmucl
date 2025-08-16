@@ -1452,7 +1452,7 @@
 	    pc
 	    (car (rassoc pc x87-float-precision-control-alist))))
   (format t "CW: Reserved:             ~30T~A~%" (ldb (byte 2 (+ 6 16)) x87-mode))
-  (print-fp-exceptions-enabled (ldb x87-traps-byte x87-mode)))
+  (print-fp-exceptions-enabled (ldb x87-float-traps-byte x87-mode)))
 
 (defknown x87-floating-point-modes () float-modes (flushable))
 (defknown ((setf x87-floating-point-modes)) (float-modes)
