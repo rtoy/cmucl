@@ -139,16 +139,15 @@
 	   (new-exceptions (ldb float-exceptions-byte new-mode))
 	   (new-enables (ldb float-traps-byte new-mode))
 	   (x87-modes 0))
-      ;; From the new mode, update the x87 FPU mode with the same set
-      ;; of accrued exceptions, enabled exceptions, and rounding mode.
-      (setf x87-modes (dpb new-exceptions x87-exceptions-byte x87-modes))
-      (setf x87-modes (dpb new-enables x87-exceptions-mask-byte x87-modes))
-      (setf x87-modes (dpb rc x87-rounding-control-byte x87-modes))
+      ;; From the new mode, update the x87 FPU mode with the same set of accrued exceptions, enabled exceptions, and rounding mode.
+      (setf x87-modes (dpb new-exceptions float-exceptions-byte x87-modes))
+      (setf x87-modes (dpb new-enables x87-float-traps-byte x87-modes))
+      (setf x87-modes (dpb rc x87-float-rounding-mode x87-modes))
 
       ;; Set precision to 64-bits (double-extended).
       (setf x87-modes
-	    (dpb (cdr (assoc :64-bits x87-precision-control-alist))
-		 x87-precision-control-byte
+	    (dpb (cdr (assoc :64-bits x87-float-precision-control-alist))
+		 x87-float-precision-control-byte
 		 x87-modes))
 
       (setf (vm::sse2-floating-point-modes) (ldb (byte 16 0) new-mode))

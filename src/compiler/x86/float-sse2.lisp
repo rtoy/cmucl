@@ -1379,21 +1379,26 @@
 ;; 10   double precision (53 bits)
 ;; 11   double extended precision (64 bits)
 
-(defconstant x87-exceptions-byte
-  (byte 6 0))
-(defconstant x87-infinity-control-byte
-  (byte 1 (+ 12 16)))
-(defconstant x87-rounding-control-byte
-  (byte 2 (+ 10 16)))
-(defconstant x87-precision-control-byte
-  (byte 2 (+ 8 16)))
-(defconstant x87-exceptions-mask-byte
-  (byte 6 16))
-(defconstant x87-precision-control-alist
+(defconstant x87-float-infinity-control-byte
+  (byte 1 (+ 12 16))
+  "The bit in the x87 FPU control word that controls the infinity mode.")
+(defconstant x87-float-rounding-mode
+  (byte 2 (+ 10 16))
+  "The bits in the x87 FPU control word for the rounding mode.")
+(defconstant x87-float-precision-control-byte
+  (byte 2 (+ 8 16))
+  "The bits in the x87 FPU contol word for the FP operation precision.")
+(defconstant x87-float-traps-byte
+  (byte 6 16)
+  "The bits in the x87 FPU control word indicating the exceptions that
+ are enabled.")
+(defconstant x87-float-precision-control-alist
   `((:24-bits . 0)
     (:reserved . 1)
     (:53-bits . 2)
-    (:64-bits . 3)))
+    (:64-bits . 3))
+  "Alist for the x87 precison control.  The car is the symbolic
+ precision and the cdr is the value for the precision control field.")
 
 (defun print-fp-exceptions-enabled (enabled)
   (format t "Precision enable:      ~30T~A~%" (ldb (byte 1 5) enabled))
@@ -1416,7 +1421,7 @@
   ;; Note that Intel uses masks to disable the exception, but to match
   ;; the rest of cmucl, these bits are represented as enable bits.
   (format t "Flush-to-zero:         ~30T~A~%" (ldb (byte 1 15) sse-mode))
-  (let ((rc (ldb (byte 2 13) sse-mode)))
+  (let ((rc (ldb float-rounding-mode sse-mode)))
     (format t "Rounding control:      ~30T~A ~A~%"
 	    rc
 	    (car (rassoc rc rounding-mode-alist))))
@@ -1437,17 +1442,17 @@
   (format t "SW: Stack fault:          ~30T~A~%" (ldb (byte 1 6) x87-mode))
   (print-fp-current-exceptions (ldb float-exceptions-byte x87-mode))
   (format t "CW: Reserved:             ~30T~A~%" (ldb (byte 2 (+ 13 16)) x87-mode))
-  (format t "CW: Infinity control:     ~30T~A~%" (ldb (byte 1 (+ 12 16)) x87-mode))
-  (let ((rc (ldb (byte 2 (+ 10 16)) x87-mode)))
+  (format t "CW: Infinity control:     ~30T~A~%" (ldb x87-float-infinity-control-byte x87-mode))
+  (let ((rc (ldb x87-float-rounding-mode x87-mode)))
     (format t "CW: Rounding control:     ~30T~A ~A~%"
 	    rc
 	    (car (rassoc rc rounding-mode-alist))))
-  (let ((pc (ldb (byte 2 (+ 8 16)) x87-mode)))
+  (let ((pc (ldb x87-float-precision-control-byte x87-mode)))
     (format t "CW: Precision control:    ~30T~A ~A~%"
 	    pc
-	    (car (rassoc pc x87-precision-control-alist))))
+	    (car (rassoc pc x87-float-precision-control-alist))))
   (format t "CW: Reserved:             ~30T~A~%" (ldb (byte 2 (+ 6 16)) x87-mode))
-  (print-fp-exceptions-enabled (ldb x87-exceptions-mask-byte x87-mode)))
+  (print-fp-exceptions-enabled (ldb x87-traps-byte x87-mode)))
 
 (defknown x87-floating-point-modes () float-modes (flushable))
 (defknown ((setf x87-floating-point-modes)) (float-modes)
