@@ -87,6 +87,30 @@ msgid "inline ftruncate"
 msgstr ""
 
 #: src/compiler/x86/float-sse2.lisp
+msgid "The bit in the x87 FPU control word that controls the infinity mode."
+msgstr ""
+
+#: src/compiler/x86/float-sse2.lisp
+msgid "The bits in the x87 FPU control word for the rounding mode."
+msgstr ""
+
+#: src/compiler/x86/float-sse2.lisp
+msgid "The bits in the x87 FPU contol word for the FP operation precision."
+msgstr ""
+
+#: src/compiler/x86/float-sse2.lisp
+msgid ""
+"The bits in the x87 FPU control word indicating the exceptions that\n"
+" are enabled."
+msgstr ""
+
+#: src/compiler/x86/float-sse2.lisp
+msgid ""
+"Alist for the x87 precison control.  The car is the symbolic\n"
+" precision and the cdr is the value for the precision control field."
+msgstr ""
+
+#: src/compiler/x86/float-sse2.lisp
 msgid "Print SSE2 modes word in a readable fashion."
 msgstr ""
 
