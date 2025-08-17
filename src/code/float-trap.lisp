@@ -109,37 +109,17 @@
 			       (ash x87-enables 7))))
 
       final-mode))
-  #+nil
+
   (defun (setf floating-point-modes) (new-mode)
     (declare (type (unsigned-byte 32) new-mode))
     ;; Set the floating point modes for both X87 and SSE2.  This
     ;; include the rounding control bits.
-    (let* ((rc (ldb float-rounding-mode new-mode))
-	   (new-exceptions (logand #x3f new-mode))
-	   (new-enables (logand #x3f (ash new-mode -7)))
-	   (x87-modes
-	    (logior new-exceptions
-		    (ash rc 10)
-		    (ash new-enables 16)
-		    ;; Set precision control to be 64-bit, always.  We
-		    ;; don't use the x87 registers with sse2, so this
-		    ;; is ok and would be the correct setting if we
-		    ;; ever support long-floats.
-		    (ash 3 (+ 8 16)))))
-      (setf (vm::sse2-floating-point-modes) (ldb (byte 24 0) new-mode))
-      (setf (vm::x87-floating-point-modes) (ldb (byte 24 0) x87-modes)))
-    new-mode)
-  (defun (setf floating-point-modes) (new-mode)
-    (declare (type (unsigned-byte 32) new-mode))
-    ;; Set the floating point modes for both X87 and SSE2.  This
-    ;; include the rounding control bits.
-    #+nil
-    (format t "new-mode = ~8,'0x~%" new-mode)
     (let* ((rc (ldb float-rounding-mode new-mode))
 	   (new-exceptions (ldb float-exceptions-byte new-mode))
 	   (new-enables (ldb float-traps-byte new-mode))
 	   (x87-modes 0))
-      ;; From the new mode, update the x87 FPU mode with the same set of accrued exceptions, enabled exceptions, and rounding mode.
+      ;; From the new mode, update the x87 FPU mode with the same set
+      ;; of accrued exceptions, enabled exceptions, and rounding mode.
       (setf x87-modes (dpb new-exceptions float-exceptions-byte x87-modes))
       (setf x87-modes (dpb new-enables x87-float-traps-byte x87-modes))
       (setf x87-modes (dpb rc x87-float-rounding-mode x87-modes))
@@ -152,8 +132,7 @@
 
       (setf (vm::sse2-floating-point-modes) (ldb (byte 16 0) new-mode))
       (setf (vm::x87-floating-point-modes) (ldb (byte 30 0) x87-modes)))
-    new-mode)
-  )
+    new-mode))
 
 #+(and sse2 darwin)
 (progn

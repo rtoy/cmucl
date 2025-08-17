@@ -1422,7 +1422,7 @@
   ;; the rest of cmucl, these bits are represented as enable bits.
   (format t "Flush-to-zero:         ~30T~A~%" (ldb (byte 1 15) sse-mode))
   (let ((rc (ldb float-rounding-mode sse-mode)))
-    (format t "Rounding control:      ~30T~A ~A~%"
+    (format t "Rounding control:      ~30T#b~2,'0b ~S~%"
 	    rc
 	    (car (rassoc rc rounding-mode-alist))))
   (print-fp-exceptions-enabled (ldb float-traps-byte sse-mode))
@@ -1432,26 +1432,28 @@
   "Print X87 floating modes word in a readable fashion."
   ;; Note that Intel uses masks to disable the exception, but to match
   ;; the rest of cmucl, these bits are represented as enable bits.
-  (format t "SW: FPU busy:             ~30T~A~%" (ldb (byte 1 15) x87-mode))
-  (format t "SW: Condition code C3:    ~30T~A~%" (ldb (byte 1 14) x87-mode))
-  (format t "SW: Top of stack:         ~30T~D~%" (ldb (byte 3 11) x87-mode))
-  (format t "SW: Condition code C2:    ~30T~A~%" (ldb (byte 1 10) x87-mode))
-  (format t "SW: Condition code C1:    ~30T~A~%" (ldb (byte 1 9) x87-mode))
-  (format t "SW: Condition code C0:    ~30T~A~%" (ldb (byte 1 8) x87-mode))
-  (format t "SW: Error summary:        ~30T~A~%" (ldb (byte 1 7) x87-mode))
-  (format t "SW: Stack fault:          ~30T~A~%" (ldb (byte 1 6) x87-mode))
+  (format t "Status word:~%")
+  (format t "FPU busy:             ~30T~A~%" (ldb (byte 1 15) x87-mode))
+  (format t "Condition code C3:    ~30T~A~%" (ldb (byte 1 14) x87-mode))
+  (format t "Top of stack:         ~30T~D~%" (ldb (byte 3 11) x87-mode))
+  (format t "Condition code C2:    ~30T~A~%" (ldb (byte 1 10) x87-mode))
+  (format t "Condition code C1:    ~30T~A~%" (ldb (byte 1 9) x87-mode))
+  (format t "Condition code C0:    ~30T~A~%" (ldb (byte 1 8) x87-mode))
+  (format t "Error summary:        ~30T~A~%" (ldb (byte 1 7) x87-mode))
+  (format t "Stack fault:          ~30T~A~%" (ldb (byte 1 6) x87-mode))
   (print-fp-current-exceptions (ldb float-exceptions-byte x87-mode))
-  (format t "CW: Reserved:             ~30T~A~%" (ldb (byte 2 (+ 13 16)) x87-mode))
-  (format t "CW: Infinity control:     ~30T~A~%" (ldb x87-float-infinity-control-byte x87-mode))
+  (format t "~%Control word:~%")
+  (format t "Reserved:             ~30T#b~2,'0b~%" (ldb (byte 2 (+ 13 16)) x87-mode))
+  (format t "Infinity control:     ~30T~A~%" (ldb x87-float-infinity-control-byte x87-mode))
   (let ((rc (ldb x87-float-rounding-mode x87-mode)))
-    (format t "CW: Rounding control:     ~30T~A ~A~%"
+    (format t "Rounding control:     ~30T#b~2,'0b ~S~%"
 	    rc
 	    (car (rassoc rc rounding-mode-alist))))
   (let ((pc (ldb x87-float-precision-control-byte x87-mode)))
-    (format t "CW: Precision control:    ~30T~A ~A~%"
+    (format t "Precision control:    ~30T#b~2,'0b ~S~%"
 	    pc
 	    (car (rassoc pc x87-float-precision-control-alist))))
-  (format t "CW: Reserved:             ~30T~A~%" (ldb (byte 2 (+ 6 16)) x87-mode))
+  (format t "Reserved:             ~30T#b~2,'0b~%" (ldb (byte 2 (+ 6 16)) x87-mode))
   (print-fp-exceptions-enabled (ldb x87-float-traps-byte x87-mode)))
 
 (defknown x87-floating-point-modes () float-modes (flushable))
