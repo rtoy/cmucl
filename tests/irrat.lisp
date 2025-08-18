@@ -245,6 +245,17 @@
               (tanh #c(200w0 200w0))))
   
   
+;; See bug #424
+(define-test hypot
+    (:tag :issues)
+  (assert-eql 3.8950612975366328d0
+	      (kernel:%hypot 2.302585092994046d0 3.141592653589793d0))
+  (let ((result (expt #C(2.302585092994046d0 3.141592653589793d0) 4)))
+    (assert-eql -188.4466069439329d0
+		(realpart result))
+    (assert-eql -132.16721026205448d0
+		(imagpart result))))
+
 (define-test cos-tiny
     (:tag issues)
   ;; This test comes from the Maxima testsuite where core-math was not
@@ -260,3 +271,4 @@
   ;; The computed result looked it had like a single-precision accuracy.
   (assert-eql -0.37106498060016496d0
 	      (kernel:%log (kernel:make-double-float (+ 1071644672 398457) 0))))
+
