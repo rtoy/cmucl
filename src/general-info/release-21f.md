@@ -137,6 +137,8 @@ public domain.
     * #417 PCL complains about repeated aux variables in defmethod
     * #418 Update asdf to version 3.3.7.4 (for
       package-local-nicknames)
+    * #424 Use fdlibm `hypot` to fix bug in snapshot 2025-07
+    * #426 Define float-modes type correctly for `(setf (x87-set-floating-point-modes))`
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
