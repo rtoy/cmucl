@@ -647,8 +647,7 @@ heap overflow.")
   (let  ((* nil) (** nil) (*** nil)
 	 (- nil) (+ nil) (++ nil) (+++ nil)
 	 (/// nil) (// nil) (/ nil)
-	 (magic-eof-cookie (cons :eof nil))
-	 (number-of-eofs 0))
+	 (magic-eof-cookie (cons :eof nil)))
     (loop
       (with-simple-restart (abort (intl:gettext "Return to Top-Level."))
 	(catch 'top-level-catcher
@@ -663,28 +662,19 @@ heap overflow.")
 			 (funcall *prompt*)
 			 *prompt*))
 	      (force-output)
+	      ;; Quit REPL if Ctrl-d (EOF) is the next character to be read.
+	      (when (eq (peek-char nil *standard-input* nil magic-eof-cookie)
+			magic-eof-cookie)
+		(quit))
 	      (let ((form (read *standard-input* nil magic-eof-cookie)))
 		(cond ((not (eq form magic-eof-cookie))
 		       (let ((results
 			      (multiple-value-list (interactive-eval form))))
 			 (dolist (result results)
 			   (fresh-line)
-			   (prin1 result)))
-		       (setf number-of-eofs 0))
-		      ((eql (incf number-of-eofs) 1)
-		       (if *batch-mode*
-			   (quit)
-			   (let ((stream (make-synonym-stream '*terminal-io*)))
-			     (setf *standard-input* stream)
-			     (setf *standard-output* stream)
-			     (format t (intl:gettext "~&Received EOF on *standard-input*, ~
-					switching to *terminal-io*.~%")))))
-		      ((> number-of-eofs eofs-before-quit)
-		       (format t (intl:gettext "~&Received more than ~D EOFs; Aborting.~%")
-			       eofs-before-quit)
-		       (quit))
+			   (prin1 result))))
 		      (t
-		       (format t (intl:gettext "~&Received EOF.~%"))))))))))))
+		       (quit)))))))))))
 
 
 ;;; %Halt  --  Interface
