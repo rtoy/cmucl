@@ -48,7 +48,7 @@
   (:ignore args ecx edx)
   (:guard (backend-featurep :sse2))
   (:generator 0
-    #+core-math
+    #+(and nil core-math)
     (progn
       ;; Save the x87 FPU control word.  Then modify it to set the
       ;; precision bits to 3 for 64-bit mantissas for 80-bit
@@ -86,7 +86,7 @@
 	 (inst fstpd (ea-for-df-stack temp-double))
 	 (inst movsd xmm0-tn (ea-for-df-stack temp-double)))))
     ;; Restore the x87 FPU control settings
-    #+core-math
+    #+(and nil core-math)
     (inst fldcw save-fpu-cw)))
 
 (define-vop (alloc-number-stack-space)
