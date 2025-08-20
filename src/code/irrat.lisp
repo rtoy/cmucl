@@ -27,6 +27,7 @@
 ;;; Make these INLINE, since the call to C is at least as compact as a Lisp
 ;;; call, and saves number consing to boot.
 ;;;
+#-core-math
 (defmacro def-math-rtn (name num-args)
   (multiple-value-bind (c-name lisp-name)
       (if (listp name)
@@ -45,8 +46,43 @@
 			   'double-float)
 		     results)))))))
 
+;; Define alien math routine with the given name and number of args.
+;; This generates a double-float version using the supplied NAME (or
+;; C-NAME and LISP-NAME).  The single-float version is assumed to have
+;; the same C-NAME and LISP-NAME, except an "f" and "F" are appended,
+;; respectively.
+#+core-math
+(defmacro def-math-rtn (name num-args)
+  (multiple-value-bind (c-name lisp-name)
+      (if (listp name)
+	  (values (first name) (second name))
+	  (values name
+		  (intern (concatenate 'simple-string
+				       "%"
+				       (string-upcase name)))))
+    (let ((c-name-f (concatenate 'simple-string c-name "f"))
+	  (lisp-name-f (symbolicate lisp-name "F")))
+    `(progn
+       (declaim (inline ,lisp-name))
+       (export ',lisp-name)
+       (alien:def-alien-routine (,c-name ,lisp-name) double-float
+	 ,@(let ((results nil))
+	     (dotimes (i num-args (nreverse results))
+	       (push (list (intern (format nil "ARG-~D" i))
+			   'double-float)
+		     results))))
+       (declaim (inline ,lisp-name-f))
+       (export ',lisp-name-f)
+       (alien:def-alien-routine (,c-name-f ,lisp-name-f) single-float
+	 ,@(let ((results nil))
+	     (dotimes (i num-args (nreverse results))
+	       (push (list (intern (format nil "ARG-~D" i))
+			   'single-float)
+		     results))))))))
+
 (eval-when (compile load eval)
 
+#-core-math
 (defun handle-reals (function var)
   `((((foreach fixnum single-float bignum ratio))
      (coerce (,function (coerce ,var 'double-float)) 'single-float))
@@ -55,6 +91,20 @@
     #+double-double
     ((double-double-float)
      (,(symbolicate "DD-" function) ,var))))
+
+#+core-math
+(defun handle-reals (function var)
+  ;; Handle single-float and double-float args with different
+  ;; functions.  We assume the name of the single-float version is the
+  ;; same as the double-float, but with "F" appended.
+  `((((foreach fixnum single-float bignum ratio))
+     (,(symbolicate function "F") (coerce ,var 'single-float)))
+    ((double-float)
+     (,function ,var))
+    #+double-double
+    ((double-double-float)
+     (,(symbolicate "DD-" function) ,var))))
+  
 
 ); eval-when (compile load eval)
 
