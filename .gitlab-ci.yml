@@ -4,7 +4,7 @@ variables:
   download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/$year/$month"
   version: "$year-$month-x86"
   tar_ext: "xz"
-  bootstrap: ""
+  bootstrap: "-B boot-2025-07"
   # Value to use for build.sh -C option.  Allows choosing a different
   # config, if needed.
   build_config: ""

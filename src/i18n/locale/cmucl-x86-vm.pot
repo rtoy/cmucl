@@ -136,6 +136,23 @@ msgstr ""
 msgid "Maximum number of bits in a positive fixnum"
 msgstr ""
 
+#: src/compiler/x86/parms.lisp
+msgid ""
+"The bits in the FP mode that hold the accrued exceptions that have\n"
+" occurred since the bits were reset."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "The bits in the FP mode that hold FP exceptions that are enabled."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid ""
+"The bits in the FP mode that hold the current exception.  However\n"
+" for x86, there aren't separate bits for this, so we use the stick\n"
+" bits from the accrued exceptions"
+msgstr ""
+
 #: src/compiler/x86/vm.lisp
 msgid "Redefining SC number ~D from ~S to ~S."
 msgstr ""
