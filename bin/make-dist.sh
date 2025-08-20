@@ -185,6 +185,7 @@ ROOT=$(dirname "$0")
 GTAR_OPTS=(-t "${GTAR:-tar}")
 EXTRA_OPTS=(${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}})
 INSTALL_OPTS=(${INSTALL_DIR:+ -I ${INSTALL_DIR}})
+MANDIR="${MANDIR:+ -M ${MANDIR}}"
 OPTIONS=("${GTAR_OPTS[@]}" "${EXTRA_OPTS[@]}" "${INSTALL_OPTS[@]}")
 
 set -x

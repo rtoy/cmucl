@@ -374,6 +374,11 @@ msgid "inline (signed-byte 32) integer-length"
 msgstr "inlineway (ignedsay-ytebay 32) integerway-engthlay"
 
 #: src/compiler/x86/arith.lisp
+#, fuzzy
+msgid "inline (unsigned-byte 32) integer-length"
+msgstr "inlineway (ignedsay-ytebay 32) integerway-engthlay"
+
+#: src/compiler/x86/arith.lisp
 msgid "inline (unsigned-byte 32) logcount"
 msgstr "inlineway (unsignedway-ytebay 32) ogcountlay"
 
