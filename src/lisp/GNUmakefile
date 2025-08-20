@@ -53,13 +53,13 @@ version.o : version.c version
 	mv ,version version
 	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
 
-lisp: ${OBJS} ${CORE64_OBJS} version.o
+lisp: ${OBJS} ${CORE_MATH_OBJS} version.o
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp $^ ${OS_LIBS} -lm
 	mv -f ,lisp lisp
 
 # Create a library out of all the object files so we can build an
 # executable.  However, we need to remove exec-init.o from the library
-lisp.a:	version.o ${OBJS} ${CORE64_OBJS} ${EXEC_FINAL_OBJ}
+lisp.a:	version.o ${OBJS} ${CORE_MATH_OBJS} ${EXEC_FINAL_OBJ}
 	$(AR) crs lisp.a ${OBJS} ${CORE64_OBJS} version.o
 ifneq (${EXEC_FINAL_OBJ},)
 	$(AR) d lisp.a exec-init.o
