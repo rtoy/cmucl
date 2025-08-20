@@ -405,20 +405,6 @@ msgid "Top-level READ-EVAL-PRINT loop.  Do not call this."
 msgstr ""
 
 #: src/code/lispinit.lisp
-msgid ""
-"~&Received EOF on *standard-input*, ~\n"
-"					switching to *terminal-io*.~%"
-msgstr ""
-
-#: src/code/lispinit.lisp
-msgid "~&Received more than ~D EOFs; Aborting.~%"
-msgstr ""
-
-#: src/code/lispinit.lisp
-msgid "~&Received EOF.~%"
-msgstr ""
-
-#: src/code/lispinit.lisp
 msgid "Return to Top-Level."
 msgstr ""
 
