@@ -63,6 +63,8 @@ def_arch_os () {
 		GTAR=gtar ;;
 	  esac
 	  uname_r=$(uname -r)
+	  # shellcheck disable=SC2001
+	  # sed is ok here instead of shell variable pattern matching
 	  case $uname_r in
 	    5.*) rel=$(echo "$uname_r" | sed 's/5\.//') ;;
 	    *) rel=$uname_r;;
@@ -86,7 +88,9 @@ def_arch_os () {
 	  ;;
       FreeBSD)
 	  ARCH=x86
-	  OS=freebsd_$(uname -r | tr '[:upper:]' '[:lower:]')
+	  # shellcheck disable=SC2018,SC2019
+	  # Don't want to use :lower: and :upper here since that depends on the locale.
+	  OS=freebsd_$(uname -r | tr 'A-Z' 'a-z')
 	  ;;
       esac
 }
@@ -159,6 +163,7 @@ if [ -z "$INSTALL_DIR" ]; then
     fi
 fi   
 
+# shellcheck disable=SC2001
 TARGET="$(echo "$1" | sed 's:/*$::')"
 
 # Choose a version based on the git hash as the default version.  We
