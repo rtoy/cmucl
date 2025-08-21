@@ -109,7 +109,6 @@
 			       (ash x87-enables 7))))
 
       final-mode))
-
   (defun (setf floating-point-modes) (new-mode)
     (declare (type (unsigned-byte 32) new-mode))
     ;; Set the floating point modes for both X87 and SSE2.  This
