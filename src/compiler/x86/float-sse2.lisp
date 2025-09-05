@@ -1288,6 +1288,10 @@
 ;;  0         invalid operation flag
 ;;
 ;; See below for rounding control
+;;
+;; Also see float-rounding-mode, float-sticky-bits, float-traps-byte,
+;; and float-exceptions-byte in compiler/x86/parms.lisp.
+
 (defknown sse2-floating-point-modes () float-modes (flushable))
 (defknown ((setf sse2-floating-point-modes)) (float-modes) float-modes)
 
