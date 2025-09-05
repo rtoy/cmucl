@@ -342,4 +342,3 @@
 			     (x86::x87-floating-point-modes)))))
     (assert-true (typep new-mode 'x86::float-modes))
     (assert-equal new-mode (setf (x86::x87-floating-point-modes) new-mode))))
-
