@@ -56,6 +56,4 @@
       ;; Verify precision for x87
       (assert-eql :64-bits
 		  (car (rassoc (ldb x86::x87-float-precision-control-byte x87-modes)
-			       x86::x87-float-precision-control-alist))))
-    )
-    )
+			       x86::x87-float-precision-control-alist))))))
