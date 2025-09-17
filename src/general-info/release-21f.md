@@ -123,6 +123,7 @@ public domain.
     * #375 `unix-mkstemp` and `unix-mkdtemp` actually returns the
       file names now.
     * #379 Support GNU-style command-line option names
+    * #381 cmucl-unix.pot depends on OS
     * #382 Command-line options are case-sensitive
     * #385 Fixed compiler warning about `%p` in Linux-os.c
     * #386 Generate `def-unix-error` forms from OS-specific files.
