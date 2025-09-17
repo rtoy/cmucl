@@ -1,10 +1,10 @@
 variables:
   year: "2025"
-  month: "07"
+  month: "09"
   download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/$year/$month"
   version: "$year-$month-x86"
   tar_ext: "xz"
-  bootstrap: "-B boot-2025-07"
+  bootstrap: ""
 
 # Default install configuration to download the cmucl tarballs to use
 # for building.
