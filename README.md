@@ -1,14 +1,15 @@
 [![pipeline status](https://gitlab.common-lisp.net/cmucl/cmucl/badges/master/pipeline.svg)](https://gitlab.common-lisp.net/cmucl/cmucl/commits/master)
 
-CMUCL is a free, high performance implementation of the Common Lisp
-programming language which runs on most major Unix platforms. It
-mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
-sophisticated native code compiler; a powerful foreign function
-interface; an implementation of CLOS; the Common Lisp Object System;
-which includes multimethods; a metaobject protocol; a source-level
-debugger and code profiler; and an Emacs-like editor implemented in
-Common Lisp. CMUCL is maintained by a team of volunteers collaborating
-over the Internet, and is mostly in the public domain.
+CMUCL is a free, high performance implementation of the [Common
+Lisp](http://en.wikipedia.org/wiki/Common_Lisp) programming language
+which runs on most major Unix platforms. It mainly conforms to the
+[ANSI Common Lisp standard](http://www.lispworks.com/documentation/HyperSpec/Front/index.htm). CMUCL provides a sophisticated native code
+compiler; a powerful foreign function interface; an implementation of
+CLOS; the Common Lisp Object System; which includes multimethods; a
+metaobject protocol; a source-level debugger and code profiler; and an
+Emacs-like editor implemented in Common Lisp. CMUCL is maintained by a
+team of volunteers collaborating over the Internet, and is mostly in
+the public domain.
 
 Here is a summary of its main features:
 
@@ -27,7 +28,7 @@ Here is a summary of its main features:
 * **generational garbage collection** on all supported
   architectures.  
 * **multiprocessing capability** on the x86 ports.
-* a [foreign function interface](ttps://cmucl.org/docs/cmu-user/html/Alien-Objects.html) which allows interfacing with C code
+* a [foreign function interface](https://cmucl.org/docs/cmu-user/html/Alien-Objects.html) which allows interfacing with C code
   and system libraries, including shared libraries on most platforms,
   and direct access to Unix system calls.
 * support for [interprocess communication](https://cmucl.org/docs/cmu-user/html/Interprocess-Communication-under-LISP.html) and remote procedure calls.

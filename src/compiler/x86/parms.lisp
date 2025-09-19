@@ -205,9 +205,15 @@
 ;; need to do it this way because the interface assumes the modes are
 ;; in the same order as the MXCSR register.
 (defconstant float-rounding-mode     (byte 2 13))
-(defconstant float-sticky-bits       (byte 6  0))
-(defconstant float-traps-byte        (byte 6  7))
-(defconstant float-exceptions-byte   (byte 6  0))
+(defconstant float-sticky-bits       (byte 6  0)
+  "The bits in the FP mode that hold the accrued exceptions that have
+ occurred since the bits were reset.")
+(defconstant float-traps-byte        (byte 6  7)
+  "The bits in the FP mode that hold FP exceptions that are enabled.")
+(defconstant float-exceptions-byte   (byte 6  0)
+  "The bits in the FP mode that hold the current exception.  However
+ for x86, there aren't separate bits for this, so we use the stick
+ bits from the accrued exceptions")
 
 (progn
 ;; SSE2 has a flush-to-zero flag, which we use as the fast bit.  Some

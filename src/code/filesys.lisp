@@ -957,11 +957,15 @@
       (error 'simple-file-error 
 	     :pathname pathname
 	     :format-control (intl:gettext "Bad place for a wild pathname."))
-      (let ((namestring (unix-namestring (merge-pathnames pathname) t)))
-	(when (and namestring (unix:unix-file-kind namestring))
-	  (pathname (unix::unix-resolve-links
-		     (unix:unix-maybe-prepend-current-directory
-		      namestring)))))))
+      (let* ((namestring (unix-namestring (merge-pathnames pathname) t))
+	     (file-kind (and namestring (unix:unix-file-kind namestring))))
+	(when file-kind
+	  (let ((resolved (unix:unix-realpath (unix:unix-maybe-prepend-current-directory
+					       namestring))))
+	    (pathname 
+	     (if (and resolved (eq file-kind :directory))
+		 (concatenate 'string resolved "/")
+		 resolved)))))))
 
 
 ;;;; Other random operations.

@@ -1,8 +1,10 @@
 variables:
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2024/08"
-  #download_url: "https://cmucl.org/downloads/snapshots/2024/08"
-  version: "2024-08-x86"
-  bootstrap: "-B boot-2024-08"
+  year: "2025"
+  month: "09"
+  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/$year/$month"
+  version: "$year-$month-x86"
+  tar_ext: "xz"
+  bootstrap: ""
 
 # Default install configuration to download the cmucl tarballs to use
 # for building.
@@ -16,10 +18,10 @@ variables:
     - ls -F /usr/local/bin
     - type -all gitlab-runner
     # Download binaries.  (Do we really need the extras tarball?)
-    - $CURL -o cmucl-$version-$osname.tar.bz2 $download_url/cmucl-$version-$osname.tar.bz2
-    - $CURL -o cmucl-$version-$osname.extra.tar.bz2 $download_url/cmucl-$version-$osname.extra.tar.bz2
+    - $CURL -o cmucl-$version-$osname.tar.$tar_ext $download_url/cmucl-$version-$osname.tar.$tar_ext
+    - $CURL -o cmucl-$version-$osname.extra.tar.$tar_ext $download_url/cmucl-$version-$osname.extra.tar.$tar_ext
     - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-$osname.tar.bz2; tar xjf ../cmucl-$version-$osname.extra.tar.bz2)
+    - (cd snapshot; tar xf ../cmucl-$version-$osname.tar.$tar_ext; tar xf ../cmucl-$version-$osname.extra.tar.$tar_ext)
 
 # Default build configuration to be added to each build stage for each
 # OS.  This assumes we don't need anything special between OSes, and
@@ -34,6 +36,7 @@ variables:
       - build-2/*.log
       - build-3/*.log
       - build-4/
+      - cmucl*
       # Needed by Linux analyzer stage
       - src/lisp/cmucl-version.h
       # Save this so we can see the generated errno
@@ -49,7 +52,11 @@ variables:
     - bin/build.sh $bootstrap -b build -R -C "" -o snapshot/bin/lisp
     # When the result of `git describe` cannot be used as a version
     # string, an alternative can be provided with the -V flag
+    # The following stages need this to run tests and such.
+    - sh -x bin/git-version.sh
     - bin/make-dist.sh -I dist build-4
+    # Also make some tarballs so it's easy to download the artifacts.
+    - bin/make-dist.sh -S build-4
 
 # Default configuration for running the ansi-tests.
 .ansi_test_template: &ansi_test_configuration
@@ -103,6 +110,7 @@ stages:
   - ansi-test
   - benchmark
   - analyze
+  - markdown-link-check
 
 cache:
 
@@ -114,6 +122,13 @@ linux:install:
   variables:
     osname: "linux"
     CURL: "curl"
+  # These rules are needed so that the static analyzer job can run on a
+  # schedule because this is a prerequisite of the analyzer build.  A
+  # regular push or merge request does the normal stuff.
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 linux:build:
   <<: *build_configuration
@@ -122,6 +137,13 @@ linux:build:
   needs:
     - job: linux:install
       artifacts: true
+  # These rules is needed so that the static analyzer job can run on a
+  # schedule because this is a prerequisite of the analyzer build.  A
+  # regular push or merge request does the normal stuff.
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 linux:cross-build:
   stage: build
@@ -259,7 +281,19 @@ osx:benchmark:
 # the linux-4 directory built in the linux:build job.
 linux:static-analyzer:
   stage: analyze
-  when: manual
+  # The analyzer is a manual job that isn't normally run.  These rules
+  # make that happen, but when the pipeline is scheduled we do run the
+  # analyzer. 
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
+      
+      
   tags:
     - linux
   artifacts:
@@ -311,3 +345,34 @@ opensuse:ansi-test:
     - job: opensuse:build
       artifacts: true
 
+# Optional job that runs the markdown link checker.  This is optional
+# because it's very slow, of course; you have to run it manually.
+#
+# From https://github.com/tcort/markdown-link-check
+# Checks links on the wiki pages whenever any wiki markdown pages change. 
+markdown-link-check:
+  stage: markdown-link-check
+  # Run the checker when the pipeline is scheduled to run.
+  # It's ok if this fails; we don't want to declare the entire
+  # pipeline as having failed.
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
+
+  # Only the linux runner has markdown-link-check installed
+  tags:
+    - linux
+  script:
+    # Check links in the main repo
+    - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
+    # Clone the wiki pages and check the links there.  Lots of
+    # failures here because of
+    # https://gitlab.com/gitlab-org/gitlab/-/issues/17845.
+    - git clone https://gitlab.common-lisp.net/cmucl/cmucl.wiki.git
+    - find cmucl.wiki -name \*.md -print0 | xargs -0 -n1 markdown-link-check

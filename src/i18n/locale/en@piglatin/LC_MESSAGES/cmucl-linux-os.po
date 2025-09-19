@@ -16,13 +16,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/code/linux-os.lisp
-msgid "Getpagesize failed: ~A"
-msgstr "Etpagesizegay ailedfay: ~Away"
-
 #: src/code/signal.lisp
 msgid "Stack fault on coprocessor"
 msgstr "Tacksay aultfay onway oprocessorcay"
+
+#~ msgid "Getpagesize failed: ~A"
+#~ msgstr "Etpagesizegay ailedfay: ~Away"
 
 #~ msgid "Returns a string describing version of the supporting software."
 #~ msgstr ""
