@@ -16,10 +16,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/code/bsd-os.lisp
-msgid "Unix system call getrusage failed: ~A."
-msgstr "Unixway ystemsay allcay etrusagegay ailedfay: ~Away."
-
 #: src/code/signal.lisp
 msgid "Emt instruction"
 msgstr "Emtway instructionway"
@@ -27,6 +23,9 @@ msgstr "Emtway instructionway"
 #: src/code/signal.lisp
 msgid "Bad argument to system call"
 msgstr "Adbay argumentway otay ystemsay allcay"
+
+#~ msgid "Unix system call getrusage failed: ~A."
+#~ msgstr "Unixway ystemsay allcay etrusagegay ailedfay: ~Away."
 
 #~ msgid "Version string for supporting software"
 #~ msgstr "Ersionvay ingstray orfay upportingsay oftwaresay"

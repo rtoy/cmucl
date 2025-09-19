@@ -3716,7 +3716,7 @@ msgstr ""
 msgid ""
 "WITH-STRING-CODEPOINT-ITERATOR ((next string) &body body)\n"
 "  provides a method of looping through a string from the beginning to\n"
-"  the end of the string prodcucing successive codepoints from the\n"
+"  the end of the string producing successive codepoints from the\n"
 "  string.  NEXT is bound to a generator macro that, within the scope\n"
 "  of the invocation, returns one or two values. The first value tells\n"
 "  whether any objects remain in the string. When the first value is\n"
@@ -3985,7 +3985,7 @@ msgstr ""
 msgid ""
 "WITH-STRING-GLYPH-ITERATOR ((next string) &body body)\n"
 "  provides a method of looping through a string from the beginning to\n"
-"  the end of the string prodcucing successive glyphs from the string.\n"
+"  the end of the string producing successive glyphs from the string.\n"
 "  NEXT is bound to a generator macro that, within the scope of the\n"
 "  invocation, returns one or three values. The first value tells\n"
 "  whether any objects remain in the string. When the first value is\n"
@@ -8208,6 +8208,7 @@ msgid ""
 "     (:EXPORT {symbol-name}*)\n"
 "     (:INTERN {symbol-name}*)\n"
 "     (:SIZE <integer>)\n"
+"     (:LOCAL-NICKNAMES {({nickname package}*)})\n"
 "   All options except :SIZE and :DOCUMENTATION can be used multiple times."
 msgstr ""
 
@@ -8549,6 +8550,57 @@ msgstr ""
 msgid ""
 "Identical to APROPOS, except that it returns a list of the symbols\n"
 "  found instead of describing them."
+msgstr ""
+
+#: src/code/package.lisp
+msgid ""
+"Returns an alist of (local-nickname . actual-package) describing the\n"
+"  nicknames local to Package."
+msgstr ""
+
+#: src/code/package.lisp
+msgid ""
+"For the designated package Package (defaulting to *PACKAGE*), add\n"
+"  Local-Nickname as a package local nickname to the package\n"
+"  Actual-Package. Actual-Package and Package must be an package\n"
+"  designator. Local-Nickname should be a string designator.\n"
+"\n"
+"  Returns the designated package.\n"
+"\n"
+"  Signals a continuable error if any of the following are true:\n"
+"    - Local-Nickname is already a local nickname for a different package\n"
+"    - Local-Nickname is one of \"CL\", \"COMMON-LISP\", or \"KEYWORD\""
+msgstr ""
+
+#: src/code/package.lisp
+msgid "Local nickname cannot be \"CL\", \"COMMON-LISP\" or \"KEYWORD\""
+msgstr ""
+
+#: src/code/package.lisp
+msgid "~A is already a local nickname for the package ~A in ~A"
+msgstr ""
+
+#: src/code/package.lisp
+msgid ""
+"~A cannot be a package local nickname for the global package~_ ~A with the "
+"same name"
+msgstr ""
+
+#: src/code/package.lisp
+msgid ""
+"~A cannot be a package local nickname for the global package~_ ~A with "
+"nickname ~A"
+msgstr ""
+
+#: src/code/package.lisp
+msgid ""
+"If Package has Old-Nickname as a local nickname, it is removed.\n"
+"  Returns true if the nickname existed and was removed.  Otherwise\n"
+" returns NIL."
+msgstr ""
+
+#: src/code/package.lisp
+msgid "Returns a list of packages which have a local nickname for Package."
 msgstr ""
 
 #: src/code/reader.lisp
@@ -9665,6 +9717,15 @@ msgstr ""
 msgid ""
 "When non-nil, attempt to load \"library:<host>.translations\" to resolve\n"
 "   an otherwise undefined logical host."
+msgstr ""
+
+#: src/code/pathname.lisp
+msgid ""
+"When non-NIL, pathnames are on Darwin are normalized when created.\n"
+"  Otherwise, the pathnames are unchanged.\n"
+"\n"
+"  This must be NIL during bootstrapping because Unicode is not yet\n"
+"  available."
 msgstr ""
 
 #: src/code/pathname.lisp

@@ -1,47 +1,46 @@
 variables:
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/2024/08"
-  version: "2024-08-x86"
-  bootstrap: "-B boot-2024-08"
+  year: "2025"
+  month: "09"
+  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/$year/$month"
+  version: "$year-$month-x86"
+  tar_ext: "xz"
+  bootstrap: ""
 
-
-stages:
-  - install
-  - build
-  - test
-  - ansi-test
-  - benchmark
-  - analyze
-
-cache:
-
-
-linux:install:
+# Default install configuration to download the cmucl tarballs to use
+# for building.
+.install_template: &install_configuration
   stage: install
-  tags:
-    - linux
   artifacts:
     paths:
       - snapshot/
   script:
-    - wget -nv $download_url/cmucl-$version-linux.tar.bz2
-    - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
+    - echo PATH = $PATH
+    - ls -F /usr/local/bin
+    - type -all gitlab-runner
+    # Download binaries.  (Do we really need the extras tarball?)
+    - $CURL -o cmucl-$version-$osname.tar.$tar_ext $download_url/cmucl-$version-$osname.tar.$tar_ext
+    - $CURL -o cmucl-$version-$osname.extra.tar.$tar_ext $download_url/cmucl-$version-$osname.extra.tar.$tar_ext
     - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
+    - (cd snapshot; tar xf ../cmucl-$version-$osname.tar.$tar_ext; tar xf ../cmucl-$version-$osname.extra.tar.$tar_ext)
 
-linux:build:
+# Default build configuration to be added to each build stage for each
+# OS.  This assumes we don't need anything special between OSes, and
+# the option '-C ""' is good enough.  We also override the default
+# build dirs by using the -b option so that we know where the results
+# are, independent of OS.
+.build_template: &build_configuration
   stage: build
-  tags:
-    - linux
   artifacts:
     paths:
       - dist/
-      - linux-2/*.log
-      - linux-3/*.log
-      - linux-4/
-      - src/lisp/
-  needs:
-    - job: linux:install
-      artifacts: true
+      - build-2/*.log
+      - build-3/*.log
+      - build-4/
+      - cmucl*
+      # Needed by Linux analyzer stage
+      - src/lisp/cmucl-version.h
+      # Save this so we can see the generated errno
+      - src/code/errno.lisp
   script:
     # Do cross compile first
     #- bin/create-target.sh xtarget x86_linux_clang
@@ -50,11 +49,101 @@ linux:build:
     # Regular build using the cross-compiled result or snapshot.  The
     # analyzer job requires gcc, so make sure we build with gcc here
     # instead of clang. 
-    - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
-    # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
+    - bin/build.sh $bootstrap -b build -R -C "" -o snapshot/bin/lisp
     # When the result of `git describe` cannot be used as a version
     # string, an alternative can be provided with the -V flag
-    - bin/make-dist.sh -I dist linux-4
+    # The following stages need this to run tests and such.
+    - sh -x bin/git-version.sh
+    - bin/make-dist.sh -I dist build-4
+    # Also make some tarballs so it's easy to download the artifacts.
+    - bin/make-dist.sh -S build-4
+
+# Default configuration for running the ansi-tests.
+.ansi_test_template: &ansi_test_configuration
+  stage: ansi-test
+  artifacts:
+    paths:
+      - ansi-test/test.out
+  script:
+    - bin/run-ansi-tests.sh -l dist/bin/lisp
+  
+# Default configuration for running unit tests.
+.unit_test_template: &unit_test_configuration
+  stage: test
+  artifacts:
+    paths:
+      - ansi-test/test.out
+      - test.log
+  script:
+    - echo LANG = $LANG
+    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+
+# Default configuration to test creation of lisp executable and
+# testing the exectuable works.
+.exec_test_template: &exec_test_configuration
+  stage: test
+  script:
+    # Create an executable and test it by printing the version.
+    - dist/bin/lisp -eval '(save-lisp "saved-lisp-executable" :executable t)'
+    - ./saved-lisp-executable --version
+    # Run the unit tests with the executable, just to make sure the
+    # executable works as expected.
+    - bin/run-unit-tests.sh -l ./saved-lisp-executable
+
+# Default configuration for running the benchmarks.
+.benchmark_template: &benchmark_configuration
+  stage: benchmark
+  artifacts:
+    paths:
+      - benchmarks/cl-bench/results
+  script:
+    - cd benchmarks/cl-bench
+    - mkdir tmp
+    - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
+    - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
+    - ../../snapshot/bin/lisp -load report
+    
+stages:
+  - install
+  - build
+  - test
+  - ansi-test
+  - benchmark
+  - analyze
+  - markdown-link-check
+
+cache:
+
+#### Linux jobs ####
+linux:install:
+  <<: *install_configuration
+  tags:
+    - linux
+  variables:
+    osname: "linux"
+    CURL: "curl"
+  # These rules are needed so that the static analyzer job can run on a
+  # schedule because this is a prerequisite of the analyzer build.  A
+  # regular push or merge request does the normal stuff.
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+linux:build:
+  <<: *build_configuration
+  tags:
+    - linux
+  needs:
+    - job: linux:install
+      artifacts: true
+  # These rules is needed so that the static analyzer job can run on a
+  # schedule because this is a prerequisite of the analyzer build.  A
+  # regular push or merge request does the normal stuff.
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 linux:cross-build:
   stage: build
@@ -85,31 +174,21 @@ linux:cross-build:
     - bin/make-dist.sh -I xdist xlinux-4
 
 linux:test:
-  stage: test
+  <<: *unit_test_configuration
   tags:
     - linux
-  artifacts:
-    paths:
-      - ansi-test/test.out
-      - test.log
   needs:
     # Needs artifacts from build (dist/)
     - job: linux:build
       artifacts: true
-  script:
-    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 linux:exec-test:
-  stage: test
+  <<: *exec_test_configuration
   tags:
     - linux
   needs:
     - job: linux:build
       artifacts: true
-  script:
-    # Create an executable and test it by printing the version.
-    - dist/bin/lisp -eval '(save-lisp "saved-lisp-executable" :executable t)'
-    - ./saved-lisp-executable --version
 
 linux:cross-test:
   stage: test
@@ -127,148 +206,94 @@ linux:cross-test:
     - bin/run-unit-tests.sh -l xdist/bin/lisp 2>&1 | tee cross-test.log
 
 linux:ansi-test:
-  stage: ansi-test
+  <<: *ansi_test_configuration
   tags:
     - linux
-  artifacts:
-    paths:
-      - ansi-test/test.out
   needs:
     # Needs artifacts from build (dist/)
     - job: linux:build
       artifacts: true
-  script:
-    - bin/run-ansi-tests.sh -l dist/bin/lisp
     
 linux:benchmark:
-  stage: benchmark
+  <<: *benchmark_configuration
   tags:
     - linux
-  artifacts:
-    paths:
-      - benchmarks/cl-bench/results
   needs:
     # Needs artifacts from install (snapshot/) and build (dist/)
     - job: linux:install
       artifacts: true
     - job: linux:build
-  script:
-    - cd benchmarks/cl-bench
-    - mkdir tmp
-    - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
-    - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
-    - ../../snapshot/bin/lisp -load report
 
+#### OSX (Mac) jobs ####
 osx:install:
-  stage: install
+  <<: *install_configuration
   tags:
     - macos-virtualbox
-  artifacts:
-    paths:
-      - snapshot/
-  script:
-    - echo PATH = $PATH
-    - ls -F /usr/local/bin
-    - type -all gitlab-runner
-    - /opt/local/bin/curl -o cmucl-$version-darwin.tar.bz2 $download_url/cmucl-$version-darwin.tar.bz2
-    - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-darwin.tar.bz2)
+  variables:
+    osname: "darwin"
+    CURL: "/opt/local/bin/curl"
 
 osx:build:
-  stage: build
+  <<: *build_configuration
   tags:
     - macos-virtualbox
-  artifacts:
-    paths:
-      - dist/
-      - darwin-2/*.log
-      - darwin-3/*.log
-      - darwin-4/*.log
-      - src/code/errno.lisp
   needs:
     - job: osx:install
       artifacts: true
-  script:
-    # Do cross compile first
-    #- bin/create-target.sh xtarget x86_darwin
-    #- bin/create-target.sh xcross x86_darwin
-    #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
-    # Regular build using the cross-compiled result or snapshot.
-    # Need /opt/local/bin to get msgmerge and msgfmt programs.
-    - PATH=/opt/local/bin:$PATH bin/build.sh $bootstrap -R -C "" -o snapshot/bin/lisp
-    # If needed use -V to specify the version in case some tag makes git
-    # describe return something that make-dist.sh doesn't like.
-    - bin/make-dist.sh -I dist darwin-4
 
 osx:test:
-  stage: test
+  <<: *unit_test_configuration
   tags:
     - macos-virtualbox
-  artifacts:
-    paths:
-      - ansi-test/test.out
-      - test.log
   needs:
     # Needs artifacts from build (dist/)
     - job: osx:build
       artifacts: true
-  script:
-    - echo LANG = $LANG
-    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 osx:exec-test:
-  stage: test
+  <<: *exec_test_configuration
   tags:
     - macos-virtualbox
   needs:
     - job: osx:build
       artifacts: true
-  script:
-    # Create an executable and test it by printing the version.
-    - dist/bin/lisp -eval '(save-lisp "saved-lisp-executable" :executable t)'
-    - ./saved-lisp-executable --version
   
 osx:ansi-test:
-  stage: ansi-test
+  <<: *ansi_test_configuration
   tags:
     - macos-virtualbox
-  artifacts:
-    paths:
-      - ansi-test/test.out
   needs:
     # Needs artifacts from build (dist/)
     - job: osx:build
       artifacts: true
-  script:
-    # NB: sometimes we can't clone the ansi-test repo (bad cert!?!).
-    # Manually cloning it in the gitlab build dir helps with this
-    # issue until we can figure out what's going on.
-    - bin/run-ansi-tests.sh -l dist/bin/lisp
   
 osx:benchmark:
-  stage: benchmark
+  <<: *benchmark_configuration
   tags:
     - macos-virtualbox
-  artifacts:
-    paths:
-      - benchmarks/cl-bench/results
   needs:
     # Needs artifacts from install (snapshot/) and build (dist/)
     - job: osx:install
       artifacts: true
     - job:  osx:build
-  script:
-    - cd benchmarks/cl-bench
-    - mkdir tmp
-    - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
-    - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
-    - ../../snapshot/bin/lisp -load report
 
 # Optional job that runs the static analyzer.  It needs the files from
 # the linux-4 directory built in the linux:build job.
 linux:static-analyzer:
   stage: analyze
-  when: manual
+  # The analyzer is a manual job that isn't normally run.  These rules
+  # make that happen, but when the pipeline is scheduled we do run the
+  # analyzer. 
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
+      
+      
   tags:
     - linux
   artifacts:
@@ -282,75 +307,72 @@ linux:static-analyzer:
     # the results to the log file instead of also having it go to the
     # console.  If someday there's less or no output, we can consider
     # having the logs go to the console too.
-    - make -C linux-4/lisp clean
-    - make -C linux-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 
+    - make -C build-4/lisp clean
+    - make -C build-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 
 
+#### OpenSUSE jobs ####
 opensuse:install:
-  stage: install
+  <<: *install_configuration
   tags:
     - opensuse
-  artifacts:
-    paths:
-      - snapshot/
-  script:
-    - wget -nv $download_url/cmucl-$version-linux.tar.bz2
-    - wget -nv $download_url/cmucl-$version-linux.extra.tar.bz2
-    - mkdir snapshot
-    - (cd snapshot; tar xjf ../cmucl-$version-linux.tar.bz2; tar xjf ../cmucl-$version-linux.extra.tar.bz2)
+  variables:
+    osname: "linux"
+    CURL: "curl"
 
 opensuse:build:
-  stage: build
+  <<: *build_configuration
   tags:
     - opensuse
-  artifacts:
-    paths:
-      - dist/
-      - linux-2/*.log
-      - linux-3/*.log
-      - linux-4/
   needs:
     - job: opensuse:install
       artifacts: true
-  script:
-    # Do cross compile first
-    #- bin/create-target.sh xtarget x86_linux_clang
-    #- bin/create-target.sh xcross x86_linux_clang
-    #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
-    # Regular build using the cross-compiled result or snapshot.  The
-    # analyzer job requires gcc, so make sure we build with gcc here
-    # instead of clang. 
-    - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
-    # - bin/build.sh $bootstrap -R -C "x86_linux" -o snapshot/bin/lisp
-    # If needed use -V to specify the version in case some tag makes git
-    # describe return something that make-dist.sh doesn't like.
-    - bin/make-dist.sh -I dist linux-4
 
 opensuse:test:
-  stage: test
+  <<: *unit_test_configuration
   tags:
-    - linux
-  artifacts:
-    paths:
-      - ansi-test/test.out
-      - test.log
+    - opensuse
   needs:
     # Needs artifacts from build (dist/)
     - job: opensuse:build
       artifacts: true
-  script:
-    - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
 
 opensuse:ansi-test:
-  stage: ansi-test
+  <<: *ansi_test_configuration
   tags:
-    - linux
-  artifacts:
-    paths:
-      - ansi-test/test.out
+    - opensuse
   needs:
     # Needs artifacts from build (dist/)
     - job: opensuse:build
       artifacts: true
-  script:
-    - bin/run-ansi-tests.sh -l dist/bin/lisp
 
+# Optional job that runs the markdown link checker.  This is optional
+# because it's very slow, of course; you have to run it manually.
+#
+# From https://github.com/tcort/markdown-link-check
+# Checks links on the wiki pages whenever any wiki markdown pages change. 
+markdown-link-check:
+  stage: markdown-link-check
+  # Run the checker when the pipeline is scheduled to run.
+  # It's ok if this fails; we don't want to declare the entire
+  # pipeline as having failed.
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: manual
+      allow_failure: true
+
+  # Only the linux runner has markdown-link-check installed
+  tags:
+    - linux
+  script:
+    # Check links in the main repo
+    - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
+    # Clone the wiki pages and check the links there.  Lots of
+    # failures here because of
+    # https://gitlab.com/gitlab-org/gitlab/-/issues/17845.
+    - git clone https://gitlab.common-lisp.net/cmucl/cmucl.wiki.git
+    - find cmucl.wiki -name \*.md -print0 | xargs -0 -n1 markdown-link-check

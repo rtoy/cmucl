@@ -1,26 +1,25 @@
 #!/bin/sh 
 
 # Build CMUCL from source.  The intent of this script is to make it a
-# little easier invoke the other scripts and build CMUCL.  In the
+# little easier to invoke the other scripts and build CMUCL.  In the
 # simplest case where your lisp is named cmulisp and no special
 # bootfiles are needed, you would build CMUCL using:
 #
-#    src/tools/build.sh -C ""
+#    bin/build.sh -b build -C "" -o cmulisp
 #
 # This will create a set of directories named build-2, build-3, and
 # build-4 and CMUCL will be built 3 consecutive times, using the
 # version of CMUCL from the previous build.
-#
 #
 # You can control which of the builds are done by using the -1, -2, -3
 # options, but it is up to you to make sure the previous builds exist.
 #
 # A more realistic example would be
 #
-#    src/tools/build.sh -v "My build" -B boot-19b.lisp -o "my-lisp -noinit"
+#    bin/build.sh -C "linux" -B boot-19b.lisp -o "my-lisp"
 #
 # where you need to load the bootfile boot-19b.lisp and your lisp is
-# not named cmulisp, but my-lisp.
+# not named lisp, but my-lisp.
 #
 # For more complicated builds, you will need to run create-target.sh
 # manually, and adjust the bootstrap or setenv files by hand.  Once
@@ -30,7 +29,7 @@
 # Cross compiling is not supported with this script.  You will have to
 # do that by hand.
 #
-# For more information see src/BUILDING.
+# For more information run "bin/build.sh -?".  Also see BUILDING.md.
 #
 # $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/build.sh,v 1.38 2010/11/10 19:17:55 rtoy Exp $
 #
@@ -110,13 +109,6 @@ case `uname -s` in
       esac ;;
 esac
 
-# Set default version and generate lisp/cmucl-version.h
-DEFAULT_VERSION="`bin/git-version.sh`"
-export DEFAULT_VERISON
-echo DEFAULT_VERSION = $DEFAULT_VERSION
-
-bin/git-version.sh -f > src/lisp/cmucl-version.h
-
 export LANG=en_US.UTF-8
 
 buildit ()
@@ -157,8 +149,10 @@ buildit ()
     fi
 }
 
-# Create the errno file containing all the def-unix-error forms.
-bin/create-errno.sh
+# Create the errno file containing all the def-unix-error forms.  No
+# options mean we use the existing OS-specific template.  Exit if
+# there's an error in creating the errno file.
+bin/create-errno.sh || exit 1
 
 BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
@@ -188,6 +182,10 @@ do
 	    ;;
     esac
 done
+
+# Generate lisp/cmucl-version.h with the appropriate version.  The -v
+# option (if given) overrides the default that git-describe.sh uses.
+bin/git-version.sh -f ${VERSION:+ -v ${VERSION}} > src/lisp/cmucl-version.h
 
 # If -b not given, try to derive one instead of just using "build".
 if [ -z "$BASE" ]; then

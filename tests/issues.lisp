@@ -1153,3 +1153,4 @@
   (assert-true (stream::find-external-format :646 nil))
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
+

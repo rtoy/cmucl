@@ -15,10 +15,6 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/code/errno.lisp
-msgid "Successful"
-msgstr ""
-
 #: src/code/unix.lisp
 msgid ""
 "The encoding to use for converting a namestring to a string that can\n"
@@ -30,6 +26,13 @@ msgstr ""
 
 #: src/code/unix.lisp
 msgid "Syscall ~A failed: ~A"
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Get the current working directory.  If the directory could be\n"
+"  determined, T and the directory name as a string are returned.\n"
+"  Otherwise, both values are NIL."
 msgstr ""
 
 #: src/code/unix.lisp
@@ -625,11 +628,10 @@ msgid "Returns either :file, :directory, :link, :special, or NIL."
 msgstr ""
 
 #: src/code/unix.lisp
-msgid "Returns the pathname with all symbolic links resolved."
-msgstr ""
-
-#: src/code/unix.lisp
-msgid "Error reading link ~S: ~S"
+msgid ""
+"Returns the pathname with all symbolic links expanded and\n"
+" references to '.' and '..' and extra '/' characters removed.  If\n"
+" expansion fails, NIL is returned and the errno."
 msgstr ""
 
 #: src/code/unix.lisp
