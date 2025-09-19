@@ -9,321 +9,124 @@
 	      (invoke-restart 'continue))))
   (defconstant +ef-max+ 14))
 
+;;; Bootstrap for adding %local-nicknames to package structure.
+(in-package :lisp)
 
-;; For issue #390.  Initialize the new UNIX package with ERRNO stuff.
-;; Without this we need to disable package locks in code:exports.lisp
-;; when defining the UNIX package and that removes the ability to
-;; detect changes in the UNIX package.
-(in-package "LISP")
-(load "src/code/exports-errno")
-(ext:without-package-locks
-  ;; Define macro to create the UNIX package that also shadow imports
-  ;; the symbols from ERRNO and also exports them again.  This is
-  ;; needed so that we don't get a warning about UNIX shadowing all
-  ;; the symbols from ERRNO and a warning that UNIX exports all the
-  ;; symbols from ERRNO too.
-  (defmacro define-unix-package (&body body)
-    (let (errno-symbols)
-      (do-external-symbols (sym "ERRNO")
-	(push (symbol-name sym) errno-symbols))
-      `(ext:without-package-locks
-	 (defpackage "UNIX"
-	 (:shadowing-import-from "ERRNO" ,@errno-symbols)
-	 (:export ,@errno-symbols)
-	 ,@body)))))
+(intern "PACKAGE-LOCAL-NICKNAMES" "LISP")
+(intern	"ADD-PACKAGE-LOCAL-NICKNAME" "LISP")
+(intern	"REMOVE-PACKAGE-LOCAL-NICKNAME" "LISP")
+(intern	"PACKAGE-LOCALLY-NICKNAMED-BY-LIST" "LISP")
 
-(define-unix-package
-  (:export "UNIX-CURRENT-DIRECTORY"
-	   "UNIX-OPEN"
-	   "UNIX-READ"
-	   "UNIX-WRITE"
-	   "UNIX-GETPAGESIZE"
-	   "UNIX-ERRNO"
-	   "UNIX-MAYBE-PREPEND-CURRENT-DIRECTORY"
-	   "UNIX-RESOLVE-LINKS"
-	   "UNIX-REALPATH"
-	   "UNIX-CLOSE"
-	   "UNIX-STAT"
-	   "UNIX-LSTAT"
-	   "UNIX-FSTAT"
-	   "UNIX-GETHOSTNAME"
-	   "UNIX-LSEEK"
-	   "UNIX-EXIT"
-	   "UNIX-CHDIR"
-	   "UNIX-ACCESS"
-	   "UNIX-DUP"
-	   "UNIX-CHMOD"
-	   "UNIX-READLINK"
-	   "UNIX-RENAME"
-	   "UNIX-SELECT"
-	   "UNIX-FAST-GETRUSAGE"
-	   "UNIX-GETRUSAGE"
-	   "UNIX-GETTIMEOFDAY"
-	   "UNIX-ISATTY"
-	   "UNIX-MKDIR"
-	   "UNIX-RMDIR"
-	   "UNIX-UNLINK"
-	   "TIMEZONE"
-	   "TIMEVAL"
-	   "SIZE-T"
-	   "OFF-T"
-	   "INO-T"
-	   "DEV-T"
-	   "TIME-T"
-	   "USER-INFO-NAME"
-	   "INT64-T"
-	   "MODE-T"
-	   "UNIX-FAST-SELECT"
-	   "UNIX-PIPE"
-	   "UNIX-GETPID"
-	   "UNIX-GETHOSTID"
-	   "UNIX-UID"
-	   "UNIX-GID"
-	   "GET-UNIX-ERROR-MSG"
-	   "WINSIZE"
-	   "TIMEVAL"
-	   "CLOSE-DIR"
-	   "OPEN-DIR"
-	   "READ-DIR"
+;; Make sure we don't accidentally load fasls from somewhere.
+(setf (ext:search-list "target:")
+      '("src/"))
 
-	   ;; filesys.lisp
-	   "UNIX-GETPWUID"
+;; Ensure all packages have been set up, since package definition is broken
+;; once this file has been loaded:
+(load "target:code/exports-errno" :if-does-not-exist nil)
+(load "target:code/exports")
 
-	   ;; multi-proc.lisp
-	   "UNIX-SETITIMER"
+(setf *enable-package-locked-errors* nil)
 
-	   ;; run-program.lisp
-	   "UNIX-TTYNAME"
-	   "UNIX-IOCTL"
-	   "UNIX-OPENPTY"
+;;;
+;;; Like DEFSTRUCT, but silently clobber old definitions.
+;;;
+(defmacro defstruct! (name &rest stuff)
+  `(handler-bind ((error (lambda (c)
+                           (declare (ignore c))
+                           (invoke-restart 'kernel::clobber-it))))
+     (defstruct ,name ,@stuff)))
 
-	   ;; alien-callback.lisp
-	   "UNIX-MPROTECT"
 
-	   ;; internet.lisp
-	   "UNIX-SOCKET"
-	   "UNIX-CONNECT"
-	   "UNIX-BIND"
-	   "UNIX-LISTEN"
-	   "UNIX-ACCEPT"
-	   "UNIX-GETSOCKOPT"
-	   "UNIX-SETSOCKOPT"
-	   "UNIX-GETPEERNAME"
-	   "UNIX-GETSOCKNAME"
-	   "UNIX-RECV"
-	   "UNIX-SEND"
-	   "UNIX-RECVFROM"
-	   "UNIX-SENDTO"
-	   "UNIX-SHUTDOWN"
-	   "UNIX-FCNTL"
+(defstruct! (package
+	     (:constructor internal-make-package)
+	     (:predicate packagep)
+	     (:print-function %print-package)
+	     (:make-load-form-fun
+	      (lambda (package)
+		(values `(package-or-lose ',(package-name package))
+			nil))))
+  (tables (list nil))	; A list of all the hashtables for inherited symbols.
+  (%name nil :type (or simple-string null))
+  (%nicknames () :type list)
+  (%use-list () :type list)
+  (%used-by-list () :type list)
+  (internal-symbols (required-argument) :type package-hashtable)
+  (external-symbols (required-argument) :type package-hashtable)
+  (%shadowing-symbols () :type list)
+  (lock nil :type boolean)
+  (definition-lock nil :type boolean)
+  (%local-nicknames () :type list)
+  (doc-string nil :type (or simple-string null)))
 
-	   ;; serve-event.lisp
-	   "FD-SETSIZE"
-	   "FD-ISSET"
-	   "FD-CLR"
-
-	   ;; Simple streams
-	   "PROT_READ"
-	   "UNIX-MMAP"
-	   "UNIX-MUNMAP"
-	   "UNIX-MSYNC"
-
-	   ;; Motif
-	   "UNIX-GETUID"
-
-	   ;; Hemlock
-	   "UNIX-CFGETOSPEED"
-	   "TERMIOS"
-	   "UNIX-TCGETATTR"
-	   "UNIX-TCSETATTR"
-	   "UNIX-FCHMOD"
-	   "UNIX-CREAT"
-	   "UNIX-UTIMES"
-
-	   ;; Tests
-	   "UNIX-SYMLINK"
-
-	   ;; Other symbols from structures, etc.
-	   "C-CC" "C-CFLAG" "C-IFLAG" "C-ISPEED" "C-LFLAG" "C-OFLAG" "C-OSPEED"
-	   "CHECK" "D-NAME" "D-RECLEN"    
-	   "F-GETFL" "F-GETOWN" "F-SETFL" "F-SETOWN" "FAPPEND"
-	   "FASYNC" "FD-SET" "FD-ZERO" "FNDELAY" "F_OK" "GID-T" "IT-INTERVAL"
-	   "IT-VALUE" "ITIMERVAL" "L_INCR" "L_SET" "L_XTND" "MAP_ANONYMOUS"
-	   "MAP_FIXED" "MAP_PRIVATE" "MAP_SHARED" "MS_ASYNC" "MS_INVALIDATE"
-	   "MS_SYNC" "O_APPEND" "O_CREAT" "O_EXCL" "O_NDELAY" "O_NONBLOCK"
-	   "O_RDONLY" "O_RDWR" "O_TRUNC" "O_WRONLY" "PROT_EXEC" "PROT_NONE"
-	   "PROT_WRITE" "RU-IDRSS" "RU-INBLOCK" "RU-ISRSS" "RU-IXRSS" "RU-MAJFLT"
-	   "RU-MAXRSS" "RU-MINFLT" "RU-MSGRCV" "RU-MSGSND" "RU-NIVCSW" "RU-NSIGNALS"
-	   "RU-NSWAP" "RU-NVCSW" "RU-OUBLOCK" "RU-STIME" "RU-UTIME"
-	   "RUSAGE_CHILDREN" "RUSAGE_SELF" "R_OK" "S-IFBLK" "S-IFCHR" "S-IFDIR"
-	   "S-IFLNK" "S-IFMT" "S-IFREG" "S-IFSOCK" "SIGABRT" "SIGALRM" "SIGBUS"
-	   "SIGCHLD" "SIGCONT" "SIGCONTEXT" "SIGFPE" "SIGHUP" "SIGILL" "SIGINT"
-	   "SIGIO" "SIGIOT" "SIGKILL" "SIGMASK" "SIGPIPE" "SIGPROF" "SIGQUIT"
-	   "SIGSEGV" "SIGSTOP" "SIGTERM" "SIGTRAP" "SIGTSTP" "SIGTTIN" "SIGTTOU"
-	   "SIGURG" "SIGUSR1" "SIGUSR2" "SIGVTALRM" "SIGWINCH" "SIGXCPU" "SIGXFSZ"
-	   "ST-ATIME" "ST-BLKSIZE" "ST-BLOCKS" "ST-CTIME" "ST-DEV" "ST-GID"
-	   "ST-MODE" "ST-MTIME" "ST-NLINK" "ST-RDEV" "ST-SIZE" "ST-UID" "STAT"
-	   "TCSADRAIN" "TCSAFLUSH" "TCSANOW" "TIOCGPGRP" "TIOCGWINSZ" "TIOCNOTTY"
-	   "TIOCSPGRP" "TIOCSWINSZ" "TTY-BRKINT" "TTY-ECHO" "TTY-ECHOCTL"
-	   "TTY-ECHOE" "TTY-ECHOK" "TTY-ECHOKE" "TTY-ECHONL" "TTY-ECHOPRT"
-	   "TTY-FLUSHO" "TTY-ICANON" "TTY-ICRNL" "TTY-IEXTEN" "TTY-IGNBRK"
-	   "TTY-IGNCR" "TTY-IGNPAR" "TTY-IMAXBEL" "TTY-INLCR" "TTY-INPCK" "TTY-ISIG"
-	   "TTY-ISTRIP" "TTY-IXANY" "TTY-IXOFF" "TTY-IXON" "TTY-NOFLSH" "TTY-ONLCR"
-	   "TTY-OPOST" "TTY-PARMRK" "TTY-PENDIN" "TTY-TOSTOP" "TV-SEC" "TV-USEC"
-	   "TZ-DSTTIME" "TZ-MINUTESWEST" "UID-T" "UNIX-FD" "UNIX-FILE-KIND"
-	   "UNIX-FILE-MODE" "UNIX-GETUID" "UNIX-KILL" "UNIX-KILLPG" "UNIX-PATHNAME"
-	   "UNIX-SIGBLOCK" "UNIX-SIGNAL-DESCRIPTION" "UNIX-SIGNAL-NAME"
-	   "UNIX-SIGNAL-NUMBER" "UNIX-SIGPAUSE" "UNIX-SIGSETMASK" "USER-INFO"
-	   "USER-INFO-DIR" "USER-INFO-GECOS" "USER-INFO-GID" "USER-INFO-PASSWORD"
-	   "USER-INFO-SHELL" "USER-INFO-UID" "VDSUSP" "VEOF" "VEOL" "VEOL2" "VERASE"
-	   "VINTR" "VKILL" "VMIN" "VQUIT" "VSTART" "VSTOP" "VSUSP" "VTIME"
-	   "WRITEOWN" "WS-COL" "WS-ROW" "WS-XPIXEL" "WS-YPIXEL" "W_OK" "X_OK"
-	   "FIONREAD"
-	   "TERMINAL-SPEEDS"
-	   )
-  (:export
-   ;; For asdf
-   "UNIX-GETENV"
-   "UNIX-SETENV"
-   "UNIX-PUTENV"
-   "UNIX-UNSETENV"
-   ;; For slime
-   "UNIX-EXECVE"
-   "UNIX-FORK")
-  #-(or linux solaris)
-  (:export "TCHARS"
-	   "LTCHARS"
-	   "D-NAMLEN"
-	   
-	   ;; run-program.lisp
-	   "SGTTYB"
-
-	   ;; Other symbols from structures, etc.
-	   "DIRECT" "ELOCAL" "EPROCLIM" "EVICEERR" "EVICEOP" "EXECGRP" "EXECOTH"
-	   "EXECOWN" "F-DUPFD" "F-GETFD" "F-SETFD" "FCREAT" "FEXCL"
-	   "FTRUNC" "READGRP" "READOTH" "READOWN" "S-IEXEC" "S-IREAD" "S-ISGID"
-	   "S-ISUID" "S-ISVTX" "S-IWRITE" "SAVETEXT" "SETGIDEXEC" "SETUIDEXEC"
-	   "SG-ERASE" "SG-FLAGS" "SG-ISPEED" "SG-KILL" "SG-OSPEED" "SIGEMT" "SIGSYS"
-	   "T-BRKC" "T-DSUSPC" "T-EOFC" "T-FLUSHC" "T-INTRC" "T-LNEXTC" "T-QUITC"
-	   "T-RPRNTC" "T-STARTC" "T-STOPC" "T-SUSPC" "T-WERASC" "TCIFLUSH"
-	   "TCIOFLUSH" "TCOFLUSH" "TIOCFLUSH" "TIOCGETC"
-	   "TIOCGETP" "TIOCGLTC" "TIOCSETC" "TIOCSETP" "TIOCSLTC" "TTY-CBREAK"
-	   "TTY-CLOCAL" "TTY-CREAD" "TTY-CRMOD" "TTY-CS5" "TTY-CS6" "TTY-CS7"
-	   "TTY-CS8" "TTY-CSIZE" "TTY-CSTOPB" "TTY-HUPCL" "TTY-LCASE" "TTY-PARENB"
-	   "TTY-PARODD" "TTY-RAW" "TTY-TANDEM" "WRITEGRP" "WRITEOTH"
-	   )
-  #+linux
-  (:export "TCHARS"
-	   "LTCHARS"
-	   "D-NAMLEN"
-
-	   ;; run-program.lisp
-	   "SGTTYB"
-
-	   ;; Other symbols
-	   "BLKCNT-T" "D-INO" "D-OFF"     
-	   "O_NOCTTY" "SIGSTKFLT"
-	   "SG-FLAGS"
-	   "TIOCGETP"
-	   "TIOCSETP"
-	   "TTY-IUCLC"
-	   "TTY-OCRNL" "TTY-OFDEL" "TTY-OFILL" "TTY-OLCUC" "TTY-ONLRET" "TTY-ONOCR"
-	   "TTY-XCASE" "UNIX-DUP2" "UNIX-GETITIMER" "UNIX-PID"
-	   "UTSNAME"
-	   )
-  #+solaris
-  (:export "D-INO"
-	   "D-OFF"
-	   "DIRECT"
-	   "EXECGRP"
-	   "EXECOTH"
-	   "EXECOWN"
-	   
-	   "F-DUPFD"
-	   "F-GETFD"
-	   "F-SETFD"
-	   "FCREAT"
-	   "FEXCL"
-	   "FTRUNC"
-	   "LTCHARS"
-	   "O_NOCTTY"
-	   "RCV1EN"
-	   "READGRP"
-	   "READOTH"
-	   "READOWN"
-	   "S-IEXEC"
-	   "S-IREAD"
-	   "S-ISGID"
-	   "S-ISUID"
-	   "S-ISVTX"
-	   "S-IWRITE"
-	   "SAVETEXT"
-	   "SETGIDEXEC"
-	   "SETUIDEXEC"
-	   "SG-ERASE"
-	   "SG-FLAGS"
-	   "SG-ISPEED"
-	   "SG-KILL"
-	   "SG-OSPEED"
-	   "SGTTYB"
-	   "SIGEMT"
-	   "SIGSYS"
-	   "SIGWAITING"
-	   "T-BRKC"
-	   "T-DSUSPC"
-	   "T-EOFC"
-	   "T-FLUSHC"
-	   "T-INTRC"
-	   "T-LNEXTC"
-	   "T-QUITC"
-	   "T-RPRNTC"
-	   "T-STARTC"
-	   "T-STOPC"
-	   "T-SUSPC"
-	   "T-WERASC"
-	   "TCHARS"
-	   "TCIFLUSH"
-	   "TCIOFLUSH"
-	   "TCOFLUSH"
-	   "TIOCFLUSH"
-	   "TIOCGETC"
-	   "TIOCGETP"
-	   "TIOCGLTC"
-	   "TIOCSETC"
-	   "TIOCSETP"
-	   "TIOCSLTC"
-	   "TTY-CBAUD"
-	   "TTY-CBREAK"
-	   "TTY-CLOCAL"
-	   "TTY-CREAD"
-	   "TTY-CRMOD"
-	   "TTY-CS5"
-	   "TTY-CS6"
-	   "TTY-CS7"
-	   "TTY-CS8"
-	   "TTY-CSIZE"
-	   "TTY-CSTOPB"
-	   "TTY-DEFECHO"
-	   "TTY-HUPCL"
-	   "TTY-IUCLC"
-	   "TTY-LCASE"
-	   "TTY-LOBLK"
-	   "TTY-OCRNL"
-	   "TTY-OFDEL"
-	   "TTY-OFILL"
-	   "TTY-OLCUC"
-	   "TTY-ONLRET"
-	   "TTY-ONOCR"
-	   "TTY-PARENB"
-	   "TTY-PARODD"
-	   "TTY-RAW"
-	   "TTY-TANDEM"
-	   "TTY-XCASE"
-	   "UNIX-TIMES"
-	   "UNIX-DUP2"
-	   "UTSNAME"
-	   "WRITEGRP"
-	   "WRITEOTH"
-	   "XMT1EN"
-	   )
-  )
+;; Need to define this with the extra arg because compiling pcl uses
+;; defpackage and we need this defined.  This isn't the actual
+;; implementation; we just added the extra arg.
+(defun %defpackage (name nicknames size shadows shadowing-imports
+			 use imports interns exports doc-string &optional local-nicknames)
+  (declare (type simple-base-string name)
+	   (type list nicknames local-nicknames shadows shadowing-imports
+		 imports interns exports)
+	   (type (or list (member :default)) use)
+	   (type (or simple-base-string null) doc-string))
+  (let ((package (or (find-package name)
+		     (progn
+		       (when (eq use :default)
+			 (setf use *default-package-use-list*))
+		       (make-package name
+				     :use nil
+				     :internal-symbols (or size 10)
+				     :external-symbols (length exports))))))
+    (unless (string= (the string (package-name package)) name)
+      (error 'simple-package-error
+	     :package name
+	     :format-control (intl:gettext "~A is a nick-name for the package ~A")
+	     :format-arguments (list name (package-name name))))
+    (enter-new-nicknames package nicknames)
+    ;; Shadows and Shadowing-imports.
+    (let ((old-shadows (package-%shadowing-symbols package)))
+      (shadow shadows package)
+      (dolist (sym-name shadows)
+	(setf old-shadows (remove (find-symbol sym-name package) old-shadows)))
+      (dolist (simports-from shadowing-imports)
+	(let ((other-package (package-or-lose (car simports-from))))
+	  (dolist (sym-name (cdr simports-from))
+	    (let ((sym (find-or-make-symbol sym-name other-package)))
+	      (shadowing-import sym package)
+	      (setf old-shadows (remove sym old-shadows))))))
+      (when old-shadows
+	(warn (intl:gettext "~A also shadows the following symbols:~%  ~S")
+	      name old-shadows)))
+    ;; Use
+    (unless (eq use :default)
+      (let ((old-use-list (package-use-list package))
+	    (new-use-list (mapcar #'package-or-lose use)))
+	(use-package (set-difference new-use-list old-use-list) package)
+	(let ((laterize (set-difference old-use-list new-use-list)))
+	  (when laterize
+	    (unuse-package laterize package)
+	    (warn (intl:gettext "~A previously used the following packages:~%  ~S")
+		  name
+		  laterize)))))
+    ;; Import and Intern.
+    (dolist (sym-name interns)
+      (intern sym-name package))
+    (dolist (imports-from imports)
+      (let ((other-package (package-or-lose (car imports-from))))
+	(dolist (sym-name (cdr imports-from))
+	  (import (list (find-or-make-symbol sym-name other-package))
+		  package))))
+    ;; Exports.
+    (let ((old-exports nil)
+	  (exports (mapcar #'(lambda (sym-name) (intern sym-name package))
+			   exports)))
+      (do-external-symbols (sym package)
+	(push sym old-exports))
+      (export exports package)
+      (let ((diff (set-difference old-exports exports)))
+	(when diff
+	  (warn (intl:gettext "~A also exports the following symbols:~%  ~S")
+		name diff))))
+    ;; Documentation
+    (setf (package-doc-string package) doc-string)
+    package))
