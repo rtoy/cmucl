@@ -355,7 +355,6 @@
 	   "EIO"
 	   "EISCONN"
 	   "EISDIR"
-	   "ELOCAL"
 	   "ELOOP"
 	   "EMFILE"
 	   "EMLINK"
@@ -398,8 +397,6 @@
 	   "ETOOMANYREFS"
 	   "ETXTBSY"
 	   "EUSERS"
-	   "EVICEERR"
-	   "EVICEOP"
 	   "EWOULDBLOCK"
 	   "EXDEV"
 	   )
