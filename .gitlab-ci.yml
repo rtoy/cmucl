@@ -1,8 +1,11 @@
 variables:
-  year: "2025"
-  month: "09"
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/$year/$month"
-  version: "$year-$month-x86"
+  #year: "2025"
+  #month: "09"
+  #download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/$year/$month"
+  #version: "$year-$month-x86"
+  release: "21f"
+  download_url: "https://common-lisp.net/project/cmucl/downloads/release/$release"
+  version: "$release-x86"
   tar_ext: "xz"
   bootstrap: "-B boot-21f"
 
