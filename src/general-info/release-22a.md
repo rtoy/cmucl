@@ -21,8 +21,10 @@ public domain.
   * Known issues:
   * Feature enhancements:
   * Changes:
+    * Updated CLX from upstream to version from 2024-09-11.
   * ANSI compliance fixes:
   * Bug fixes:
+    * #387: Update CLX from upstream to version from 2024-09-11.
   * Gitlab tickets:
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
