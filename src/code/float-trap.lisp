@@ -320,6 +320,7 @@
 ;;;
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
+#-(and solaris x86)
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal)
 	   (type system-area-pointer scp))
@@ -439,6 +440,111 @@
 	    ;; state in the signal handler is unchanged and it seems we
 	    ;; don't need to reset it any way when we throw out.
 	    ))))))
+
+#+(and solaris x86)
+(progn
+  ;; See /usr/include/sys/machsig.h
+  ;;
+  ;; There are 2 constants for integer division by zero and integer
+  ;; overflow that we aren't using.
+  (defconstant +fpe-fltdiv+ 3
+    "Signal code for FP divide by zero")
+  (defconstant +fpe-fltovf+ 4
+    "Signal code for FP overflow")
+  (defconstant +fpe-fltund+ 5
+    "Signal code for FP underflow")
+  (defconstant +fpe-fltres+ 6
+    "Signal code for FP inexact result")
+  (defconstant +fpe-fltinv+ 7
+    "Signal code for FP invalid operation")
+  ;; On FreeBSD (and maybe other OSes), this happens when the x86
+  ;; BOUND instruction detects an index out of bounds.  Linux
+  ;; apparently generates a SIGSEGV instead.  See
+  ;; https://stackoverflow.com/questions/27051428/what-is-a-fpe-fltsub-subscript-out-of-range-signal
+  (defconstant +fpe-fltsub+ 8
+    "Signal code for subscript out of range")
+  (defconstant +fpe-fltden+ 9
+    "Signal code for FP denormalize")
+  ;; We only include the values that FP operations can trap on. 
+  (defconstant +fpe-code-info-alist+
+    (list (cons +fpe-fltdiv+
+		(list 'division-by-zero float-divide-by-zero-trap-bit ))
+	  (cons +fpe-fltovf+
+		(list 'floating-point-overflow float-overflow-trap-bit))
+	  (cons +fpe-fltund+
+		(list 'floating-point-underflow float-underflow-trap-bit))
+	  (cons +fpe-fltres+
+		(list 'floating-point-inexact float-inexact-trap-bit))
+	  (cons +fpe-fltinv+
+		(list 'floating-point-invalid-operation float-invalid-trap-bit))
+	  (cons +fpe-fltden+
+		(list 'floating-point-denormal-operand float-denormal-trap-bit)))
+    "Alist mapping the FPE code to a list of the corresponding floating
+    point error type and the correstrap bit value"))
+
+#+(and solaris x86)
+(defun sigfpe-handler (signal code scp)
+  (declare (ignore signal)
+	   (type system-area-pointer scp))
+  #+nil
+  (format t "***Enter Handler***~%")
+  (let* ((modes (sigcontext-floating-point-modes
+		 (alien:sap-alien scp (* unix:sigcontext))))
+	 (current-x87-modes (vm::x87-floating-point-modes))
+	 (current-sse2-modes (vm::sse2-floating-point-modes)))
+    #+nil
+    (progn
+      (format t "Current modes:         ~32,'0b~%" modes)
+      (format t "Current HW x87 modes:  ~32,'0b~%" current-x87-modes)
+      (format t "Current HW sse2 modes: ~32,'0b~%" current-sse2-modes))
+
+    (multiple-value-bind (fop operands)
+	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
+	  (if (fboundp sym)
+	      (funcall sym (alien:sap-alien scp (* unix:sigcontext)) modes)
+	      (values nil nil)))
+      ;; Don't let throws get away without resetting the
+      ;; floating-point modes back to the original values which we get
+      ;; from the sigcontext.  Because we can throw, we never return
+      ;; from the signal handler so the sigcontext is never restored.
+      ;; This means we need to restore the fpu state ourselves.
+      (unwind-protect
+	   (let ((fpe-info (second (assoc code +fpe-code-info-alist+))))
+	     #+nil
+	     (format t "fpe code = ~D~%" code)
+	     (if fpe-info
+		 (error fpe-info
+			:operation fop
+			:operands operands)
+		 (error _"SIGFPE code ~D not handled" code)))
+	;; Cleanup
+	;;
+	;; Clear out the status for any enabled traps.  If we don't
+	;; then when we return, the exception gets signaled again.
+	(let* ((trap-bit (third (assoc code +fpe-code-info-alist+)))
+	       (new-x87-modes
+		(logandc2 current-x87-modes trap-bit))
+	       (new-sse2-modes
+		(logandc2 current-sse2-modes trap-bit)))
+	  #+nil
+	  (progn
+	    (format t "***Cleanup***~%")
+	    (format t "Trap bit: ~D~%" trap-bit)
+	    (format t "Current modes:         ~32,'0b~%" (vm::floating-point-modes))
+	    (format t "Current HW x87 modes:  ~32,'0b~%" current-x87-modes)
+	    (format t "Current HW sse2 modes: ~32,'0b~%" current-sse2-modes)
+	    (format t "New x87 modes:         ~32,'0b~%" new-x87-modes)
+	    (format t "New sse2 modes:        ~32,'0b~%" new-sse2-modes))
+	  #+nli
+	  (format t "Setting new sse2 modes~%")
+	  (setf (vm::sse2-floating-point-modes) new-sse2-modes)
+	  #+nil
+	  (format t "Setting new x87 modes~%")
+	  (setf (vm::x87-floating-point-modes) new-x87-modes)
+	  #+nil
+	  (progn
+	    (format t "new x87 modes:         ~32,'0b~%" (vm::x87-floating-point-modes))
+	    (format t "new sse2 modes:        ~32,'0b~%" (vm::sse2-floating-point-modes))))))))
 
 (macrolet
     ((with-float-traps (name merge-traps docstring)
