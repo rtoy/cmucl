@@ -69,7 +69,7 @@
 
 (def-alien-type time-t
     #-(or bsd linux alpha) unsigned-long
-    #+linux long
+    #+linux int64-t
     #+(and bsd (not netbsd)) long
     #+(and bsd netbsd) int64-t
     #+alpha unsigned-int)
@@ -136,8 +136,8 @@
 
 (def-alien-type nil
   (struct timeval
-    (tv-sec #-linux time-t #+linux int)		; seconds
-    (tv-usec int)))				; and microseconds
+    (tv-sec time-t)				; seconds
+    (tv-usec long)))				; and microseconds
 
 #+(or linux BSD)
 (def-alien-type nil
@@ -1720,12 +1720,6 @@
   (declare (type unix-pathname name1 name2))
   (void-syscall ("symlink" c-string c-string)
 		(%name->file name1) (%name->file name2)))
-
-(def-alien-type nil
-  (struct timeval
-    (tv-sec time-t)			; seconds
-    (tv-usec #-linux int 
-             #+linux time-t))) ; and microseconds
 
 (def-alien-type nil
   (struct timezone
