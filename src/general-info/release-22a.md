@@ -24,8 +24,9 @@ public domain.
     * Updated CLX from upstream to version from 2024-09-11.
   * ANSI compliance fixes:
   * Bug fixes:
-    * #387: Update CLX from upstream to version from 2024-09-11.
   * Gitlab tickets:
+    * #387: Update CLX from upstream to version from 2024-09-11.
+    * #444: `unix-stat` and friends return wrong timestamp
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
