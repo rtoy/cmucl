@@ -92,7 +92,7 @@ if [ "$UPDATE" = "yes" ]; then
    exit 0
 fi
 
-if [ -z "$DEFAULT" -a -n "$ERRNO_FILE" ]; then
+if [ -z "$DEFAULT" ] && [ -n "$ERRNO_FILE" ]; then
     # First check that the errno definitions haven't changed.  If they
     # have, exit with an error.
 
