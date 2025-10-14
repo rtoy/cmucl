@@ -82,8 +82,11 @@ find_errno ()
 {
     # Create appropriate DEF-UNIX-ERROR forms by reading header files
     # containing the C definitions.
-
-    awk -f bin/create-def-unix-error.awk ${ERRNO_HEADERS}
+    echo '#include <errno.h>' |
+	cc -dM -E - |
+	grep "#define[ \t]\{1,\}E[A-Z0-9]\{1,\}" |
+	sed 's/#define \(.*\) \(.*\)$/(def-unix-error \1 \2)/'
+    #awk -f bin/create-def-unix-error.awk ${ERRNO_HEADERS}
 }
 
 if [ "$UPDATE" = "yes" ]; then
