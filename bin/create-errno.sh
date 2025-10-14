@@ -56,17 +56,15 @@ ERRNO_FILE="bin/errno-default.lisp"
 # support code.
 TEMPLATE="bin/errno-template.lisp"
 
-# Set ERRNO_HEADERS to the files where we can find errno definitions.
+# Set ERRNO_FILE to an OS-specific name if possible.  If not, use the
+# default ERRNO_FILE value.
 if [ -z "$DEFAULT" ]; then
     case $(uname -s) in
-	Linux) ERRNO_HEADERS=/usr/include/asm-generic/errno*.h
-	       ERRNO_FILE="bin/errno-linux.lisp"
+	Linux) ERRNO_FILE="bin/errno-linux.lisp"
 	       ;;
-	Darwin) ERRNO_HEADERS=/usr/include/sys/errno.h
-		ERRNO_FILE="bin/errno-darwin.lisp"
+	Darwin) ERRNO_FILE="bin/errno-darwin.lisp"
 		;;
-	SunOS) ERRNO_HEADERS=/usr/include/sys/errno.h
-	       ERRNO_FILE="bin/errno-solaris.lisp"
+	SunOS) ERRNO_FILE="bin/errno-solaris.lisp"
 	       ;;
 	*) # The default case where we use the defaults.  But also disable updating.
 	    UPDATE=""
