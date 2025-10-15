@@ -74,7 +74,10 @@
 (define-defmethod-test-1 defmethod.20 dm2 nil (x))
 (define-defmethod-test-1 defmethod.21 dm2 nil (x &optional y z))
 (define-defmethod-test-1 defmethod.22 dm2 nil (x &key y))
-
+(define-defmethod-test-1 defmethod.23 dm2 nil (x y &aux (x x) (y y)))
+(define-defmethod-test-1 defmethod.23 dm2 nil (x y &aux z))
+(define-defmethod-test-1 defmethod.23 dm2 nil (x y &aux z z))
+(define-defmethod-test-1 defmethod.23 dm2 nil (x y &aux z (z z)))
 ;;;
 ;;; A forward-referenced class used as specializer signaled an
 ;;; error at some point.

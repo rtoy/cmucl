@@ -245,3 +245,13 @@
               (tanh #c(200w0 200w0))))
   
   
+;; See bug #424
+(define-test hypot
+    (:tag :issues)
+  (assert-eql 3.8950612975366328d0
+	      (kernel:%hypot 2.302585092994046d0 3.141592653589793d0))
+  (let ((result (expt #C(2.302585092994046d0 3.141592653589793d0) 4)))
+    (assert-eql -188.4466069439329d0
+		(realpart result))
+    (assert-eql -132.16721026205448d0
+		(imagpart result))))

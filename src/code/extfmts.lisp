@@ -1299,7 +1299,7 @@ character and illegal outputs are replaced by a question mark.")
 	(#.+ef-oc+ (%ef-octet-count ef))))
     `(setf (aref (ef-cache (find-external-format ,(ef-name ef))) ,slot)
 	 ,(subst (ef-name ef) ef
-		 (function-lambda-expression (aref (ef-cache ef) slot)))))))
+		 (function-lambda-expression (aref (ef-cache ef) slot))))))
 
 ;;; Builtin external formats.
 

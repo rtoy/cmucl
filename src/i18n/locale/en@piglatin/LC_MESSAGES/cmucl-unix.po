@@ -30,6 +30,13 @@ msgid "Syscall ~A failed: ~A"
 msgstr "Yscallsay ~Away ailedfay: ~Away"
 
 #: src/code/unix.lisp
+msgid ""
+"Get the current working directory.  If the directory could be\n"
+"  determined, T and the directory name as a string are returned.\n"
+"  Otherwise, both values are NIL."
+msgstr ""
+
+#: src/code/unix.lisp
 msgid "Test for read permission"
 msgstr "Esttay orfay eadray ermissionpay"
 
@@ -842,667 +849,11 @@ msgstr ""
 "Eturnsray eitherway :ilefay, :irectoryday, :inklay, :ecialspay, orway NIL."
 
 #: src/code/unix.lisp
-msgid "Returns the pathname with all symbolic links resolved."
-msgstr ""
-"Eturnsray ethay athnamepay ithway allway ymbolicsay inkslay esolvedray."
-
-#: src/code/unix.lisp
-msgid "Error reading link ~S: ~S"
-msgstr "Errorway eadingray inklay ~S: ~S"
-
-#: src/code/unix.lisp
-msgid "Successful"
-msgstr "Uccessfulsay"
-
-#: src/code/unix.lisp
-msgid "Operation not permitted"
-msgstr "Operationway otnay ermittedpay"
-
-#: src/code/unix.lisp
-msgid "No such file or directory"
-msgstr "Onay uchsay ilefay orway irectoryday"
-
-#: src/code/unix.lisp
-msgid "No such process"
-msgstr "Onay uchsay ocesspray"
-
-#: src/code/unix.lisp
-msgid "Interrupted system call"
-msgstr "Interruptedway ystemsay allcay"
-
-#: src/code/unix.lisp
-msgid "I/O error"
-msgstr "Iway/O errorway"
-
-#: src/code/unix.lisp
-msgid "Device not configured"
-msgstr "Eviceday otnay onfiguredcay"
-
-#: src/code/unix.lisp
-msgid "Arg list too long"
-msgstr "Argway istlay ootay onglay"
-
-#: src/code/unix.lisp
-msgid "Exec format error"
-msgstr "Execway ormatfay errorway"
-
-#: src/code/unix.lisp
-msgid "Bad file descriptor"
-msgstr "Adbay ilefay escriptorday"
-
-#: src/code/unix.lisp
-msgid "No child process"
-msgstr "Onay ildchay ocesspray"
-
-#: src/code/unix.lisp
-msgid "Resource deadlock avoided"
-msgstr "Esourceray eadlockday avoidedway"
-
-#: src/code/unix.lisp
-msgid "No more processes"
-msgstr "Onay oremay ocessespray"
-
-#: src/code/unix.lisp
-msgid "Try again"
-msgstr "Ytray againway"
-
-#: src/code/unix.lisp
-msgid "Out of memory"
-msgstr "Outway ofway emorymay"
-
-#: src/code/unix.lisp
-msgid "Permission denied"
-msgstr "Ermissionpay eniedday"
-
-#: src/code/unix.lisp
-msgid "Bad address"
-msgstr "Adbay addressway"
-
-#: src/code/unix.lisp
-msgid "Block device required"
-msgstr "Ockblay eviceday equiredray"
-
-#: src/code/unix.lisp
-msgid "Device or resource busy"
-msgstr "Eviceday orway esourceray usybay"
-
-#: src/code/unix.lisp
-msgid "File exists"
-msgstr "Ilefay existsway"
-
-#: src/code/unix.lisp
-msgid "Cross-device link"
-msgstr "Osscray-eviceday inklay"
-
-#: src/code/unix.lisp
-msgid "No such device"
-msgstr "Onay uchsay eviceday"
-
-#: src/code/unix.lisp
-msgid "Not a director"
-msgstr "Otnay away irectorday"
-
-#: src/code/unix.lisp
-msgid "Is a directory"
-msgstr "Isway away irectoryday"
-
-#: src/code/unix.lisp
-msgid "Invalid argument"
-msgstr "Invalidway argumentway"
-
-#: src/code/unix.lisp
-msgid "File table overflow"
-msgstr "Ilefay abletay overflowway"
-
-#: src/code/unix.lisp
-msgid "Too many open files"
-msgstr "Ootay anymay openway ilesfay"
-
-#: src/code/unix.lisp
-msgid "Inappropriate ioctl for device"
-msgstr "Inappropriateway ioctlway orfay eviceday"
-
-#: src/code/unix.lisp
-msgid "Text file busy"
-msgstr "Exttay ilefay usybay"
-
-#: src/code/unix.lisp
-msgid "File too large"
-msgstr "Ilefay ootay argelay"
-
-#: src/code/unix.lisp
-msgid "No space left on device"
-msgstr "Onay acespay eftlay onway eviceday"
-
-#: src/code/unix.lisp
-msgid "Illegal seek"
-msgstr "Illegalway eeksay"
-
-#: src/code/unix.lisp
-msgid "Read-only file system"
-msgstr "Eadray-onlyway ilefay ystemsay"
-
-#: src/code/unix.lisp
-msgid "Too many links"
-msgstr "Ootay anymay inkslay"
-
-#: src/code/unix.lisp
-msgid "Broken pipe"
-msgstr "Okenbray ipepay"
-
-#: src/code/unix.lisp
-msgid "Numerical argument out of domain"
-msgstr "Umericalnay argumentway outway ofway omainday"
-
-#: src/code/unix.lisp
-msgid "Result too large"
-msgstr "Esultray ootay argelay"
-
-#: src/code/unix.lisp
-msgid "Math result not representable"
-msgstr "Athmay esultray otnay epresentableray"
-
-#: src/code/unix.lisp
-msgid "Operation would block"
-msgstr "Operationway ouldway ockblay"
-
-#: src/code/unix.lisp
-msgid "Resource temporarily unavailable"
-msgstr "Esourceray emporarilytay unavailableway"
-
-#: src/code/unix.lisp
-msgid "Operation now in progress"
-msgstr "Operationway ownay inway ogresspray"
-
-#: src/code/unix.lisp
-msgid "Operation already in progress"
-msgstr "Operationway alreadyway inway ogresspray"
-
-#: src/code/unix.lisp
-msgid "Socket operation on non-socket"
-msgstr "Ocketsay operationway onway onnay-ocketsay"
-
-#: src/code/unix.lisp
-msgid "Destination address required"
-msgstr "Estinationday addressway equiredray"
-
-#: src/code/unix.lisp
-msgid "Message too long"
-msgstr "Essagemay ootay onglay"
-
-#: src/code/unix.lisp
-msgid "Protocol wrong type for socket"
-msgstr "Otocolpray ongwray ypetay orfay ocketsay"
-
-#: src/code/unix.lisp
-msgid "Protocol not available"
-msgstr "Otocolpray otnay availableway"
-
-#: src/code/unix.lisp
-msgid "Protocol not supported"
-msgstr "Otocolpray otnay upportedsay"
-
-#: src/code/unix.lisp
-msgid "Socket type not supported"
-msgstr "Ocketsay ypetay otnay upportedsay"
-
-#: src/code/unix.lisp
-msgid "Operation not supported on socket"
-msgstr "Operationway otnay upportedsay onway ocketsay"
-
-#: src/code/unix.lisp
-msgid "Protocol family not supported"
-msgstr "Otocolpray amilyfay otnay upportedsay"
-
-#: src/code/unix.lisp
-msgid "Address family not supported by protocol family"
-msgstr "Addressway amilyfay otnay upportedsay ybay otocolpray amilyfay"
-
-#: src/code/unix.lisp
-msgid "Address already in use"
-msgstr "Addressway alreadyway inway useway"
-
-#: src/code/unix.lisp
-msgid "Can't assign requested address"
-msgstr "Ancay't assignway equestedray addressway"
-
-#: src/code/unix.lisp
-msgid "Network is down"
-msgstr "Etworknay isway ownday"
-
-#: src/code/unix.lisp
-msgid "Network is unreachable"
-msgstr "Etworknay isway unreachableway"
-
-#: src/code/unix.lisp
-msgid "Network dropped connection on reset"
-msgstr "Etworknay oppeddray onnectioncay onway esetray"
-
-#: src/code/unix.lisp
-msgid "Software caused connection abort"
-msgstr "Oftwaresay ausedcay onnectioncay abortway"
-
-#: src/code/unix.lisp
-msgid "Connection reset by peer"
-msgstr "Onnectioncay esetray ybay eerpay"
-
-#: src/code/unix.lisp
-msgid "No buffer space available"
-msgstr "Onay ufferbay acespay availableway"
-
-#: src/code/unix.lisp
-msgid "Socket is already connected"
-msgstr "Ocketsay isway alreadyway onnectedcay"
-
-#: src/code/unix.lisp
-msgid "Socket is not connected"
-msgstr "Ocketsay isway otnay onnectedcay"
-
-#: src/code/unix.lisp
-msgid "Can't send after socket shutdown"
-msgstr "Ancay't endsay afterway ocketsay utdownshay"
-
-#: src/code/unix.lisp
-msgid "Too many references: can't splice"
-msgstr "Ootay anymay eferencesray: ancay't licespay"
-
-#: src/code/unix.lisp
-msgid "Connection timed out"
-msgstr "Onnectioncay imedtay outway"
-
-#: src/code/unix.lisp
-msgid "Connection refused"
-msgstr "Onnectioncay efusedray"
-
-#: src/code/unix.lisp
-msgid "Too many levels of symbolic links"
-msgstr "Ootay anymay evelslay ofway ymbolicsay inkslay"
-
-#: src/code/unix.lisp
-msgid "File name too long"
-msgstr "Ilefay amenay ootay onglay"
-
-#: src/code/unix.lisp
-msgid "Host is down"
-msgstr "Osthay isway ownday"
-
-#: src/code/unix.lisp
-msgid "No route to host"
-msgstr "Onay outeray otay osthay"
-
-#: src/code/unix.lisp
-msgid "Directory not empty"
-msgstr "Irectoryday otnay emptyway"
-
-#: src/code/unix.lisp
-msgid "Too many processes"
-msgstr "Ootay anymay ocessespray"
-
-#: src/code/unix.lisp
-msgid "Too many users"
-msgstr "Ootay anymay usersway"
-
-#: src/code/unix.lisp
-msgid "Disc quota exceeded"
-msgstr "Iscday otaquay exceededway"
-
-#: src/code/unix.lisp
-msgid "namei should continue locally"
-msgstr "ameinay ouldshay ontinuecay ocallylay"
-
-#: src/code/unix.lisp
-msgid "namei was handled remotely"
-msgstr "ameinay asway andledhay emotelyray"
-
-#: src/code/unix.lisp
-msgid "Remote file system error _N"
-msgstr "Emoteray ilefay ystemsay errorway _N"
-
-#: src/code/unix.lisp
-msgid "syscall was handled by Vice"
-msgstr "yscallsay asway andledhay ybay Icevay"
-
-#: src/code/unix.lisp
-msgid "No message of desired type"
-msgstr "Onay essagemay ofway esiredday ypetay"
-
-#: src/code/unix.lisp
-msgid "Identifier removed"
-msgstr "Identifierway emovedray"
-
-#: src/code/unix.lisp
-msgid "Channel number out of range"
-msgstr "Annelchay umbernay outway ofway angeray"
-
-#: src/code/unix.lisp
-msgid "Level 2 not synchronized"
-msgstr "Evellay 2 otnay ynchronizedsay"
-
-#: src/code/unix.lisp
-msgid "Level 3 halted"
-msgstr "Evellay 3 altedhay"
-
-#: src/code/unix.lisp
-msgid "Level 3 reset"
-msgstr "Evellay 3 esetray"
-
-#: src/code/unix.lisp
-msgid "Link number out of range"
-msgstr "Inklay umbernay outway ofway angeray"
-
-#: src/code/unix.lisp
-msgid "Protocol driver not attached"
-msgstr "Otocolpray iverdray otnay attachedway"
-
-#: src/code/unix.lisp
-msgid "No CSI structure available"
-msgstr "Onay CSI ucturestray availableway"
-
-#: src/code/unix.lisp
-msgid "Level 2 halted"
-msgstr "Evellay 2 altedhay"
-
-#: src/code/unix.lisp
-msgid "Deadlock situation detected/avoided"
-msgstr "Eadlockday ituationsay etectedday/avoidedway"
-
-#: src/code/unix.lisp
-msgid "No record locks available"
-msgstr "Onay ecordray ockslay availableway"
-
-#: src/code/unix.lisp
-msgid "Error 47"
-msgstr "Errorway 47"
-
-#: src/code/unix.lisp
-msgid "Error 48"
-msgstr "Errorway 48"
-
-#: src/code/unix.lisp
-msgid "Bad exchange descriptor"
-msgstr "Adbay exchangeway escriptorday"
-
-#: src/code/unix.lisp
-msgid "Bad request descriptor"
-msgstr "Adbay equestray escriptorday"
-
-#: src/code/unix.lisp
-msgid "Message tables full"
-msgstr "Essagemay ablestay ullfay"
-
-#: src/code/unix.lisp
-msgid "Anode table overflow"
-msgstr "Anodeway abletay overflowway"
-
-#: src/code/unix.lisp
-msgid "Bad request code"
-msgstr "Adbay equestray odecay"
-
-#: src/code/unix.lisp
-msgid "Invalid slot"
-msgstr "Invalidway otslay"
-
-#: src/code/unix.lisp
-msgid "File locking deadlock"
-msgstr "Ilefay ockinglay eadlockday"
-
-#: src/code/unix.lisp
-msgid "Bad font file format"
-msgstr "Adbay ontfay ilefay ormatfay"
-
-#: src/code/unix.lisp
-msgid "Not a stream device"
-msgstr "Otnay away eamstray eviceday"
-
-#: src/code/unix.lisp
-msgid "No data available"
-msgstr "Onay ataday availableway"
-
-#: src/code/unix.lisp
-msgid "Timer expired"
-msgstr "Imertay expiredway"
-
-#: src/code/unix.lisp
-msgid "Out of stream resources"
-msgstr "Outway ofway eamstray esourcesray"
-
-#: src/code/unix.lisp
-msgid "Machine is not on the network"
-msgstr "Achinemay isway otnay onway ethay etworknay"
-
-#: src/code/unix.lisp
-msgid "Package not installed"
-msgstr "Ackagepay otnay installedway"
-
-#: src/code/unix.lisp
-msgid "Object is remote"
-msgstr "Objectway isway emoteray"
-
-#: src/code/unix.lisp
-msgid "Link has been severed"
-msgstr "Inklay ashay eenbay everedsay"
-
-#: src/code/unix.lisp
-msgid "Advertise error"
-msgstr "Advertiseway errorway"
-
-#: src/code/unix.lisp
-msgid "Srmount error"
-msgstr "Rmountsay errorway"
-
-#: src/code/unix.lisp
-msgid "Communication error on send"
-msgstr "Ommunicationcay errorway onway endsay"
-
-#: src/code/unix.lisp
-msgid "Protocol error"
-msgstr "Otocolpray errorway"
-
-#: src/code/unix.lisp
-msgid "Multihop attempted"
-msgstr "Ultihopmay attemptedway"
-
-#: src/code/unix.lisp
-msgid "Not a data message"
-msgstr "Otnay away ataday essagemay"
-
-#: src/code/unix.lisp
-msgid "Value too large for defined data type"
-msgstr "Aluevay ootay argelay orfay efinedday ataday ypetay"
-
-#: src/code/unix.lisp
-msgid "Name not unique on network"
-msgstr "Amenay otnay uniqueway onway etworknay"
-
-#: src/code/unix.lisp
-msgid "File descriptor in bad state"
-msgstr "Ilefay escriptorday inway adbay tatesay"
-
-#: src/code/unix.lisp
-msgid "Remote address changed"
-msgstr "Emoteray addressway angedchay"
-
-#: src/code/unix.lisp
-msgid "Can not access a needed shared library"
-msgstr "Ancay otnay accessway away eedednay aredshay ibrarylay"
-
-#: src/code/unix.lisp
-msgid "Accessing a corrupted shared library"
-msgstr "Accessingway away orruptedcay aredshay ibrarylay"
-
-#: src/code/unix.lisp
-msgid ".lib section in a.out corrupted"
-msgstr ".iblay ectionsay inway away.outway orruptedcay"
-
-#: src/code/unix.lisp
-msgid "Attempting to link in more shared libraries than system limit"
-msgstr ""
-"Attemptingway otay inklay inway oremay aredshay ibrarieslay anthay ystemsay "
-"imitlay"
-
-#: src/code/unix.lisp
-msgid "Can not exec a shared library directly"
-msgstr "Ancay otnay execway away aredshay ibrarylay irectlyday"
-
-#: src/code/unix.lisp
-msgid "Error 88"
-msgstr "Errorway 88"
-
-#: src/code/unix.lisp
-msgid "Operation not applicable"
-msgstr "Operationway otnay applicableway"
-
-#: src/code/unix.lisp
 msgid ""
-"Number of symbolic links encountered during path name traversal exceeds "
-"MAXSYMLINKS"
+"Returns the pathname with all symbolic links expanded and\n"
+" references to '.' and '..' and extra '/' characters removed.  If\n"
+" expansion fails, NIL is returned and the errno."
 msgstr ""
-"Umbernay ofway ymbolicsay inkslay encounteredway uringday athpay amenay "
-"aversaltray exceedsway MAXSYMLINKS"
-
-#: src/code/unix.lisp
-msgid "Error 91"
-msgstr "Errorway 91"
-
-#: src/code/unix.lisp
-msgid "Error 92"
-msgstr "Errorway 92"
-
-#: src/code/unix.lisp
-msgid "Option not supported by protocol"
-msgstr "Optionway otnay upportedsay ybay otocolpray"
-
-#: src/code/unix.lisp
-msgid "Operation not supported on transport endpoint"
-msgstr "Operationway otnay upportedsay onway ansporttray endpointway"
-
-#: src/code/unix.lisp
-msgid "Cannot assign requested address"
-msgstr "Annotcay assignway equestedray addressway"
-
-#: src/code/unix.lisp
-msgid "Network dropped connection because of reset"
-msgstr "Etworknay oppeddray onnectioncay ecausebay ofway esetray"
-
-#: src/code/unix.lisp
-msgid "Transport endpoint is already connected"
-msgstr "Ansporttray endpointway isway alreadyway onnectedcay"
-
-#: src/code/unix.lisp
-msgid "Transport endpoint is not connected"
-msgstr "Ansporttray endpointway isway otnay onnectedcay"
-
-#: src/code/unix.lisp
-msgid "Cannot send after socket shutdown"
-msgstr "Annotcay endsay afterway ocketsay utdownshay"
-
-#: src/code/unix.lisp
-msgid "Too many references: cannot splice"
-msgstr "Ootay anymay eferencesray: annotcay licespay"
-
-#: src/code/unix.lisp
-msgid "Stale NFS file handle"
-msgstr "Talesay NFS ilefay andlehay"
-
-#: src/code/unix.lisp
-msgid "Resource deadlock would occur"
-msgstr "Esourceray eadlockday ouldway occurway"
-
-#: src/code/unix.lisp
-msgid "Function not implemented"
-msgstr "Unctionfay otnay implementedway"
-
-#: src/code/unix.lisp
-msgid "Too many symbolic links encountered"
-msgstr "Ootay anymay ymbolicsay inkslay encounteredway"
-
-#: src/code/unix.lisp
-msgid "Invalid exchange"
-msgstr "Invalidway exchangeway"
-
-#: src/code/unix.lisp
-msgid "Invalid request descriptor"
-msgstr "Invalidway equestray escriptorday"
-
-#: src/code/unix.lisp
-msgid "Exchange full"
-msgstr "Exchangeway ullfay"
-
-#: src/code/unix.lisp
-msgid "No anode"
-msgstr "Onay anodeway"
-
-#: src/code/unix.lisp
-msgid "Invalid request code"
-msgstr "Invalidway equestray odecay"
-
-#: src/code/unix.lisp
-msgid "File locking deadlock error"
-msgstr "Ilefay ockinglay eadlockday errorway"
-
-#: src/code/unix.lisp
-msgid "Device not a stream"
-msgstr "Eviceday otnay away eamstray"
-
-#: src/code/unix.lisp
-msgid "Out of streams resources"
-msgstr "Outway ofway eamsstray esourcesray"
-
-#: src/code/unix.lisp
-msgid "RFS specific error"
-msgstr "RFS ecificspay errorway"
-
-#: src/code/unix.lisp
-msgid "Attempting to link in too many shared libraries"
-msgstr "Attemptingway otay inklay inway ootay anymay aredshay ibrarieslay"
-
-#: src/code/unix.lisp
-msgid "Cannot exec a shared library directly"
-msgstr "Annotcay execway away aredshay ibrarylay irectlyday"
-
-#: src/code/unix.lisp
-msgid "Illegal byte sequence"
-msgstr "Illegalway ytebay equencesay"
-
-#: src/code/unix.lisp
-msgid "Interrupted system call should be restarted _N"
-msgstr "Interruptedway ystemsay allcay ouldshay ebay estartedray _N"
-
-#: src/code/unix.lisp
-msgid "Streams pipe error"
-msgstr "Eamsstray ipepay errorway"
-
-#: src/code/unix.lisp
-msgid "Address family not supported by protocol"
-msgstr "Addressway amilyfay otnay upportedsay ybay otocolpray"
-
-#: src/code/unix.lisp
-msgid "Cannot send after transport endpoint shutdown"
-msgstr "Annotcay endsay afterway ansporttray endpointway utdownshay"
-
-#: src/code/unix.lisp
-msgid "Structure needs cleaning"
-msgstr "Ucturestray eedsnay eaningclay"
-
-#: src/code/unix.lisp
-msgid "Not a XENIX named type file"
-msgstr "Otnay away XENIX amednay ypetay ilefay"
-
-#: src/code/unix.lisp
-msgid "No XENIX semaphores available"
-msgstr "Onay XENIX emaphoressay availableway"
-
-#: src/code/unix.lisp
-msgid "Is a named type file"
-msgstr "Isway away amednay ypetay ilefay"
-
-#: src/code/unix.lisp
-msgid "Remote I/O error"
-msgstr "Emoteray Iway/O errorway"
-
-#: src/code/unix.lisp
-msgid "Quota exceeded"
-msgstr "Otaquay exceededway"
 
 #: src/code/unix.lisp
 msgid ""
@@ -1512,10 +863,6 @@ msgstr ""
 "Eturnsray away ingstray escribingday ethay errorway umbernay ichwhay asway "
 "eturnedray ybay away\n"
 "  UNIX ystemsay allcay."
-
-#: src/code/unix.lisp
-msgid "Unknown error [~d]"
-msgstr "Unknownway errorway [~d]"
 
 #: src/code/unix.lisp
 msgid ""
@@ -1733,7 +1080,11 @@ msgstr ""
 "   oesnday't orkway."
 
 #: src/code/unix.lisp
-msgid "Call setlocale(3c) with fixed args.  Returns 0 on success."
+msgid ""
+"Set all the categories of the locale according to the values of\n"
+"  the environment variables by calling setlocale(LC_ALL, \"\").\n"
+"\n"
+"  Returns 0 on success and -1 if setlocale failed."
 msgstr ""
 
 #: src/code/unix.lisp
@@ -1746,6 +1097,530 @@ msgstr ""
 #: src/code/unix.lisp
 msgid "Get the codeset from the locale"
 msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Generates a unique temporary file name from TEMPLATE, and creates\n"
+"  and opens the file.  On success, the corresponding file descriptor\n"
+"  and name of the file is returned.  Otherwise, NIL and the UNIX error\n"
+"  code is returned."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid ""
+"Generate a uniquely named temporary directory from Template.  The\n"
+"  directory is created with permissions 0700.  The name of the\n"
+"  directory is returned.\n"
+"\n"
+"  If the directory cannot be created NIL and the UNIX error code is\n"
+"  returned."
+msgstr ""
+
+#: src/code/unix.lisp
+msgid "Returns a string that describes the error code Errno"
+msgstr ""
+
+#~ msgid "Returns the pathname with all symbolic links resolved."
+#~ msgstr ""
+#~ "Eturnsray ethay athnamepay ithway allway ymbolicsay inkslay esolvedray."
+
+#~ msgid "Error reading link ~S: ~S"
+#~ msgstr "Errorway eadingray inklay ~S: ~S"
+
+#~ msgid "Successful"
+#~ msgstr "Uccessfulsay"
+
+#~ msgid "Operation not permitted"
+#~ msgstr "Operationway otnay ermittedpay"
+
+#~ msgid "No such file or directory"
+#~ msgstr "Onay uchsay ilefay orway irectoryday"
+
+#~ msgid "No such process"
+#~ msgstr "Onay uchsay ocesspray"
+
+#~ msgid "Interrupted system call"
+#~ msgstr "Interruptedway ystemsay allcay"
+
+#~ msgid "I/O error"
+#~ msgstr "Iway/O errorway"
+
+#~ msgid "Device not configured"
+#~ msgstr "Eviceday otnay onfiguredcay"
+
+#~ msgid "Arg list too long"
+#~ msgstr "Argway istlay ootay onglay"
+
+#~ msgid "Exec format error"
+#~ msgstr "Execway ormatfay errorway"
+
+#~ msgid "Bad file descriptor"
+#~ msgstr "Adbay ilefay escriptorday"
+
+#~ msgid "No child process"
+#~ msgstr "Onay ildchay ocesspray"
+
+#~ msgid "Resource deadlock avoided"
+#~ msgstr "Esourceray eadlockday avoidedway"
+
+#~ msgid "No more processes"
+#~ msgstr "Onay oremay ocessespray"
+
+#~ msgid "Try again"
+#~ msgstr "Ytray againway"
+
+#~ msgid "Out of memory"
+#~ msgstr "Outway ofway emorymay"
+
+#~ msgid "Permission denied"
+#~ msgstr "Ermissionpay eniedday"
+
+#~ msgid "Bad address"
+#~ msgstr "Adbay addressway"
+
+#~ msgid "Block device required"
+#~ msgstr "Ockblay eviceday equiredray"
+
+#~ msgid "Device or resource busy"
+#~ msgstr "Eviceday orway esourceray usybay"
+
+#~ msgid "File exists"
+#~ msgstr "Ilefay existsway"
+
+#~ msgid "Cross-device link"
+#~ msgstr "Osscray-eviceday inklay"
+
+#~ msgid "No such device"
+#~ msgstr "Onay uchsay eviceday"
+
+#~ msgid "Not a director"
+#~ msgstr "Otnay away irectorday"
+
+#~ msgid "Is a directory"
+#~ msgstr "Isway away irectoryday"
+
+#~ msgid "Invalid argument"
+#~ msgstr "Invalidway argumentway"
+
+#~ msgid "File table overflow"
+#~ msgstr "Ilefay abletay overflowway"
+
+#~ msgid "Too many open files"
+#~ msgstr "Ootay anymay openway ilesfay"
+
+#~ msgid "Inappropriate ioctl for device"
+#~ msgstr "Inappropriateway ioctlway orfay eviceday"
+
+#~ msgid "Text file busy"
+#~ msgstr "Exttay ilefay usybay"
+
+#~ msgid "File too large"
+#~ msgstr "Ilefay ootay argelay"
+
+#~ msgid "No space left on device"
+#~ msgstr "Onay acespay eftlay onway eviceday"
+
+#~ msgid "Illegal seek"
+#~ msgstr "Illegalway eeksay"
+
+#~ msgid "Read-only file system"
+#~ msgstr "Eadray-onlyway ilefay ystemsay"
+
+#~ msgid "Too many links"
+#~ msgstr "Ootay anymay inkslay"
+
+#~ msgid "Broken pipe"
+#~ msgstr "Okenbray ipepay"
+
+#~ msgid "Numerical argument out of domain"
+#~ msgstr "Umericalnay argumentway outway ofway omainday"
+
+#~ msgid "Result too large"
+#~ msgstr "Esultray ootay argelay"
+
+#~ msgid "Math result not representable"
+#~ msgstr "Athmay esultray otnay epresentableray"
+
+#~ msgid "Operation would block"
+#~ msgstr "Operationway ouldway ockblay"
+
+#~ msgid "Resource temporarily unavailable"
+#~ msgstr "Esourceray emporarilytay unavailableway"
+
+#~ msgid "Operation now in progress"
+#~ msgstr "Operationway ownay inway ogresspray"
+
+#~ msgid "Operation already in progress"
+#~ msgstr "Operationway alreadyway inway ogresspray"
+
+#~ msgid "Socket operation on non-socket"
+#~ msgstr "Ocketsay operationway onway onnay-ocketsay"
+
+#~ msgid "Destination address required"
+#~ msgstr "Estinationday addressway equiredray"
+
+#~ msgid "Message too long"
+#~ msgstr "Essagemay ootay onglay"
+
+#~ msgid "Protocol wrong type for socket"
+#~ msgstr "Otocolpray ongwray ypetay orfay ocketsay"
+
+#~ msgid "Protocol not available"
+#~ msgstr "Otocolpray otnay availableway"
+
+#~ msgid "Protocol not supported"
+#~ msgstr "Otocolpray otnay upportedsay"
+
+#~ msgid "Socket type not supported"
+#~ msgstr "Ocketsay ypetay otnay upportedsay"
+
+#~ msgid "Operation not supported on socket"
+#~ msgstr "Operationway otnay upportedsay onway ocketsay"
+
+#~ msgid "Protocol family not supported"
+#~ msgstr "Otocolpray amilyfay otnay upportedsay"
+
+#~ msgid "Address family not supported by protocol family"
+#~ msgstr "Addressway amilyfay otnay upportedsay ybay otocolpray amilyfay"
+
+#~ msgid "Address already in use"
+#~ msgstr "Addressway alreadyway inway useway"
+
+#~ msgid "Can't assign requested address"
+#~ msgstr "Ancay't assignway equestedray addressway"
+
+#~ msgid "Network is down"
+#~ msgstr "Etworknay isway ownday"
+
+#~ msgid "Network is unreachable"
+#~ msgstr "Etworknay isway unreachableway"
+
+#~ msgid "Network dropped connection on reset"
+#~ msgstr "Etworknay oppeddray onnectioncay onway esetray"
+
+#~ msgid "Software caused connection abort"
+#~ msgstr "Oftwaresay ausedcay onnectioncay abortway"
+
+#~ msgid "Connection reset by peer"
+#~ msgstr "Onnectioncay esetray ybay eerpay"
+
+#~ msgid "No buffer space available"
+#~ msgstr "Onay ufferbay acespay availableway"
+
+#~ msgid "Socket is already connected"
+#~ msgstr "Ocketsay isway alreadyway onnectedcay"
+
+#~ msgid "Socket is not connected"
+#~ msgstr "Ocketsay isway otnay onnectedcay"
+
+#~ msgid "Can't send after socket shutdown"
+#~ msgstr "Ancay't endsay afterway ocketsay utdownshay"
+
+#~ msgid "Too many references: can't splice"
+#~ msgstr "Ootay anymay eferencesray: ancay't licespay"
+
+#~ msgid "Connection timed out"
+#~ msgstr "Onnectioncay imedtay outway"
+
+#~ msgid "Connection refused"
+#~ msgstr "Onnectioncay efusedray"
+
+#~ msgid "Too many levels of symbolic links"
+#~ msgstr "Ootay anymay evelslay ofway ymbolicsay inkslay"
+
+#~ msgid "File name too long"
+#~ msgstr "Ilefay amenay ootay onglay"
+
+#~ msgid "Host is down"
+#~ msgstr "Osthay isway ownday"
+
+#~ msgid "No route to host"
+#~ msgstr "Onay outeray otay osthay"
+
+#~ msgid "Directory not empty"
+#~ msgstr "Irectoryday otnay emptyway"
+
+#~ msgid "Too many processes"
+#~ msgstr "Ootay anymay ocessespray"
+
+#~ msgid "Too many users"
+#~ msgstr "Ootay anymay usersway"
+
+#~ msgid "Disc quota exceeded"
+#~ msgstr "Iscday otaquay exceededway"
+
+#~ msgid "namei should continue locally"
+#~ msgstr "ameinay ouldshay ontinuecay ocallylay"
+
+#~ msgid "namei was handled remotely"
+#~ msgstr "ameinay asway andledhay emotelyray"
+
+#~ msgid "Remote file system error _N"
+#~ msgstr "Emoteray ilefay ystemsay errorway _N"
+
+#~ msgid "syscall was handled by Vice"
+#~ msgstr "yscallsay asway andledhay ybay Icevay"
+
+#~ msgid "No message of desired type"
+#~ msgstr "Onay essagemay ofway esiredday ypetay"
+
+#~ msgid "Identifier removed"
+#~ msgstr "Identifierway emovedray"
+
+#~ msgid "Channel number out of range"
+#~ msgstr "Annelchay umbernay outway ofway angeray"
+
+#~ msgid "Level 2 not synchronized"
+#~ msgstr "Evellay 2 otnay ynchronizedsay"
+
+#~ msgid "Level 3 halted"
+#~ msgstr "Evellay 3 altedhay"
+
+#~ msgid "Level 3 reset"
+#~ msgstr "Evellay 3 esetray"
+
+#~ msgid "Link number out of range"
+#~ msgstr "Inklay umbernay outway ofway angeray"
+
+#~ msgid "Protocol driver not attached"
+#~ msgstr "Otocolpray iverdray otnay attachedway"
+
+#~ msgid "No CSI structure available"
+#~ msgstr "Onay CSI ucturestray availableway"
+
+#~ msgid "Level 2 halted"
+#~ msgstr "Evellay 2 altedhay"
+
+#~ msgid "Deadlock situation detected/avoided"
+#~ msgstr "Eadlockday ituationsay etectedday/avoidedway"
+
+#~ msgid "No record locks available"
+#~ msgstr "Onay ecordray ockslay availableway"
+
+#~ msgid "Error 47"
+#~ msgstr "Errorway 47"
+
+#~ msgid "Error 48"
+#~ msgstr "Errorway 48"
+
+#~ msgid "Bad exchange descriptor"
+#~ msgstr "Adbay exchangeway escriptorday"
+
+#~ msgid "Bad request descriptor"
+#~ msgstr "Adbay equestray escriptorday"
+
+#~ msgid "Message tables full"
+#~ msgstr "Essagemay ablestay ullfay"
+
+#~ msgid "Anode table overflow"
+#~ msgstr "Anodeway abletay overflowway"
+
+#~ msgid "Bad request code"
+#~ msgstr "Adbay equestray odecay"
+
+#~ msgid "Invalid slot"
+#~ msgstr "Invalidway otslay"
+
+#~ msgid "File locking deadlock"
+#~ msgstr "Ilefay ockinglay eadlockday"
+
+#~ msgid "Bad font file format"
+#~ msgstr "Adbay ontfay ilefay ormatfay"
+
+#~ msgid "Not a stream device"
+#~ msgstr "Otnay away eamstray eviceday"
+
+#~ msgid "No data available"
+#~ msgstr "Onay ataday availableway"
+
+#~ msgid "Timer expired"
+#~ msgstr "Imertay expiredway"
+
+#~ msgid "Out of stream resources"
+#~ msgstr "Outway ofway eamstray esourcesray"
+
+#~ msgid "Machine is not on the network"
+#~ msgstr "Achinemay isway otnay onway ethay etworknay"
+
+#~ msgid "Package not installed"
+#~ msgstr "Ackagepay otnay installedway"
+
+#~ msgid "Object is remote"
+#~ msgstr "Objectway isway emoteray"
+
+#~ msgid "Link has been severed"
+#~ msgstr "Inklay ashay eenbay everedsay"
+
+#~ msgid "Advertise error"
+#~ msgstr "Advertiseway errorway"
+
+#~ msgid "Srmount error"
+#~ msgstr "Rmountsay errorway"
+
+#~ msgid "Communication error on send"
+#~ msgstr "Ommunicationcay errorway onway endsay"
+
+#~ msgid "Protocol error"
+#~ msgstr "Otocolpray errorway"
+
+#~ msgid "Multihop attempted"
+#~ msgstr "Ultihopmay attemptedway"
+
+#~ msgid "Not a data message"
+#~ msgstr "Otnay away ataday essagemay"
+
+#~ msgid "Value too large for defined data type"
+#~ msgstr "Aluevay ootay argelay orfay efinedday ataday ypetay"
+
+#~ msgid "Name not unique on network"
+#~ msgstr "Amenay otnay uniqueway onway etworknay"
+
+#~ msgid "File descriptor in bad state"
+#~ msgstr "Ilefay escriptorday inway adbay tatesay"
+
+#~ msgid "Remote address changed"
+#~ msgstr "Emoteray addressway angedchay"
+
+#~ msgid "Can not access a needed shared library"
+#~ msgstr "Ancay otnay accessway away eedednay aredshay ibrarylay"
+
+#~ msgid "Accessing a corrupted shared library"
+#~ msgstr "Accessingway away orruptedcay aredshay ibrarylay"
+
+#~ msgid ".lib section in a.out corrupted"
+#~ msgstr ".iblay ectionsay inway away.outway orruptedcay"
+
+#~ msgid "Attempting to link in more shared libraries than system limit"
+#~ msgstr ""
+#~ "Attemptingway otay inklay inway oremay aredshay ibrarieslay anthay "
+#~ "ystemsay imitlay"
+
+#~ msgid "Can not exec a shared library directly"
+#~ msgstr "Ancay otnay execway away aredshay ibrarylay irectlyday"
+
+#~ msgid "Error 88"
+#~ msgstr "Errorway 88"
+
+#~ msgid "Operation not applicable"
+#~ msgstr "Operationway otnay applicableway"
+
+#~ msgid ""
+#~ "Number of symbolic links encountered during path name traversal exceeds "
+#~ "MAXSYMLINKS"
+#~ msgstr ""
+#~ "Umbernay ofway ymbolicsay inkslay encounteredway uringday athpay amenay "
+#~ "aversaltray exceedsway MAXSYMLINKS"
+
+#~ msgid "Error 91"
+#~ msgstr "Errorway 91"
+
+#~ msgid "Error 92"
+#~ msgstr "Errorway 92"
+
+#~ msgid "Option not supported by protocol"
+#~ msgstr "Optionway otnay upportedsay ybay otocolpray"
+
+#~ msgid "Operation not supported on transport endpoint"
+#~ msgstr "Operationway otnay upportedsay onway ansporttray endpointway"
+
+#~ msgid "Cannot assign requested address"
+#~ msgstr "Annotcay assignway equestedray addressway"
+
+#~ msgid "Network dropped connection because of reset"
+#~ msgstr "Etworknay oppeddray onnectioncay ecausebay ofway esetray"
+
+#~ msgid "Transport endpoint is already connected"
+#~ msgstr "Ansporttray endpointway isway alreadyway onnectedcay"
+
+#~ msgid "Transport endpoint is not connected"
+#~ msgstr "Ansporttray endpointway isway otnay onnectedcay"
+
+#~ msgid "Cannot send after socket shutdown"
+#~ msgstr "Annotcay endsay afterway ocketsay utdownshay"
+
+#~ msgid "Too many references: cannot splice"
+#~ msgstr "Ootay anymay eferencesray: annotcay licespay"
+
+#~ msgid "Stale NFS file handle"
+#~ msgstr "Talesay NFS ilefay andlehay"
+
+#~ msgid "Resource deadlock would occur"
+#~ msgstr "Esourceray eadlockday ouldway occurway"
+
+#~ msgid "Function not implemented"
+#~ msgstr "Unctionfay otnay implementedway"
+
+#~ msgid "Too many symbolic links encountered"
+#~ msgstr "Ootay anymay ymbolicsay inkslay encounteredway"
+
+#~ msgid "Invalid exchange"
+#~ msgstr "Invalidway exchangeway"
+
+#~ msgid "Invalid request descriptor"
+#~ msgstr "Invalidway equestray escriptorday"
+
+#~ msgid "Exchange full"
+#~ msgstr "Exchangeway ullfay"
+
+#~ msgid "No anode"
+#~ msgstr "Onay anodeway"
+
+#~ msgid "Invalid request code"
+#~ msgstr "Invalidway equestray odecay"
+
+#~ msgid "File locking deadlock error"
+#~ msgstr "Ilefay ockinglay eadlockday errorway"
+
+#~ msgid "Device not a stream"
+#~ msgstr "Eviceday otnay away eamstray"
+
+#~ msgid "Out of streams resources"
+#~ msgstr "Outway ofway eamsstray esourcesray"
+
+#~ msgid "RFS specific error"
+#~ msgstr "RFS ecificspay errorway"
+
+#~ msgid "Attempting to link in too many shared libraries"
+#~ msgstr "Attemptingway otay inklay inway ootay anymay aredshay ibrarieslay"
+
+#~ msgid "Cannot exec a shared library directly"
+#~ msgstr "Annotcay execway away aredshay ibrarylay irectlyday"
+
+#~ msgid "Illegal byte sequence"
+#~ msgstr "Illegalway ytebay equencesay"
+
+#~ msgid "Interrupted system call should be restarted _N"
+#~ msgstr "Interruptedway ystemsay allcay ouldshay ebay estartedray _N"
+
+#~ msgid "Streams pipe error"
+#~ msgstr "Eamsstray ipepay errorway"
+
+#~ msgid "Address family not supported by protocol"
+#~ msgstr "Addressway amilyfay otnay upportedsay ybay otocolpray"
+
+#~ msgid "Cannot send after transport endpoint shutdown"
+#~ msgstr "Annotcay endsay afterway ansporttray endpointway utdownshay"
+
+#~ msgid "Structure needs cleaning"
+#~ msgstr "Ucturestray eedsnay eaningclay"
+
+#~ msgid "Not a XENIX named type file"
+#~ msgstr "Otnay away XENIX amednay ypetay ilefay"
+
+#~ msgid "No XENIX semaphores available"
+#~ msgstr "Onay XENIX emaphoressay availableway"
+
+#~ msgid "Is a named type file"
+#~ msgstr "Isway away amednay ypetay ilefay"
+
+#~ msgid "Remote I/O error"
+#~ msgstr "Emoteray Iway/O errorway"
+
+#~ msgid "Quota exceeded"
+#~ msgstr "Otaquay exceededway"
+
+#~ msgid "Unknown error [~d]"
+#~ msgstr "Unknownway errorway [~d]"
 
 #~ msgid "Unix-getpagesize returns the number of bytes in a system page."
 #~ msgstr ""

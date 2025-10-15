@@ -1,5 +1,5 @@
 ;;; -*- mode: Lisp; Base: 10 ; Syntax: ANSI-Common-Lisp ; Package: CL-USER ; buffer-read-only: t; -*-
-;;; This is ASDF 3.3.7: Another System Definition Facility.
+;;; This is ASDF 3.3.7.4: Another System Definition Facility.
 ;;;
 ;;; Feedback, bug reports, and patches are all welcome:
 ;;; please mail to <asdf-devel@common-lisp.net>.
@@ -135,10 +135,10 @@
   (:import-from
    #+allegro #:excl
    #+sbcl #:sb-ext
-   #+(or clasp abcl ecl) #:ext
+   #+(or clasp abcl ecl cmu) #:ext
    #+ccl #:ccl
    #+lispworks #:hcl
-   #-(or allegro sbcl clasp abcl ccl lispworks ecl)
+   #-(or allegro sbcl clasp abcl ccl lispworks ecl cmu)
    (error "Don't know from which package this lisp supplies the local-package-nicknames API.")
    #:remove-package-local-nickname #:package-local-nicknames #:add-package-local-nickname)
   (:export
@@ -1165,7 +1165,7 @@ Return a string made of the parts not omitted or emitted by FROB."
 
   (defmacro compatfmt (format)
     #+(or gcl genera)
-    (frob-substrings format `("~3i~_" #+genera ,@'("~@<" "~@;" "~@:>" "~:>")))
+    (frob-substrings format `("~3i~_" "~@<" "~@;" "~@:>" "~:>"))
     #-(or gcl genera) format))
 ;;;; -------------------------------------------------------------------------
 ;;;; General Purpose Utilities for ASDF
@@ -1848,7 +1848,7 @@ form suitable for testing with #+."
 (in-package :uiop/version)
 
 (with-upgradability ()
-  (defparameter *uiop-version* "3.3.7")
+  (defparameter *uiop-version* "3.3.7.4")
 
   (defun unparse-version (version-list)
     "From a parsed version (a list of natural numbers), compute the version string"
@@ -2064,7 +2064,7 @@ keywords explicitly."
 
   (defun os-unix-p ()
     "Is the underlying operating system some Unix variant?"
-    (or (featurep '(:or :unix :cygwin :haiku)) (os-macosx-p)))
+    (or (featurep '(:or :unix :cygwin :haiku :linux)) (os-macosx-p)))
 
   (defun os-windows-p ()
     "Is the underlying operating system Microsoft Windows?"
@@ -2376,7 +2376,7 @@ suitable for use as a directory name to segregate Lisp FASLs, C dynamic librarie
                      (error "Could not set current directory to ~A" x))
       #+ecl (ext:chdir x)
       #+clasp (ext:chdir x t)
-      #+gcl (system:chdir x)
+      #+gcl (system::chdir x)
       #+lispworks (hcl:change-directory x)
       #+mkcl (mk-ext:chdir x)
       #+sbcl (progn (require :sb-posix) (symbol-call :sb-posix :chdir (sb-ext:native-namestring x)))
@@ -2811,6 +2811,7 @@ actually-existing directory."
 
 ;;; Parsing filenames
 (with-upgradability ()
+  #-gcl
   (declaim (ftype function ensure-pathname)) ; forward reference
 
   (defun split-unix-namestring-directory-components
@@ -3339,20 +3340,6 @@ or the original (parsed) pathname if it is false (the default)."
       (when p
         #+allegro
         (probe-file p :follow-symlinks truename)
-        #+gcl
-        (if truename
-            (truename* p)
-            (let ((kind (car (si::stat p))))
-              (when (eq kind :link)
-                (setf kind (ignore-errors (car (si::stat (truename* p))))))
-              (ecase kind
-                ((nil) nil)
-                ((:file :link)
-                 (cond
-                   ((file-pathname-p p) p)
-                   ((directory-pathname-p p)
-                    (subpathname p (car (last (pathname-directory p)))))))
-                (:directory (ensure-directory-pathname p)))))
         #+clisp
         #.(let* ((fs (or #-os-windows (find-symbol* '#:file-stat :posix nil)))
                  (pp (find-symbol* '#:probe-pathname :ext nil)))
@@ -3367,7 +3354,7 @@ or the original (parsed) pathname if it is false (the default)."
                     (t '(or (and (truename* p) p)
                          (if-let (d (ensure-directory-pathname p))
                           (and (truename* d) d)))))))
-        #-(or allegro clisp gcl)
+        #-(or allegro clisp)
         (if truename
             (probe-file p)
             (and
@@ -6304,13 +6291,13 @@ MAKE-INSTANCE. Primarily, it is being made available to enable type-checking."))
       (not-implemented-error 'process-info-pid)))
 
   (defun %process-status (process-info)
+    #-(or allegro clozure cmucl ecl lispworks mkcl sbcl scl)
+    (not-implemented-error '%process-status)
     (if-let (exit-code (slot-value process-info 'exit-code))
       (return-from %process-status
         (if-let (signal-code (slot-value process-info 'signal-code))
           (values :signaled signal-code)
           (values :exited exit-code))))
-    #-(or allegro clasp clozure cmucl ecl lispworks mkcl sbcl scl)
-    (not-implemented-error '%process-status)
     (if-let (process (slot-value process-info 'process))
       (multiple-value-bind (status code)
           (progn
@@ -6322,13 +6309,13 @@ MAKE-INSTANCE. Primarily, it is being made available to enable type-checking."))
                         (symbol-call :ext '#:external-process-status process)
                         (not-implemented-error '%process-status))
             #+clozure (ccl:external-process-status process)
-            #+(or cmucl scl) (let ((status (ext:process-status process)))
-                               (if (member status '(:exited :signaled))
-                                   ;; Calling ext:process-exit-code on
-                                   ;; processes that are still alive
-                                   ;; yields an undefined result
-                                   (values status (ext:process-exit-code process))
-                                   status))
+            #+cmucl (let ((status (ext:process-status process)))
+                      (if (member status '(:exited :signaled :stopped))
+                          ;; ext:process-exit-code can also be called
+                          ;; for stopped processes to determine the
+                          ;; signal that stopped them
+                          (values status (ext:process-exit-code process))
+                        status))
             #+ecl (ext:external-process-status process)
             #+lispworks
             ;; a signal is only returned on LispWorks 7+
@@ -6353,7 +6340,14 @@ MAKE-INSTANCE. Primarily, it is being made available to enable type-checking."))
                          ;; sb-ext:process-exit-code can also be
                          ;; called for stopped processes to determine
                          ;; the signal that stopped them
-                         (values status (sb-ext:process-exit-code process)))))
+                         (values status (sb-ext:process-exit-code process))))
+            #+scl (let ((status (ext:process-status process)))
+                               (if (member status '(:exited :signaled))
+                                   ;; Calling ext:process-exit-code on
+                                   ;; processes that are still alive
+                                   ;; yields an undefined result
+                                   (values status (ext:process-exit-code process))
+                                   status)))
         (case status
           (:exited (setf (slot-value process-info 'exit-code) code))
           (:signaled (let ((%code (%signal-to-exit-code code)))
@@ -6663,7 +6657,7 @@ could block because its output buffers are full."
                        (not-implemented-error 'launch-program))
            #+clozure 'ccl:run-program
            #+(or cmucl ecl scl) 'ext:run-program
-           
+
            #+lispworks ,@'('system:run-shell-command `("/usr/bin/env" ,@command)) ; full path needed
            #+mkcl 'mk-ext:run-program
            #+sbcl 'sb-ext:run-program
@@ -6751,7 +6745,6 @@ could block because its output buffers are full."
            ;; returns (io err pid) of which we keep io.
            (t (prop 'process io-or-pid)))))
      process-info)))
-
 ;;;; -------------------------------------------------------------------------
 ;;;; run-program initially from xcvb-driver.
 
@@ -7966,7 +7959,7 @@ previously-loaded version of ASDF."
          ;; "3.4.5.67" would be a development version in the official branch, on top of 3.4.5.
          ;; "3.4.5.0.8" would be your eighth local modification of official release 3.4.5
          ;; "3.4.5.67.8" would be your eighth local modification of development version 3.4.5.67
-         (asdf-version "3.3.7")
+         (asdf-version "3.3.7.4")
          (existing-version (asdf-version)))
     (setf *asdf-version* asdf-version)
     (when (and existing-version (not (equal asdf-version existing-version)))
@@ -14111,7 +14104,8 @@ system or its dependencies if it has already been loaded."
     (setf excl:*warn-on-nested-reader-conditionals* uiop/common-lisp::*acl-warn-save*))
 
   #+(and allegro allegro-v10.1) ;; check for patch needed for upgradeability
-  (unless (assoc "ma040" (cdr (assoc :lisp sys:*patches*)) :test 'equal)
+  (when (and (not (member :developer excl::.build-mode. :test #'eq))
+             (not (assoc "ma040" (cdr (assoc :lisp sys:*patches*)) :test 'equal)))
     (warn 'asdf-install-warning
           :format-control "On Allegro Common Lisp 10.1, patch pma040 is ~
 needed for correct ASDF upgrading. Please update your Allegro image ~

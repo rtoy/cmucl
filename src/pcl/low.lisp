@@ -357,15 +357,20 @@ the compiler as completely as possible.  Currently this means that
     (when morep
       (simple-program-error "~@<~s not allowed here~@:>" 'c:&more))
     (collect ((vars))
-      (labels ((check-var (var)
-		 (cond ((not (symbolp var))
-			(simple-program-error
-			 "~@<Invalid lambda variable: ~s~@:>" var))
-		       ((memq var (vars))
-			(simple-program-error
-			 "~@<Repeated lambda variable: ~s~@:>" var))
-		       (t
-			(vars var))))
+      (labels ((check-lambda-variable (var)
+		 (unless (symbolp var)
+		   (simple-program-error
+		    "~@<Invalid lambda variable: ~s~@:>" var)))
+	       (check-var (var)
+		 (check-lambda-variable var)
+		 (if (memq var (vars))
+		     (simple-program-error
+		      "~@<Repeated lambda variable: ~s~@:>" var)
+		     (vars var)))
+	       (check-aux (var)
+		 (if (consp var)
+		     (check-lambda-variable (car var))
+		     (check-lambda-variable var)))
 	       (check-required (var)
 		 (if (and (consp var) specialized-p)
 		     (check-var (car var))
@@ -385,7 +390,7 @@ the compiler as completely as possible.  Currently this means that
 	(mapc #'check-optional optional)
 	(mapc #'check-optional keys)
 	(when restp (check-var rest))
-	(mapc #'check-optional aux)
+	(mapc #'check-aux aux)
 	(values required optional restp rest keyp keys
 		allow-other-keys-p aux)))))
 
