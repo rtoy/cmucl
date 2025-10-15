@@ -83,7 +83,8 @@ find_errno ()
     echo '#include <errno.h>' |
 	cc -dM -E - |
 	grep "#define[ \t]\{1,\}E[A-Z0-9]\{1,\}" |
-	sed 's/#define \(.*\) \(.*\)$/(def-unix-error \1 \2)/'
+	sed 's/#define \(.*\) \(.*\)$/(def-unix-error \1 \2)/' |
+	sort -n -k 3
     #awk -f bin/create-def-unix-error.awk ${ERRNO_HEADERS}
 }
 
