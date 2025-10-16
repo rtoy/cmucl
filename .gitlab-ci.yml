@@ -1,10 +1,13 @@
 variables:
-  year: "2025"
-  month: "07"
-  download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/$year/$month"
-  version: "$year-$month-x86"
+  #year: "2025"
+  #month: "09"
+  #download_url: "https://common-lisp.net/project/cmucl/downloads/snapshots/$year/$month"
+  #version: "$year-$month-x86"
+  release: "21f"
+  download_url: "https://common-lisp.net/project/cmucl/downloads/release/$release"
+  version: "$release-x86"
   tar_ext: "xz"
-  bootstrap: ""
+  bootstrap: "-B boot-21f"
 
 # Default install configuration to download the cmucl tarballs to use
 # for building.
@@ -129,6 +132,7 @@ linux:install:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "push"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "branch"
 
 linux:build:
   <<: *build_configuration

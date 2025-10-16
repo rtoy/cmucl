@@ -38,7 +38,7 @@ Independent FOSS developers"
   :maintainer "sharplispers"
   :license "MIT"
   :depends-on (#+(or ecl sbcl) sb-bsd-sockets)
-  :version "0.7.5"
+  :version "0.7.6"
   :serial t
   :default-component-class clx-source-file
   :in-order-to ((test-op (test-op "clx/test")))
@@ -50,6 +50,7 @@ Independent FOSS developers"
    #+openmcl (:file "dep-openmcl")
    #+allegro (:file "dep-allegro")
    #+lispworks (:file "dep-lispworks")
+   (:file "common")
    (:file "macros")
    (:file "bufmac")
    (:file "buffer")
