@@ -395,6 +395,10 @@ msgid "EVAL returned an unbound marker."
 msgstr ""
 
 #: src/code/lispinit.lisp
+msgid "Number of consecutive EOFs before cmucl"
+msgstr ""
+
+#: src/code/lispinit.lisp
 msgid ""
 "How many pages to reserve from the total heap space so we can handle\n"
 "heap overflow."
@@ -402,6 +406,20 @@ msgstr ""
 
 #: src/code/lispinit.lisp
 msgid "Top-level READ-EVAL-PRINT loop.  Do not call this."
+msgstr ""
+
+#: src/code/lispinit.lisp
+msgid ""
+"~&Received EOF on *standard-input*, ~\n"
+"					switching to *terminal-io*.~%"
+msgstr ""
+
+#: src/code/lispinit.lisp
+msgid "~&Received more than ~D EOFs; Aborting.~%"
+msgstr ""
+
+#: src/code/lispinit.lisp
+msgid "~&Received EOF.~%"
 msgstr ""
 
 #: src/code/lispinit.lisp

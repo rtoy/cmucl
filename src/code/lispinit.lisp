@@ -633,7 +633,8 @@
   (values-list /))
 
 
-(defconstant eofs-before-quit 10)
+(defvar *eofs-before-quit* 3
+  "Number of consecutive EOFs before cmucl")
 
 (defparameter *reserved-heap-pages* 256
   "How many pages to reserve from the total heap space so we can handle
@@ -679,9 +680,9 @@ heap overflow.")
 			     (setf *standard-output* stream)
 			     (format t (intl:gettext "~&Received EOF on *standard-input*, ~
 					switching to *terminal-io*.~%")))))
-		      ((> number-of-eofs eofs-before-quit)
+		      ((> number-of-eofs *eofs-before-quit*)
 		       (format t (intl:gettext "~&Received more than ~D EOFs; Aborting.~%")
-			       eofs-before-quit)
+			       *eofs-before-quit*)
 		       (quit))
 		      (t
 		       (format t (intl:gettext "~&Received EOF.~%"))))))))))))
