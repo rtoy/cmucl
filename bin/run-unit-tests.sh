@@ -42,6 +42,11 @@ rm -rf test-tmp
 mkdir test-tmp
 ln -s /bin/ls test-tmp/ls-link
 
+# Set the timestamp on 64-bit-timestamp.txt.  It's ok if this doesn't
+# work in general, as long as it works on Linux for the stat test in
+# tests/os.lisp.
+touch -d "1 April 2038" tests/resources/64-bit-timestamp.txt
+
 # Cleanup temp files and directories that we created during testing.
 function cleanup {
     rm -f /tmp/trac.36.bom.txt /tmp/trac.43.txt
