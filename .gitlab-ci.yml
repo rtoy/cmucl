@@ -7,7 +7,7 @@ variables:
   download_url: "https://common-lisp.net/project/cmucl/downloads/release/$release"
   version: "$release-x86"
   tar_ext: "xz"
-  bootstrap: "-B boot-21f"
+  bootstrap: ""
 
 # Default install configuration to download the cmucl tarballs to use
 # for building.
