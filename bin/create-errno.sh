@@ -48,6 +48,7 @@ done
 
 # Output file containing the final errno defintions
 OUTPUT="src/code/errno.lisp"
+OUTPUT_PKG="src/code/exports-errno.lisp"
 
 # Default file containing errno definitions.
 ERRNO_FILE="bin/errno-default.lisp"
@@ -55,6 +56,7 @@ ERRNO_FILE="bin/errno-default.lisp"
 # Template file containing the default def-unix-error forms and other
 # support code.
 TEMPLATE="bin/errno-template.lisp"
+TEMPLATE_PKG="bin/errno-pkg-template.lisp"
 
 # Set ERRNO_FILE to an OS-specific name if possible.  If not, use the
 # default ERRNO_FILE value.
@@ -107,6 +109,12 @@ fi
 # Create the src/code/errno.lisp file from the template and the
 # OS-specific errno values (or the default).
 cat "$TEMPLATE" "$ERRNO_FILE" > $OUTPUT
+
+cut -d ' ' -f 2 "$ERRNO_FILE" |
+    sed 's/\(.*\)/   "\1"/' |
+    sort |
+    cat "$TEMPLATE_PKG" - > "$OUTPUT_PKG"
+echo "   ))" >> "$OUTPUT_PKG"
 
 # If -S option given, cat the output file to stdout
 if [ -n "$SHOW" ]; then
