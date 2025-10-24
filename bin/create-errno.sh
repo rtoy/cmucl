@@ -56,15 +56,10 @@ ERRNO_FILE="bin/errno-default.lisp"
 # support code.
 TEMPLATE="bin/errno-template.lisp"
 
-# How to dump the macros.  This version works on Linux, Darwin, and
-# Solaris (with Sun C).  Update this below if we need some other way
-# for other OSes.
-DUMP_MACROS="cpp -dM -"
-
 # Set ERRNO_FILE to an OS-specific name if possible.  If not, use the
 # default ERRNO_FILE value.
 if [ -z "$DEFAULT" ]; then
-    case $(uname -s) in
+    case `uname -s` in
 	Linux) ERRNO_FILE="bin/errno-linux.lisp"
 	       ;;
 	Darwin) ERRNO_FILE="bin/errno-darwin.lisp"
@@ -84,9 +79,11 @@ fi
 find_errno ()
 {
     # Create appropriate DEF-UNIX-ERROR forms by reading header files
-    # containing the C definitions.
+    # containing the C definitions.  This version with cpp works on
+    # Linux, Darwin, and Solaris (with Sun C) to dump the macros
+    # defined in errno.h.
     echo '#include <errno.h>' |
-	${DUMP_MACROS} |
+	cpp -dM - |
 	grep "#define[ \t]\{1,\}E[A-Z0-9]\{1,\}" |
 	sed 's/#define \(.*\) \(.*\)$/(def-unix-error \1 \2)/' |
 	sort -n -k 3
