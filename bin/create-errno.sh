@@ -61,6 +61,7 @@ TEMPLATE_PKG="bin/errno-pkg-template.lisp"
 # Set ERRNO_FILE to an OS-specific name if possible.  If not, use the
 # default ERRNO_FILE value.
 if [ -z "$DEFAULT" ]; then
+    # shellcheck disable=SC2006
     case `uname -s` in
 	Linux) ERRNO_FILE="bin/errno-linux.lisp"
 	       ;;
