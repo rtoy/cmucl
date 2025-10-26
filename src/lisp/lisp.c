@@ -303,64 +303,89 @@ default_cmucllib(const char *argv0arg)
 static const char *
 default_cmucllib(const char *argv0arg)
 {
-    extern void findyourself_init(const char *argv0);
-    extern int find_yourself(char *result, size_t size_of_result);
-    
-    int rc;
+    int total_len;
+    int cwd_len;
+    char **ptr;
     char *defpath;
     char *cwd;
-    char* newpath = malloc(PATH_MAX);
+    char *newpath = malloc(PATH_MAX);
     
-    realpath(argv0arg, newpath);
-    printf("argv[0] = %s\n", argv0arg);
-    printf("realpath = %s\n", newpath);
+    cwd = realpath(argv0arg, newpath);
 
+    if (debug_lisp_search) {
+	fprintf(stderr, "Realpath of %s = %s\n", argv0arg, newpath);
+    }
+
+    if (!cwd) {
+	perror("Cannot determine realpath of lisp executable");
+	exit(1);
+    }
+
+    /*
+     * Delete the binary name from the full path, leaving just the
+     * full directory to the executable.
+     */
     cwd = strrchr(newpath, '/');
-    cwd[1] = '\0';
-    printf("cwd = %s\n", newpath);
-    
+    if (cwd) {
+	cwd[1] = '\0';
+    }
+
+    /* cwd is the path directory of the executable */
     cwd = newpath;
-    {
-	char **ptr;
-	int total_len;
-	int cwd_len;
 
-	/* First figure out how much space we need */
+    if (debug_lisp_search) {
+	fprintf(stderr, "Executable path %s\n", cwd);
+    }
+    
+    /*
+     * Create the appropriate value for CMUCLLIB by adding the
+     * executable path (if needed) to each entry in
+     * cmucllib_search_list.
+     */
 
-	total_len = 0;
-	cwd_len = strlen(newpath);
+    /* First figure out how much space we need */
 
-	ptr = cmucllib_search_list;
+    total_len = 0;
+    cwd_len = strlen(cwd);
 
-	while (*ptr != NULL) {
-	    /* Plus 2 for the ":" and "/" we need to add */
-	    total_len += strlen(*ptr) + cwd_len + 2;
-	    ++ptr;
+    ptr = cmucllib_search_list;
+
+    while (*ptr != NULL) {
+	/*
+	 * Plus 2 for the ":" and "/" we need to add and the cwd that
+	 * might be added.
+	 */
+	total_len += strlen(*ptr) + cwd_len + 2;
+	++ptr;
+    }
+
+    /* Create the colon separated list of directories */
+
+    defpath = malloc(total_len + 1);
+    *defpath = '\0';
+
+    ptr = cmucllib_search_list;
+    while (*ptr != NULL) {
+	/*
+	 * If it's relative, add the full executable path first to
+	 * make the path absolute.
+	 */
+	if (*ptr[0] != '/') {
+	    strcat(defpath, cwd);
 	}
 
-	/* Create the colon separated list of directories */
+	strcat(defpath, *ptr);
 
-	defpath = malloc(total_len + 1);
-	*defpath = '\0';
-
-	ptr = cmucllib_search_list;
-	while (*ptr != NULL) {
-	    if (*ptr[0] != '/') {
-		strcat(defpath, cwd);
-	    }
-
-	    strcat(defpath, *ptr);
-
-	    if (ptr[1] != NULL) {
-		strcat(defpath, ":");
-	    }
-
-	    ++ptr;
+	/* Add a colon if we're not at the last entry of the search list */
+	if (ptr[1] != NULL) {
+	    strcat(defpath, ":");
 	}
 
-	if (strlen(defpath) > total_len) {
-	    abort();
-	}
+	++ptr;
+    }
+
+    if (strlen(defpath) > total_len) {
+	abort();
     }
 
     free(newpath);
