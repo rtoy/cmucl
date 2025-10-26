@@ -115,7 +115,7 @@ getcwd_or_die(char* buf, size_t size)
 }
 
 /* Set this to see how we're doing our search */
-int debug_lisp_search = FALSE;
+int debug_lisp_search = TRUE;
 
 /*
  * Define this to get some debugging printfs for searching for the
@@ -129,6 +129,7 @@ int debug_lisp_search = FALSE;
  * From the current location of the lisp executable, create a suitable
  * default for CMUCLLIB
  */
+#if 0
 static const char *
 default_cmucllib(const char *argv0arg)
 {
@@ -295,6 +296,74 @@ default_cmucllib(const char *argv0arg)
     free(argv0_dir);
     free(cwd);
 
+    return (const char *) defpath;
+}
+#endif    
+
+static const char *
+default_cmucllib(const char *argv0arg)
+{
+    extern void findyourself_init(const char *argv0);
+    extern int find_yourself(char *result, size_t size_of_result);
+    
+    int rc;
+    char *defpath;
+    char *cwd;
+    char* newpath = malloc(PATH_MAX);
+    
+    realpath(argv0arg, newpath);
+    printf("argv[0] = %s\n", argv0arg);
+    printf("realpath = %s\n", newpath);
+
+    cwd = strrchr(newpath, '/');
+    cwd[1] = '\0';
+    printf("cwd = %s\n", newpath);
+    
+    cwd = newpath;
+    {
+	char **ptr;
+	int total_len;
+	int cwd_len;
+
+	/* First figure out how much space we need */
+
+	total_len = 0;
+	cwd_len = strlen(newpath);
+
+	ptr = cmucllib_search_list;
+
+	while (*ptr != NULL) {
+	    /* Plus 2 for the ":" and "/" we need to add */
+	    total_len += strlen(*ptr) + cwd_len + 2;
+	    ++ptr;
+	}
+
+	/* Create the colon separated list of directories */
+
+	defpath = malloc(total_len + 1);
+	*defpath = '\0';
+
+	ptr = cmucllib_search_list;
+	while (*ptr != NULL) {
+	    if (*ptr[0] != '/') {
+		strcat(defpath, cwd);
+	    }
+
+	    strcat(defpath, *ptr);
+
+	    if (ptr[1] != NULL) {
+		strcat(defpath, ":");
+	    }
+
+	    ++ptr;
+	}
+
+	if (strlen(defpath) > total_len) {
+	    abort();
+	}
+    }
+
+    free(newpath);
     return (const char *) defpath;
 }
 
