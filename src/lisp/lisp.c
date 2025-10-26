@@ -309,7 +309,7 @@ default_cmucllib(const char *argv0arg)
     char *defpath;
     char *cwd;
     char *newpath = malloc(PATH_MAX);
-    
+
     cwd = realpath(argv0arg, newpath);
 
     if (debug_lisp_search) {
@@ -336,7 +336,7 @@ default_cmucllib(const char *argv0arg)
     if (debug_lisp_search) {
 	fprintf(stderr, "Executable path %s\n", cwd);
     }
-    
+
     /*
      * Create the appropriate value for CMUCLLIB by adding the
      * executable path (if needed) to each entry in
