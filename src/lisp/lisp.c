@@ -143,6 +143,11 @@ default_cmucllib(const char *argv0arg)
     char *cwd;
     char *newpath = malloc(PATH_MAX);
 
+    if (!newpath) {
+	perror("Failed to malloc space for newpath");
+	exit(1);
+    }
+
     cwd = realpath(argv0arg, newpath);
 
     if (debug_lisp_search) {
@@ -195,6 +200,11 @@ default_cmucllib(const char *argv0arg)
     /* Create the colon separated list of directories */
 
     defpath = malloc(total_len + 1);
+    if (!defpath) {
+	perror("Failed to malloc space for cmucllib");
+	exit(1);
+    }
+    
     *defpath = '\0';
 
     ptr = cmucllib_search_list;
