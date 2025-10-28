@@ -115,7 +115,7 @@ getcwd_or_die(char* buf, size_t size)
 }
 
 /* Set this to see how we're doing our search */
-int debug_lisp_search = TRUE;
+int debug_lisp_search = FALSE;
 
 /*
  * Define this to get some debugging printfs for searching for the
