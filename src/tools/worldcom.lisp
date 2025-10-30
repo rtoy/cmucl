@@ -315,8 +315,8 @@
   (comf "target:code/multi-proc"))
 
 (comf "target:code/setf-funs")
-(comf "target:code/exports-errno" :proceed t)
 (comf "target:code/exports" :proceed t)
+(comf "target:code/exports-unix" :proceed t)
 
 ;;; Compile basic macros that we assume are already in the compilation
 ;;; environment.  We inhibit compile-time definition to prevent these functions

@@ -48,15 +48,16 @@ done
 
 # Output file containing the final errno defintions
 OUTPUT="src/code/errno.lisp"
-OUTPUT_PKG="src/code/exports-errno.lisp"
+OUTPUT_PKG="src/code/exports-unix.lisp"
 
 # Default file containing errno definitions.
 ERRNO_FILE="bin/errno-default.lisp"
 
 # Template file containing the default def-unix-error forms and other
-# support code.
+# support code.  TEMPLATE is for the definition of all the errno
+# values.  TEMPLATE_PKG is for the definition of the UNIX package.
 TEMPLATE="bin/errno-template.lisp"
-TEMPLATE_PKG="bin/errno-pkg-template.lisp"
+TEMPLATE_PKG="bin/unix-pkg-template.lisp"
 
 # Set ERRNO_FILE to an OS-specific name if possible.  If not, use the
 # default ERRNO_FILE value.
@@ -84,12 +85,15 @@ find_errno ()
     # Create appropriate DEF-UNIX-ERROR forms by reading header files
     # containing the C definitions.  This version with cpp works on
     # Linux, Darwin, and Solaris (with Sun C) to dump the macros
-    # defined in errno.h.
+    # defined in errno.h.  The results are sorted in descending
+    # numerical order so that aliases are at the end.  Sorting is
+    # important because different Linux systems can have the errno
+    # values in different orders.
     echo '#include <errno.h>' |
 	cpp -dM - |
 	grep "#define[ \t]\{1,\}E[A-Z0-9]\{1,\}" |
 	sed 's/#define \(.*\) \(.*\)$/(def-unix-error \1 \2)/' |
-	sort -n -k 3
+	sort -nr -k 3
 }
 
 if [ "$UPDATE" = "yes" ]; then
@@ -112,7 +116,7 @@ fi
 cat "$TEMPLATE" "$ERRNO_FILE" > $OUTPUT
 
 cut -d ' ' -f 2 "$ERRNO_FILE" |
-    sed 's/\(.*\)/   "\1"/' |
+    sed 's/\(.*\)/           "\1"/' |
     sort |
     cat "$TEMPLATE_PKG" - > "$OUTPUT_PKG"
 echo "   ))" >> "$OUTPUT_PKG"

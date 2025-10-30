@@ -31,9 +31,11 @@
 (if (find-package "BIGNUM")
     (rename-package "BIGNUM" "BIGNUM" 'nil)
     (make-package "BIGNUM" :nicknames 'nil :use nil))
+#+nil
 (if (find-package "ERRNO")
     (rename-package "ERRNO" "ERRNO" 'nil)
     (make-package "ERRNO" :nicknames 'nil :use nil))
+#+nil
 (if (find-package "UNIX")
     (rename-package "UNIX" "UNIX" 'nil)
     (make-package "UNIX" :nicknames 'nil :use nil))
@@ -139,7 +141,9 @@
 (use-package '("SYSTEM" "ALIEN-INTERNALS" "ALIEN" "LISP") "C-CALL")
 (use-package '("KERNEL" "EXTENSIONS" "LISP") "INSPECT")
 (use-package '("LISP" "KERNEL") "BIGNUM")
+#+nil
 (use-package '("LISP") "ERRNO")
+#+nil
 (use-package '("LISP") "UNIX")
 (use-package '("KERNEL" "LISP" "EXTENSIONS") "FORMAT")
 (use-package '("EXTENSIONS" "SYSTEM" "DEBUG" "KERNEL" "BIGNUM") "LISP")
@@ -200,6 +204,7 @@
 	   "MULTIPLY-BIGNUM-AND-FIXNUM" "MULTIPLY-BIGNUMS" "MULTIPLY-FIXNUMS"
 	   "NEGATE-BIGNUM" "SUBTRACT-BIGNUM"))
 
+#+nil
 (defpackage "UNIX"
   (:export "UNIX-CURRENT-DIRECTORY"
 	   "UNIX-OPEN"
@@ -497,6 +502,7 @@
 
 ;; Import all of the symbols from UNIX-ERRNO into UNIX and the export
 ;; them.
+#+nil
 (ext:without-package-locks
   (do-external-symbols (sym "ERRNO")
     (shadowing-import sym "UNIX")
