@@ -35,4 +35,4 @@ src/docs/cmu-user/*.vdx
 src/docs/cmu-user/*.vnd
 # Ignore generated errno files
 src/code/errno.lisp
-src/code/exports-errno.lisp
+src/code/exports-unix.lisp
