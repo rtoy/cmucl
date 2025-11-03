@@ -94,17 +94,17 @@ find_errno ()
 	awk "BEGIN {
     max = 0
 }
-/* Pattern is '#define Efoo number' */
+# Pattern is '#define Efoo number'
 /^#define[ \t]+(E[A-Z0-9]+)[ \t]+([0-9]+)/ {
     errno[\$3] = \$2
     max = (\$3 > max) ? \$3 : max
 }
-/* Pattern is '#define Efoo Ealias' */
+# Pattern is '#define Efoo Ealias'
 /^#define[ \t]+(E[A-Z0-9]+)[ \t]+(E[A-Z0-9]+)/ {
     alias[\$3] = \$2
 }
 END {
-    /* Print out each errno and print the alias right after the actual value */
+    # Print out each errno and print the alias right after the actual value
     for (i = 0; i <= max; i++) {
         if (i in errno) {
             printf \"(defconstant %s %d)\n\", errno[i], i
