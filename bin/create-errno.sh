@@ -91,9 +91,30 @@ find_errno ()
     # values in different orders.
     echo '#include <errno.h>' |
 	cpp -dM - |
-	grep "#define[ \t]\{1,\}E[A-Z0-9]\{1,\}" |
-	sed 's/#define \(.*\) \(.*\)$/(def-unix-error \1 \2)/' |
-	sort -nr -k 3
+	awk "BEGIN {
+    max = 0
+}
+/* Pattern is '#define Efoo number' */
+/^#define[ \t]+(E[A-Z0-9]+)[ \t]+([0-9]+)/ {
+    errno[\$3] = \$2
+    max = (\$3 > max) ? \$3 : max
+}
+/* Pattern is '#define Efoo Ealias' */
+/^#define[ \t]+(E[A-Z0-9]+)[ \t]+(E[A-Z0-9]+)/ {
+    alias[\$3] = \$2
+}
+END {
+    /* Print out each errno and print the alias right after the actual value */
+    for (i = 0; i <= max; i++) {
+        if (i in errno) {
+            printf \"(defconstant %s %d)\n\", errno[i], i
+            if (errno[i] in alias) {
+                printf \"(defconstant %s %s)\n\", alias[errno[i]], errno[i]
+            }
+        }
+    }
+}"
+
 }
 
 if [ "$UPDATE" = "yes" ]; then
