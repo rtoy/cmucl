@@ -1,3 +1,5 @@
+;;; Default errno values.  These are used only if we could not
+;;; auto-generate these forms.
 (defconstant EPERM 1)
 (defconstant ENOENT 2)
 (defconstant ESRCH 3)
@@ -8,7 +10,8 @@
 (defconstant ENOEXEC 8)
 (defconstant EBADF 9)
 (defconstant ECHILD 10)
-(defconstant EDEADLK 11)
+#+bsd(defconstant EDEADLK 11)
+#-bsd(defconstant EAGAIN 11)
 (defconstant ENOMEM 12)
 (defconstant EACCES 13)
 (defconstant EFAULT 14)
@@ -30,12 +33,19 @@
 (defconstant EROFS 30)
 (defconstant EMLINK 31)
 (defconstant EPIPE 32)
+;;; 
+;;; Math
 (defconstant EDOM 33)
 (defconstant ERANGE 34)
-(defconstant EAGAIN 35)
-(defconstant EWOULDBLOCK EAGAIN)
+
+;;; non-blocking and interrupt i/o
+(defconstant EWOULDBLOCK 35)
+#-bsd(defconstant EDEADLK 35 _N"Operation would block") ; Ditto
+#+bsd(defconstant EAGAIN 35)
 (defconstant EINPROGRESS 36)
 (defconstant EALREADY 37)
+;;;
+;;; ipc/network software
 (defconstant ENOTSOCK 38)
 (defconstant EDESTADDRREQ 39)
 (defconstant EMSGSIZE 40)
@@ -43,11 +53,13 @@
 (defconstant ENOPROTOOPT 42)
 (defconstant EPROTONOSUPPORT 43)
 (defconstant ESOCKTNOSUPPORT 44)
-(defconstant ENOTSUP 45)
+(defconstant EOPNOTSUPP 45)
 (defconstant EPFNOSUPPORT 46)
 (defconstant EAFNOSUPPORT 47)
 (defconstant EADDRINUSE 48)
 (defconstant EADDRNOTAVAIL 49)
+;;;
+;;; operational errors
 (defconstant ENETDOWN 50)
 (defconstant ENETUNREACH 51)
 (defconstant ENETRESET 52)
@@ -60,48 +72,23 @@
 (defconstant ETOOMANYREFS 59)
 (defconstant ETIMEDOUT 60)
 (defconstant ECONNREFUSED 61)
+;;; 
 (defconstant ELOOP 62)
 (defconstant ENAMETOOLONG 63)
+;;; 
 (defconstant EHOSTDOWN 64)
 (defconstant EHOSTUNREACH 65)
 (defconstant ENOTEMPTY 66)
+;;; 
+;;; quotas & resource 
 (defconstant EPROCLIM 67)
 (defconstant EUSERS 68)
 (defconstant EDQUOT 69)
-(defconstant ESTALE 70)
-(defconstant EREMOTE 71)
-(defconstant EBADRPC 72)
-(defconstant ERPCMISMATCH 73)
-(defconstant EPROGUNAVAIL 74)
-(defconstant EPROGMISMATCH 75)
-(defconstant EPROCUNAVAIL 76)
-(defconstant ENOLCK 77)
-(defconstant ENOSYS 78)
-(defconstant EFTYPE 79)
-(defconstant EAUTH 80)
-(defconstant ENEEDAUTH 81)
-(defconstant EPWROFF 82)
-(defconstant EDEVERR 83)
-(defconstant EOVERFLOW 84)
-(defconstant EBADEXEC 85)
-(defconstant EBADARCH 86)
-(defconstant ESHLIBVERS 87)
-(defconstant EBADMACHO 88)
-(defconstant ECANCELED 89)
-(defconstant EIDRM 90)
-(defconstant ENOMSG 91)
-(defconstant EILSEQ 92)
-(defconstant ENOATTR 93)
-(defconstant EBADMSG 94)
-(defconstant EMULTIHOP 95)
-(defconstant ENODATA 96)
-(defconstant ENOLINK 97)
-(defconstant ENOSR 98)
-(defconstant ENOSTR 99)
-(defconstant EPROTO 100)
-(defconstant ETIME 101)
-(defconstant EOPNOTSUPP 102)
-(defconstant ENOPOLICY 103)
-(defconstant ENOTRECOVERABLE 104)
-(defconstant EOWNERDEAD 105)
-(defconstant EQFULL 106)
+;;;
+;;; CMU RFS
+(defconstant ELOCAL 126)
+(defconstant EREMOTE 127)
+;;;
+;;; VICE
+(defconstant EVICEERR 70)
+(defconstant EVICEOP 71)

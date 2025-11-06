@@ -22,7 +22,7 @@ If no options are given (the usual case), src/code/errno.lisp is
 updated with the OS-specific values in
 bin/errno-{lisp,darwin,solaris}.lisp.  For other OSes a default value
 in bin/errno-default.lisp is used.  For supported OSes, we also
-regenerate the def-unix-error forms from the system header files and
+regenerate the defconstant forms from the system header files and
 display a diff between this and the existing files.
 
 If -U is given, the existing OS-specific file is updated with the
@@ -48,25 +48,27 @@ done
 
 # Output file containing the final errno defintions
 OUTPUT="src/code/errno.lisp"
+OUTPUT_PKG="src/code/exports-unix.lisp"
 
 # Default file containing errno definitions.
-ERRNO_FILE="bin/errno-default.lisp"
+ERRNO_FILE="src/tools/errno-default.lisp"
 
 # Template file containing the default def-unix-error forms and other
-# support code.
-TEMPLATE="bin/errno-template.lisp"
+# support code.  TEMPLATE is for the definition of all the errno
+# values.  TEMPLATE_PKG is for the definition of the UNIX package.
+TEMPLATE="src/tools/errno-template.lisp"
+TEMPLATE_PKG="src/tools/unix-pkg-template.lisp"
 
-# Set ERRNO_HEADERS to the files where we can find errno definitions.
+# Set ERRNO_FILE to an OS-specific name if possible.  If not, use the
+# default ERRNO_FILE value.
 if [ -z "$DEFAULT" ]; then
-    case $(uname -s) in
-	Linux) ERRNO_HEADERS=/usr/include/asm-generic/errno*.h
-	       ERRNO_FILE="bin/errno-linux.lisp"
+    # shellcheck disable=SC2006
+    case `uname -s` in
+	Linux) ERRNO_FILE="bin/errno-linux.lisp"
 	       ;;
-	Darwin) ERRNO_HEADERS=/usr/include/sys/errno.h
-		ERRNO_FILE="bin/errno-darwin.lisp"
+	Darwin) ERRNO_FILE="bin/errno-darwin.lisp"
 		;;
-	SunOS) ERRNO_HEADERS=/usr/include/sys/errno.h
-	       ERRNO_FILE="bin/errno-solaris.lisp"
+	SunOS) ERRNO_FILE="bin/errno-solaris.lisp"
 	       ;;
 	*) # The default case where we use the defaults.  But also disable updating.
 	    UPDATE=""
@@ -80,10 +82,37 @@ fi
 
 find_errno ()
 {
-    # Create appropriate DEF-UNIX-ERROR forms by reading header files
-    # containing the C definitions.
+    # Create appropriate DEFCONSTANT forms by reading the preprocessed output of errno.h
+    # containing the C definitions.  This version with cpp works on
+    # Linux, Darwin, and Solaris (with Sun C) to dump the macros
+    # defined in errno.h.  The results are sorted in ascending
+    # numerical order and aliases follow the original definition.
+    echo '#include <errno.h>' |
+	cpp -dM - |
+	awk "BEGIN {
+    max = 0
+}
+# Pattern is '#define EFOO number'
+/^#define[ \t]+(E[A-Z0-9]+)[ \t]+([0-9]+)/ {
+    errno[\$3] = \$2
+    max = (\$3 > max) ? \$3 : max
+}
+# Pattern is '#define EFOO EALIAS'
+/^#define[ \t]+(E[A-Z0-9]+)[ \t]+(E[A-Z0-9]+)/ {
+    alias[\$3] = \$2
+}
+END {
+    # Print out each errno and print the alias right after the actual value
+    for (i = 0; i <= max; i++) {
+        if (i in errno) {
+            printf \"(defconstant %s %d)\n\", errno[i], i
+            if (errno[i] in alias) {
+                printf \"(defconstant %s %s)\n\", alias[errno[i]], errno[i]
+            }
+        }
+    }
+}"
 
-    awk -f bin/create-def-unix-error.awk ${ERRNO_HEADERS}
 }
 
 if [ "$UPDATE" = "yes" ]; then
@@ -91,7 +120,7 @@ if [ "$UPDATE" = "yes" ]; then
    exit 0
 fi
 
-if [ -z "$DEFAULT" -a -n "$ERRNO_FILE" ]; then
+if [ -z "$DEFAULT" ] && [ -n "$ERRNO_FILE" ]; then
     # First check that the errno definitions haven't changed.  If they
     # have, exit with an error.
 
@@ -104,6 +133,12 @@ fi
 # Create the src/code/errno.lisp file from the template and the
 # OS-specific errno values (or the default).
 cat "$TEMPLATE" "$ERRNO_FILE" > $OUTPUT
+
+cut -d ' ' -f 2 "$ERRNO_FILE" |
+    sed 's/\(.*\)/           "\1"/' |
+    sort |
+    cat "$TEMPLATE_PKG" - > "$OUTPUT_PKG"
+echo "   ))" >> "$OUTPUT_PKG"
 
 # If -S option given, cat the output file to stdout
 if [ -n "$SHOW" ]; then
