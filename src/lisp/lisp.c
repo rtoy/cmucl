@@ -133,20 +133,20 @@ int debug_lisp_search = FALSE;
  *
  * The caller must free the returned string.
  */
-static const char *
+static char *
 default_cmucllib(const char *argv0arg)
 {
-    int total_len;
-    int path_len;
+    char *cwd;
     int cwd_len;
     char **ptr;
     char *path;
+    int path_len;
     char *slash;
 
     cwd = realpath(argv0arg, NULL);
 
     if (debug_lisp_search) {
-	fprintf(stderr, "Realpath of %s = %s\n", argv0arg, newpath);
+	fprintf(stderr, "Realpath of %s = %s\n", argv0arg, cwd);
     }
 
     if (!cwd) {
@@ -175,7 +175,7 @@ default_cmucllib(const char *argv0arg)
 
     /* First figure out how much space we need */
 
-    total_len = 0;
+    path_len = 0;
     cwd_len = strlen(cwd);
 
     ptr = cmucllib_search_list;
@@ -185,19 +185,19 @@ default_cmucllib(const char *argv0arg)
 	 * Plus 2 for the ":" and "/" we need to add and the cwd that
 	 * might be added.
 	 */
-	total_len += strlen(*ptr) + cwd_len + 2;
+	path_len += strlen(*ptr) + cwd_len + 2;
 	++ptr;
     }
 
     /* Create the colon separated list of directories */
 
-    defpath = malloc(total_len + 1);
-    if (!defpath) {
+    path = malloc(path_len + 1);
+    if (!path) {
 	perror("Failed to malloc space for cmucllib");
 	exit(1);
     }
     
-    *defpath = '\0';
+    *path = '\0';
 
     ptr = cmucllib_search_list;
     while (*ptr != NULL) {
@@ -206,25 +206,25 @@ default_cmucllib(const char *argv0arg)
 	 * make the path absolute.
 	 */
 	if (*ptr[0] != '/') {
-	    strcat(defpath, cwd);
+	    strcat(path, cwd);
 	}
 
-	strcat(defpath, *ptr);
+	strcat(path, *ptr);
 
 	/* Add a colon if we're not at the last entry of the search list */
 	if (ptr[1] != NULL) {
-	    strcat(defpath, ":");
+	    strcat(path, ":");
 	}
 
 	++ptr;
     }
 
-    if (strlen(defpath) > total_len) {
+    if (strlen(path) > path_len) {
 	abort();
     }
 
     free(cwd);
-    return (const char *) defpath;
+    return path;
 }
 
 /*
