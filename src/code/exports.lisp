@@ -31,14 +31,6 @@
 (if (find-package "BIGNUM")
     (rename-package "BIGNUM" "BIGNUM" 'nil)
     (make-package "BIGNUM" :nicknames 'nil :use nil))
-#+nil
-(if (find-package "ERRNO")
-    (rename-package "ERRNO" "ERRNO" 'nil)
-    (make-package "ERRNO" :nicknames 'nil :use nil))
-#+nil
-(if (find-package "UNIX")
-    (rename-package "UNIX" "UNIX" 'nil)
-    (make-package "UNIX" :nicknames 'nil :use nil))
 (if (find-package "FORMAT")
     (rename-package "FORMAT" "FORMAT" 'nil)
     (make-package "FORMAT" :nicknames 'nil :use nil))

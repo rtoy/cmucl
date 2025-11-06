@@ -82,24 +82,22 @@ fi
 
 find_errno ()
 {
-    # Create appropriate DEF-UNIX-ERROR forms by reading header files
+    # Create appropriate DEFCONSTANT forms by reading the preprocessed output of errno.h
     # containing the C definitions.  This version with cpp works on
     # Linux, Darwin, and Solaris (with Sun C) to dump the macros
-    # defined in errno.h.  The results are sorted in descending
-    # numerical order so that aliases are at the end.  Sorting is
-    # important because different Linux systems can have the errno
-    # values in different orders.
+    # defined in errno.h.  The results are sorted in ascending
+    # numerical order and aliases follow the original definition.
     echo '#include <errno.h>' |
 	cpp -dM - |
 	awk "BEGIN {
     max = 0
 }
-# Pattern is '#define Efoo number'
+# Pattern is '#define EFOO number'
 /^#define[ \t]+(E[A-Z0-9]+)[ \t]+([0-9]+)/ {
     errno[\$3] = \$2
     max = (\$3 > max) ? \$3 : max
 }
-# Pattern is '#define Efoo Ealias'
+# Pattern is '#define EFOO EALIAS'
 /^#define[ \t]+(E[A-Z0-9]+)[ \t]+(E[A-Z0-9]+)/ {
     alias[\$3] = \$2
 }

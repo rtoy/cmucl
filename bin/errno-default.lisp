@@ -11,7 +11,7 @@
 (defconstant EBADF 9)
 (defconstant ECHILD 10)
 #+bsd(defconstant EDEADLK 11)
-#-bsd(defconstant EAGAIN 11 #-linux)
+#-bsd(defconstant EAGAIN 11)
 (defconstant ENOMEM 12)
 (defconstant EACCES 13)
 (defconstant EFAULT 14)
@@ -36,7 +36,7 @@
 ;;; 
 ;;; Math
 (defconstant EDOM 33)
-(defconstant ERANGE 34 #-linux)
+(defconstant ERANGE 34)
 
 ;;; non-blocking and interrupt i/o
 (defconstant EWOULDBLOCK 35)
