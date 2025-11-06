@@ -137,18 +137,13 @@ static const char *
 default_cmucllib(const char *argv0arg)
 {
     int total_len;
+    int path_len;
     int cwd_len;
     char **ptr;
-    char *defpath;
-    char *cwd;
-    char *newpath = malloc(PATH_MAX);
+    char *path;
+    char *slash;
 
-    if (!newpath) {
-	perror("Failed to malloc space for newpath");
-	exit(1);
-    }
-
-    cwd = realpath(argv0arg, newpath);
+    cwd = realpath(argv0arg, NULL);
 
     if (debug_lisp_search) {
 	fprintf(stderr, "Realpath of %s = %s\n", argv0arg, newpath);
@@ -163,13 +158,10 @@ default_cmucllib(const char *argv0arg)
      * Delete the binary name from the full path, leaving just the
      * full directory to the executable.
      */
-    cwd = strrchr(newpath, '/');
-    if (cwd) {
-	cwd[1] = '\0';
+    slash = strrchr(cwd, '/');
+    if (slash) {
+	slash[1] = '\0';
     }
-
-    /* cwd is the path directory of the executable */
-    cwd = newpath;
 
     if (debug_lisp_search) {
 	fprintf(stderr, "Executable path %s\n", cwd);
@@ -231,7 +223,7 @@ default_cmucllib(const char *argv0arg)
 	abort();
     }
 
-    free(newpath);
+    free(cwd);
     return (const char *) defpath;
 }
 
