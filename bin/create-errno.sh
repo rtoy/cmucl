@@ -51,13 +51,13 @@ OUTPUT="src/code/errno.lisp"
 OUTPUT_PKG="src/code/exports-unix.lisp"
 
 # Default file containing errno definitions.
-ERRNO_FILE="bin/errno-default.lisp"
+ERRNO_FILE="src/tools/errno-default.lisp"
 
 # Template file containing the default def-unix-error forms and other
 # support code.  TEMPLATE is for the definition of all the errno
 # values.  TEMPLATE_PKG is for the definition of the UNIX package.
-TEMPLATE="bin/errno-template.lisp"
-TEMPLATE_PKG="bin/unix-pkg-template.lisp"
+TEMPLATE="src/tools/errno-template.lisp"
+TEMPLATE_PKG="src/tools/unix-pkg-template.lisp"
 
 # Set ERRNO_FILE to an OS-specific name if possible.  If not, use the
 # default ERRNO_FILE value.
