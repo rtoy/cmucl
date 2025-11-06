@@ -22,7 +22,7 @@ If no options are given (the usual case), src/code/errno.lisp is
 updated with the OS-specific values in
 bin/errno-{lisp,darwin,solaris}.lisp.  For other OSes a default value
 in bin/errno-default.lisp is used.  For supported OSes, we also
-regenerate the def-unix-error forms from the system header files and
+regenerate the defconstant forms from the system header files and
 display a diff between this and the existing files.
 
 If -U is given, the existing OS-specific file is updated with the
