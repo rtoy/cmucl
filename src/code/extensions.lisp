@@ -645,57 +645,6 @@
 				default-name))
 	       "XXXXXX"))
 
-;;; WITH-TEMPORARY-STREAM  -- Public
-;;;
-(defmacro with-temporary-stream ((s &key
-				      (direction :output)
-				      (element-type 'base-char)
-				      (external-format :default)
-				      decoding-error
-				      encoding-error)
-				 &parse-body (forms decls))
-  _N"Return a stream to a temporary file that is automatically created."
-  (let ((fd (gensym "FD-"))
-	(filename (gensym "FILENAME-"))
-	(dir (gensym "DIRECTION-"))
-	(okay (gensym "OKAY-"))
-	(err (gensym "ERR-"))
-	(file-template (gensym "FILE-TEMPLATE-")))
-    `(progn
-       (unless (member ,direction '(:output :io))
-	 (error ":direction must be one of :output or :io, not ~S"
-		,direction))
-       (let ((,file-template (create-template nil "cmucl-temp-stream-"))
-	     ,fd ,filename ,s)
-	 (unwind-protect
-	      (progn
-		(multiple-value-setq (,fd ,filename)
-		  (unix::unix-mkstemp ,file-template))
-		(unless ,fd
-		  (error "Unable to create temporary stream at ~S: ~A~%"
-			 ,file-template
-			 (unix:get-unix-error-msg ,filename)))
-		(let* ((,dir ,direction))
-		  (setf ,s (make-fd-stream ,fd
-					   :input (member ,dir '(:input :io))
-					   :output (member ,dir '(:output :io))
-					   :element-type ',element-type
-					   :external-format ,external-format
-					   :decoding-error ,decoding-error
-					   :encoding-error ,encoding-error)))
-		;; Delete the file; we have an open fd to the file, though.
-		(multiple-value-bind (,okay ,err)
-		    (unix::unix-unlink ,filename)
-		  (unless ,okay
-		    (error "Unable to unlink temporary file ~S: ~A"
-			   ,filename (unix:get-unix-error-msg ,err))))
-		(locally ,@decls
-		  ,@forms))
-	   ;; Close the stream which will close the fd now that we're
-	   ;; done.
-	   (when ,s
-	     (close ,s)))))))
-
 ;;; WITH-TEMPORARY-FILE  -- Public
 (defmacro with-temporary-file ((filename &key prefix)
 			       &parse-body (forms decls))
