@@ -1213,8 +1213,7 @@
 
 	     "INVALID-FASL"
 	     "WITH-TEMPORARY-DIRECTORY"
-	     "WITH-TEMPORARY-FILE"
-	     "WITH-TEMPORARY-STREAM")
+	     "WITH-TEMPORARY-FILE")
   ;; gencgc features
   #+gencgc
   (:export "GET-GC-ASSERTIONS"

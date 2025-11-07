@@ -175,7 +175,6 @@
 		(let ((p0* (file-position stream)))
 		  (eql p0* p0)))))))))
 
-#+nil
 (define-test trac.43
     (:tag :trac)
   (assert-true
@@ -192,19 +191,6 @@
 	 (unread-char ch stream)
 	 (let ((p0* (file-position stream)))
 	   (eql p0* p0)))))))
-
-(define-test trac.43
-    (:tag :trac)
-  (assert-true
-   (ext:with-temporary-stream (stream :direction :io :external-format :utf-8)
-     (dotimes (i 1000)
-       (write-char (code-char #x1234) stream))
-     (file-position stream 0)
-     (let ((p0 (file-position stream))
-	   (ch (read-char stream)))
-       (unread-char ch stream)
-       (let ((p0* (file-position stream)))
-	 (eql p0* p0))))))
 
 (define-test trac.50
   (:tag :trac)
