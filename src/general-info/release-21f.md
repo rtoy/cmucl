@@ -1,7 +1,5 @@
 # CMUCL 21f
 
-# Work in progress
-
 The CMUCL project is pleased to announce the release of CMUCL 21f.
 This is a major release which contains numerous enhancements and bug
 fixes from the <previous> release.
@@ -23,7 +21,7 @@ public domain.
     * Add support for Gray streams implementation of file-length via
       `ext:stream-file-length` generic function.
   * Changes:
-    * Update to ASDF 3.3.7
+    * Update to ASDF 3.3.7.4
     * The RNG has changed from an old version of xoroshiro128+ to
       xoroshiro128**.  This means sequences of random numbers will be
       different from before.  See ~~#276~~.
@@ -123,6 +121,7 @@ public domain.
     * #375 `unix-mkstemp` and `unix-mkdtemp` actually returns the
       file names now.
     * #379 Support GNU-style command-line option names
+    * #381 cmucl-unix.pot depends on OS
     * #382 Command-line options are case-sensitive
     * #385 Fixed compiler warning about `%p` in Linux-os.c
     * #386 Generate `def-unix-error` forms from OS-specific files.
@@ -131,6 +130,16 @@ public domain.
     * #398 Update mk:defsystem to v3.9.2    
     * #400 `unix-resolve-links` no longer breaks on some lengths
     * #401 `file-position` now returns the correct value
+    * #404 Use `realpath(3)` to implement `unix::unix-resolve-links`
+    * #405 `unix::unix-resolve-links` has been removed.
+    * #415 Support package-local-nicknames
+    * #417 PCL complains about repeated aux variables in defmethod
+    * #418 Update asdf to version 3.3.7.4 (for
+      package-local-nicknames)
+    * #424 Use fdlibm `hypot` to fix bug in snapshot 2025-07
+    * #426 Define float-modes type correctly for `(setf (x87-set-floating-point-modes))`
+    * #431 Fix setting of x87 FP modes in `set-floating-point-modes`
+    * #432 `make-dist.sh` passes `-M` to `make-extra-dist.sh` which doesn't accept `-M` option.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

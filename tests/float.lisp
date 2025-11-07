@@ -333,3 +333,12 @@
                                        (declare (ignore c))
                                        (values (invoke-restart 'lisp::largest-float)))))
                       (read-from-string string))))))
+
+#+x86
+(define-test x87-set-floating-point-modes
+    (:tag :issues)
+  (let ((new-mode (setf (x86::x87-floating-point-modes)
+			(dpb 2 (byte 2 24)
+			     (x86::x87-floating-point-modes)))))
+    (assert-true (typep new-mode 'x86::float-modes))
+    (assert-equal new-mode (setf (x86::x87-floating-point-modes) new-mode))))

@@ -87,7 +87,7 @@
 (def-math-rtn ("__ieee754_pow" %pow) 2)
 #-(or x86 sparc-v7 sparc-v8 sparc-v9)
 (def-math-rtn "sqrt" 1)
-(def-math-rtn "hypot" 2)
+(def-math-rtn ("__ieee754_hypot" %hypot) 2)
 
 (def-math-rtn ("fdlibm_log1p" %log1p) 1)
 (def-math-rtn ("fdlibm_expm1" %expm1) 1)

@@ -571,7 +571,7 @@ by every function, which attempts to generate RENDER requests."
                          (defun (setf ,(xintern 'picture- slot)) (new-value picture)
                            (setf (picture-%changed-p picture) t)
                            (setf (aref (picture-%values picture) ,index) new-value))))
-    
+
                (defun synchronise-picture-state (picture)
                  (when (picture-%changed-p picture)
                    (let ((display (picture-display picture)))
@@ -593,15 +593,27 @@ by every function, which attempts to generate RENDER requests."
                                                   (aref (picture-%server-values picture) ,index)))
                                          (setf (aref (picture-%server-values picture) ,index)
                                           (aref (picture-%values picture) ,index))))))))
+                   ;; Ensure that the picture clip rectangles are updated when
+                   ;; it is necessary. It is important to copy the mask values
+                   ;; when it is a sequence (instead of assigning it), because
+                   ;; the client may modify the sequence without changing its
+                   ;; identity. We still test for EQUALP to avoid a roundtrip.
+                   ;; -- jd 2023-03-31
                    ,(let ((index (position 'clip-mask specs :key #'second)))
-                         `(unless (eql (aref (picture-%values picture) ,index)
-                                   (aref (picture-%server-values picture)
-                                    ,index))
-                           (%render-change-picture-clip-rectangles
-                            picture (aref (picture-%values picture) ,index))
-                           (setf (aref (picture-%server-values picture) ,index)
-                                 (aref (picture-%values picture) ,index))))
-
+                      `(let ((clip-mask (aref (picture-%values picture) ,index))
+                             (serv-mask (aref (picture-%server-values picture) ,index)))
+                         (unless (equalp clip-mask serv-mask)
+                           (if (typep clip-mask 'sequence)
+                               (let ((clip-length (length clip-mask)))
+                                 (if (and (typep serv-mask 'sequence)
+                                          (= (length serv-mask) clip-length))
+                                     (replace serv-mask clip-mask)
+                                     (setf (aref (picture-%server-values picture) ,index)
+                                           (make-array clip-length
+                                                       :initial-contents clip-mask)))
+                                 (%render-change-picture-clip-rectangles picture clip-mask))
+                               (setf (aref (picture-%server-values picture) ,index)
+                                     clip-mask)))))
                    (setf (picture-%changed-p picture) nil)))
 
                (defun render-create-picture
@@ -979,9 +991,11 @@ by every function, which attempts to generate RENDER requests."
 (defmacro %render-composite-glyphs
     (opcode type transform display dest glyph-set source dest-x dest-y sequence
      alu src-x src-y mask-format start end)
-  (let ((size (ecase type (card8 1) (card16 2) (card32 4)))
-        ;; FIXME: the last chunk for CARD8 can be 254.
-        (chunksize (ecase type (card8 252) (card16 254) (card32 254))))
+  (multiple-value-bind (size chunksize)
+      (ecase type
+        (card8 (values 1 252)) ; FIXME: the last chunk for CARD8 can be 254.
+        (card16 (values 2 254))
+        (card32 (values 4 254)))
     `(multiple-value-bind (nchunks leftover)
          (floor (- end start) ,chunksize)
        (let* ((payloadsize (+ (* nchunks (+ 8 (* ,chunksize ,size)))
@@ -989,7 +1003,7 @@ by every function, which attempts to generate RENDER requests."
                                   (+ 8 (* 4 (ceiling (* leftover ,size) 4)))
                                   0)))
               (request-length (+ 7 (/ payloadsize 4))))
-         (declare (integer request-length))
+         (declare (type array-index request-length))
          (with-buffer-request (,display (extension-opcode ,display "RENDER") :length (* 4 request-length))
            (data ,opcode)
            (length request-length)
@@ -1149,13 +1163,13 @@ by every function, which attempts to generate RENDER requests."
       (card16 y))))
 
 ;; untested
-(defun render-free-glyphs (glyph-set glyphs)
+(defun render-free-glyphs (glyph-set glyphs &key (start 0) (end (length glyphs)))
   "This request removes glyphs from glyph-set. Each glyph must exist in glyph-set (else a Match error results)."
   (let ((display (glyph-set-display glyph-set)))
     (with-buffer-request (display (extension-opcode display "RENDER"))
       (data +X-RenderFreeGlyphs+)
       (glyph-set glyph-set)
-      ((sequence :format card32) glyphs))))
+      ((sequence :format card32 :start start :end end) glyphs))))
 
 
 #||

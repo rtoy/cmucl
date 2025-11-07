@@ -1159,6 +1159,13 @@ msgid ""
 msgstr ""
 
 #: src/code/type.lisp
+msgid ""
+"The minimum length of either list argument for subsetp where a\n"
+"  hashtable is used to speed up processing instead of using a basic\n"
+"  list implementation.  This value was determined by experimentation."
+msgstr ""
+
+#: src/code/type.lisp
 msgid "Subtypep is illegal on this type:~%  ~S"
 msgstr ""
 
@@ -1594,8 +1601,8 @@ msgstr ""
 msgid ""
 "Returns T if X and Y are EQL or if they are structured components\n"
 "  whose elements are EQUAL.  Strings and bit-vectors are EQUAL if they\n"
-"  are the same length and have indentical components.  Other arrays must be\n"
-"  EQ to be EQUAL."
+"  are the same length and have identical components.  Other arrays\n"
+"  must be EQ to be EQUAL."
 msgstr ""
 
 #: src/code/pred.lisp
@@ -3211,15 +3218,7 @@ msgid "Test and test-not both supplied."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Destructively returns the union list1 and list2."
-msgstr ""
-
-#: src/code/list.lisp
 msgid "Returns the intersection of list1 and list2."
-msgstr ""
-
-#: src/code/list.lisp
-msgid "Destructively returns the intersection of list1 and list2."
 msgstr ""
 
 #: src/code/list.lisp
@@ -3227,11 +3226,19 @@ msgid "Returns the elements of list1 which are not in list2."
 msgstr ""
 
 #: src/code/list.lisp
+msgid "Destructively returns the union list1 and list2."
+msgstr ""
+
+#: src/code/list.lisp
+msgid "Destructively returns the intersection of list1 and list2."
+msgstr ""
+
+#: src/code/list.lisp
 msgid "Destructively returns the elements of list1 which are not in list2."
 msgstr ""
 
 #: src/code/list.lisp
-msgid "Return new list of elements appearing exactly once in LIST1 and LIST2."
+msgid "Return new list of elements appearing exactly one of LIST1 and LIST2."
 msgstr ""
 
 #: src/code/list.lisp
@@ -3711,7 +3718,7 @@ msgstr ""
 msgid ""
 "WITH-STRING-CODEPOINT-ITERATOR ((next string) &body body)\n"
 "  provides a method of looping through a string from the beginning to\n"
-"  the end of the string prodcucing successive codepoints from the\n"
+"  the end of the string producing successive codepoints from the\n"
 "  string.  NEXT is bound to a generator macro that, within the scope\n"
 "  of the invocation, returns one or two values. The first value tells\n"
 "  whether any objects remain in the string. When the first value is\n"
@@ -3875,19 +3882,19 @@ msgid ""
 "  a new string Count long filled with the fill character."
 msgstr ""
 
-#: src/code/string.lisp
+#: src/code/unicode.lisp src/code/string.lisp
 msgid ""
 "Given a string, returns a new string that is a copy of it with all\n"
 "  lower case alphabetic characters converted to uppercase."
 msgstr ""
 
-#: src/code/string.lisp
+#: src/code/unicode.lisp src/code/string.lisp
 msgid ""
 "Given a string, returns a new string that is a copy of it with all\n"
 "  upper case alphabetic characters converted to lowercase."
 msgstr ""
 
-#: src/code/string.lisp
+#: src/code/unicode.lisp src/code/string.lisp
 msgid ""
 "Given a string, returns a copy of the string with the first\n"
 "  character of each ``word'' converted to upper-case, and remaining\n"
@@ -3980,7 +3987,7 @@ msgstr ""
 msgid ""
 "WITH-STRING-GLYPH-ITERATOR ((next string) &body body)\n"
 "  provides a method of looping through a string from the beginning to\n"
-"  the end of the string prodcucing successive glyphs from the string.\n"
+"  the end of the string producing successive glyphs from the string.\n"
 "  NEXT is bound to a generator macro that, within the scope of the\n"
 "  invocation, returns one or three values. The first value tells\n"
 "  whether any objects remain in the string. When the first value is\n"
@@ -4859,6 +4866,28 @@ msgid ""
 "  their testing within, and restored on exit."
 msgstr ""
 
+#: src/code/float-trap.lisp
+msgid ""
+"Execute BODY with the floating-point rounding mode set to\n"
+"  ROUNDING-MODE.  ROUNDING-MODE must be a one:\n"
+"\n"
+"   :NEAREST\n"
+"       the default mode of round to nearest even.\n"
+"   :ZERO\n"
+"       round numbers down towards zero.  Positive numbers round down\n"
+"       and negative numbers round up.\n"
+"   :POSITIVE-INFINITY\n"
+"       round numbers up towards positive infinity.\n"
+"   :NEGATIVE-INFINITY\n"
+"       round numbers down towards negative infinity.\n"
+"\n"
+"  These are the same as the possible values for the rounding mode in\n"
+"  SET-FLOATING-POINT-MODES.\n"
+"\n"
+"  Only the rounding mode is restored on exit; other floating-point\n"
+"  modes are not modified."
+msgstr ""
+
 #: src/code/float.lisp
 msgid "Return true if the float X is denormalized."
 msgstr ""
@@ -5415,6 +5444,37 @@ msgstr ""
 
 #: src/code/char.lisp
 msgid ""
+"A character code strictly larger than this is handled using Unicode\n"
+"  rules."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"Number of bits used for the index of the second stage table of the\n"
+"  case mapping table."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"For the character code, CODE, the 32-bit value from the\n"
+"  case mapping table that indicates the delta between CODE and the\n"
+"  corresponding upper or lower case character for CODE."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"Compute the lower-case character code for the given character CODE.\n"
+"  If no lower-case code exists, just return CODE."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
+"Compute the upper-case character code for the given character CODE.\n"
+"  If no upper-case code exists, just return CODE."
+msgstr ""
+
+#: src/code/char.lisp
+msgid ""
 "This is the alist of (character-name . character) for characters with\n"
 "  long names.  The first name in this list for a given character is used\n"
 "  on typeout and is the preferred form for input."
@@ -5504,12 +5564,6 @@ msgstr ""
 
 #: src/code/char.lisp
 msgid ""
-"The argument must be a character object; title-case-p returns T if the\n"
-"  argument is a title-case character, NIL otherwise."
-msgstr ""
-
-#: src/code/char.lisp
-msgid ""
 "The argument must be a character object.  Both-case-p returns T if the\n"
 "  argument is an alphabetic character and if the character exists in\n"
 "  both upper and lower case.  For ASCII, this is the same as Alpha-char-p."
@@ -5592,10 +5646,6 @@ msgstr ""
 
 #: src/code/char.lisp
 msgid "Returns CHAR converted to upper-case if that is possible."
-msgstr ""
-
-#: src/code/char.lisp
-msgid "Returns CHAR converted to title-case if that is possible."
 msgstr ""
 
 #: src/code/char.lisp
@@ -6007,7 +6057,7 @@ msgstr ""
 #: src/code/commandline.lisp
 msgid ""
 "Evaluate the specified Lisp expression during the start up\n"
-"  sequence.  the value of the form will not be printed unless it is\n"
+"  sequence.  The value of the form will not be printed unless it is\n"
 "  wrapped in a form that does output."
 msgstr ""
 
@@ -6129,7 +6179,7 @@ msgstr ""
 #: src/code/commandline.lisp
 msgid ""
 "Causes Lisp to start up silently, disabling printing of the herald\n"
-"  and causing most unnecessary noise, like GC messages,load messages,\n"
+"  and causing most unnecessary noise, like GC messages, load messages,\n"
 "  etc. to be suppressed."
 msgstr ""
 
@@ -6144,7 +6194,7 @@ msgid "Specify the unidata.bin file to be used."
 msgstr ""
 
 #: src/code/commandline.lisp
-msgid "~&Usage: ~A <options>~2%"
+msgid "~&Usage: ~A <options> [-- [app-args]*]~2%"
 msgstr ""
 
 #: src/code/commandline.lisp
@@ -6152,15 +6202,7 @@ msgid "Print out the command line options and exit"
 msgstr ""
 
 #: src/code/commandline.lisp
-msgid "Same as -help."
-msgstr ""
-
-#: src/code/commandline.lisp
-msgid "Prints the cmucl version and exits"
-msgstr ""
-
-#: src/code/commandline.lisp
-msgid "Prints the cmucl version and exits; same as -version"
+msgid "Prints the cmucl version and exits, without loading the lisp core."
 msgstr ""
 
 #: src/code/env-access.lisp
@@ -6788,7 +6830,8 @@ msgid ""
 "\n"
 "  :site-init\n"
 "      If true, then the name of the site init file to load.  The default is\n"
-"  library:site-init.  No error if this does not exist.\n"
+"  library:site-init if it exists.  If not, library:default-site-init\n"
+"  is used if it exists.  No error if these files do not exist.\n"
 "\n"
 "  :print-herald\n"
 "      If true (the default), print out the lisp system herald when "
@@ -6864,7 +6907,7 @@ msgid " on "
 msgstr ""
 
 #: src/code/save.lisp
-msgid "See <http://www.cmucl.org/> for support information."
+msgid "Please visit https://cmucl.org/bugs to report bugs and ask questions."
 msgstr ""
 
 #: src/code/save.lisp
@@ -8174,14 +8217,15 @@ msgid ""
 "Defines a new package called PACKAGE.  Each of OPTIONS should be one of the\n"
 "   following:\n"
 "     (:NICKNAMES {package-name}*)\n"
-"     (:SIZE <integer>)\n"
+"     (:DOCUMENTATION doc-string)\n"
+"     (:USE {package-name}*)\n"
 "     (:SHADOW {symbol-name}*)\n"
 "     (:SHADOWING-IMPORT-FROM <package-name> {symbol-name}*)\n"
-"     (:USE {package-name}*)\n"
 "     (:IMPORT-FROM <package-name> {symbol-name}*)\n"
-"     (:INTERN {symbol-name}*)\n"
 "     (:EXPORT {symbol-name}*)\n"
-"     (:DOCUMENTATION doc-string)\n"
+"     (:INTERN {symbol-name}*)\n"
+"     (:SIZE <integer>)\n"
+"     (:LOCAL-NICKNAMES {({nickname package}*)})\n"
 "   All options except :SIZE and :DOCUMENTATION can be used multiple times."
 msgstr ""
 
@@ -8525,6 +8569,57 @@ msgid ""
 "  found instead of describing them."
 msgstr ""
 
+#: src/code/package.lisp
+msgid ""
+"Returns an alist of (local-nickname . actual-package) describing the\n"
+"  nicknames local to Package."
+msgstr ""
+
+#: src/code/package.lisp
+msgid ""
+"For the designated package Package (defaulting to *PACKAGE*), add\n"
+"  Local-Nickname as a package local nickname to the package\n"
+"  Actual-Package. Actual-Package and Package must be an package\n"
+"  designator. Local-Nickname should be a string designator.\n"
+"\n"
+"  Returns the designated package.\n"
+"\n"
+"  Signals a continuable error if any of the following are true:\n"
+"    - Local-Nickname is already a local nickname for a different package\n"
+"    - Local-Nickname is one of \"CL\", \"COMMON-LISP\", or \"KEYWORD\""
+msgstr ""
+
+#: src/code/package.lisp
+msgid "Local nickname cannot be \"CL\", \"COMMON-LISP\" or \"KEYWORD\""
+msgstr ""
+
+#: src/code/package.lisp
+msgid "~A is already a local nickname for the package ~A in ~A"
+msgstr ""
+
+#: src/code/package.lisp
+msgid ""
+"~A cannot be a package local nickname for the global package~_ ~A with the "
+"same name"
+msgstr ""
+
+#: src/code/package.lisp
+msgid ""
+"~A cannot be a package local nickname for the global package~_ ~A with "
+"nickname ~A"
+msgstr ""
+
+#: src/code/package.lisp
+msgid ""
+"If Package has Old-Nickname as a local nickname, it is removed.\n"
+"  Returns true if the nickname existed and was removed.  Otherwise\n"
+" returns NIL."
+msgstr ""
+
+#: src/code/package.lisp
+msgid "Returns a list of packages which have a local nickname for Package."
+msgstr ""
+
 #: src/code/reader.lisp
 msgid "Float format for 1.0E1"
 msgstr ""
@@ -8738,7 +8833,11 @@ msgid "Internal error in floating point reader."
 msgstr ""
 
 #: src/code/reader.lisp
-msgid "Underflow"
+msgid "Floating-point overflow reading ~S: ~S"
+msgstr ""
+
+#: src/code/reader.lisp
+msgid "Floating point underflow when reading ~S: ~S"
 msgstr ""
 
 #: src/code/reader.lisp
@@ -9102,7 +9201,8 @@ msgstr ""
 #: src/code/extfmts.lisp
 msgid ""
 "The default external format to use if no other external format is\n"
-"  specified"
+"  specified.  This is unaffected by any locale settings or by\n"
+"  SET-SYSTEM-EXTERNAL-FORMAT."
 msgstr ""
 
 #: src/code/extfmts.lisp
@@ -9164,6 +9264,12 @@ msgstr ""
 
 #: src/code/extfmts.lisp
 msgid "~&Could not find external format ~S~%"
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
+"List of external formats that are builtin so that they don't need to\n"
+"  be loaded on first use."
 msgstr ""
 
 #: src/code/extfmts.lisp
@@ -9259,6 +9365,13 @@ msgstr ""
 
 #: src/code/extfmts.lisp
 msgid ""
+"Compute the number of octets needed to convert String using the\n"
+"  specified External-format.  The string is bound by Start (defaulting\n"
+"  to 0) and End (defaulting to the end of the string)."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
 "Encode the given String using External-Format and return a new\n"
 "  string.  The characters of the new string are the octets of the\n"
 "  encoded result, with each octet converted to a character via\n"
@@ -9304,6 +9417,13 @@ msgid ""
 "UTF-8 is a variable-length character encoding for Unicode.  By\n"
 "default, illegal input sequences are replaced by the Unicode\n"
 "replacement character."
+msgstr ""
+
+#: src/code/extfmts.lisp
+msgid ""
+"US ASCII 7-bit encoding.  Illegal input sequences are replaced with\n"
+"the Unicode replacment character.  Illegal output characters are\n"
+"replaced with a question mark."
 msgstr ""
 
 #: src/code/fd-stream.lisp
@@ -9615,6 +9735,15 @@ msgstr ""
 msgid ""
 "When non-nil, attempt to load \"library:<host>.translations\" to resolve\n"
 "   an otherwise undefined logical host."
+msgstr ""
+
+#: src/code/pathname.lisp
+msgid ""
+"When non-NIL, pathnames are on Darwin are normalized when created.\n"
+"  Otherwise, the pathnames are unchanged.\n"
+"\n"
+"  This must be NIL during bootstrapping because Unicode is not yet\n"
+"  available."
 msgstr ""
 
 #: src/code/pathname.lisp
@@ -12224,6 +12353,14 @@ msgstr ""
 
 #: src/code/rand-xoroshiro.lisp
 msgid ""
+"Generate the next 64-bit result from the xoroshiro128** generator\n"
+"  using the state in STATE, a simple-array of 2 double-floats.  The\n"
+"  64-bit result is returned as 2 32-bit values, with the high 32-bits\n"
+"  being the first value."
+msgstr ""
+
+#: src/code/rand-xoroshiro.lisp
+msgid ""
 "Generate a uniformly distributed pseudo-random number between zero\n"
 "  and Arg.  State, if supplied, is the random state to use."
 msgstr ""
@@ -12235,7 +12372,7 @@ msgstr ""
 #: src/code/rand-xoroshiro.lisp
 msgid ""
 "Jump the RNG-STATE.  This is equivalent to 2^64 calls to the\n"
-"  xoroshiro128+ generator.  It can be used to generate 2^64\n"
+"  xoroshiro128** generator.  It can be used to generate 2^64\n"
 "  non-overlapping subsequences for parallel computations."
 msgstr ""
 
@@ -15282,6 +15419,16 @@ msgid ""
 "  character extends to the end of S.  If the index is negative or\n"
 "  valid index into S, the returned value will be strictly greater than\n"
 "  the index."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid "Returns CHAR converted to title-case if that is possible."
+msgstr ""
+
+#: src/code/unicode.lisp
+msgid ""
+"The argument must be a character object; title-case-p returns T if the\n"
+"  argument is a title-case character, NIL otherwise."
 msgstr ""
 
 #: src/code/unicode.lisp
@@ -19011,6 +19158,10 @@ msgid "use inline (unsigned-byte 32) operations"
 msgstr ""
 
 #: src/compiler/float-tran.lisp
+msgid "Shouldn't happen"
+msgstr ""
+
+#: src/compiler/float-tran.lisp
 msgid "Can't open-code float to rational comparison."
 msgstr ""
 
@@ -21175,6 +21326,13 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid ""
+"Set the type specifier of the kind of object returned by the\n"
+"  STREAM. There is no default method as this is optional and only\n"
+"  needed for bivalent streams."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid ""
 "Return true if Stream is not closed.  A default method is provided\n"
 "  by class FUNDAMENTAL-STREAM which returns true if CLOSE has not been\n"
 "  called on the stream."
@@ -21185,6 +21343,21 @@ msgid ""
 "Closes the given Stream.  No more I/O may be performed, but\n"
 "  inquiries may still be made.  If :Abort is non-nil, an attempt is made\n"
 "  to clean up the side effects of having created the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Returns non-nil if the given Stream can is interactive."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid "Convert pathspec (a pathname, string or stream) into a pathname."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
+msgid ""
+"Return the pathname for the actual file described by the filespec.\n"
+"  An error of type file-error is signalled if no such file exists,\n"
+"  or the pathname is wild."
 msgstr ""
 
 #: src/pcl/gray-streams.lisp
@@ -21348,6 +21521,10 @@ msgid "Implements FILE-POSITION for the stream for setting the position."
 msgstr ""
 
 #: src/pcl/gray-streams.lisp
+msgid "Implements FILE-LENGTH for the stream."
+msgstr ""
+
+#: src/pcl/gray-streams.lisp
 msgid ""
 "Used by READ-BYTE; returns either an integer, or the symbol :EOF\n"
 "  if the stream is at end-of-file."
@@ -21361,12 +21538,6 @@ msgstr ""
 
 #: src/pcl/gray-streams.lisp
 msgid "    Gray Streams Protocol Support"
-msgstr ""
-
-msgid ""
-"US ASCII 7-bit encoding.  Illegal input sequences are replaced with\n"
-"the Unicode replacment character.  Illegal output characters are\n"
-"replaced with a question mark."
 msgstr ""
 
 msgid ""

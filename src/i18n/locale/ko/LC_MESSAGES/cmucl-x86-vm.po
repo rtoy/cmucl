@@ -77,6 +77,38 @@ msgstr ""
 msgid "Thread safe push of val onto the list in the vector element."
 msgstr ""
 
+#: src/code/x86-vm.lisp
+msgid "The bit in the x87 FPU control word that controls the infinity mode."
+msgstr ""
+
+#: src/code/x86-vm.lisp
+msgid "The bits in the x87 FPU control word for the rounding mode."
+msgstr ""
+
+#: src/code/x86-vm.lisp
+msgid "The bits in the x87 FPU contol word for the FP operation precision."
+msgstr ""
+
+#: src/code/x86-vm.lisp
+msgid ""
+"The bits in the x87 FPU control word indicating the exceptions that\n"
+" are enabled."
+msgstr ""
+
+#: src/code/x86-vm.lisp
+msgid ""
+"Alist for the x87 precison control.  The car is the symbolic\n"
+" precision and the cdr is the value for the precision control field."
+msgstr ""
+
+#: src/code/x86-vm.lisp
+msgid "Print SSE2 floating modes word in a human-readable fashion."
+msgstr ""
+
+#: src/code/x86-vm.lisp
+msgid "Print X87 floating modes word in a human-readable fashion."
+msgstr ""
+
 #: src/code/load.lisp
 msgid "Top-Level Form"
 msgstr ""
@@ -134,6 +166,23 @@ msgstr ""
 
 #: src/compiler/x86/parms.lisp
 msgid "Maximum number of bits in a positive fixnum"
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid ""
+"The bits in the FP mode that hold the accrued exceptions that have\n"
+" occurred since the bits were reset."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid "The bits in the FP mode that hold FP exceptions that are enabled."
+msgstr ""
+
+#: src/compiler/x86/parms.lisp
+msgid ""
+"The bits in the FP mode that hold the current exception.  However\n"
+" for x86, there aren't separate bits for this, so we use the stick\n"
+" bits from the accrued exceptions"
 msgstr ""
 
 #: src/compiler/x86/vm.lisp
@@ -294,6 +343,10 @@ msgstr ""
 
 #: src/compiler/x86/arith.lisp
 msgid "inline (signed-byte 32) integer-length"
+msgstr ""
+
+#: src/compiler/x86/arith.lisp
+msgid "inline (unsigned-byte 32) integer-length"
 msgstr ""
 
 #: src/compiler/x86/arith.lisp

@@ -15,10 +15,6 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/code/bsd-os.lisp
-msgid "Unix system call getrusage failed: ~A."
-msgstr "유닉스 시스템 호출에 실패 getrusage: ~A 등급."
-
 #: src/code/signal.lisp
 msgid "Emt instruction"
 msgstr ""
@@ -26,6 +22,9 @@ msgstr ""
 #: src/code/signal.lisp
 msgid "Bad argument to system call"
 msgstr ""
+
+#~ msgid "Unix system call getrusage failed: ~A."
+#~ msgstr "유닉스 시스템 호출에 실패 getrusage: ~A 등급."
 
 #~ msgid "Version string for supporting software"
 #~ msgstr "소프트 웨어를 지원하기위한 버전 문자열"
