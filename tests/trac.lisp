@@ -410,7 +410,7 @@
       (let* ((expected (stream:string-to-octets string :external-format :latin1))
 	     (octets (make-array (length expected)
 				 :element-type '(unsigned-byte 8)))
-	     (proc (ext:run-program "/bin/cat" (list path)
+	     (proc (ext:run-program "/bin/cat" (list (namestring path))
 				    :output :stream
 				    :element-type '(unsigned-byte 8))))
 	(read-sequence octets (ext:process-output proc))
@@ -456,7 +456,7 @@
       (let ((octets (stream:string-to-octets string :external-format :latin1))
 	    (output (make-array (length string)
 				:element-type '(unsigned-byte 8)))
-	    (proc (ext:run-program "/bin/cat" (list path)
+	    (proc (ext:run-program "/bin/cat" (list (namestring path))
 				   :input :stream
 				   :output :stream
 				   :element-type '(unsigned-byte 8))))

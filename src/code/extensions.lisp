@@ -704,22 +704,24 @@
  in a OS-dependent location.  Otherwise the prefix is used as a prefix
  for the name.  On completion, the file is automatically removed."
   (let ((fd (gensym "FD-"))
-	(file-template (gensym "TEMP-PATH-")))
+	(file-template (gensym "TEMP-PATH-"))
+	(unique-filename (gensym "UNIQUE-FILENAME-")))
     `(let ((,file-template (create-template ,prefix "cmucl-temp-file-"))
-	   ,filename)
+	   ,unique-filename)
        (unwind-protect
 	    (let (,fd)
-	      (multiple-value-setq (,fd ,filename)
+	      (multiple-value-setq (,fd ,unique-filename)
 		(unix::unix-mkstemp ,file-template))
 	      (unless ,fd
 		(error "Unable to create temporary file with template ~S: ~A~%"
 		       ,file-template
-		       (unix:get-unix-error-msg ,filename)))
+		       (unix:get-unix-error-msg ,unique-filename)))
 	      (unix:unix-close ,fd)
+	      (setf ,filename (pathname ,unique-filename))
 	      (locally ,@decls
 		,@forms))
 	 ;; We're done so delete the temp file, if one was created.
-	 (when (stringp ,filename)
+	 (when (pathnamep ,filename)
 	   (delete-file ,filename))))))
 
 ;;; WITH-TEMPORARY-DIRECTORY  -- Public
@@ -742,10 +744,10 @@
 		(error "Unable to create temporary directory at ~S: ~A"
 		       ,dir-template
 		       (unix:get-unix-error-msg ,err)))
-	      (setf ,dirname (concatenate 'string ,dirname "/"))
+	      (setf ,dirname (pathname (concatenate 'string ,dirname "/")))
 	      (locally ,@decls
 		,@forms))
 	 ;; If a temp directory was created, remove it and all its
 	 ;; contents.  Is there a better way?
 	 (when ,dirname
-	   (ext:run-program "/bin/rm" (list "-rf" ,dirname)))))))
+	   (ext:run-program "/bin/rm" (list "-rf" (namestring ,dirname))))))))
