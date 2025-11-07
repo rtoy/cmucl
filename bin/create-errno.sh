@@ -64,11 +64,11 @@ TEMPLATE_PKG="src/tools/unix-pkg-template.lisp"
 if [ -z "$DEFAULT" ]; then
     # shellcheck disable=SC2006
     case `uname -s` in
-	Linux) ERRNO_FILE="bin/errno-linux.lisp"
+	Linux) ERRNO_FILE="src/tools/errno-linux.lisp"
 	       ;;
-	Darwin) ERRNO_FILE="bin/errno-darwin.lisp"
+	Darwin) ERRNO_FILE="src/tools/errno-darwin.lisp"
 		;;
-	SunOS) ERRNO_FILE="bin/errno-solaris.lisp"
+	SunOS) ERRNO_FILE="src/tools/errno-solaris.lisp"
 	       ;;
 	*) # The default case where we use the defaults.  But also disable updating.
 	    UPDATE=""
