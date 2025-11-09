@@ -4,7 +4,9 @@ include Config.x86_common
 CFLAGS += $(COPT)
 CPPFLAGS += -m32
 CFLAGS += -rdynamic  -march=pentium4 -mfpmath=sse -mtune=generic
-CFLAGS += -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+# ANALYZER flag should be set to -fanalyzer when doing the CI builds
+# for the C static analyzer.
+CFLAGS += -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(ANALYZER)
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC +=  linux-stubs.S
