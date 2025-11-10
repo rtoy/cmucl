@@ -5999,24 +5999,22 @@ msgid ""
 msgstr ""
 
 #: src/code/extensions.lisp
-msgid "Return a stream to a temporary file that is automatically created."
-msgstr ""
-
-#: src/code/extensions.lisp
 msgid ""
 "Creates a temporary file with a name bound to Filename which a\n"
-" namestring.  If Prefix is not provided, the temporary file is created\n"
-" in a OS-dependent location.  Otherwise the prefix is used as a prefix\n"
-" for the name.  On completion, the file is automatically removed."
+" namestring.  If Directory is not provided, the temporary file is created\n"
+" in a OS-dependent location.  The Prefix is a prefix to the file name\n"
+" to be created.  If not provided a default prefix is used.\n"
+" On completion, the file is automatically removed."
 msgstr ""
 
 #: src/code/extensions.lisp
 msgid ""
-"Return a namestring to a temporary directory.  If Prefix is not\n"
-" provided, the directory is created in an OS-dependent location.\n"
-" Otherwise, the Prefix is a string that is used as a prefix for the\n"
-" name of the temporary directory.  The directory and all its contents\n"
-" are automatically removed afterward."
+"Return a namestring to a temporary directory.  If Directory is not\n"
+" provided, the directory is created in an OS-dependent location.  The\n"
+" Prefix is a string that is used as a prefix for the name of the\n"
+" temporary directory.  If Prefix is not given, a default prefix is\n"
+" used.  The directory and all its contents are automatically removed\n"
+" afterward."
 msgstr ""
 
 #: src/code/commandline.lisp

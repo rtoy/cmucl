@@ -632,30 +632,31 @@
       (unless (alien:null-alien path)
 	(alien:free-alien path)))))
 
-;; Create a template suitable for mkstemp and mkdtemp.  PREFIX is
-;; string (or NIL) provided by the macros and is used as is as the
-;; template prefix.  If PREFIX is NIL, the prefix is obtained by
-;; appending DEFAULT-NAME to the OS-dependent temporary path.  In all
-;; cases, we append exactly 6 X's to create the finale template.
-(defun create-template (prefix default-name)
+;; Create a template suitable for mkstemp and mkdtemp.  DIRECTORY is
+;; the directory for the template.  If DIRECTORY is NIL, an
+;; OS-dependent location is used.  PREFIX is string that is the prefix
+;; for the filename for the template.  In all cases, we append exactly
+;; 6 X's to create the finale template.
+(defun create-template (directory prefix)
   (concatenate 'string
-	       (or prefix
-		   (concatenate 'string
-				(get-os-temp-path)
-				default-name))
+	       (or directory
+		   (get-os-temp-path))
+	       "/"
+	       prefix
 	       "XXXXXX"))
 
 ;;; WITH-TEMPORARY-FILE  -- Public
-(defmacro with-temporary-file ((filename &key prefix)
+(defmacro with-temporary-file ((filename &key directory (prefix "cmucl-temp-file-"))
 			       &parse-body (forms decls))
   _N"Creates a temporary file with a name bound to Filename which a
- namestring.  If Prefix is not provided, the temporary file is created
- in a OS-dependent location.  Otherwise the prefix is used as a prefix
- for the name.  On completion, the file is automatically removed."
+ namestring.  If Directory is not provided, the temporary file is created
+ in a OS-dependent location.  The Prefix is a prefix to the file name
+ to be created.  If not provided a default prefix is used.
+ On completion, the file is automatically removed."
   (let ((fd (gensym "FD-"))
 	(file-template (gensym "TEMP-PATH-"))
 	(unique-filename (gensym "UNIQUE-FILENAME-")))
-    `(let ((,file-template (create-template ,prefix "cmucl-temp-file-"))
+    `(let ((,file-template (create-template ,directory ,prefix))
 	   ,unique-filename)
        (unwind-protect
 	    (let (,fd)
@@ -674,16 +675,17 @@
 	   (delete-file ,filename))))))
 
 ;;; WITH-TEMPORARY-DIRECTORY  -- Public
-(defmacro with-temporary-directory ((dirname &key prefix)
+(defmacro with-temporary-directory ((dirname &key directory (prefix  "cmucl-temp-dir-"))
 				    &parse-body (forms decls))
- _N"Return a namestring to a temporary directory.  If Prefix is not
- provided, the directory is created in an OS-dependent location.
- Otherwise, the Prefix is a string that is used as a prefix for the
- name of the temporary directory.  The directory and all its contents
- are automatically removed afterward."
+ _N"Return a namestring to a temporary directory.  If Directory is not
+ provided, the directory is created in an OS-dependent location.  The
+ Prefix is a string that is used as a prefix for the name of the
+ temporary directory.  If Prefix is not given, a default prefix is
+ used.  The directory and all its contents are automatically removed
+ afterward."
   (let ((err (gensym "ERR-"))
 	(dir-template (gensym "DIR-TEMPLATE-")))
-    `(let ((,dir-template (create-template ,prefix "cmucl-temp-dir-"))
+    `(let ((,dir-template (create-template ,directory ,prefix))
 	   ,dirname ,err)
        (unwind-protect
 	    (progn
