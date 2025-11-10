@@ -2542,25 +2542,6 @@
     ;; those octets to get a proper Lisp string.
     (string-decode (cast result c-string) :default)))
 
-#+nil
-(defun unix-get-username (uid)
-  _N"Returns a string that is the user name corresponding to the given UID.
-  If no such uid exists or if the user name does not exist, NIL is
-  returned."
-  (with-alien ((name (* c-call:c-string)))
-    (let ((result (alien-funcall
-		   (extern-alien "os_get_username"
-				 (function c-call:int
-					   uid-t
-					   (* c-call:c-string)))
-		   uid
-		   (addr name))))
-      (cond ((zerop result)
-	     (cast name c-call:c-string)
-	     (free-alien name))
-	    (t
-	     nil)))))
-
 (defun unix-get-username (uid)
   _N"Returns a string that is the user name corresponding to the given UID.
   If no such uid exists or if the user name does not exist, NIL is
