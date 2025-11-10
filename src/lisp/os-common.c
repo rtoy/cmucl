@@ -779,7 +779,7 @@ again:
  * returned.
  */
 char *
-os_get_username(uid_t uid, int *status)
+os_get_user_name(uid_t uid, int *status)
 {
     char *buf;
     char *name;
@@ -821,7 +821,7 @@ os_file_author(const char *path)
         return NULL;
     }
 
-    return os_get_username(sb.st_uid, &status);
+    return os_get_user_name(sb.st_uid, &status);
 }
 
 int
@@ -1037,4 +1037,3 @@ os_getcwd(void)
 {
     return getcwd(NULL, 0);
 }
-

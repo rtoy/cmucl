@@ -2552,7 +2552,7 @@
 	   (progn
 	     (setf result
 		   (alien-funcall
-		    (extern-alien "os_get_username"
+		    (extern-alien "os_get_user_name"
 				  (function (* c-call:c-string)
 					    uid-t
 					    (* c-call:int)))
