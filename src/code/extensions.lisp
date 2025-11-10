@@ -674,6 +674,22 @@
 	 (when (pathnamep ,filename)
 	   (delete-file ,filename))))))
 
+(defun recursive-delete-directory (dir)
+  _N"Recursively delete the directory DIR.  All files and subdirectories of
+  DIR are removed.  DIR must be a pathname to a directory.  Any NAME
+  or TYPE components in DIR are ignored."
+  (declare (type pathname dir))
+  ;; Find all the files or directories in DIR.
+  (dolist (path (directory (merge-pathnames "*.*" dir)))
+    ;; If the path is a directory, recursively delete the directory.
+    ;; Otherwise delete the file.  We do not follow any symlinks.
+    (if (eq (unix:unix-file-kind (namestring path)) :directory)
+	(recursive-delete-directory path)
+	(delete-file path)))
+  ;; Finally delete the directory.
+  (unix:unix-rmdir (namestring dir))
+  (values))
+
 ;;; WITH-TEMPORARY-DIRECTORY  -- Public
 (defmacro with-temporary-directory ((dirname &key directory (prefix  "cmucl-temp-dir-"))
 				    &parse-body (forms decls))
@@ -701,4 +717,4 @@
 	 ;; If a temp directory was created, remove it and all its
 	 ;; contents.  Is there a better way?
 	 (when ,dirname
-	   (ext:run-program "/bin/rm" (list "-rf" (namestring ,dirname))))))))
+	   (recursive-delete-directory (namestring ,dirname)))))))
