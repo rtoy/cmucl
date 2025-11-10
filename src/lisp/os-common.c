@@ -767,89 +767,10 @@ again:
 
 
 /*
- * From the given UID, find the corresponding user name and home
- * directory.
- *
- * NAME and DIR are set to the user name and home directory.  The
- * caller must free these.  If no such uid exists, NAME and DIR are
- * set to NULL.
- *
- * Returns the status of getpwuid.  Zero indicates success.  Otherwise
- * the errno is returned.
- */
-#if 0
-int
-os_get_user_info(uid_t uid, char **name, char **dir)
-{
-    char initial[1024];
-    char *buffer, *obuffer;
-    size_t size;
-    struct passwd pwd;
-    struct passwd *ppwd;
-    int status;
-
-    *name = NULL;
-    *dir = NULL;
-
-    buffer = initial;
-    obuffer = NULL;
-    size = sizeof(initial) / sizeof(initial[0]);
-
-    /*
-     * Keep trying with larger buffers until a maximum is reached.  We
-     * assume (1 << 20) is large enough for any OS.
-     */
-again:
-    switch (status = getpwuid_r(uid, &pwd, buffer, size, &ppwd)) {
-      case 0:
-	  /* Success, though we might not have a matching entry */
-	  if (ppwd) {
-	      *name = strdup(pwd.pw_name);
-	      *dir = strdup(pwd.pw_dir);
-	  }
-	  break;
-      case ERANGE:
-	  /* Buffer is too small, double its size and try again */
-	  size *= 2;
-	  if (size > (1 << 20)) {
-	      break;
-	  }
-	  if ((buffer = realloc(obuffer, size)) == NULL) {
-	      break;
-	  }
-	  obuffer = buffer;
-	  goto again;
-      default:
-	/* All other errors */
-	break;
-    }
-    free(obuffer);
-
-    return status;
-}
-#endif
-
-/*
  * Given the UID, return the user name.  If the uid does not exist,
  * returns NULL.  The caller must call free on the string that is
  * returned.
  */
-#if 0
-char *
-os_get_username(uid_t uid)
-{
-    int status;
-    char *name;
-    char *dir;
-
-    status = os_get_user_info(uid, &name, &dir);
-
-    free(dir);
-
-    return (status == 0) ? name : NULL;
-}
-#endif
-
 int
 os_get_username(uid_t uid, char **name)
 {
@@ -1054,21 +975,6 @@ get_homedir_from_name(const char* name, int *status)
  *
  * The caller must free the memory returned.
  */
-#if 0
-static char *
-get_homedir_from_uid(uid_t uid, int *status)
-{
-    char *name;
-    char *dir;
-	
-    *status = os_get_user_info(uid, &name, &dir);
-
-    free(name);
-    
-    return (*status == 0) ? dir : NULL;
-}
-#endif
-
 static char *
 get_homedir_from_uid(uid_t uid, int *status)
 {
