@@ -730,6 +730,13 @@ os_lstat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uin
     return rc;
 }
 
+/*
+ * Basic interface to getpwuid, except we will automatically retry if
+ * the given buffer is too small.  To support this |buffer| is a
+ * pointer to a char buffer.  This will be updated with a new buffer
+ * if we needed to retry getpwuid with a larger buffer.  The remaining
+ * parameters are the same as for getpwuid.
+ */
 int
 os_getpwuid(uid_t uid, struct passwd *pwd, char **buffer, size_t buflen, struct passwd **result)
 {
@@ -771,32 +778,32 @@ again:
  * returns NULL.  The caller must call free on the string that is
  * returned.
  */
-int
-os_get_username(uid_t uid, char **name)
+char *
+os_get_username(uid_t uid, int *status)
 {
-    int status;
-    char buffer[1024];
     char *buf;
+    char *name;
     struct passwd pwd;
     struct passwd *result;
+    char buffer[1024];
 
     buf = buffer;
 
-    status = os_getpwuid(uid, &pwd, &buf, 1024, &result);
+    *status = os_getpwuid(uid, &pwd, &buf, 1024, &result);
 
-    if (status != 0 || result == NULL || result->pw_name == NULL) {
-	*name = NULL;
+    if (*status != 0 || result == NULL || result->pw_name == NULL) {
+	name = NULL;
     } else {
-	*name = strdup(result->pw_name);
-	if (*name == NULL) {
-	    status = errno;
+	name = strdup(result->pw_name);
+	if (name == NULL) {
+	    *status = errno;
 	}
 	if (buf != buffer) {
 	    free(buf);
 	}
     }
 
-    return status;
+    return name;
 }
 
 /*
@@ -807,16 +814,14 @@ os_get_username(uid_t uid, char **name)
 char *
 os_file_author(const char *path)
 {
-    char *name;
+    int status;
     struct stat sb;
 
     if (stat(path, &sb) != 0) {
         return NULL;
     }
 
-    os_get_username(sb.st_uid, &name);
-
-    return name;
+    return os_get_username(sb.st_uid, &status);
 }
 
 int

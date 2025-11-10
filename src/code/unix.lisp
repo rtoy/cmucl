@@ -2544,20 +2544,9 @@
 
 #+nil
 (defun unix-get-username (uid)
-  (let (name)
-    (unwind-protect
-	 (progn
-	   (setf name
-		 (alien-funcall
-		  (extern-alien "os_get_username"
-				(function (* char) uid-t))
-		  uid))
-	   (unless (null-alien name)
-	     (cast name c-call:c-string)))
-      (unless (null-alien name)
-	(free-alien name)))))
-
-(defun unix-get-username (uid)
+  _N"Returns a string that is the user name corresponding to the given UID.
+  If no such uid exists or if the user name does not exist, NIL is
+  returned."
   (with-alien ((name (* c-call:c-string)))
     (let ((result (alien-funcall
 		   (extern-alien "os_get_username"
@@ -2565,10 +2554,34 @@
 					   uid-t
 					   (* c-call:c-string)))
 		   uid
-		   name)))
+		   (addr name))))
       (cond ((zerop result)
-	     (case (deref name) c-call:c-string)
-	     (free-alien (deref name)))
+	     (cast name c-call:c-string)
+	     (free-alien name))
 	    (t
 	     nil)))))
+
+(defun unix-get-username (uid)
+  _N"Returns a string that is the user name corresponding to the given UID.
+  If no such uid exists or if the user name does not exist, NIL is
+  returned."
+  (with-alien ((status c-call:int))
+    (let (result)
+      (unwind-protect
+	   (progn
+	     (setf result
+		   (alien-funcall
+		    (extern-alien "os_get_username"
+				  (function (* c-call:c-string)
+					    uid-t
+					    (* c-call:int)))
+		    uid
+		    (addr status)))
+	     (values 
+	      (if (and (zerop status)
+		       (not (null-alien result)))
+		  (cast result c-call:c-string)
+		  nil)
+	      status))
+	(free-alien name)))))
     

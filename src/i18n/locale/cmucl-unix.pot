@@ -810,3 +810,10 @@ msgstr ""
 msgid "Returns a string that describes the error code Errno"
 msgstr ""
 
+#: src/code/unix.lisp
+msgid ""
+"Returns a string that is the user name corresponding to the given UID.\n"
+"  If no such uid exists or if the user name does not exist, NIL is\n"
+"  returned."
+msgstr ""
+
