@@ -730,6 +730,42 @@ os_lstat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uin
     return rc;
 }
 
+int
+os_getpwuid(uid_t uid, struct passwd *pwd, char **buffer, size_t buflen, struct passwd **result)
+{
+    int status;
+    char *obuffer = NULL;
+
+    /*
+     * Keep trying with larger buffers until a maximum is reached.  We
+     * assume (1 << 20) is large enough for any OS.
+     */
+again:
+    switch (status = getpwuid_r(uid, pwd, *buffer, buflen, result)) {
+      case 0:
+	  /* Success, though we might not have a matching entry */
+	  break;
+      case ERANGE:
+	  /* Buffer is too small, double its size and try again */
+	  buflen *= 2;
+	  if (buflen > (1 << 20)) {
+	      break;
+	  }
+	  if ((*buffer = realloc(obuffer, buflen)) == NULL) {
+	      break;
+	  }
+	  obuffer = *buffer;
+	  goto again;
+      default:
+	/* All other errors */
+	break;
+    }
+    free(obuffer);
+
+    return status;
+}
+
+
 /*
  * From the given UID, find the corresponding user name and home
  * directory.
@@ -741,6 +777,7 @@ os_lstat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uin
  * Returns the status of getpwuid.  Zero indicates success.  Otherwise
  * the errno is returned.
  */
+#if 0
 int
 os_get_user_info(uid_t uid, char **name, char **dir)
 {
@@ -790,12 +827,14 @@ again:
 
     return status;
 }
+#endif
 
 /*
  * Given the UID, return the user name.  If the uid does not exist,
  * returns NULL.  The caller must call free on the string that is
  * returned.
  */
+#if 0
 char *
 os_get_username(uid_t uid)
 {
@@ -809,6 +848,35 @@ os_get_username(uid_t uid)
 
     return (status == 0) ? name : NULL;
 }
+#endif
+
+int
+os_get_username(uid_t uid, char **name)
+{
+    int status;
+    char buffer[1024];
+    char *buf;
+    struct passwd pwd;
+    struct passwd *result;
+
+    buf = buffer;
+
+    status = os_getpwuid(uid, &pwd, &buf, 1024, &result);
+
+    if (status != 0 || result == NULL || result->pw_name == NULL) {
+	*name = NULL;
+    } else {
+	*name = strdup(result->pw_name);
+	if (*name == NULL) {
+	    status = errno;
+	}
+	if (buf != buffer) {
+	    free(buf);
+	}
+    }
+
+    return status;
+}
 
 /*
  * Interface for file-author.  Given a pathname, returns a new string
@@ -818,13 +886,16 @@ os_get_username(uid_t uid)
 char *
 os_file_author(const char *path)
 {
+    char *name;
     struct stat sb;
 
     if (stat(path, &sb) != 0) {
         return NULL;
     }
 
-    return os_get_username(sb.st_uid);
+    os_get_username(sb.st_uid, &name);
+
+    return name;
 }
 
 int
@@ -983,6 +1054,7 @@ get_homedir_from_name(const char* name, int *status)
  *
  * The caller must free the memory returned.
  */
+#if 0
 static char *
 get_homedir_from_uid(uid_t uid, int *status)
 {
@@ -995,7 +1067,35 @@ get_homedir_from_uid(uid_t uid, int *status)
     
     return (*status == 0) ? dir : NULL;
 }
+#endif
 
+static char *
+get_homedir_from_uid(uid_t uid, int *status)
+{
+    char buffer[1024];
+    char *buf;
+    char *dir;
+    struct passwd pwd;
+    struct passwd *result;
+
+    buf = buffer;
+
+    *status = os_getpwuid(uid, &pwd, &buf, 1024, &result);
+
+    if (*status != 0 || result == NULL || result->pw_dir == NULL) {
+	dir = NULL;
+    } else {
+	dir = strdup(result->pw_dir);
+	if (dir == NULL) {
+	    *status = errno;
+	}
+	if (buf != buffer) {
+	    free(buf);
+	}
+    }
+
+    return dir;
+}
 
 /*
  * Return the home directory of the user named NAME.  If NAME is the

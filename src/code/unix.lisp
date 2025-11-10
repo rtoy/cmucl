@@ -2542,6 +2542,7 @@
     ;; those octets to get a proper Lisp string.
     (string-decode (cast result c-string) :default)))
 
+#+nil
 (defun unix-get-username (uid)
   (let (name)
     (unwind-protect
@@ -2555,3 +2556,19 @@
 	     (cast name c-call:c-string)))
       (unless (null-alien name)
 	(free-alien name)))))
+
+(defun unix-get-username (uid)
+  (with-alien ((name (* c-call:c-string)))
+    (let ((result (alien-funcall
+		   (extern-alien "os_get_username"
+				 (function c-call:int
+					   uid-t
+					   (* c-call:c-string)))
+		   uid
+		   name)))
+      (cond ((zerop result)
+	     (case (deref name) c-call:c-string)
+	     (free-alien (deref name)))
+	    (t
+	     nil)))))
+    
