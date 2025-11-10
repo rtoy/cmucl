@@ -301,6 +301,7 @@ linux:static-analyzer:
   tags:
     - linux
   artifacts:
+    when: always
     paths:
       - analyzer.log
   needs:
@@ -312,15 +313,7 @@ linux:static-analyzer:
     # console.  If someday there's less or no output, we can consider
     # having the logs go to the console too.
     - make -C build-4/lisp clean
-    # From
-    # https://docs.gitlab.com/ci/yaml/script/#ignore-non-zero-exit-codes
-    #
-    # If the analyzer fails, we still want the logs to be saved.  So
-    # ignore the failure, but also print a message so we know
-    # something happened.
-    - exit_code=0
-    - make -C build-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 || exit_code=$?
-    - if [ $exit_code -ne 0 ]; then echo "Analyzer failed with code $exit_code"; fi;
+    - make -C build-4/lisp ANALYZER=-fanalyzer > analyzer.log 2>&1
 
 #### OpenSUSE jobs ####
 opensuse:install:
