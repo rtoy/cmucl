@@ -985,12 +985,11 @@ get_homedir_from_uid(uid_t uid, int *status)
     struct passwd *result;
 
     buf = buffer;
+    dir = NULL;
 
     *status = os_getpwuid(uid, &pwd, &buf, 1024, &result);
 
-    if (*status != 0 || result == NULL || result->pw_dir == NULL) {
-	dir = NULL;
-    } else {
+    if (*status == 0 && result != NULL && result->pw_dir != NULL) {
 	dir = strdup(result->pw_dir);
 	if (dir == NULL) {
 	    *status = errno;
