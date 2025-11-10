@@ -717,4 +717,4 @@
 	 ;; If a temp directory was created, remove it and all its
 	 ;; contents.  Is there a better way?
 	 (when ,dirname
-	   (recursive-delete-directory (namestring ,dirname)))))))
+	   (recursive-delete-directory ,dirname))))))
