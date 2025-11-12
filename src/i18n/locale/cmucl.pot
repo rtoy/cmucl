@@ -6016,6 +6016,14 @@ msgstr ""
 
 #: src/code/extensions.lisp
 msgid ""
+"Delete the directory Dirname.  If the Recursive is non-NIL,\n"
+"  recursively delete the directory Dirname including all files and\n"
+"  subdirectories. Dirname must be a pathname to a directory.  Any NAME\n"
+"  or TYPE components in Dirname are ignored."
+msgstr ""
+
+#: src/code/extensions.lisp
+msgid ""
 "Return a namestring to a temporary directory.  If Directory is not\n"
 " provided, the directory is created in an OS-dependent location.  The\n"
 " Prefix is a string that is used as a prefix for the name of the\n"

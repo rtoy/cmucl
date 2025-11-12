@@ -624,11 +624,7 @@
       (error "Unable to find path to temporary directory"))
 
     (unwind-protect
-	 (let* ((string (unix::%file->name (cast path c-call:c-string)))
-		(len (length string)))
-	   (if (char= #\/ (aref string (1- len)))
-	       string
-	       (concatenate 'string string "/")))
+	 (unix::%file->name (cast path c-call:c-string))
       (unless (alien:null-alien path)
 	(alien:free-alien path)))))
 
@@ -674,6 +670,7 @@
 	 (when (pathnamep ,filename)
 	   (delete-file ,filename))))))
 
+#+nil
 (defun recursive-delete-directory (dir)
   _N"Recursively delete the directory DIR.  All files and subdirectories of
   DIR are removed.  DIR must be a pathname to a directory.  Any NAME
@@ -689,6 +686,25 @@
   ;; Finally delete the directory.
   (unix:unix-rmdir (namestring dir))
   (values))
+
+(defun delete-directory (dirname &key recursive)
+  _N"Delete the directory Dirname.  If the Recursive is non-NIL,
+  recursively delete the directory Dirname including all files and
+  subdirectories. Dirname must be a pathname to a directory.  Any NAME
+  or TYPE components in Dirname are ignored."
+  (declare (type pathname dirname))
+  (when recusive
+    ;; Find all the files or directories in DIRNAME.
+    (dolist (path (directory (merge-pathnames "*.*" dirname)))
+      ;; If the path is a directory, recursively delete the directory.
+      ;; Otherwise delete the file.  We do not follow any symlinks.
+      (if (eq (unix:unix-file-kind (namestring path)) :directory)
+	  (delete-directory path :recursive t)
+	  (delete-file path))))
+  ;; Finally delete the directory.
+  (unix:unix-rmdir (namestring dir))
+  (values))
+
 
 ;;; WITH-TEMPORARY-DIRECTORY  -- Public
 (defmacro with-temporary-directory ((dirname &key directory (prefix  "cmucl-temp-dir-"))
@@ -717,4 +733,4 @@
 	 ;; If a temp directory was created, remove it and all its
 	 ;; contents.  Is there a better way?
 	 (when ,dirname
-	   (recursive-delete-directory ,dirname))))))
+	   (delete-directory ,dirname :recursive t))))))

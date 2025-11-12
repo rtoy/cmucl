@@ -645,10 +645,25 @@ os_temporary_directory(void)
      * Otherwise, just assume "/tmp" will work.
      */
     char *tmp_path = getenv("TMP");
+    char *result;
+    int len;
 
     if (tmp_path == NULL) {
 	tmp_path = "/tmp";
     }
 
-    return strdup(tmp_path);
+    /* Append a slash if needed */
+    len = strlen(tmp_path);
+    result = malloc(len + 1);
+
+    /* If malloc fails, just return NULL. */
+    if (result) {
+	strcpy(result, tmp_path);
+
+	if (tmp_path[len] != '/') {
+	    strcat(result, "/");
+	}
+    }
+	    
+    return result;
 }
