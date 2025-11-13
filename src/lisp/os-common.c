@@ -737,7 +737,7 @@ os_lstat(const char* path, uint64_t *dev, uint64_t *ino, unsigned int *mode, uin
  * if we needed to retry getpwuid with a larger buffer.  The remaining
  * parameters are the same as for getpwuid.
  */
-int
+static int
 os_getpwuid(uid_t uid, struct passwd *pwd, char **buffer, size_t buflen, struct passwd **result)
 {
     int status;
@@ -789,7 +789,7 @@ os_get_user_name(uid_t uid, int *status)
 
     buf = buffer;
 
-    *status = os_getpwuid(uid, &pwd, &buf, 1024, &result);
+    *status = os_getpwuid(uid, &pwd, &buf, sizeof(buffer), &result);
 
     if (*status != 0 || result == NULL || result->pw_name == NULL) {
 	name = NULL;
@@ -992,7 +992,7 @@ get_homedir_from_uid(uid_t uid, int *status)
     buf = buffer;
     dir = NULL;
 
-    *status = os_getpwuid(uid, &pwd, &buf, 1024, &result);
+    *status = os_getpwuid(uid, &pwd, &buf, sizeof(buffer), &result);
 
     if (*status == 0 && result != NULL && result->pw_dir != NULL) {
 	dir = strdup(result->pw_dir);
