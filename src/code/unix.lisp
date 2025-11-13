@@ -2541,3 +2541,28 @@
     ;; Result from strerror can be localized so we need to decode
     ;; those octets to get a proper Lisp string.
     (string-decode (cast result c-string) :default)))
+
+(defun unix-get-username (uid)
+  _N"Returns a string that is the user name corresponding to the given UID.
+  If no such uid exists or if the user name does not exist, NIL is
+  returned."
+  (with-alien ((status c-call:int))
+    (let (result)
+      (unwind-protect
+	   (progn
+	     (setf result
+		   (alien-funcall
+		    (extern-alien "os_get_user_name"
+				  (function (* c-call:c-string)
+					    uid-t
+					    (* c-call:int)))
+		    uid
+		    (addr status)))
+	     (values 
+	      (if (and (zerop status)
+		       (not (null-alien result)))
+		  (cast result c-call:c-string)
+		  nil)
+	      status))
+	(free-alien name)))))
+    

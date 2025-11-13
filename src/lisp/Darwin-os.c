@@ -593,7 +593,7 @@ os_temporary_directory(void)
 
     len = confstr(_CS_DARWIN_USER_TEMP_DIR, path, PATH_MAX);
     if (len == 0 || len > PATH_MAX || (len == PATH_MAX && path[len - 1] != '/')) {
-	strlcpy(path, "/tmp/");
+	strcpy(path, "/tmp/");
     } else if (path[len - 1] != '/') {
 	strcat(path, "/");
     }
