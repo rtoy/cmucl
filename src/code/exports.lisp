@@ -1211,7 +1211,9 @@
 
 	     "*TRUST-DYNAMIC-EXTENT-DECLARATIONS*"
 
-	     "INVALID-FASL")
+	     "INVALID-FASL"
+	     "WITH-TEMPORARY-DIRECTORY"
+	     "WITH-TEMPORARY-FILE")
   ;; gencgc features
   #+gencgc
   (:export "GET-GC-ASSERTIONS"
