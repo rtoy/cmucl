@@ -23,6 +23,7 @@
 #include <dlfcn.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include "os.h"
 #include "arch.h"
@@ -571,3 +572,30 @@ os_support_sse2()
     return TRUE;
 }
 #endif
+
+/*
+ * Return a new string containing the path to an OS-dependent location
+ * where temporary files/directories can be stored.  If NULL is
+ * returned, such a location could not be found or some other error
+ * happened.
+ *
+ * Caller must call free() on the string returned.
+ */
+char *
+os_temporary_directory(void)
+{
+    /*
+     * macosx has a secure per-user temporary directory.
+     * Don't cache the result as this is only called once.
+     */
+    size_t len;
+    char path[PATH_MAX];
+
+    len = confstr(_CS_DARWIN_USER_TEMP_DIR, path, PATH_MAX);
+    if (len == 0 || len > PATH_MAX || (len == PATH_MAX && path[len - 1] != '/')) {
+	strlcpy(path, "/tmp/");
+    } else if (path[len - 1] != '/') {
+	strcat(path, "/");
+    }
+    return strdup(path);
+}
