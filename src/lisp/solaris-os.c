@@ -646,9 +646,9 @@ os_support_sse2()
 
 /*
  * Return a new string containing the path to an OS-dependent location
- * where temporary files/directories can be stored.  If NULL is
- * returned, such a location could not be found or some other error
- * happened.
+ * where temporary files/directories can be stored.  The string must
+ * end with a slash.  If NULL is returned, such a location could not
+ * be found or some other error happened.
  *
  * Caller must call free() on the string returned.
  */
@@ -659,11 +659,21 @@ os_temporary_directory(void)
      * If the TMP envvar is set, use that as the temporary directory.
      * Otherwise, just assume "/tmp" will work.
      */
-    char *tmp_path = getenv("TMP");
+    char *tmp;
+    size_t len;
+    char *result;
 
-    if (tmp_path == NULL) {
-	tmp_path = "/tmp";
+    tmp = getenv("TMP");
+    if (tmp == NULL) {
+	return strdup("/tmp/");
     }
-
-    return strdup(tmp_path);
+    len = strlen(tmp);
+    if (tmp[len] == '/') {
+	return strdup(tmp);
+    }
+    result = malloc(len + 2);
+    if (result) {
+	sprintf(result, "%s/", tmp);
+    }
+    return result;
 }
