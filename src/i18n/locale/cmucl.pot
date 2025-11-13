@@ -6009,13 +6009,6 @@ msgstr ""
 
 #: src/code/extensions.lisp
 msgid ""
-"Recursively delete the directory DIR.  All files and subdirectories of\n"
-"  DIR are removed.  DIR must be a pathname to a directory.  Any NAME\n"
-"  or TYPE components in DIR are ignored."
-msgstr ""
-
-#: src/code/extensions.lisp
-msgid ""
 "Delete the directory Dirname.  If the Recursive is non-NIL,\n"
 "  recursively delete the directory Dirname including all files and\n"
 "  subdirectories. Dirname must be a pathname to a directory.  Any NAME\n"
