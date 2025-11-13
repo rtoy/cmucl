@@ -911,7 +911,7 @@ os_software_version(void)
 }
 
 static char *
-get_homedir_from_name(const char* name, int *status)
+get_homedir_by_user_name(const char* name, int *status)
 {
     int buflen;
     char *buf = NULL;
@@ -981,7 +981,7 @@ get_homedir_from_name(const char* name, int *status)
  * The caller must free the memory returned.
  */
 static char *
-get_homedir_from_uid(uid_t uid, int *status)
+get_homedir_by_uid(uid_t uid, int *status)
 {
     char buffer[1024];
     char *buf;
@@ -1021,10 +1021,10 @@ char *
 os_get_user_homedir(const char* name, int *status)
 {
     if (strlen(name) == 0) {
-	return get_homedir_from_uid(getuid(), status);
+	return get_homedir_by_uid(getuid(), status);
     }
 
-    return get_homedir_from_name(name, status);
+    return get_homedir_by_user_name(name, status);
 }
     
 
