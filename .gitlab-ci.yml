@@ -301,6 +301,7 @@ linux:static-analyzer:
   tags:
     - linux
   artifacts:
+    when: always
     paths:
       - analyzer.log
   needs:
@@ -312,7 +313,7 @@ linux:static-analyzer:
     # console.  If someday there's less or no output, we can consider
     # having the logs go to the console too.
     - make -C build-4/lisp clean
-    - make -C build-4/lisp CFLAGS=-fanalyzer > analyzer.log 2>&1 
+    - make -C build-4/lisp ANALYZER=-fanalyzer > analyzer.log 2>&1
 
 #### OpenSUSE jobs ####
 opensuse:install:
