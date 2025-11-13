@@ -54,6 +54,7 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (pushnew :no-hemlock *features*)
 
 (load "target:code/exports")
+(load "target:code/exports-unix")
 (load "target:tools/setup" :if-source-newer :load-source)
 (comf "target:tools/setup" :load t)
 

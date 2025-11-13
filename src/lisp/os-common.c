@@ -26,6 +26,9 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <time.h>
+#if defined(DARWIN)
+#include <limits.h>
+#endif
 
 #include "os.h"
 #include "internals.h"
@@ -1027,7 +1030,6 @@ os_get_user_homedir(const char* name, int *status)
     return get_homedir_by_user_name(name, status);
 }
     
-
 /*
  * Return a new string (or NULL) for the current working directory.
  * The caller must free this space.
