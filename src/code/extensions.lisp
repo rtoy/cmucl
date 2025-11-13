@@ -702,7 +702,7 @@
 	  (delete-directory path :recursive t)
 	  (delete-file path))))
   ;; Finally delete the directory.
-  (unix:unix-rmdir (namestring dir))
+  (unix:unix-rmdir (namestring dirname))
   (values))
 
 

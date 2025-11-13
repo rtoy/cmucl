@@ -644,26 +644,22 @@ os_temporary_directory(void)
      * If the TMP envvar is set, use that as the temporary directory.
      * Otherwise, just assume "/tmp" will work.
      */
-    char *tmp_path = getenv("TMP");
+    char *tmp;
+    size_t len;
     char *result;
-    int len;
 
-    if (tmp_path == NULL) {
-	tmp_path = "/tmp";
+    tmp = getenv("TMP");
+    if (tmp == NULL) {
+	return strdup("/tmp/");
     }
-
-    /* Append a slash if needed */
-    len = strlen(tmp_path);
-    result = malloc(len + 1);
-
-    /* If malloc fails, just return NULL. */
+    len = strlen(tmp);
+    if (tmp[len] == '/') {
+	return strdup(tmp);
+    }
+    result = malloc(len + 2);
     if (result) {
-	strcpy(result, tmp_path);
-
-	if (tmp_path[len] != '/') {
-	    strcat(result, "/");
-	}
+	sprintf(result, "%s/", tmp);
     }
-	    
     return result;
+}
 }

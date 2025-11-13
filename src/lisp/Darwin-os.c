@@ -588,27 +588,14 @@ os_temporary_directory(void)
      * macosx has a secure per-user temporary directory.
      * Don't cache the result as this is only called once.
      */
-    int len;
-    char *result;
+    size_t len;
     char path[PATH_MAX];
 
-    int path_size = confstr(_CS_DARWIN_USER_TEMP_DIR, path, PATH_MAX);
-    if (path_size == 0 || path_size > PATH_MAX) {
-	strlcpy(path, "/tmp", sizeof(path));
+    len = confstr(_CS_DARWIN_USER_TEMP_DIR, path, PATH_MAX);
+    if (len == 0 || len > PATH_MAX || (len == PATH_MAX && path[len - 1] != '/')) {
+	strlcpy(path, "/tmp/");
+    } else if (path[len - 1] != '/') {
+	strcat(path, "/");
     }
-
-    /* Append a slash if needed */
-    len = strlen(path);
-    result = malloc(len + 1);
-    
-    /* If malloc fails, just return NULL. */
-    if (result) {
-	strcpy(result, path);
-
-	if (path[len] != '/') {
-	    strcat(result, "/");
-	}
-    }
-	
-    return result;
+    return strdup(path);
 }
