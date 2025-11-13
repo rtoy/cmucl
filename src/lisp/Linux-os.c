@@ -631,9 +631,9 @@ os_support_sse2(void)
 
 /*
  * Return a new string containing the path to an OS-dependent location
- * where temporary files/directories can be stored.  If NULL is
- * returned, such a location could not be found or some other error
- * happened.
+ * where temporary files/directories can be stored.  The string must
+ * end with a slash.  If NULL is returned, such a location could not
+ * be found or some other error happened.
  *
  * Caller must call free() on the string returned.
  */
@@ -661,5 +661,4 @@ os_temporary_directory(void)
 	sprintf(result, "%s/", tmp);
     }
     return result;
-}
 }
