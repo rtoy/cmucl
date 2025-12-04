@@ -704,4 +704,3 @@ In particular steps 3, 4, and 5 can be combined into one by using the
 -c, -r, and -l options for cross-build-world.sh.  The -c option cleans
 out the targe and cross directories; -r does step 4; and -l does step
 5.
-
