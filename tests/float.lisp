@@ -388,7 +388,7 @@
    (list (complex (scale-float 1d0 -1074) (scale-float 1d0 -1074))
 	 (complex (scale-float 1d0 -1073) (scale-float 1d0 -1074))
 	 (complex 0.6d0 0.2d0)
-	 53 least-positive-double-float)
+	 52 least-positive-double-float)
    ;; 9
    (list (complex (scale-float 1d0 1015) (scale-float 1d0 -989))
 	 (complex (scale-float 1d0 1023) (scale-float 1d0 1023))
@@ -456,7 +456,7 @@
       (min (real-ulp (realpart diff))
 	   (real-ulp (imagpart diff))))))
 
-(define-test complex-division
+(define-test complex-division.double
   (:tag :issues)
   (loop for k from 1
 	for test in *test-cases*
@@ -473,3 +473,35 @@
 			     k x y z z-true diff rel)
 	       (assert-true (<= ulp max-ulp)
 			    k x y z z-true diff ulp max-ulp)))))
+
+(define-test complex-division.misc
+    (:tag :issue)
+  (let ((num '(1
+	       1/2
+	       1.0
+	       1d0
+	       #c(1 2)
+	       #c(1.0 2.0)
+	       #c(1d0 2d0)
+	       #c(1w0 2w0))))
+    ;; Try all combinations of divisions of different types.  This is
+    ;; primarily to test that we got all the numeric contagion cases
+    ;; for division in CL:/.
+    (dolist (x num)
+      (dolist (y num)
+	(assert-true (/ x y)
+		     x y)))))
+
+(define-test complex-division.single
+    (:tag :issues)
+  (let ((x #c(1 2))
+	(y (complex (expt 2 127) (expt 2 127)))
+	(expected (coerce (/ x y)
+			  '(complex single-float))))
+    ;; A naive implementation of complex division would cause an
+    ;; overflow in computing the denominator.
+    (assert-equal expected
+		  (/ (coerce x '(complex single-float))
+		     (coerce y '(complex single-float)))
+		  x
+		  y)))
