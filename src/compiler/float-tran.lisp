@@ -1918,12 +1918,12 @@
   (frob (complex double-float) 1d0))
 
 (macrolet
-    ((frob (type)
-       (let ((name (symbolicate "CDIV-" type)))
+    ((frob (type name)
        `(deftransform / ((x y) ((complex ,type) (complex ,type)) *)
-		      (,name x y)))))
-  (frob double-float)
-  (frob single-float))
+		      (,name x y))))
+  (frob double-float kernel::cdiv-double-float)
+  (frob single-float kernel::cdiv-single-float))
+
 
 ;;;; Complex contagion:
 
