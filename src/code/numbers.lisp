@@ -593,180 +593,18 @@
 	    (build-ratio x y)
 	    (build-ratio (truncate x gcd) (truncate y gcd))))))
 
-
-#+nil
-(defun two-arg-/ (x y)
-  (number-dispatch ((x number) (y number))
-    (float-contagion / x y (ratio integer))
-     
-    ((complex complex)
-     (let* ((rx (realpart x))
-	    (ix (imagpart x))
-	    (ry (realpart y))
-	    (iy (imagpart y)))
-       (if (> (abs ry) (abs iy))
-	   (let* ((r (/ iy ry))
-		  (dn (+ ry (* r iy))))
-	     (canonical-complex (/ (+ rx (* ix r)) dn)
-				(/ (- ix (* rx r)) dn)))
-	   (let* ((r (/ ry iy))
-		  (dn (+ iy (* r ry))))
-	     (canonical-complex (/ (+ (* rx r) ix) dn)
-				(/ (- (* ix r) rx) dn))))))
-    (((foreach integer ratio single-float double-float) complex)
-     (let* ((ry (realpart y))
-	    (iy (imagpart y)))
-       (if (> (abs ry) (abs iy))
-	   (let* ((r (/ iy ry))
-		  (dn (* ry (+ 1 (* r r)))))
-	     (canonical-complex (/ x dn)
-				(/ (- (* x r)) dn)))
-	   (let* ((r (/ ry iy))
-		  (dn (* iy (+ 1 (* r r)))))
-	     (canonical-complex (/ (* x r) dn)
-				(/ (- x) dn))))))
-    ((complex (or rational float))
-     (canonical-complex (/ (realpart x) y)
-			(/ (imagpart x) y)))
-    
-    ((ratio ratio)
-     (let* ((nx (numerator x))
-	    (dx (denominator x))
-	    (ny (numerator y))
-	    (dy (denominator y))
-	    (g1 (gcd nx ny))
-	    (g2 (gcd dx dy)))
-       (build-ratio (* (maybe-truncate nx g1) (maybe-truncate dy g2))
-		    (* (maybe-truncate dx g2) (maybe-truncate ny g1)))))
-    
-    ((integer integer)
-     (integer-/-integer x y))
-    
-    ((integer ratio)
-     (if (zerop x)
-	 0
-	 (let* ((ny (numerator y))
-		(dy (denominator y))
-		(gcd (gcd x ny)))
-	   (build-ratio (* (maybe-truncate x gcd) dy)
-			(maybe-truncate ny gcd)))))
-    
-    ((ratio integer)
-     (let* ((nx (numerator x))
-	    (gcd (gcd nx y)))
-       (build-ratio (maybe-truncate nx gcd)
-		    (* (maybe-truncate y gcd) (denominator x)))))))
-
-;; An implementation of Baudin and Smith's robust complex division.
-;; This is a pretty straightforward translation of the original in
-;; https://arxiv.org/pdf/1210.4539.
-#+nil
-(eval-when (:compile-toplevel :load-toplevel :execute)
-(macrolet
-    ((frob (type max-float min-float eps-float)
-       (let ((name (symbolicate "CDIV-" type)))
-	 `(progn
-	    (let ((ov ,max-float)
-		  (un ,min-float)
-		  (eps ,eps-float))
-	      (defun ,name (x y)
-		(declare (type (complex ,type) x y))
-		(labels
-		    ((internal-compreal (a b c d r tt)
-		       (declare (double-float a b c d r tt))
-		       ;; Iteration 1:  compare r against DBL_MIN instead of 0
-		       (cond ((/= r 0)
-			      (let ((br (* b r)))
-				(if (/= br 0)
-				    (* (+ a br) tt)
-				    (+ (* a tt)
-				       (* (* b tt)
-					  r)))))
-			     (t
-			      (* (+ a (* d (/ b c)))
-				 tt))))
-
-		     (robust-subinternal (a b c d)
-		       (declare (double-float a b c d))
-		       (let* ((r (/ d c))
-			      (tt (/ (+ c (* d r)))))
-			 (let ((e (internal-compreal a b c d r tt))
-			       (f (internal-compreal b (- a) c d r tt)))
-			   #+nil(format t "subint: e f = ~A ~A~%" e f)
-			   (values e
-				   f))))
-
-		     (robust-internal (x y)
-		       (declare (type (complex ,type) x y))
-		       #+nil(format t "x = ~A, y = ~A~%" x y)
-		       (let ((a (realpart x))
-			     (b (imagpart x))
-			     (c (realpart y))
-			     (d (imagpart y)))
-			 (cond
-			   ((<= (abs d) (abs c))
-			    (multiple-value-bind (e f)
-				(robust-subinternal a b c d)
-			      #+nil(format t "1: e f = ~A ~A~%" e f)
-			      (complex e f)))
-			   (t
-			    (multiple-value-bind (e f)
-				(robust-subinternal b a d c)
-			      #+nil(format t "2: e f = ~A ~A~%" e f)
-			      (complex e (- f))))))))
-		  (let* ((a (realpart x))
-			 (b (imagpart x))
-			 (c (realpart y))
-			 (d (imagpart y))
-			 (ab (max (abs a) (abs b)))
-			 (cd (max (abs c) (abs d)))
-			 (b 2d0)
-			 (s 1d0)
-			 (be (/ b (* eps eps))))
-		    (when (>= ab (/ ov 2))
-		      (setf x (/ x 2)
-			    s (* s 2)))
-		    (when (>= cd (/ ov 2))
-		      (setf y (/ y 2)
-			    s (/ s 2)))
-		    (when (<= ab (* un (/ b eps)))
-		      (setf x (* x be)
-			    s (/ s be)))
-		    (when (<= cd (* un (/ b eps)))
-		      (setf y (* y be)
-			    s (* s be)))
-		    ;; Iteration 2
-		    #+nil
-		    (when (< cd eps)
-		      (setf x (/ x eps))
-		      (setf y (/ y eps)))
-
-		    ;; Iteration 4
-		    #+nil
-		    (when (> cd (/ ov 2))
-		      (setf x (/ x 2)
-			    y (/ y 2)))
-
-		    (* s
-		       (robust-internal x y))))))))))
-  ;; The eps value for double-float is determined by looking at the
-  ;; value of %eps in Scilab.
-  (frob double-float most-positive-double-float least-positive-normalized-double-float
-	(scale-float 1d0 -52))
-  ;; The eps value here is a guess.
-  (frob single-float most-positive-single-float least-positive-normalized-single-float
-	(scale-float 1f0 -22)))
-)
-
+;; An implementation of Baudin and Smith's robust complex division for
+;; double-floats.  This is a pretty straightforward translation of the
+;; original in https://arxiv.org/pdf/1210.4539.
 (let ((ov most-positive-double-float)
       (un least-positive-normalized-double-float)
+      ;; This is the value of Scilab's %eps variable.
       (eps (scale-float 1d0 -52)))
   (defun cdiv-double-float (x y)
     (declare (type (complex double-float) x y))
     (labels
 	((internal-compreal (a b c d r tt)
 	   (declare (double-float a b c d r tt))
-	   ;; Iteration 1:  compare r against DBL_MIN instead of 0
 	   (cond ((/= r 0)
 		  (let ((br (* b r)))
 		    (if (/= br 0)
@@ -777,7 +615,6 @@
 		 (t
 		  (* (+ a (* d (/ b c)))
 		     tt))))
-
 	 (robust-subinternal (a b c d)
 	   (declare (double-float a b c d))
 	   (let* ((r (/ d c))
@@ -787,7 +624,6 @@
 	       #+nil(format t "subint: e f = ~A ~A~%" e f)
 	       (values e
 		       f))))
-
 	 (robust-internal (x y)
 	   (declare (type (complex double-float) x y))
 	   #+nil(format t "x = ~A, y = ~A~%" x y)
@@ -827,21 +663,11 @@
 	(when (<= cd (* un (/ b eps)))
 	  (setf y (* y be)
 		s (* s be)))
-	;; Iteration 2
-	#+nil
-	(when (< cd eps)
-	  (setf x (/ x eps))
-	  (setf y (/ y eps)))
-
-	;; Iteration 4
-	#+nil
-	(when (> cd (/ ov 2))
-	  (setf x (/ x 2)
-		y (/ y 2)))
-
 	(* s
 	   (robust-internal x y))))))
 
+;; Smith's algorithm for complex division for (complex single-float).
+;; We convert the parts to double-floats before computing the result.
 (defun cdiv-single-float (x y)
   (declare (type (complex single-float) x y))
   (let ((a (float (realpart x) 1d0))
@@ -877,12 +703,15 @@
      (cdiv-single-float (coerce x '(complex single-float))
 			y))
     
-    (((foreach integer ratio single-float double-float (complex rational) (complex single-float))
+    (((foreach integer ratio single-float double-float (complex rational)
+	       (complex single-float))
       (complex double-float))
      (cdiv-double-float (coerce x '(complex double-float))
 			y))
     (((complex double-double-float)
-      (foreach (complex rational) (complex single-float) (complex double-float) (complex double-double-float)))
+      (foreach (complex rational) (complex single-float) (complex double-float)
+	       (complex double-double-float)))
+     ;; We should do something better for double-double floats.
      (let ((a (realpart x))
 	   (b (imagpart x))
 	   (c (realpart y))
@@ -935,6 +764,8 @@
 				(/ (- x) dn))))))
     (((complex rational)
       (complex rational))
+     ;; We probably don't need to do Smith's algorithm for rationals.
+     ;; A naive implementation of coplex division has no issues.
      (let ((a (realpart x))
 	   (b (imagpart x))
 	   (c (realpart y))
@@ -952,7 +783,8 @@
 		     (f (/ (- b (* a r)) denom)))
 		(canonical-complex e f))))))     
 
-    (((foreach (complex rational) (complex single-float) (complex double-float) (complex double-double-float))
+    (((foreach (complex rational) (complex single-float) (complex double-float)
+	       (complex double-double-float))
       (or rational float))
      (canonical-complex (/ (realpart x) y)
 			(/ (imagpart x) y)))
@@ -962,24 +794,6 @@
      (cdiv-double-float (coerce x '(complex double-float))
 			(coerce y '(complex double-float))))
 
-    #+nil
-    (((foreach integer ratio single-float double-float) complex)
-     (let* ((ry (realpart y))
-	    (iy (imagpart y)))
-       (if (> (abs ry) (abs iy))
-	   (let* ((r (/ iy ry))
-		  (dn (* ry (+ 1 (* r r)))))
-	     (canonical-complex (/ x dn)
-				(/ (- (* x r)) dn)))
-	   (let* ((r (/ ry iy))
-		  (dn (* iy (+ 1 (* r r)))))
-	     (canonical-complex (/ (* x r) dn)
-				(/ (- x) dn))))))
-    #+nil
-    ((complex (or rational float))
-     (canonical-complex (/ (realpart x) y)
-			(/ (imagpart x) y)))
-    
     ((ratio ratio)
      (let* ((nx (numerator x))
 	    (dx (denominator x))
@@ -1007,91 +821,6 @@
 	    (gcd (gcd nx y)))
        (build-ratio (maybe-truncate nx gcd)
 		    (* (maybe-truncate y gcd) (denominator x)))))))
-
-
-#+nil
-(defun two-arg-/ (x y)
-  (number-dispatch ((x number) (y number))
-    (float-contagion / x y (ratio integer))
-
-    (((complex double-float) (complex double-float))
-     (cdiv-double-float x y))
-    (((complex double-float) (complex single-float))
-     (cdiv-double-float x (coerce y '(complex double-float))))
-    
-    (((complex single-float) (complex double-float))
-     (cdiv-double-float (coerce y '(complex double-float))
-			y))
-    (((complex single-float) (complex single-float))
-     (cdiv-single-float x y))
-    
-    #+nil
-    (((foreach (complex single-float) (complex double-float))
-      (complex double-float))
-     (cdiv-double-float (complex (float (realpart x) 1d0)
-				 (float (imagpart x) 1d0))
-			y))
-    (((foreach (complex rational) (complex double-double-float))
-      (foreach (complex rational) (complex double-double-float)))
-     (let* ((rx (realpart x))
-	    (ix (imagpart x))
-	    (ry (realpart y))
-	    (iy (imagpart y)))
-       (if (> (abs ry) (abs iy))
-	   (let* ((r (/ iy ry))
-		  (dn (+ ry (* r iy))))
-	     (canonical-complex (/ (+ rx (* ix r)) dn)
-				(/ (- ix (* rx r)) dn)))
-	   (let* ((r (/ ry iy))
-		  (dn (+ iy (* r ry))))
-	     (canonical-complex (/ (+ (* rx r) ix) dn)
-				(/ (- (* ix r) rx) dn))))))
-    (((foreach integer ratio single-float double-float)
-      (foreach (complex rational) (complex double-double-float)))
-     (let* ((ry (realpart y))
-	    (iy (imagpart y)))
-       (if (> (abs ry) (abs iy))
-	   (let* ((r (/ iy ry))
-		  (dn (* ry (+ 1 (* r r)))))
-	     (canonical-complex (/ x dn)
-				(/ (- (* x r)) dn)))
-	   (let* ((r (/ ry iy))
-		  (dn (* iy (+ 1 (* r r)))))
-	     (canonical-complex (/ (* x r) dn)
-				(/ (- x) dn))))))
-    (((foreach (complex rational) (complex double-double-float))
-      (or rational float))
-     (canonical-complex (/ (realpart x) y)
-			(/ (imagpart x) y)))
-    
-    ((ratio ratio)
-     (let* ((nx (numerator x))
-	    (dx (denominator x))
-	    (ny (numerator y))
-	    (dy (denominator y))
-	    (g1 (gcd nx ny))
-	    (g2 (gcd dx dy)))
-       (build-ratio (* (maybe-truncate nx g1) (maybe-truncate dy g2))
-		    (* (maybe-truncate dx g2) (maybe-truncate ny g1)))))
-    
-    ((integer integer)
-     (integer-/-integer x y))
-    
-    ((integer ratio)
-     (if (zerop x)
-	 0
-	 (let* ((ny (numerator y))
-		(dy (denominator y))
-		(gcd (gcd x ny)))
-	   (build-ratio (* (maybe-truncate x gcd) dy)
-			(maybe-truncate ny gcd)))))
-    
-    ((ratio integer)
-     (let* ((nx (numerator x))
-	    (gcd (gcd nx y)))
-       (build-ratio (maybe-truncate nx gcd)
-		    (* (maybe-truncate y gcd) (denominator x)))))))
-
 
 (defun %negate (n)
   (number-dispatch ((n number))
