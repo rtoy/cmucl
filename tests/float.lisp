@@ -342,3 +342,134 @@
 			     (x86::x87-floating-point-modes)))))
     (assert-true (typep new-mode 'x86::float-modes))
     (assert-equal new-mode (setf (x86::x87-floating-point-modes) new-mode))))
+
+;; Tests for complex division.  From Baudin and Smith, and one test
+;; from Maxima.  Each test is a list of values: x, y, z-true,
+;; bits-of-accuracy, and max-ulp.
+(defparameter *test-cases*
+  (list
+   ;; 1
+   (list (complex 1d0 1d0)
+	 (complex 1d0 (scale-float 1d0 1023))
+	 (complex (scale-float 1d0 -1023)
+		  (scale-float -1d0 -1023))
+	 53 least-positive-double-float)
+   ;; 2
+   (list (complex 1d0 1d0)
+	 (complex (scale-float 1d0 -1023) (scale-float 1d0 -1023))
+	 (complex (scale-float 1d0 1023) 0)
+	 53 least-positive-double-float)
+   ;; 3
+   (list (complex (scale-float 1d0 1023) (scale-float 1d0 -1023))
+	 (complex (scale-float 1d0 677) (scale-float 1d0 -677))
+	 (complex (scale-float 1d0 346) (scale-float -1d0 -1008))
+	 53 least-positive-double-float)
+   ;; 4
+   (list (complex (scale-float 1d0 1023) (scale-float 1d0 1023))
+	 (complex 1d0 1d0)
+	 (complex (scale-float 1d0 1023) 0)
+	 53 least-positive-double-float)
+   ;; 5
+   (list (complex (scale-float 1d0 1020) (scale-float 1d0 -844))
+	 (complex (scale-float 1d0 656) (scale-float 1d0 -780))
+	 (complex (scale-float 1d0 364) (scale-float -1d0 -1072))
+	 53 least-positive-double-float)
+   ;; 6
+   (list (complex (scale-float 1d0 -71) (scale-float 1d0 1021))
+	 (complex (scale-float 1d0 1001) (scale-float 1d0 -323))
+	 (complex (scale-float 1d0 -1072) (scale-float 1d0 20))
+	 53 least-positive-double-float)
+   ;; 7
+   (list (complex (scale-float 1d0 -347) (scale-float 1d0 -54))
+	 (complex (scale-float 1d0 -1037) (scale-float 1d0 -1058))
+	 (complex 3.898125604559113300d289 8.174961907852353577d295)
+	 53 least-positive-double-float)
+   ;; 8
+   (list (complex (scale-float 1d0 -1074) (scale-float 1d0 -1074))
+	 (complex (scale-float 1d0 -1073) (scale-float 1d0 -1074))
+	 (complex 0.6d0 0.2d0)
+	 53 least-positive-double-float)
+   ;; 9
+   (list (complex (scale-float 1d0 1015) (scale-float 1d0 -989))
+	 (complex (scale-float 1d0 1023) (scale-float 1d0 1023))
+	 (complex 0.001953125d0 -0.001953125d0)
+	 53 least-positive-double-float)
+   ;; 10
+   (list (complex (scale-float 1d0 -622) (scale-float 1d0 -1071))
+	 (complex (scale-float 1d0 -343) (scale-float 1d0 -798))
+	 (complex 1.02951151789360578d-84 6.97145987515076231d-220)
+	 53 least-positive-double-float)
+   ;; From Maxima
+   (list #c(5.43d-10 1.13d-100)
+	 #c(1.2d-311 5.7d-312)
+	 #c(3.691993880674614517999740937026568563794896024143749539711267954d301
+	    -1.753697093319947872394996242210428954266103103602859195409591583d301)
+	 53 least-positive-double-float)
+   ))
+
+(defun rel-err (computed expected)
+  (flet ((rerr (c e)
+	   (let ((diff (abs (- c e))))
+	     (if (zerop diff)
+		 (float-digits diff)
+		 (floor (- (log (/ diff (abs e)) 2d0)))))))
+    (min (rerr (realpart computed) (realpart expected))
+	 (rerr (imagpart computed) (imagpart expected)))))
+
+(defconstant +most-negative-normalized-float-exponent+
+  (nth-value 1 (decode-float least-positive-normalized-double-float)))
+
+(defun power-of-two-p (n)
+  (cond ((integerp n)
+	 (and (> n 0)
+	      (= 0 (logand (abs n) (+ (abs n) -1)))))
+	((floatp n)
+	 (and (> n 0.0)
+	      (= 0.5 (decode-float n))))))
+
+(defun ulp (f)
+  (cond
+    ((= f 0.0)
+     least-positive-double-float)
+    (t
+     (multiple-value-bind (significand expon)
+	 (decode-float f)
+       ;; If the exponent is smaller than the smallest
+       ;; normalized exponent, the ULP is the smallest float.
+       ;; Otherwise, the ULP has an exponent that is
+       ;; float-digits smaller, except when the fraction is a
+       ;; power of two, where we have to increase the exponent
+       ;; by 1.
+       (if (> expon +most-negative-normalized-float-exponent+)
+	   (scale-float 0.5d0
+			(- expon
+			   (float-digits f)
+			   (if (power-of-two-p significand)
+			       0
+			       -1)))
+	   least-positive-double-float)))))
+
+(defun complex-ulp (computed expected)
+  (flet ((real-ulp (f)
+	   (ulp (abs f))))
+    (let ((diff (- computed expected)))
+      (min (real-ulp (realpart diff))
+	   (real-ulp (imagpart diff))))))
+
+(define-test complex-division
+  (:tag :issues)
+  (loop for k from 1
+	for test in *test-cases*
+	do
+	   (destructuring-bind (x y z-true expected-rel max-ulp)
+	       test
+	     (let* ((z (/ x y))
+		    (diff (- z z-true))
+		    (rel (rel-err z z-true))
+		    (ulp (complex-ulp z z-true)))
+	       
+	       (assert-equal expected-rel
+			     rel
+			     k x y z z-true diff rel)
+	       (assert-true (<= ulp max-ulp)
+			    k x y z z-true diff ulp max-ulp)))))

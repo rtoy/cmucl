@@ -1804,7 +1804,7 @@
   #+double-double
   (frob double-double-float))
   
-#+(and sse2 complex-fp-vops)
+#+(and nil sse2 complex-fp-vops)
 (macrolet
     ((frob (type one)
        `(deftransform / ((x y) (,type ,type) *
@@ -1844,6 +1844,177 @@
 		     dn)))))))
   (frob (complex single-float) 1f0)
   (frob (complex double-float) 1d0))
+
+#+(and nil sse2 complex-fp-vops)
+(macrolet
+    ((frob (type one)
+       `(deftransform / ((x y) (,type ,type) *
+			 :policy (> speed space))
+	  ;; Divide a complex by a complex
+
+	  ;; Here's how we do a complex division
+	  ;;
+	  ;; Compute (xr + i*xi)/(yr + i*yi)
+	  ;;
+	  ;; Assume |xi| < |xr| and |yi| < |yr|.  Then
+	  ;;
+	  ;; (xr + i*xi)   xr*(1 + i*(xi/xr))
+	  ;; ----------- = -----------------
+	  ;; (yr + i*yi)   yr*(1 + i*(yi/yr))
+	  ;;
+          ;;               xr*(1+i(xi/xr))*(1-i*(yi/yr))
+	  ;;             = -----------------------------
+          ;;                    yr*(1+(yi/yr)^2)
+	  ;;
+          ;;               xr*(1+i(xi/xr))*(1-i*(yi/yr))
+          ;;             = -----------------------------
+          ;;                    yr + (yi/yr)*yi
+          ;;		      
+	  ;; This allows us to use a fast complex multiply followed by
+	  ;; a real division.
+	  '(let* ((rx (realpart x))
+		  (ix (imagpart x))
+		  (ry (realpart y))
+		  (iy (imagpart y)))
+	    (if (>= (abs rx) (abs ix))
+		(if (>= (abs ry) (abs iy))
+		    ;; |xr| >= |xi| and |yr| >= |yi|
+		    ;;
+		    ;;     xr*(1+i*(xi/xr))*(1-i*(yi/yr))
+		    ;; w = ------------------------------
+		    ;;        yr + (yi/yr)*yi
+		    ;;
+		    ;; (1+i*p)*(1-i*q) = 1+p*q + i*(p-q)
+		    (let* ((x-div (/ ix rx))
+			   (y-div (/ iy ry))
+			   (dn (+ ry (* y-div iy)))
+			   (factor (/ xr dn)))
+		      (* factor
+			 (complex (1+ (* x-div y-div))
+				  (- x-div y-div))))
+		    ;; |xr| >= |xi| and |yr| < |yi|
+		    ;;
+		    ;;     xr*(1+i*(xi/xr))*(yr/yi-i)
+		    ;; w = ------------------------------
+		    ;;         yi*((yr/yi)^2+1)
+		    ;;
+		    ;;     xr*(1+i*(xi/xr))*(yr/yi-i)
+		    ;; w = ------------------------------
+		    ;;         (yr/yi)*yi + yi
+		    ;;
+		    ;; (1+i*p)*(q-i) = p+q + i*(p*q-1)
+		    (let* ((x-div (/ ix rx))
+			   (y-div (/ ry iy))
+			   (dn (+ yi (* y-div iy)))
+			   (factor (/ xr dn)))
+		      (* factor
+			 (complex (+ x-div y-div)
+				  (1- (* x-div y-div))))))
+		    (let* ((r (/ ry iy))
+			   (dn (+ iy (* r ry))))
+		      (/ (* x (complex r ,(- one)))
+			 dn)))))))
+  (frob (complex single-float) 1f0)
+  (frob (complex double-float) 1d0))
+
+;; An implementation of Baudin and Smith's robust complex division.
+;; This is a pretty straightforward translation of the original in
+;; https://arxiv.org/pdf/1210.4539.
+(macrolet
+    ((frob (type max-float min-float eps-float)
+       (let ((name (symbolicate "CDIV-" type)))
+	 `(progn
+	    (let ((ov ,max-float)
+		  (un ,min-float)
+		  (eps ,eps-float))
+	      (defun ,name (x y)
+		(declare (type (complex ,type) x y))
+		(labels
+		    ((internal-compreal (a b c d r tt)
+		       (declare (,type a b c d r tt))
+		       (cond ((zerop r)
+			      (let ((br (* b r)))
+				(if (/= br 0)
+				    (* (+ a br) tt)
+				    (+ (* a tt)
+				       (* (* b tt)
+					  r)))))
+			     (t
+			      (* (+ a (* d (/ b c)))
+				 tt))))
+
+		     (robust-subinternal (a b c d)
+		       (declare (,type a b c d))
+		       (let* ((r (/ d c))
+			      (tt (/ (+ c (* d r)))))
+			 (values (internal-compreal a b c d r tt)
+				 (internal-compreal b (- a) c d r tt))))
+
+		     (robust-internal (x y)
+		       (declare (type (complex ,type) x y))
+		       (let ((a (realpart x))
+			     (b (imagpart x))
+			     (c (realpart y))
+			     (d (imagpart y)))
+			 (cond
+			   ((<= (abs d) (abs c))
+			    (multiple-value-bind (e f)
+				(robust-subinternal a b c d)
+			      (complex e f)))
+			   (t
+			    (multiple-value-bind (e f)
+				(robust-subinternal b a d c)
+			      (complex e (- f))))))))
+		  (let* ((a (realpart x))
+			 (b (imagpart x))
+			 (c (realpart y))
+			 (d (imagpart y))
+			 (ab (max (abs a) (abs b)))
+			 (cd (max (abs c) (abs d)))
+			 (b 2d0)
+			 (s 1d0)
+			 (be (/ b (* eps eps))))
+		    (when (>= ab (/ ov 2))
+		      (setf x (/ x 2)
+			    s (* s 2)))
+		    (when (>= cd (/ ov 2))
+		      (setf y (/ y 2)
+			    s (/ s 2)))
+		    (when (<= ab (* un (/ b eps)))
+		      (setf x (* x be)
+			    s (/ s be)))
+		    (when (<= cd (* un (/ b eps)))
+		      (setf y (* y be)
+			    s (* s be)))
+		    ;; Iteration 2
+		    #+nil
+		    (when (< cd eps)
+		      (setf x (/ x eps))
+		      (setf y (/ y eps)))
+
+		    ;; Iteration 4
+		    #+nil
+		    (when (> cd (/ ov 2))
+		      (setf x (/ x 2)
+			    y (/ y 2)))
+
+		    (* s
+		       (robust-internal x y))))))))))
+  ;; The eps value for double-float is determined by looking at the
+  ;; value of %eps in Scilab.
+  (frob double-float most-positive-double-float least-positive-normalized-double-float
+	(scale-float 1d0 -52))
+  ;; The eps value here is a guess.
+  (frob single-float most-positive-single-float least-positive-normalized-single-float
+	(scale-float 1f0 -22)))
+
+(macrolet
+    ((frob (type)
+       (let ((name (symbolicate "CDIV-" type)))
+       `(deftransform / ((x y) ((complex ,type) (complex ,type)) *)
+		      (,name x y)))))
+  (frob double-float)
+  (frob single-float))
 
 ;;;; Complex contagion:
 
