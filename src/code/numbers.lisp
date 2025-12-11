@@ -618,28 +618,40 @@
 	   ;;                       = (a + b*d/c)/(c+d*r)
 	   ;;                       = (a + b*r)/(c + d*r).
 	   ;;
-	   ;; Thus tt = 1/(c + d*r).
+	   ;; Thus tt = (c + d*r).
+	   #+nil
+	   (progn
+	     (format t "a,b,c,d = ~A ~A ~A ~A~%" a b c d)
+	     (format t "  r, tt = ~A ~A~%" r tt))
 	   (cond ((/= r 0)
 		  (let ((br (* b r)))
+		    #+nil
+		    (format t "br = ~A~%" br)
 		    (if (/= br 0)
-			(* (+ a br) tt)
+			(/ (+ a br) tt)
 			;; b*r underflows.  Instead, compute
 			;;
 			;; (a + b*r)*tt = a*tt + b*tt*r
 			;;              = a*tt + (b*tt)*r
-			(+ (* a tt)
-			   (* (* b tt)
+			;; (a + b*r)/tt = a/tt + b/tt*r
+			;;              = a*tt + (b*tt)*r
+			(+ (/ a tt)
+			   (* (/ b tt)
 			      r)))))
 		 (t
 		  ;; r = 0 so d is very tiny compared to c.
 		  ;;
-		  ;; (a + b*r)*tt = (a + b*(d/c))*tt
-		  (* (+ a (* d (/ b c)))
+		  ;; (a + b*r)/tt = (a + b*(d/c))/tt
+		  #+nil
+		  (progn
+		    (format t "r = 0~%")
+		    (format t "a*tt = ~A~%" (* a tt)))
+		  (/ (+ a (* d (/ b c)))
 		     tt))))
 	 (robust-subinternal (a b c d)
 	   (declare (double-float a b c d))
 	   (let* ((r (/ d c))
-		  (tt (/ (+ c (* d r)))))
+		  (tt (+ c (* d r))))
 	     ;; e is the real part and f is the imaginary part.  We
 	     ;; can use internal-compreal for the imaginary part by
 	     ;; noticing that the imaginary part of (a+i*b)/(c+i*d) is
@@ -679,9 +691,9 @@
 	     (d (imagpart y))
 	     (ab (max (abs a) (abs b)))
 	     (cd (max (abs c) (abs d)))
-	     (b 2d0)
+	     (bb 2d0)
 	     (s 1d0)
-	     (be (/ b (* eps eps))))
+	     (be (/ bb (* eps eps))))
 	;; If a or b is big, scale down a and b.
 	(when (>= ab (/ ov 2))
 	  (setf x (/ x 2)
@@ -691,11 +703,11 @@
 	  (setf y (/ y 2)
 		s (/ s 2)))
 	;; If a or b is tiny, scale up a and b.
-	(when (<= ab (* un (/ b eps)))
+	(when (<= ab (* un (/ bb eps)))
 	  (setf x (* x be)
 		s (/ s be)))
 	;; If c or d is tiny, scale up c and d.
-	(when (<= cd (* un (/ b eps)))
+	(when (<= cd (* un (/ bb eps)))
 	  (setf y (* y be)
 		s (* s be)))
 	(* s
