@@ -388,7 +388,7 @@
    (list (complex (scale-float 1d0 -1074) (scale-float 1d0 -1074))
 	 (complex (scale-float 1d0 -1073) (scale-float 1d0 -1074))
 	 (complex 0.6d0 0.2d0)
-	 52 least-positive-double-float)
+	 53 least-positive-double-float)
    ;; 9
    (list (complex (scale-float 1d0 1015) (scale-float 1d0 -989))
 	 (complex (scale-float 1d0 1023) (scale-float 1d0 1023))
@@ -399,11 +399,18 @@
 	 (complex (scale-float 1d0 -343) (scale-float 1d0 -798))
 	 (complex 1.02951151789360578d-84 6.97145987515076231d-220)
 	 53 least-positive-double-float)
+   ;; 11
    ;; From Maxima
    (list #c(5.43d-10 1.13d-100)
 	 #c(1.2d-311 5.7d-312)
 	 #c(3.691993880674614517999740937026568563794896024143749539711267954d301
 	    -1.753697093319947872394996242210428954266103103602859195409591583d301)
+	 52 least-positive-double-float)
+   ;; 12
+   ;; Found by ansi tests. z/z should be exactly 1.
+   (list #c(1.565640716292489d19 0.0d0)
+	 #c(1.565640716292489d19 0.0d0)
+	 #c(1d0 0)
 	 53 least-positive-double-float)
    ))
 
@@ -494,10 +501,10 @@
 
 (define-test complex-division.single
     (:tag :issues)
-  (let ((x #c(1 2))
-	(y (complex (expt 2 127) (expt 2 127)))
-	(expected (coerce (/ x y)
-			  '(complex single-float))))
+  (let* ((x #c(1 2))
+	 (y (complex (expt 2 127) (expt 2 127)))
+	 (expected (coerce (/ x y)
+			   '(complex single-float))))
     ;; A naive implementation of complex division would cause an
     ;; overflow in computing the denominator.
     (assert-equal expected
