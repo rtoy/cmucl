@@ -605,42 +605,73 @@
     (labels
 	((internal-compreal (a b c d r tt)
 	   (declare (double-float a b c d r tt))
+	   ;; Compute the real part of the complex division
+	   ;; (a+ib)/(c+id), assuming |c| <= |d|.  r = d/c and tt = 1/(c+d*r).
+	   ;;
+	   ;; The realpart is (a*c+b*d)/(c^2+d^2).
+	   ;;
+	   ;;   c^2+d^2 = c*(c+d*(d/c)) = c*(c+d*r)
+	   ;;
+	   ;; Then
+	   ;;
+	   ;;   (a*c+b*d)/(c^2+d^2) = (a*c+b*d)/(c*(c+d*r))
+	   ;;                       = (a + b*d/c)/(c+d*r)
+	   ;;                       = (a + b*r)/(c + d*r).
+	   ;;
+	   ;; Thus tt = 1/(c + d*r).
 	   (cond ((/= r 0)
 		  (let ((br (* b r)))
 		    (if (/= br 0)
 			(* (+ a br) tt)
+			;; b*r underflows.  Instead, compute
+			;;
+			;; (a + b*r)*tt = a*tt + b*tt*r
+			;;              = a*tt + (b*tt)*r
 			(+ (* a tt)
 			   (* (* b tt)
 			      r)))))
 		 (t
+		  ;; r = 0 so d is very tiny compared to c.
+		  ;;
+		  ;; (a + b*r)*tt = (a + b*(d/c))*tt
 		  (* (+ a (* d (/ b c)))
 		     tt))))
 	 (robust-subinternal (a b c d)
 	   (declare (double-float a b c d))
 	   (let* ((r (/ d c))
 		  (tt (/ (+ c (* d r)))))
+	     ;; e is the real part and f is the imaginary part.  We
+	     ;; can use internal-compreal for the imaginary part by
+	     ;; noticing that the imaginary part of (a+i*b)/(c+i*d) is
+	     ;; the same as the real part of (b-i*a)/(c+i*d).
 	     (let ((e (internal-compreal a b c d r tt))
 		   (f (internal-compreal b (- a) c d r tt)))
-	       #+nil(format t "subint: e f = ~A ~A~%" e f)
 	       (values e
 		       f))))
 	 (robust-internal (x y)
 	   (declare (type (complex double-float) x y))
-	   #+nil(format t "x = ~A, y = ~A~%" x y)
 	   (let ((a (realpart x))
 		 (b (imagpart x))
 		 (c (realpart y))
 		 (d (imagpart y)))
 	     (cond
 	       ((<= (abs d) (abs c))
+		;; |d| <= |c|, so we can use robust-subinternal to
+		;; perform the division.
 		(multiple-value-bind (e f)
 		    (robust-subinternal a b c d)
-		  #+nil(format t "1: e f = ~A ~A~%" e f)
 		  (complex e f)))
 	       (t
+		;; |d| > |c|.  So, instead compute
+		;;
+		;;   (b + i*a)/(d + i*c) = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
+		;;
+		;; Compare this to (a+i*b)/(c+i*d) and we see that
+		;; realpart of the former is the same, but the
+		;; imagpart of the former is the negative of the
+		;; desired division.
 		(multiple-value-bind (e f)
 		    (robust-subinternal b a d c)
-		  #+nil(format t "2: e f = ~A ~A~%" e f)
 		  (complex e (- f))))))))
       (let* ((a (realpart x))
 	     (b (imagpart x))
@@ -651,15 +682,19 @@
 	     (b 2d0)
 	     (s 1d0)
 	     (be (/ b (* eps eps))))
+	;; If a or b is big, scale down a and b.
 	(when (>= ab (/ ov 2))
 	  (setf x (/ x 2)
 		s (* s 2)))
+	;; If c or d is big, scale down c and d.
 	(when (>= cd (/ ov 2))
 	  (setf y (/ y 2)
 		s (/ s 2)))
+	;; If a or b is tiny, scale up a and b.
 	(when (<= ab (* un (/ b eps)))
 	  (setf x (* x be)
 		s (/ s be)))
+	;; If c or d is tiny, scale up c and d.
 	(when (<= cd (* un (/ b eps)))
 	  (setf y (* y be)
 		s (* s be)))
