@@ -343,6 +343,21 @@
     (assert-true (typep new-mode 'x86::float-modes))
     (assert-equal new-mode (setf (x86::x87-floating-point-modes) new-mode))))
 
+(defun parse-%a (string)
+  (let* ((sign (if (char= (aref string 0) #\-)
+		   -1
+		   1))
+	 (dot-posn (position #\. string))
+	 (p-posn (position #\p string))
+	 (lead (parse-integer string :start (1- dot-posn) :end dot-posn))
+	 (frac (parse-integer string :start (1+ dot-posn) :end p-posn :radix 16))
+	 (exp (parse-integer string :start (1+ p-posn))))
+    (* sign
+       (scale-float (float (+ (ash lead 52)
+			      frac)
+			   1d0)
+		    (- exp 52)))))
+
 ;; Tests for complex division.  From Baudin and Smith, and one test
 ;; from Maxima.  Each test is a list of values: x, y, z-true,
 ;; bits-of-accuracy, and max-ulp.
@@ -412,6 +427,34 @@
 	 #c(1.565640716292489d19 0.0d0)
 	 #c(1d0 0)
 	 53 least-positive-double-float)
+   ;; 13
+   ;; Iteration 1.  Without this, we would instead return
+   ;;
+   ;;   (complex (parse-%a "0x1.ba8df8075bceep+155") (parse-%a "-0x1.a4ad6329485f0p-895"))
+   ;;
+   ;; whose imaginary part is quite a bit off.
+   (list (complex (parse-%a "0x1.73a3dac1d2f1fp+509") (parse-%a "-0x1.c4dba4ba1ee79p-620"))
+	 (complex (parse-%a "0x1.adf526c249cf0p+353") (parse-%a "0x1.98b3fbc1677bbp-697"))
+	 (complex (parse-%a "0x1.BA8DF8075BCEEp+155") (parse-%a "-0x1.A4AD628DA5B74p-895"))
+	 53 least-positive-double-float)
+   ;; 14
+   ;; Iteration 2.
+   (list (complex (parse-%a "-0x0.000000008e4f8p-1022") (parse-%a "0x0.0000060366ba7p-1022"))
+	 (complex (parse-%a "-0x1.605b467369526p-245") (parse-%a "0x1.417bd33105808p-256"))
+	 (complex (parse-%a "0x1.cde593daa4ffep-810") (parse-%a "-0x1.179b9a63df6d3p-799"))
+	 52 least-positive-double-float)
+   ;; 15
+   ;; Iteration 3
+   (list (complex (parse-%a "0x1.cb27eece7c585p-355 ") (parse-%a "0x0.000000223b8a8p-1022"))
+	 (complex (parse-%a "-0x1.74e7ed2b9189fp-22") (parse-%a "0x1.3d80439e9a119p-731"))
+	 (complex (parse-%a "-0x1.3b35ed806ae5ap-333") (parse-%a "-0x0.05e01bcbfd9f6p-1022"))
+	 53 least-positive-double-float)
+   ;; 16
+   ;; Iteration 4
+   (list (complex (parse-%a "-0x1.f5c75c69829f0p-530") (parse-%a "-0x1.e73b1fde6b909p+316"))
+	 (complex (parse-%a "-0x1.ff96c3957742bp+1023") (parse-%a "0x1.5bd78c9335899p+1021"))
+	 (complex (parse-%a "-0x1.423c6ce00c73bp-710") (parse-%a "0x1.d9edcf45bcb0ep-708"))
+	 52 least-positive-double-float)
    ))
 
 (defun rel-err (computed expected)

@@ -623,7 +623,7 @@
 	   (progn
 	     (format t "a,b,c,d = ~A ~A ~A ~A~%" a b c d)
 	     (format t "  r, tt = ~A ~A~%" r tt))
-	   (cond ((/= r 0)
+	   (cond ((>= (abs r) un)
 		  (let ((br (* b r)))
 		    #+nil
 		    (format t "br = ~A~%" br)
