@@ -602,17 +602,19 @@
 ;; In particular iteration 1 and 3 are added.  Iteration 2 and 4 were
 ;; not added.  The test examples from iteration 2 and 4 didn't change
 ;; with or without changes added.
-(let* (;; This is the value of Scilab's %eps variable.
-       (eps (scale-float 1d0 -52))
-       (rmin least-positive-normalized-double-float)
-       (rbig (/ most-positive-double-float 2))
-       (rmin2 (scale-float 1d0 -53))
-       (rminscal (scale-float 1d0 51))
-       (rmax2 (* rbig rmin2))
-       (be (/ 2 (* eps eps)))
-       (2/eps (/ 2 eps)))
+(let* ((+eps+ (scale-float 1d0 -52))
+       (+rmin+ least-positive-normalized-double-float)
+       (+rbig+ (/ most-positive-double-float 2))
+       (+rmin2+ (scale-float 1d0 -53))
+       (+rminscal+ (scale-float 1d0 51))
+       (+rmax2+ (* +rbig+ +rmin2+))
+       (+be+ (/ 2 (* +eps+ +eps+)))
+       (+2/eps+ (/ 2 +eps+)))
+  (declare (double-float +eps+ +rmin+ +rbig+ +rmin2+
+			 +rminscal+ +rmax2+ +be+ +2/eps+))
   (defun cdiv-double-float (x y)
-    (declare (type (complex double-float) x y))
+    (declare (type (complex double-float) x y)
+	     (optimize (speed 3) (safety 0)))
     (labels
 	((internal-compreal (a b c d r tt)
 	   (declare (double-float a b c d r tt))
@@ -634,7 +636,7 @@
 	   (progn
 	     (format t "a,b,c,d = ~A ~A ~A ~A~%" a b c d)
 	     (format t "  r, tt = ~A ~A~%" r tt))
-	   (cond ((>= (abs r) rmin)
+	   (cond ((>= (abs r) +rmin+)
 		  (let ((br (* b r)))
 		    #+nil
 		    (format t "br = ~A~%" br)
@@ -678,43 +680,47 @@
 		 (b (imagpart x))
 		 (c (realpart y))
 		 (d (imagpart y)))
-	     (flet ((maybe-scale (abs-tst)
+	     (declare (double-float a b c d))
+	     (flet ((maybe-scale (abs-tst a b c d)
+		      (declare (double-float a b c d))
 		      ;; This implements McGehearty's iteration 3 to
 		      ;; handle the case when some values are too big
 		      ;; and should be scaled down.  Also if some
 		      ;; values are too tiny, scale them up.
 		      (let ((abs-a (abs a))
 			    (abs-b (abs b)))
-			(if (or (> abs-tst rbig)
-				(> abs-a rbig)
-				(> abs-b rbig))
+			(if (or (> abs-tst +rbig+)
+				(> abs-a +rbig+)
+				(> abs-b +rbig+))
 			    (setf a (* a 0.5d0)
 				  b (* b 0.5d0)
 				  c (* c 0.5d0)
 				  d (* d 0.5d0))
-			    (if (< abs-tst rmin2)
-				(setf a (* a rminscal)
-				      b (* b rminscal)
-				      c (* c rminscal)
-				      d (* d rminscal))
-				(if (or (and (< abs-a rmin)
-					     (< abs-b rmax2)
-					     (< abs-tst rmax2))
-					(and (< abs-b rmin)
-					     (< abs-a rmax2)
-					     (< abs-tst rmax2)))
-				    (setf a (* a rminscal)
-					  b (* b rminscal)
-					  c (* c rminscal)
-					  d (* d rminscal))))))))
+			    (if (< abs-tst +rmin2+)
+				(setf a (* a +rminscal+)
+				      b (* b +rminscal+)
+				      c (* c +rminscal+)
+				      d (* d +rminscal+))
+				(if (or (and (< abs-a +rmin+)
+					     (< abs-b +rmax2+)
+					     (< abs-tst +rmax2+))
+					(and (< abs-b +rmin+)
+					     (< abs-a +rmax2+)
+					     (< abs-tst +rmax2+)))
+				    (setf a (* a +rminscal+)
+					  b (* b +rminscal+)
+					  c (* c +rminscal+)
+					  d (* d +rminscal+)))))
+			(values a b c d))))
 	       (cond
 		 ((<= (abs d) (abs c))
 		  ;; |d| <= |c|, so we can use robust-subinternal to
 		  ;; perform the division.
-		  (maybe-scale (abs c))
-		  (multiple-value-bind (e f)
-		      (robust-subinternal a b c d)
-		    (complex e f)))
+		  (multiple-value-bind (a b c d)
+		      (maybe-scale (abs c) a b c d)
+		    (multiple-value-bind (e f)
+			(robust-subinternal a b c d)
+		      (complex e f))))
 		 (t
 		  ;; |d| > |c|.  So, instead compute
 		  ;;
@@ -724,10 +730,11 @@
 		  ;; realpart of the former is the same, but the
 		  ;; imagpart of the former is the negative of the
 		  ;; desired division.
-		  (maybe-scale (abs d))
-		  (multiple-value-bind (e f)
-		      (robust-subinternal b a d c)
-		    (complex e (- f)))))))))
+		  (multiple-value-bind (a b c d)
+		      (maybe-scale (abs d) a b c d)
+		    (multiple-value-bind (e f)
+			(robust-subinternal b a d c)
+		      (complex e (- f))))))))))
       (let* ((a (realpart x))
 	     (b (imagpart x))
 	     (c (realpart y))
@@ -735,22 +742,23 @@
 	     (ab (max (abs a) (abs b)))
 	     (cd (max (abs c) (abs d)))
 	     (s 1d0))
+	(declare (double-float s))
 	;; If a or b is big, scale down a and b.
-	(when (>= ab rbig)
+	(when (>= ab +rbig+)
 	  (setf x (/ x 2)
 		s (* s 2)))
 	;; If c or d is big, scale down c and d.
-	(when (>= cd rbig)
+	(when (>= cd +rbig+)
 	  (setf y (/ y 2)
 		s (/ s 2)))
 	;; If a or b is tiny, scale up a and b.
-	(when (<= ab (* rmin 2/eps))
-	  (setf x (* x be)
-		s (/ s be)))
+	(when (<= ab (* +rmin+ +2/eps+))
+	  (setf x (* x +be+)
+		s (/ s +be+)))
 	;; If c or d is tiny, scale up c and d.
-	(when (<= cd (* rmin 2/eps))
-	  (setf y (* y be)
-		s (* s be)))
+	(when (<= cd (* +rmin+ +2/eps+))
+	  (setf y (* y +be+)
+		s (* s +be+)))
 	(* s
 	   (robust-internal x y))))))
 
