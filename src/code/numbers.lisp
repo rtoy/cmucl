@@ -602,7 +602,9 @@
        (rbig (/ most-positive-double-float 2))
        (rmin2 (scale-float 1d0 -53))
        (rminscal (scale-float 1d0 51))
-       (rmax2 (* rbig rmin2)))
+       (rmax2 (* rbig rmin2))
+       (be (/ 2 (* eps eps)))
+       (2/eps (/ 2 eps)))
   (defun cdiv-double-float (x y)
     (declare (type (complex double-float) x y))
     (labels
@@ -671,6 +673,10 @@
 		 (c (realpart y))
 		 (d (imagpart y)))
 	     (flet ((maybe-scale (abs-tst)
+		      ;; This implements McGehearty's iteration 3 to
+		      ;; handle the case when some values are too big
+		      ;; and should be scaled down.  Also if some
+		      ;; values are too tiny, scale them up.
 		      (let ((abs-a (abs a))
 			    (abs-b (abs b)))
 			(if (or (> abs-tst rbig)
@@ -700,29 +706,6 @@
 		  ;; |d| <= |c|, so we can use robust-subinternal to
 		  ;; perform the division.
 		  (maybe-scale (abs c))
-		  #+nil
-		  (if (or (> (abs c) rbig)
-			  (> (abs a) rbig)
-			  (> (abs b) rbig))
-		      (setf a (* a 0.5d0)
-			    b (* b 0.5d0)
-			    c (* c 0.5d0)
-			    d (* d 0.5d0))
-		      (if (< (abs c) rmin2)
-			  (setf a (* a rminscal)
-				b (* b rminscal)
-				c (* c rminscal)
-				d (* d rminscal))
-			  (if (or (and (< (abs a) rmin)
-				       (< (abs b) rmax2)
-				       (< (abs c) rmax2))
-				  (and (< (abs b) rmin)
-				       (< (abs a) rmax2)
-				       (< (abs c) rmax2)))
-			      (setf a (* a rminscal)
-				    b (* b rminscal)
-				    c (* c rminscal)
-				    d (* d rminscal)))))
 		  (multiple-value-bind (e f)
 		      (robust-subinternal a b c d)
 		    (complex e f)))
@@ -736,29 +719,6 @@
 		  ;; imagpart of the former is the negative of the
 		  ;; desired division.
 		  (maybe-scale (abs d))
-		  #+nil
-		  (if (or (> (abs d) rbig)
-			  (> (abs a) rbig)
-			  (> (abs b) rbig))
-		      (setf a (* a 0.5d0)
-			    b (* b 0.5d0)
-			    c (* c 0.5d0)
-			    d (* d 0.5d0))
-		      (if (< (abs d) rmin2)
-			  (setf a (* a rminscal)
-				b (* b rminscal)
-				c (* c rminscal)
-				d (* d rminscal))
-			  (if (or (and (< (abs a) rmin)
-				       (< (abs b) rmax2)
-				       (< (abs d) rmax2))
-				  (and (< (abs b) rmin)
-				       (< (abs a) rmax2)
-				       (< (abs d) rmax2)))
-			      (setf a (* a rminscal)
-				    b (* b rminscal)
-				    c (* c rminscal)
-				    d (* d rminscal)))))
 		  (multiple-value-bind (e f)
 		      (robust-subinternal b a d c)
 		    (complex e (- f)))))))))
@@ -768,9 +728,7 @@
 	     (d (imagpart y))
 	     (ab (max (abs a) (abs b)))
 	     (cd (max (abs c) (abs d)))
-	     (bb 2d0)
-	     (s 1d0)
-	     (be (/ bb (* eps eps))))
+	     (s 1d0))
 	;; If a or b is big, scale down a and b.
 	(when (>= ab rbig)
 	  (setf x (/ x 2)
@@ -780,11 +738,11 @@
 	  (setf y (/ y 2)
 		s (/ s 2)))
 	;; If a or b is tiny, scale up a and b.
-	(when (<= ab (* rmin (/ bb eps)))
+	(when (<= ab (* rmin 2/eps))
 	  (setf x (* x be)
 		s (/ s be)))
 	;; If c or d is tiny, scale up c and d.
-	(when (<= cd (* rmin (/ bb eps)))
+	(when (<= cd (* rmin 2/eps))
 	  (setf y (* y be)
 		s (* s be)))
 	(* s
