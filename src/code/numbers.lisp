@@ -602,12 +602,13 @@
 ;; In particular iteration 1 and 3 are added.  Iteration 2 and 4 were
 ;; not added.  The test examples from iteration 2 and 4 didn't change
 ;; with or without changes added.
-(let* ((+eps+ (scale-float 1d0 -52))
-       (+rmin+ least-positive-normalized-double-float)
+(let* ((+rmin+ least-positive-normalized-double-float)
        (+rbig+ (/ most-positive-double-float 2))
        (+rmin2+ (scale-float 1d0 -53))
        (+rminscal+ (scale-float 1d0 51))
        (+rmax2+ (* +rbig+ +rmin2+))
+       ;; This is the value of %eps from Scilab
+       (+eps+ (scale-float 1d0 -52))
        (+be+ (/ 2 (* +eps+ +eps+)))
        (+2/eps+ (/ 2 +eps+)))
   (declare (double-float +eps+ +rmin+ +rbig+ +rmin2+
@@ -750,6 +751,157 @@
 		s (* s +be+)))
 	(* s
 	   (robust-internal x y))))))
+
+;;; Same algorithm as for doubles, but the constants here are
+;;; different.  I'm guessing here for the appropriate values for
+;;; +eps+, +rmin2+, and +rminscal+.
+(defconstant +dd-eps+ (scale-float 1w0 -104))
+(defconstant +dd-rmin+ least-positive-normalized-double-double-float)
+(defconstant +dd-rbig+ (/ most-positive-double-double-float 2))
+(defconstant +dd-rmin2+ (scale-float 1w0 -105))
+(defconstant +dd-rminscal+ (scale-float 1w0 102))
+(defconstant +dd-rmax2+ (* +dd-rbig+ +dd-rmin2+))
+(defconstant +dd-be+ (/ 2 (* +dd-eps+ +dd-eps+)))
+(defconstant +dd-2/eps+ (/ 2 +dd-eps+))
+
+(defun cdiv-double-double-float (x y)
+  (declare (type (complex vm::double-double-float) x y)
+	   (optimize (speed 3) (safety 0)))
+  (labels
+      ((internal-compreal (a b c d r tt)
+	 (declare (vm::double-double-float a b c d r tt))
+	 ;; Compute the real part of the complex division
+	 ;; (a+ib)/(c+id), assuming |c| <= |d|.  r = d/c and tt = 1/(c+d*r).
+	 ;;
+	 ;; The realpart is (a*c+b*d)/(c^2+d^2).
+	 ;;
+	 ;;   c^2+d^2 = c*(c+d*(d/c)) = c*(c+d*r)
+	 ;;
+	 ;; Then
+	 ;;
+	 ;;   (a*c+b*d)/(c^2+d^2) = (a*c+b*d)/(c*(c+d*r))
+	 ;;                       = (a + b*d/c)/(c+d*r)
+	 ;;                       = (a + b*r)/(c + d*r).
+	 ;;
+	 ;; Thus tt = (c + d*r).
+	 (cond ((>= (abs r) +dd-rmin+)
+		(let ((br (* b r)))
+		  (if (/= br 0)
+		      (/ (+ a br) tt)
+		      ;; b*r underflows.  Instead, compute
+		      ;;
+		      ;; (a + b*r)*tt = a*tt + b*tt*r
+		      ;;              = a*tt + (b*tt)*r
+		      ;; (a + b*r)/tt = a/tt + b/tt*r
+		      ;;              = a*tt + (b*tt)*r
+		      (+ (/ a tt)
+			 (* (/ b tt)
+			    r)))))
+	       (t
+		;; r = 0 so d is very tiny compared to c.
+		;;
+		(/ (+ a (* d (/ b c)))
+		   tt))))
+       (robust-subinternal (a b c d)
+	 (declare (vm::double-double-float a b c d))
+	 (let* ((r (/ d c))
+		(tt (+ c (* d r))))
+	   ;; e is the real part and f is the imaginary part.  We
+	   ;; can use internal-compreal for the imaginary part by
+	   ;; noticing that the imaginary part of (a+i*b)/(c+i*d) is
+	   ;; the same as the real part of (b-i*a)/(c+i*d).
+	   (let ((e (internal-compreal a b c d r tt))
+		 (f (internal-compreal b (- a) c d r tt)))
+	     (values e
+		     f))))
+	 
+       (robust-internal (x y)
+	 (declare (type (complex vm::double-double-float) x y))
+	 (let ((a (realpart x))
+	       (b (imagpart x))
+	       (c (realpart y))
+	       (d (imagpart y)))
+	   (declare (vm::double-double-float a b c d))
+	   (flet ((maybe-scale (abs-tst a b c d)
+		    (declare (vm::double-double-float a b c d))
+		    ;; This implements McGehearty's iteration 3 to
+		    ;; handle the case when some values are too big
+		    ;; and should be scaled down.  Also if some
+		    ;; values are too tiny, scale them up.
+		    (let ((abs-a (abs a))
+			  (abs-b (abs b)))
+		      (if (or (> abs-tst +dd-rbig+)
+			      (> abs-a +dd-rbig+)
+			      (> abs-b +dd-rbig+))
+			  (setf a (* a 0.5d0)
+				b (* b 0.5d0)
+				c (* c 0.5d0)
+				d (* d 0.5d0))
+			  (if (< abs-tst +dd-rmin2+)
+			      (setf a (* a +dd-rminscal+)
+				    b (* b +dd-rminscal+)
+				    c (* c +dd-rminscal+)
+				    d (* d +dd-rminscal+))
+			      (if (or (and (< abs-a +dd-rmin+)
+					   (< abs-b +dd-rmax2+)
+					   (< abs-tst +dd-rmax2+))
+				      (and (< abs-b +dd-rmin+)
+					   (< abs-a +dd-rmax2+)
+					   (< abs-tst +dd-rmax2+)))
+				  (setf a (* a +dd-rminscal+)
+					b (* b +dd-rminscal+)
+					c (* c +dd-rminscal+)
+					d (* d +dd-rminscal+)))))
+		      (values a b c d))))
+	     (cond
+	       ((<= (abs d) (abs c))
+		;; |d| <= |c|, so we can use robust-subinternal to
+		;; perform the division.
+		(multiple-value-bind (a b c d)
+		    (maybe-scale (abs c) a b c d)
+		  (multiple-value-bind (e f)
+		      (robust-subinternal a b c d)
+		    (complex e f))))
+	       (t
+		;; |d| > |c|.  So, instead compute
+		;;
+		;;   (b + i*a)/(d + i*c) = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
+		;;
+		;; Compare this to (a+i*b)/(c+i*d) and we see that
+		;; realpart of the former is the same, but the
+		;; imagpart of the former is the negative of the
+		;; desired division.
+		(multiple-value-bind (a b c d)
+		    (maybe-scale (abs d) a b c d)
+		  (multiple-value-bind (e f)
+		      (robust-subinternal b a d c)
+		    (complex e (- f))))))))))
+    (let* ((a (realpart x))
+	   (b (imagpart x))
+	   (c (realpart y))
+	   (d (imagpart y))
+	   (ab (max (abs a) (abs b)))
+	   (cd (max (abs c) (abs d)))
+	   (s 1w0))
+      (declare (vm::double-double-float s))
+      ;; If a or b is big, scale down a and b.
+      (when (>= ab +dd-rbig+)
+	(setf x (/ x 2)
+	      s (* s 2)))
+      ;; If c or d is big, scale down c and d.
+      (when (>= cd +dd-rbig+)
+	(setf y (/ y 2)
+	      s (/ s 2)))
+      ;; If a or b is tiny, scale up a and b.
+      (when (<= ab (* +dd-rmin+ +dd-2/eps+))
+	(setf x (* x +dd-be+)
+	      s (/ s +dd-be+)))
+      ;; If c or d is tiny, scale up c and d.
+      (when (<= cd (* +dd-rmin+ +dd-2/eps+))
+	(setf y (* y +dd-be+)
+	      s (* s +dd-be+)))
+      (* s
+	 (robust-internal x y)))))
 
 ;; Smith's algorithm for complex division for (complex single-float).
 ;; We convert the parts to double-floats before computing the result.

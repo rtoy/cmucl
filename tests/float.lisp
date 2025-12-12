@@ -488,7 +488,32 @@
 		    (rel (rel-err z z-true)))
 	       (assert-equal expected-rel
 			     rel
-			     k x y z z-true diff rel)))))
+			     k x y z z-true rel)))))
+
+(define-test complex-division.double-double
+  (:tag :issues)
+  (loop for k from 1
+	for test in *test-cases*
+	do
+	   (destructuring-bind (x y z-true expected-rel)
+	       test
+	     (flet ((compute-true (a b)
+		      ;; Convert a and b to complex rationals, do the
+		      ;; division and convert back.
+		      (coerce
+		       (/ (complex (rational (realpart a))
+				   (rational (imagpart a)))
+			  (complex (rational (realpart b))
+				   (rational (imagpart b))))
+		       '(complex ext:double-double-float))))
+	       (let* ((z (kernel::cdiv-double-double-float
+			  (coerce x '(complex ext:double-double-float))
+			  (coerce y '(complex ext:double-double-float))))
+		      (z-true (compute-true x y))
+		      (rel (rel-err z z-true)))
+		 (assert-equal 1000
+			       rel
+			       k x y z z-true rel))))))
 
 (define-test complex-division.misc
     (:tag :issue)
