@@ -596,6 +596,12 @@
 ;; An implementation of Baudin and Smith's robust complex division for
 ;; double-floats.  This is a pretty straightforward translation of the
 ;; original in https://arxiv.org/pdf/1210.4539.
+;;
+;; This also includes improvements mentioned in
+;; https://lpc.events/event/11/contributions/1005/attachments/856/1625/Complex_divide.pdf.
+;; In particular iteration 1 and 3 are added.  Iteration 2 and 4 were
+;; not added.  The test examples from iteration 2 and 4 didn't change
+;; with or without changes added.
 (let* (;; This is the value of Scilab's %eps variable.
        (eps (scale-float 1d0 -52))
        (rmin least-positive-normalized-double-float)
