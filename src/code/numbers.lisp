@@ -596,12 +596,10 @@
 ;; An implementation of Baudin and Smith's robust complex division for
 ;; double-floats.  This is a pretty straightforward translation of the
 ;; original in https://arxiv.org/pdf/1210.4539.
-(let* ((ov most-positive-double-float)
-       (un least-positive-normalized-double-float)
-       ;; This is the value of Scilab's %eps variable.
+(let* (;; This is the value of Scilab's %eps variable.
        (eps (scale-float 1d0 -52))
-       (rmin un)
-       (rbig (/ ov 2))
+       (rmin least-positive-normalized-double-float)
+       (rbig (/ most-positive-double-float 2))
        (rmin2 (scale-float 1d0 -53))
        (rminscal (scale-float 1d0 51))
        (rmax2 (* rbig rmin2)))
@@ -628,7 +626,7 @@
 	   (progn
 	     (format t "a,b,c,d = ~A ~A ~A ~A~%" a b c d)
 	     (format t "  r, tt = ~A ~A~%" r tt))
-	   (cond ((>= (abs r) un)
+	   (cond ((>= (abs r) rmin)
 		  (let ((br (* b r)))
 		    #+nil
 		    (format t "br = ~A~%" br)
@@ -772,19 +770,19 @@
 	     (s 1d0)
 	     (be (/ bb (* eps eps))))
 	;; If a or b is big, scale down a and b.
-	(when (>= ab (/ ov 2))
+	(when (>= ab rbig)
 	  (setf x (/ x 2)
 		s (* s 2)))
 	;; If c or d is big, scale down c and d.
-	(when (>= cd (/ ov 2))
+	(when (>= cd rbig)
 	  (setf y (/ y 2)
 		s (/ s 2)))
 	;; If a or b is tiny, scale up a and b.
-	(when (<= ab (* un (/ bb eps)))
+	(when (<= ab (* rmin (/ bb eps)))
 	  (setf x (* x be)
 		s (/ s be)))
 	;; If c or d is tiny, scale up c and d.
-	(when (<= cd (* un (/ bb eps)))
+	(when (<= cd (* rmin (/ bb eps)))
 	  (setf y (* y be)
 		s (* s be)))
 	(* s
