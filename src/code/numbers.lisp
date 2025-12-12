@@ -632,14 +632,8 @@
 	   ;;                       = (a + b*r)/(c + d*r).
 	   ;;
 	   ;; Thus tt = (c + d*r).
-	   #+nil
-	   (progn
-	     (format t "a,b,c,d = ~A ~A ~A ~A~%" a b c d)
-	     (format t "  r, tt = ~A ~A~%" r tt))
 	   (cond ((>= (abs r) +rmin+)
 		  (let ((br (* b r)))
-		    #+nil
-		    (format t "br = ~A~%" br)
 		    (if (/= br 0)
 			(/ (+ a br) tt)
 			;; b*r underflows.  Instead, compute
@@ -654,11 +648,6 @@
 		 (t
 		  ;; r = 0 so d is very tiny compared to c.
 		  ;;
-		  ;; (a + b*r)/tt = (a + b*(d/c))/tt
-		  #+nil
-		  (progn
-		    (format t "r = 0~%")
-		    (format t "a*tt = ~A~%" (* a tt)))
 		  (/ (+ a (* d (/ b c)))
 		     tt))))
 	 (robust-subinternal (a b c d)
