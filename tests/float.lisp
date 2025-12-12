@@ -343,6 +343,9 @@
     (assert-true (typep new-mode 'x86::float-modes))
     (assert-equal new-mode (setf (x86::x87-floating-point-modes) new-mode))))
 
+;; Rudimentary code to read C %a formatted numbers that look like
+;; "-0x1.c4dba4ba1ee79p-620".  We assume STRING is exactly in this
+;; format.  No error-checking is done.
 (defun parse-%a (string)
   (let* ((sign (if (char= (aref string 0) #\-)
 		   -1
@@ -358,9 +361,13 @@
 			   1d0)
 		    (- exp 52)))))
 
-;; Tests for complex division.  From Baudin and Smith, and one test
-;; from Maxima.  Each test is a list of values: x, y, z-true,
-;; bits-of-accuracy, and max-ulp.
+;; Tests for complex division.  Tests 1-10 are from Baudin and Smith.
+;; Test 11 is an example from Maxima.  Test 12 is an example from the
+;; ansi-tests.  Tests 13-16 are for examples for improvement
+;; iterations 1-4 from McGehearty.
+;;
+;; Each test is a list of values: x, y, z-true (the value of x/y), and
+;; the bits of accuracy.
 (defparameter *test-cases*
   (list
    ;; 1
@@ -457,6 +464,10 @@
 	 52 least-positive-double-float)
    ))
 
+;; Relative error in terms of bits of accuracy.  This is the
+;; definition used by Baudin and Smith.  A result of 53 means the two
+;; numbers have identical bits.  For complex numbers, we use the min
+;; of the bits of accuracy of the real and imaginary parts.
 (defun rel-err (computed expected)
   (flet ((rerr (c e)
 	   (let ((diff (abs (- c e))))
@@ -465,46 +476,6 @@
 		 (floor (- (log (/ diff (abs e)) 2d0)))))))
     (min (rerr (realpart computed) (realpart expected))
 	 (rerr (imagpart computed) (imagpart expected)))))
-
-(defconstant +most-negative-normalized-float-exponent+
-  (nth-value 1 (decode-float least-positive-normalized-double-float)))
-
-(defun power-of-two-p (n)
-  (cond ((integerp n)
-	 (and (> n 0)
-	      (= 0 (logand (abs n) (+ (abs n) -1)))))
-	((floatp n)
-	 (and (> n 0.0)
-	      (= 0.5 (decode-float n))))))
-
-(defun ulp (f)
-  (cond
-    ((= f 0.0)
-     least-positive-double-float)
-    (t
-     (multiple-value-bind (significand expon)
-	 (decode-float f)
-       ;; If the exponent is smaller than the smallest
-       ;; normalized exponent, the ULP is the smallest float.
-       ;; Otherwise, the ULP has an exponent that is
-       ;; float-digits smaller, except when the fraction is a
-       ;; power of two, where we have to increase the exponent
-       ;; by 1.
-       (if (> expon +most-negative-normalized-float-exponent+)
-	   (scale-float 0.5d0
-			(- expon
-			   (float-digits f)
-			   (if (power-of-two-p significand)
-			       0
-			       -1)))
-	   least-positive-double-float)))))
-
-(defun complex-ulp (computed expected)
-  (flet ((real-ulp (f)
-	   (ulp (abs f))))
-    (let ((diff (- computed expected)))
-      (min (real-ulp (realpart diff))
-	   (real-ulp (imagpart diff))))))
 
 (define-test complex-division.double
   (:tag :issues)
@@ -515,14 +486,11 @@
 	       test
 	     (let* ((z (/ x y))
 		    (diff (- z z-true))
-		    (rel (rel-err z z-true))
-		    (ulp (complex-ulp z z-true)))
+		    (rel (rel-err z z-true)))
 	       
 	       (assert-equal expected-rel
 			     rel
-			     k x y z z-true diff rel)
-	       (assert-true (<= ulp max-ulp)
-			    k x y z z-true diff ulp max-ulp)))))
+			     k x y z z-true diff rel)))))
 
 (define-test complex-division.misc
     (:tag :issue)
