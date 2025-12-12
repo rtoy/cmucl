@@ -676,7 +676,7 @@
   subdirectories. Dirname must be a pathname to a directory.  Any NAME
   or TYPE components in Dirname are ignored."
   (declare (type pathname dirname))
-  (when recusive
+  (when recursive
     ;; Find all the files or directories in DIRNAME.
     (dolist (path (directory (merge-pathnames "*.*" dirname)))
       ;; If the path is a directory, recursively delete the directory.
