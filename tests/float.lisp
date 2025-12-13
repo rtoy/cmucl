@@ -487,6 +487,7 @@
     (min (rerr (realpart computed) (realpart expected))
 	 (rerr (imagpart computed) (imagpart expected)))))
 
+;; Issue #456: improve accuracy of division of complex double-floats.
 (define-test complex-division.double
   (:tag :issues)
   (loop for k from 1
