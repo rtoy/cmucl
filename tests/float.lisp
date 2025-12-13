@@ -342,3 +342,11 @@
 			     (x86::x87-floating-point-modes)))))
     (assert-true (typep new-mode 'x86::float-modes))
     (assert-equal new-mode (setf (x86::x87-floating-point-modes) new-mode))))
+
+
+
+;; Issue #458
+(define-test dd-mult-overflow
+  (:tag :issues)
+  (assert-equal -2w300
+		(* -2w300 1w0)))
