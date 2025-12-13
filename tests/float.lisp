@@ -375,65 +375,65 @@
 	 (complex 1d0 (scale-float 1d0 1023))
 	 (complex (scale-float 1d0 -1023)
 		  (scale-float -1d0 -1023))
-	 53)
+	 53 106)
    ;; 2
    (list (complex 1d0 1d0)
 	 (complex (scale-float 1d0 -1023) (scale-float 1d0 -1023))
 	 (complex (scale-float 1d0 1023) 0)
-	 53)
+	 53 106)
    ;; 3
    (list (complex (scale-float 1d0 1023) (scale-float 1d0 -1023))
 	 (complex (scale-float 1d0 677) (scale-float 1d0 -677))
 	 (complex (scale-float 1d0 346) (scale-float -1d0 -1008))
-	 53)
+	 53 106)
    ;; 4
    (list (complex (scale-float 1d0 1023) (scale-float 1d0 1023))
 	 (complex 1d0 1d0)
 	 (complex (scale-float 1d0 1023) 0)
-	 53)
+	 53 106)
    ;; 5
    (list (complex (scale-float 1d0 1020) (scale-float 1d0 -844))
 	 (complex (scale-float 1d0 656) (scale-float 1d0 -780))
 	 (complex (scale-float 1d0 364) (scale-float -1d0 -1072))
-	 53)
+	 53 106)
    ;; 6
    (list (complex (scale-float 1d0 -71) (scale-float 1d0 1021))
 	 (complex (scale-float 1d0 1001) (scale-float 1d0 -323))
 	 (complex (scale-float 1d0 -1072) (scale-float 1d0 20))
-	 53)
+	 53 106)
    ;; 7
    (list (complex (scale-float 1d0 -347) (scale-float 1d0 -54))
 	 (complex (scale-float 1d0 -1037) (scale-float 1d0 -1058))
 	 (complex 3.898125604559113300d289 8.174961907852353577d295)
-	 53)
+	 53 106)
    ;; 8
    (list (complex (scale-float 1d0 -1074) (scale-float 1d0 -1074))
 	 (complex (scale-float 1d0 -1073) (scale-float 1d0 -1074))
 	 (complex 0.6d0 0.2d0)
-	 53)
+	 53 106)
    ;; 9
    (list (complex (scale-float 1d0 1015) (scale-float 1d0 -989))
 	 (complex (scale-float 1d0 1023) (scale-float 1d0 1023))
 	 (complex 0.001953125d0 -0.001953125d0)
-	 53)
+	 53 106)
    ;; 10
    (list (complex (scale-float 1d0 -622) (scale-float 1d0 -1071))
 	 (complex (scale-float 1d0 -343) (scale-float 1d0 -798))
 	 (complex 1.02951151789360578d-84 6.97145987515076231d-220)
-	 53)
+	 53 106)
    ;; 11
    ;; From Maxima
    (list #c(5.43d-10 1.13d-100)
 	 #c(1.2d-311 5.7d-312)
 	 #c(3.691993880674614517999740937026568563794896024143749539711267954d301
 	    -1.753697093319947872394996242210428954266103103602859195409591583d301)
-	 52)
+	 52 107)
    ;; 12
    ;; Found by ansi tests. z/z should be exactly 1.
    (list #c(1.565640716292489d19 0.0d0)
 	 #c(1.565640716292489d19 0.0d0)
 	 #c(1d0 0)
-	 53)
+	 53 106)
    ;; 13
    ;; Iteration 1.  Without this, we would instead return
    ;;
@@ -443,25 +443,25 @@
    (list (complex (parse-%a "0x1.73a3dac1d2f1fp+509") (parse-%a "-0x1.c4dba4ba1ee79p-620"))
 	 (complex (parse-%a "0x1.adf526c249cf0p+353") (parse-%a "0x1.98b3fbc1677bbp-697"))
 	 (complex (parse-%a "0x1.BA8DF8075BCEEp+155") (parse-%a "-0x1.A4AD628DA5B74p-895"))
-	 53)
+	 53 106)
    ;; 14
    ;; Iteration 2.
    (list (complex (parse-%a "-0x0.000000008e4f8p-1022") (parse-%a "0x0.0000060366ba7p-1022"))
 	 (complex (parse-%a "-0x1.605b467369526p-245") (parse-%a "0x1.417bd33105808p-256"))
 	 (complex (parse-%a "0x1.cde593daa4ffep-810") (parse-%a "-0x1.179b9a63df6d3p-799"))
-	 52)
+	 52 106)
    ;; 15
    ;; Iteration 3
    (list (complex (parse-%a "0x1.cb27eece7c585p-355 ") (parse-%a "0x0.000000223b8a8p-1022"))
 	 (complex (parse-%a "-0x1.74e7ed2b9189fp-22") (parse-%a "0x1.3d80439e9a119p-731"))
 	 (complex (parse-%a "-0x1.3b35ed806ae5ap-333") (parse-%a "-0x0.05e01bcbfd9f6p-1022"))
-	 53)
+	 53 106)
    ;; 16
    ;; Iteration 4
    (list (complex (parse-%a "-0x1.f5c75c69829f0p-530") (parse-%a "-0x1.e73b1fde6b909p+316"))
 	 (complex (parse-%a "-0x1.ff96c3957742bp+1023") (parse-%a "0x1.5bd78c9335899p+1021"))
 	 (complex (parse-%a "-0x1.423c6ce00c73bp-710") (parse-%a "0x1.d9edcf45bcb0ep-708"))
-	 52)
+	 52 106)
    ))
 
 ;; Relative error in terms of bits of accuracy.  This is the
@@ -482,8 +482,9 @@
   (loop for k from 1
 	for test in *test-cases*
 	do
-	   (destructuring-bind (x y z-true expected-rel)
+	   (destructuring-bind (x y z-true expected-rel expected-rel-w)
 	       test
+	     (declare (ignore expeced-rel-w))
 	     (let* ((z (/ x y))
 		    (rel (rel-err z z-true)))
 	       (assert-equal expected-rel
@@ -495,8 +496,9 @@
   (loop for k from 1
 	for test in *test-cases*
 	do
-	   (destructuring-bind (x y z-true expected-rel)
+	   (destructuring-bind (x y z-true expected-rel expected-rel-w)
 	       test
+	     (declare (ignore expected-rel))
 	     (flet ((compute-true (a b)
 		      ;; Convert a and b to complex rationals, do the
 		      ;; division and convert back.
@@ -511,7 +513,7 @@
 			  (coerce y '(complex ext:double-double-float))))
 		      (z-true (compute-true x y))
 		      (rel (rel-err z z-true)))
-		 (assert-equal 1000
+		 (assert-equal expected-rel-w
 			       rel
 			       k x y z z-true rel))))))
 

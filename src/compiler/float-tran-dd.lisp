@@ -290,10 +290,10 @@
 	   (optimize (speed 3)))
   ;; If the numbers are too big, scale them done so SPLIT doesn't overflow.
   (multiple-value-bind (aa bb)
-      (values (if (> a +two970+)
+      (values (if (> (abs a) +two970+)
 		  (* a +two-53+)
 		  a)
-	      (if (> b +two970+)
+	      (if (> (abs b) +two970+)
 		  (* b +two-53+)
 		  b))
     (let ((p (* aa bb)))
@@ -314,10 +314,10 @@
 		(declare (optimize (inhibit-warnings 3)))
 	      ;; If the numbers was scaled down, we need to scale the
 	      ;; result back up.
-	      (when (> a +two970+)
+	      (when (> (abs a) +two970+)
 		(setf p (* p +two53+)
 		      e (* e +two53+)))
-	      (when (> b +two970+)
+	      (when (> (abs b) +two970+)
 		(setf p (* p +two53+)
 		      e (* e +two53+)))
 	      (values p e))))))))
