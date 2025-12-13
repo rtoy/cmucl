@@ -2564,5 +2564,5 @@
 		  (cast result c-call:c-string)
 		  nil)
 	      status))
-	(free-alien name)))))
+	(free-alien result)))))
     

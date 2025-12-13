@@ -548,3 +548,10 @@
 		     (coerce y '(complex single-float)))
 		  x
 		  y)))
+
+
+;; Issue #458
+(define-test dd-mult-overflow
+  (:tag :issues)
+  (assert-equal -2w300
+		(* -2w300 1w0)))
