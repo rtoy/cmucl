@@ -367,7 +367,7 @@
 ;; iterations 1-4 from McGehearty.
 ;;
 ;; Each test is a list of values: x, y, z-true (the value of x/y), and
-;; the bits of accuracy.
+;; the bits of accuracy for double-float and double-double-float.
 (defparameter *test-cases*
   (list
    ;; 1
@@ -498,10 +498,11 @@
 	do
 	   (destructuring-bind (x y z-true expected-rel expected-rel-w)
 	       test
-	     (declare (ignore expected-rel))
+	     (declare (ignore expected-rel z-true))
 	     (flet ((compute-true (a b)
 		      ;; Convert a and b to complex rationals, do the
-		      ;; division and convert back.
+		      ;; division and convert back to get the true
+		      ;; expected result.
 		      (coerce
 		       (/ (complex (rational (realpart a))
 				   (rational (imagpart a)))
