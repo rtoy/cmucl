@@ -509,9 +509,8 @@
 			  (complex (rational (realpart b))
 				   (rational (imagpart b))))
 		       '(complex ext:double-double-float))))
-	       (let* ((z (kernel::cdiv-double-double-float
-			  (coerce x '(complex ext:double-double-float))
-			  (coerce y '(complex ext:double-double-float))))
+	       (let* ((z (/ (coerce x '(complex ext:double-double-float))
+			    (coerce y '(complex ext:double-double-float))))
 		      (z-true (compute-true x y))
 		      (rel (rel-err z z-true)))
 		 (assert-equal expected-rel-w
