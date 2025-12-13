@@ -88,4 +88,7 @@
     (assert-false result)
     (assert-true (and (integerp errno) (plusp errno)))))
 
-
+(define-test unix-get-username
+  (let ((uid (unix:unix-getuid)))
+    (assert-true uid)
+    (assert-true (unix::unix-get-username uid))))

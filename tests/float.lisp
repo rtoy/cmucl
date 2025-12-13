@@ -343,6 +343,16 @@
     (assert-true (typep new-mode 'x86::float-modes))
     (assert-equal new-mode (setf (x86::x87-floating-point-modes) new-mode))))
 
+
+
+;; Issue #458
+(define-test dd-mult-overflow
+  (:tag :issues)
+  (assert-equal -2w300
+		(* -2w300 1w0)))
+
+
+
 ;; Rudimentary code to read C %a formatted numbers that look like
 ;; "-0x1.c4dba4ba1ee79p-620".  We assume STRING is exactly in this
 ;; format.  No error-checking is done.
