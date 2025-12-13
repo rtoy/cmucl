@@ -701,6 +701,10 @@
 ;; In particular iteration 1 and 3 are added.  Iteration 2 and 4 were
 ;; not added.  The test examples from iteration 2 and 4 didn't change
 ;; with or without changes added.
+;;
+;; This is a pretty straightforward change of
+;; kernel::cdiv-double-float for double-double-float.  The constants
+;; may need some tweaking.
 (let* ((+dd-eps+ (scale-float 1w0 -104))
        (+dd-rmin+ least-positive-normalized-double-double-float)
        (+dd-rbig+ (/ most-positive-double-double-float 2))
