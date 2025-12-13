@@ -148,10 +148,9 @@
     ;; Verify that the directories were created.
     (assert-equal "tmp/a/b/c/"
 		  dir)
-    ;; Try to delete the directory.  It should fail, which we verify
-    ;; by noting the directory listing is not empty.
-    (ext::delete-directory (pathname "tmp/"))
-    (assert-true (directory "tmp/"))
+    ;; Try to delete the directory.  It should fail..
+    (assert-error 'kernel:simple-file-error
+		  (ext::delete-directory (pathname "tmp/")))
     ;; Now recursively delete the directory.
-    (ext::delete-directory (pathname "tmp/") :recursive t)
+    (assert-true (ext::delete-directory (pathname "tmp/") :recursive t))
     (assert-false (directory "tmp/"))))

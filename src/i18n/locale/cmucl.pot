@@ -6016,6 +6016,10 @@ msgid ""
 msgstr ""
 
 #: src/code/extensions.lisp
+msgid "Could not remove directory \"~A\": ~A."
+msgstr ""
+
+#: src/code/extensions.lisp
 msgid ""
 "Return a namestring to a temporary directory.  If Directory is not\n"
 " provided, the directory is created in an OS-dependent location.  The\n"

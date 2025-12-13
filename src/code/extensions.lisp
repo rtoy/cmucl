@@ -675,7 +675,6 @@
   recursively delete the directory Dirname including all files and
   subdirectories. Dirname must be a pathname to a directory.  Any NAME
   or TYPE components in Dirname are ignored."
-  (declare (type pathname dirname))
   (when recursive
     ;; Find all the files or directories in DIRNAME.
     (dolist (path (directory (merge-pathnames "*.*" dirname)))
@@ -685,8 +684,15 @@
 	  (delete-directory path :recursive t)
 	  (delete-file path))))
   ;; Finally delete the directory.
-  (unix:unix-rmdir (namestring dirname))
-  (values))
+  (multiple-value-bind (ok errno)
+      (unix:unix-rmdir (namestring dirname))
+    (unless ok
+      (error 'kernel:simple-file-error
+	     :pathname dirname
+	     :format-control (intl:gettext "Could not remove directory \"~A\": ~A.")
+	     :format-arguments (list dirname
+				     (unix:get-unix-error-msg errno))))
+    ok))
 
 
 ;;; WITH-TEMPORARY-DIRECTORY  -- Public
