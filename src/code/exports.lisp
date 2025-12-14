@@ -1213,7 +1213,8 @@
 
 	     "INVALID-FASL"
 	     "WITH-TEMPORARY-DIRECTORY"
-	     "WITH-TEMPORARY-FILE")
+	     "WITH-TEMPORARY-FILE"
+	     "DELETE-DIRETORY")
   ;; gencgc features
   #+gencgc
   (:export "GET-GC-ASSERTIONS"

@@ -150,7 +150,7 @@
 		  dir)
     ;; Try to delete the directory.  It should fail..
     (assert-error 'kernel:simple-file-error
-		  (ext::delete-directory (pathname "tmp/")))
+		  (ext:delete-directory (pathname "tmp/")))
     ;; Now recursively delete the directory.
-    (assert-true (ext::delete-directory (pathname "tmp/") :recursive t))
+    (assert-true (ext:delete-directory (pathname "tmp/") :recursive t))
     (assert-false (directory "tmp/"))))
