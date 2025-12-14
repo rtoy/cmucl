@@ -35,7 +35,7 @@ public domain.
             defpackage with errno symbols
     * #453: Use correct flags for analyzer and always save logs.
     * #456: Improve accuracy for division of complex double-floats
-  * #458: Spurious overflow in double-double-float multiply
+    * #458: Spurious overflow in double-double-float multiply
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
