@@ -144,13 +144,13 @@
       (assert-equal dir-tilde dir-home))))
 
 (define-test delete-directory
-  (let ((dir (ensure-directories-exist "tmp/a/b/c/")))
-    ;; Verify that the directories were created.
-    (assert-equal "tmp/a/b/c/"
-		  dir)
-    ;; Try to delete the directory.  It should fail..
-    (assert-error 'kernel:simple-file-error
-		  (ext:delete-directory (pathname "tmp/")))
-    ;; Now recursively delete the directory.
-    (assert-true (ext:delete-directory (pathname "tmp/") :recursive t))
-    (assert-false (directory "tmp/"))))
+  (:tag :issues)
+  (ext:with-temporary-directory (path)
+    (let ((dir (ensure-directories-exist (merge-pathnames "tmp/a/b/c/" path))))
+      ;; Try to delete the directory.  It should fail..
+      (assert-error 'kernel:simple-file-error
+		    (ext:delete-directory (merge-pathnames "tmp/" path)))
+      ;; Now recursively delete the directory.
+      (assert-true (ext:delete-directory (merge-pathnames "tmp/" path)
+					 :recursive t))
+      (assert-false (directory "tmp/")))))

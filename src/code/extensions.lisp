@@ -673,8 +673,9 @@
 (defun delete-directory (dirname &key recursive)
   _N"Delete the directory Dirname.  If the Recursive is non-NIL,
   recursively delete the directory Dirname including all files and
-  subdirectories. Dirname must be a pathname to a directory.  Any NAME
-  or TYPE components in Dirname are ignored."
+  subdirectories. Dirname must name a directory.  Any NAME or TYPE
+  components in Dirname are ignored.  A FILE-ERROR is signaled if any
+  directory cannot be deleted."
   (when recursive
     ;; Find all the files or directories in DIRNAME.
     (dolist (path (directory (merge-pathnames "*.*" dirname)))
