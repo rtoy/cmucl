@@ -19,7 +19,9 @@ variables:
   script:
     - echo PATH = $PATH
     - ls -F /usr/local/bin
-    # - type -all gitlab-runner
+    # Make sure gitlab-runner is available because it's needed by the
+    # VM to upload artifacts.
+    - type -all gitlab-runner
     # Download binaries.  (Do we really need the extras tarball?)
     - $CURL -o cmucl-$version-$osname.tar.$tar_ext $download_url/cmucl-$version-$osname.tar.$tar_ext
     - $CURL -o cmucl-$version-$osname.extra.tar.$tar_ext $download_url/cmucl-$version-$osname.extra.tar.$tar_ext
@@ -318,7 +320,7 @@ linux:static-analyzer:
     - make -C build-4/lisp ANALYZER=-fanalyzer > analyzer.log 2>&1
 
 #### OpenSUSE jobs ####
-opensuse:install:
+ubuntu:install:
   <<: *install_configuration
   tags:
     - ubuntu
@@ -326,30 +328,30 @@ opensuse:install:
     osname: "linux"
     CURL: "curl"
 
-opensuse:build:
+ubuntu:build:
   <<: *build_configuration
   tags:
     - ubuntu
   needs:
-    - job: opensuse:install
+    - job: ubuntu:install
       artifacts: true
 
-opensuse:test:
+ubuntu:test:
   <<: *unit_test_configuration
   tags:
     - ubuntu
   needs:
     # Needs artifacts from build (dist/)
-    - job: opensuse:build
+    - job: ubuntu:build
       artifacts: true
 
-opensuse:ansi-test:
+ubuntu:ansi-test:
   <<: *ansi_test_configuration
   tags:
     - ubuntu
   needs:
     # Needs artifacts from build (dist/)
-    - job: opensuse:build
+    - job: ubuntu:build
       artifacts: true
 
 # Optional job that runs the markdown link checker.  This is optional
