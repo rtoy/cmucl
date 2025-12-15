@@ -321,7 +321,7 @@ linux:static-analyzer:
 opensuse:install:
   <<: *install_configuration
   tags:
-    - opensuse
+    - ubuntu
   variables:
     osname: "linux"
     CURL: "curl"
@@ -329,7 +329,7 @@ opensuse:install:
 opensuse:build:
   <<: *build_configuration
   tags:
-    - opensuse
+    - ubuntu
   needs:
     - job: opensuse:install
       artifacts: true
@@ -337,7 +337,7 @@ opensuse:build:
 opensuse:test:
   <<: *unit_test_configuration
   tags:
-    - opensuse
+    - ubuntu
   needs:
     # Needs artifacts from build (dist/)
     - job: opensuse:build
@@ -346,7 +346,7 @@ opensuse:test:
 opensuse:ansi-test:
   <<: *ansi_test_configuration
   tags:
-    - opensuse
+    - ubuntu
   needs:
     # Needs artifacts from build (dist/)
     - job: opensuse:build
