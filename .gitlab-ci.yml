@@ -19,7 +19,7 @@ variables:
   script:
     - echo PATH = $PATH
     - ls -F /usr/local/bin
-    - type -all gitlab-runner
+    # - type -all gitlab-runner
     # Download binaries.  (Do we really need the extras tarball?)
     - $CURL -o cmucl-$version-$osname.tar.$tar_ext $download_url/cmucl-$version-$osname.tar.$tar_ext
     - $CURL -o cmucl-$version-$osname.extra.tar.$tar_ext $download_url/cmucl-$version-$osname.extra.tar.$tar_ext
