@@ -1232,8 +1232,7 @@ optionally keeping some of the most recent old versions."
 		   (declare (ignore sec min hour date month))
 		   (format t "~2D ~8A ~8D ~12A ~A~@[/~]~%"
 			   nlink
-                           (let ((user-info (unix:unix-getpwuid uid)))
-                             (if user-info (unix:user-info-name user-info) uid))
+			   (or (unix::unix-get-username uid) uid)
 			   size
 			   (decode-universal-time-for-files mtime year)
 			   tail

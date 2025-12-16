@@ -25,8 +25,16 @@ public domain.
   * ANSI compliance fixes:
   * Bug fixes:
   * Gitlab tickets:
-    * #387: Update CLX from upstream to version from 2024-09-11.
+    * #373: Add macros to handle temp files and directories
+    * #387: Update CLX from upstream to version from 2024-09-11
+    * #408: Add C functions to get user name and home dir
+    * #437: Use `realpath` to find the lisp executable
     * #444: `unix-stat` and friends return wrong timestamp
+    * #449: Touch 64-bit timestamp.txt with desired time for testing
+    * #446: Use C compiler to get errno values to update UNIX
+            defpackage with errno symbols
+    * #453: Use correct flags for analyzer and always save logs.
+    * #458: Spurious overflow in double-double-float multiply
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

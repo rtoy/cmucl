@@ -127,175 +127,104 @@ int debug_lisp_search = FALSE;
 
 /*
  * From the current location of the lisp executable, create a suitable
- * default for CMUCLLIB
+ * default for CMUCLLIB.  The result is a colon-separated list
+ * directories to be used for finding the core file and for the cmucl
+ * libraries.
+ *
+ * The caller must free the returned string.
  */
-static const char *
+static char *
 default_cmucllib(const char *argv0arg)
 {
-    char *p0;
-    char *defpath;
     char *cwd;
-    char *argv0_dir = strdup(argv0arg);
+    int cwd_len;
+    char **ptr;
+    char *path;
+    int path_len;
+    char *slash;
 
-    /*
-     * From argv[0], create the appropriate directory by lopping off the
-     * executable name
-     */
+    cwd = realpath(argv0arg, NULL);
 
-    p0 = strrchr(argv0_dir, '/');
-    if (p0 == NULL) {
-	*argv0_dir = '\0';
-    } else if (p0 != argv0_dir) {
-	*p0 = '\0';
-    }
-
-    /*
-     * Create the full pathname of the directory containing the
-     * executable.  argv[0] can be an absolute or relative path.
-     */
     if (debug_lisp_search) {
-	fprintf(stderr, "argv[0] = %s\n", argv0arg);
-	fprintf(stderr, "argv_dir = %s\n", argv0_dir);
+	fprintf(stderr, "Realpath of %s = %s\n", argv0arg, cwd);
     }
 
+    if (!cwd) {
+	perror("Cannot determine realpath of lisp executable");
+	exit(1);
+    }
 
-    if (argv0_dir[0] == '/') {
-	cwd = malloc(strlen(argv0_dir) + 2);
-	strcpy(cwd, argv0_dir);
-	strcat(cwd, "/");
-	if (debug_lisp_search) {
-	    fprintf(stderr, "absolute path, argv[0] = %s\n", cwd);
-	}
+    /*
+     * Delete the binary name from the full path, leaving just the
+     * full directory to the executable.
+     */
+    slash = strrchr(cwd, '/');
+    if (slash) {
+	slash[1] = '\0';
+    }
 
-    } else if (*argv0_dir != '\0') {
+    if (debug_lisp_search) {
+	fprintf(stderr, "Executable path %s\n", cwd);
+    }
+
+    /*
+     * Create the appropriate value for CMUCLLIB by adding the
+     * executable path (if needed) to each entry in
+     * cmucllib_search_list.
+     */
+
+    /* First figure out how much space we need */
+
+    path_len = 0;
+    cwd_len = strlen(cwd);
+
+    ptr = cmucllib_search_list;
+
+    while (*ptr != NULL) {
 	/*
-	 * argv[0] is a relative path.  Get the current directory and
-	 * append argv[0], after stripping off the executable name.
+	 * Plus 2 for the ":" and "/" we need to add and the cwd that
+	 * might be added.
 	 */
-	cwd = malloc(FILENAME_MAX + strlen(argv0_dir) + 100);
-	getcwd_or_die(cwd, FILENAME_MAX);
-	strcat(cwd, "/");
-	if (*argv0_dir != '\0') {
-	    strcat(cwd, argv0_dir);
-	    strcat(cwd, "/");
-	}
-	if (debug_lisp_search) {
-	    fprintf(stderr, "relative path, argv[0] = %s\n", cwd);
-	}
-    } else {
+	path_len += strlen(*ptr) + cwd_len + 2;
+	++ptr;
+    }
+
+    /* Create the colon separated list of directories */
+
+    path = malloc(path_len + 1);
+    if (!path) {
+	perror("Failed to malloc space for cmucllib");
+	exit(1);
+    }
+    
+    *path = '\0';
+
+    ptr = cmucllib_search_list;
+    while (*ptr != NULL) {
 	/*
-	 * argv[0] is someplace on the user's PATH
-	 *
+	 * If it's relative, add the full executable path first to
+	 * make the path absolute.
 	 */
-	char *path = getenv("PATH");
-	char *p1, *p2 = NULL;
-	struct stat buf;
-
-	if (debug_lisp_search) {
-	    fprintf(stderr, "User's PATH = %s\n", path ? path : "<NULL>");
+	if (*ptr[0] != '/') {
+	    strcat(path, cwd);
 	}
 
-	cwd = malloc(FILENAME_MAX + strlen(argv0arg) + 100);
-	cwd[0] = '\0';
+	strcat(path, *ptr);
 
-	if (path) {
-            const char *ptr = (p0 != NULL) ? p0 : argv0arg;
-
-	    for (p1 = path; *p1 != '\0'; p1 = p2) {
-		p2 = strchr(p1, ':');
-		if (p2 == NULL)
-		    p2 = p1 + strlen(p1);
-		strncpy(cwd, p1, p2 - p1);
-		cwd[p2 - p1] = '/';
-		cwd[p2 - p1 + 1] = '\0';
-		strcpy(cwd + (p2 - p1 + 1), ptr);
-
-		if (debug_lisp_search) {
-		    fprintf(stderr, "User's PATH, trying %s\n", cwd);
-		}
-
-		if (stat(cwd, &buf) == 0) {
-
-		    if (debug_lisp_search) {
-			fprintf(stderr, "User's PATH, found %s\n", cwd);
-		    }
-		    if (access(cwd, X_OK) == 0) {
-			break;
-		    } else {
-			if (debug_lisp_search) {
-			    fprintf(stderr,
-				    " But not executable.  Continuing...\n");
-			}
-		    }
-
-		}
-
-		if (*p2 == ':') {
-		    p2++;
-		}
-
-	    }
-	    if ((p1 == p2) || (p2 == NULL)) {
-		cwd[0] = '\0';
-	    } else {
-		cwd[p2 - p1 + 1] = '\0';
-	    }
-	    if (debug_lisp_search) {
-		fprintf(stderr, "User's PATH, Final cwd %s\n", cwd);
-	    }
-
+	/* Add a colon if we're not at the last entry of the search list */
+	if (ptr[1] != NULL) {
+	    strcat(path, ":");
 	}
+
+	++ptr;
     }
 
-    /* Create the appropriate value for CMUCLLIB */
-
-    {
-	char **ptr;
-	int total_len;
-	int cwd_len;
-
-	/* First figure out how much space we need */
-
-	total_len = 0;
-	cwd_len = strlen(cwd);
-
-	ptr = cmucllib_search_list;
-
-	while (*ptr != NULL) {
-	    /* Plus 2 for the ":" and "/" we need to add */
-	    total_len += strlen(*ptr) + cwd_len + 2;
-	    ++ptr;
-	}
-
-	/* Create the colon separated list of directories */
-
-	defpath = malloc(total_len + 1);
-	*defpath = '\0';
-
-	ptr = cmucllib_search_list;
-	while (*ptr != NULL) {
-	    if (*ptr[0] != '/') {
-		strcat(defpath, cwd);
-	    }
-
-	    strcat(defpath, *ptr);
-
-	    if (ptr[1] != NULL) {
-		strcat(defpath, ":");
-	    }
-
-	    ++ptr;
-	}
-
-	if (strlen(defpath) > total_len) {
-	    abort();
-	}
+    if (strlen(path) > path_len) {
+	abort();
     }
 
-    free(argv0_dir);
     free(cwd);
-
-    return (const char *) defpath;
+    return path;
 }
 
 /*

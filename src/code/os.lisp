@@ -69,29 +69,21 @@
   The status is 0 if no errors occurred.  Otherwise a non-zero value
   is returned. Examining errno may give information about what failed."
   (declare (string name))
-  (cond
-    ((zerop (length name))
-     (multiple-value-bind (user-info status)
-         (unix:unix-getpwuid (unix:unix-getuid))
-       (values (when user-info
-                 (unix:user-info-dir user-info))
-               status)))
-    (t
-     (alien:with-alien ((status c-call:int))
-       (let (result)
-         (unwind-protect
-              (progn
-                (setf result
-                      (alien:alien-funcall
-                       (alien:extern-alien "os_get_user_homedir"
-                                           (function (alien:* c-call:c-string)
-                                                     c-call:c-string
-                                                     (* c-call:int)))
-                       name
-                       (alien:addr status)))
-                (if (and (zerop status)
-                         (not (alien:null-alien result)))
-                    (values (alien:cast result c-call:c-string)
-                            status)
-                    (values nil status)))
-           (alien:free-alien result)))))))
+  (alien:with-alien ((status c-call:int))
+    (let (result)
+      (unwind-protect
+           (progn
+             (setf result
+                   (alien:alien-funcall
+                    (alien:extern-alien "os_get_user_homedir"
+                                        (function (alien:* c-call:c-string)
+                                                  c-call:c-string
+                                                  (* c-call:int)))
+                    name
+                    (alien:addr status)))
+             (if (and (zerop status)
+                      (not (alien:null-alien result)))
+                 (values (alien:cast result c-call:c-string)
+                         status)
+                 (values nil status)))
+        (alien:free-alien result)))))

@@ -612,3 +612,108 @@
   "Return an EQ hash of X.  The value of this hash for any given object can (of
   course) change at arbitary times."
   `(lisp::pointer-hash ,x))
+
+
+(defun get-os-temp-path ()
+  "Get a path to an appropriate temporary location from the OS.  A string
+  is returned to that path.  The path ends with a \"/\" character."
+  (let ((path (alien:alien-funcall
+	       (alien:extern-alien "os_temporary_directory"
+				   (function (alien:* c-call:char))))))
+    (when (alien:null-alien path)
+      (error "Unable to find path to temporary directory"))
+
+    (unwind-protect
+	 (unix::%file->name (cast path c-call:c-string))
+      (unless (alien:null-alien path)
+	(alien:free-alien path)))))
+
+;; Create a template suitable for mkstemp and mkdtemp.  DIRECTORY is
+;; the directory for the template.  If DIRECTORY is NIL, an
+;; OS-dependent location is used.  PREFIX is string that is the prefix
+;; for the filename for the template.  In all cases, we append exactly
+;; 6 X's to create the finale template.
+(defun create-template (directory prefix)
+  (concatenate 'string
+	       (or directory
+		   (get-os-temp-path))
+	       "/"
+	       prefix
+	       "XXXXXX"))
+
+;;; WITH-TEMPORARY-FILE  -- Public
+(defmacro with-temporary-file ((filename &key directory (prefix "cmucl-temp-file-"))
+			       &parse-body (forms decls))
+  _N"Creates a temporary file with a name bound to Filename which a
+ namestring.  If Directory is not provided, the temporary file is created
+ in a OS-dependent location.  The Prefix is a prefix to the file name
+ to be created.  If not provided a default prefix is used.
+ On completion, the file is automatically removed."
+  (let ((fd (gensym "FD-"))
+	(file-template (gensym "TEMP-PATH-"))
+	(unique-filename (gensym "UNIQUE-FILENAME-")))
+    `(let ((,file-template (create-template ,directory ,prefix))
+	   ,unique-filename)
+       (unwind-protect
+	    (let (,fd)
+	      (multiple-value-setq (,fd ,unique-filename)
+		(unix::unix-mkstemp ,file-template))
+	      (unless ,fd
+		(error "Unable to create temporary file with template ~S: ~A~%"
+		       ,file-template
+		       (unix:get-unix-error-msg ,unique-filename)))
+	      (unix:unix-close ,fd)
+	      (setf ,filename (pathname ,unique-filename))
+	      (locally ,@decls
+		,@forms))
+	 ;; We're done so delete the temp file, if one was created.
+	 (when (pathnamep ,filename)
+	   (delete-file ,filename))))))
+
+(defun delete-directory (dirname &key recursive)
+  _N"Delete the directory Dirname.  If the Recursive is non-NIL,
+  recursively delete the directory Dirname including all files and
+  subdirectories. Dirname must be a pathname to a directory.  Any NAME
+  or TYPE components in Dirname are ignored."
+  (declare (type pathname dirname))
+  (when recursive
+    ;; Find all the files or directories in DIRNAME.
+    (dolist (path (directory (merge-pathnames "*.*" dirname)))
+      ;; If the path is a directory, recursively delete the directory.
+      ;; Otherwise delete the file.  We do not follow any symlinks.
+      (if (eq (unix:unix-file-kind (namestring path)) :directory)
+	  (delete-directory path :recursive t)
+	  (delete-file path))))
+  ;; Finally delete the directory.
+  (unix:unix-rmdir (namestring dirname))
+  (values))
+
+
+;;; WITH-TEMPORARY-DIRECTORY  -- Public
+(defmacro with-temporary-directory ((dirname &key directory (prefix  "cmucl-temp-dir-"))
+				    &parse-body (forms decls))
+ _N"Return a namestring to a temporary directory.  If Directory is not
+ provided, the directory is created in an OS-dependent location.  The
+ Prefix is a string that is used as a prefix for the name of the
+ temporary directory.  If Prefix is not given, a default prefix is
+ used.  The directory and all its contents are automatically removed
+ afterward."
+  (let ((err (gensym "ERR-"))
+	(dir-template (gensym "DIR-TEMPLATE-")))
+    `(let ((,dir-template (create-template ,directory ,prefix))
+	   ,dirname ,err)
+       (unwind-protect
+	    (progn
+	      (multiple-value-setq (,dirname ,err)
+		(unix::unix-mkdtemp ,dir-template))
+	      (unless ,dirname
+		(error "Unable to create temporary directory at ~S: ~A"
+		       ,dir-template
+		       (unix:get-unix-error-msg ,err)))
+	      (setf ,dirname (pathname (concatenate 'string ,dirname "/")))
+	      (locally ,@decls
+		,@forms))
+	 ;; If a temp directory was created, remove it and all its
+	 ;; contents.  Is there a better way?
+	 (when ,dirname
+	   (delete-directory ,dirname :recursive t))))))
