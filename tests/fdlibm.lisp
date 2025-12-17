@@ -349,7 +349,9 @@
   ;; acosh(2^50), case 2^28 < x
   (assert-eql 35.35050620855721d0 (acosh (scale-float 1d0 50)))
   ;; No overflow for most positive
-  (assert-eql 710.4758600739439d0 (acosh most-positive-double-float)))
+  (assert-eql #-core-math 710.4758600739439d0
+	      #+core-math 710.475860073944d0
+	      (acosh most-positive-double-float)))
 
 (define-test asinh-basic-tests
     (:tag :fdlibm)
