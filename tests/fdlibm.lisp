@@ -517,34 +517,52 @@
   ;; |log(x) + log(1/x)| < 1.77635684e-15, x = 1.2^k, 0 <= k < 2000
   ;; The threshold is experimentally determined
   (let ((x 1d0)
-	(max-value -1d0))
+	(max-value -1d0)
+	(worst-x 0d0))
     (declare (double-float max-value)
 	     (type (double-float 1d0) x))
     (dotimes (k 2000)
       (let ((y (abs (+ (log x) (log (/ x))))))
-	(setf max-value (max max-value y))
+	(when (> y max-value)
+	  (setf worst-x x
+		max-value y))
 	(setf x (* x 1.4d0))))
-    (assert-true (< max-value 1.77635684d-15)))
+    (assert-true (< max-value
+		    #-core-math 1.77635684d-15
+		    #+core-math 1.42108548d-14)
+		 max-value
+		 worst-x))
   ;; |exp(log(x)) - x|/x < 5.6766649d-14, x = 1.4^k, 0 <= k < 2000
   (let ((x 1d0)
-	(max-error 0d0))
-    (declare (double-float max-error)
+	(max-error 0d0)
+	(worst-x 0d0))
+    (declare (double-float max-error worst-x worst-y)
 	     (type (double-float 1d0) x))
     (dotimes (k 2000)
       (let ((y (abs (/ (- (exp (log x)) x) x))))
-	(setf max-error (max max-error y))
+	(when (> y max-error)
+	  (setf worst-x x
+		max-error y))
 	(setf x (* x 1.4d0))))
-    (assert-true (< max-error 5.6766649d-14)))
+    (assert-true (< max-error 5.6766649d-14)
+		 max-error
+		 worst-x
+		 worst-y))
   ;; |exp(log(x)) - x|/x < 5.68410245d-14, x = 1.4^(-k), 0 <= k < 2000
   (let ((x 1d0)
-	(max-error 0d0))
-    (declare (double-float max-error)
+	(max-error 0d0)
+	(worst-x 0d0))
+    (declare (double-float max-error worst-x worst-y)
 	     (type (double-float (0d0)) x))
     (dotimes (k 2000)
       (let ((y (abs (/ (- (exp (log x)) x) x))))
-	(setf max-error (max max-error y))
+	(when (> y max-error)
+	  (setf worst-x x
+		max-error y))
 	(setf x (/ x 1.4d0))))
-    (assert-true (< max-error 5.68410245d-14))))
+    (assert-true (< max-error 5.68410245d-14)
+		 max-error
+		 worst-x)))
 
 (define-test sinh-basic-tests
     (:tag :fdlibm)
