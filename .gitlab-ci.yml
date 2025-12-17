@@ -183,8 +183,8 @@ linux:cross-build:
     #- job: linux:install
       artifacts: true
   script:
-    - bin/create-target.sh xtarget
-    - bin/create-target.sh xcross
+    - bin/create-target.sh xtarget $CONFIG
+    - bin/create-target.sh xcross $CONFIG
     - bin/cross-build-world.sh -crl xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp dist/bin/lisp
     - bin/build.sh -b xlinux $bootstrap -R -C $CONFIG -o "xtarget/lisp/lisp -lib xtarget/lisp"
     - bin/make-dist.sh -I xdist xlinux-4
@@ -257,7 +257,7 @@ osx:build:
     - job: osx:install
       artifacts: true
   variables:
-    CONFIG: ""
+    CONFIG: "x86_darwin"
 
 osx:test:
   <<: *unit_test_configuration
