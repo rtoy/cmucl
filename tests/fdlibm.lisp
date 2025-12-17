@@ -378,8 +378,12 @@
     (assert-eql -20.101268236238415d0 (asinh (- x))))
   (let ((x most-positive-double-float))
     ;; No overflow for most-positive-double-float
-    (assert-eql 710.4758600739439d0 (asinh x))
-    (assert-eql -710.4758600739439d0 (asinh (- x)))))
+    (assert-eql #-core-math 710.4758600739439d0
+		#+core-math 710.475860073944d0
+		(asinh x))
+    (assert-eql #-core-math -710.4758600739439d0
+		#+core-math -710.475860073944d0
+		(asinh (- x)))))
   
 (define-test atanh-basic-tests
     (:tag :fdlibm)
