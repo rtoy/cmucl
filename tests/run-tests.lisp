@@ -82,7 +82,10 @@
     (dolist (test tests)
       (push (lisp-unit:run-tests :all test)
 	    test-results))
-    (print-test-results (nreverse test-results) :verbose t)))
+    (print-test-results (nreverse test-results) :verbose t)
+    (ext:quit nil (if (zerop (length test-results))
+		      0
+		      1))))
 
 ;; Print out a summary of test results produced from RUN-LOADED-TESTS.
 (defun print-test-results (results &key verbose exitp)
