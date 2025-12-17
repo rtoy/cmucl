@@ -602,16 +602,17 @@
 ;; In particular iteration 1 and 3 are added.  Iteration 2 and 4 were
 ;; not added.  The test examples from iteration 2 and 4 didn't change
 ;; with or without changes added.
-(let* ((+eps+ (scale-float 1d0 -52))
-       (+rmin+ least-positive-normalized-double-float)
+(let* ((+rmin+ least-positive-normalized-double-float)
        (+rbig+ (/ most-positive-double-float 2))
        (+rmin2+ (scale-float 1d0 -53))
        (+rminscal+ (scale-float 1d0 51))
        (+rmax2+ (* +rbig+ +rmin2+))
+       ;; The value of %eps in Scilab
+       (+eps+ (scale-float 1d0 -52))
        (+be+ (/ 2 (* +eps+ +eps+)))
        (+2/eps+ (/ 2 +eps+)))
-  (declare (double-float +eps+ +rmin+ +rbig+ +rmin2+
-			 +rminscal+ +rmax2+ +be+ +2/eps+))
+  (declare (double-float +rmin+ +rbig+ +rmin2+ +rminscal+ +rmax2+
+			 +eps+ +be+ +2/eps+))
   (defun cdiv-double-float (x y)
     (declare (type (complex double-float) x y)
 	     (optimize (speed 3) (safety 0)))
@@ -619,7 +620,7 @@
 	((internal-compreal (a b c d r tt)
 	   (declare (double-float a b c d r tt))
 	   ;; Compute the real part of the complex division
-	   ;; (a+ib)/(c+id), assuming |c| <= |d|.  r = d/c and tt = 1/(c+d*r).
+	   ;; (a+ib)/(c+id), assuming |d| <= |c|.  r = d/c and tt = 1/(c+d*r).
 	   ;;
 	   ;; The realpart is (a*c+b*d)/(c^2+d^2).
 	   ;;
@@ -713,7 +714,8 @@
 		 (t
 		  ;; |d| > |c|.  So, instead compute
 		  ;;
-		  ;;   (b + i*a)/(d + i*c) = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
+		  ;;   (b + i*a)/(d + i*c)
+		  ;;     = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
 		  ;;
 		  ;; Compare this to (a+i*b)/(c+i*d) and we see that
 		  ;; realpart of the former is the same, but the
@@ -850,7 +852,7 @@
     (((complex rational)
       (complex rational))
      ;; We probably don't need to do Smith's algorithm for rationals.
-     ;; A naive implementation of coplex division has no issues.
+     ;; A naive implementation of complex division has no issues.
      (let ((a (realpart x))
 	   (b (imagpart x))
 	   (c (realpart y))
