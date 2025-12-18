@@ -147,7 +147,7 @@ linux:build:
     - job: linux:install
       artifacts: true
   variables:
-    CONFIG: "x86_linux"
+    CONFIG: "x86_linux_clang"
   # These rules is needed so that the static analyzer job can run on a
   # schedule because this is a prerequisite of the analyzer build.  A
   # regular push or merge request does the normal stuff.
@@ -171,7 +171,7 @@ linux:cross-build:
       - linux-4/lisp
   variables:
     # This must match the config used for the linux build!
-    CONFIG: "x86_linux"
+    CONFIG: "x86_linux_clang"
 
   needs:
 
@@ -346,7 +346,7 @@ ubuntu:build:
     - job: ubuntu:install
       artifacts: true
   variables:
-    CONFIG: "x86_linux"
+    CONFIG: "x86_linux_clang"
 
 ubuntu:test:
   <<: *unit_test_configuration
