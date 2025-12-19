@@ -51,6 +51,7 @@
       (assert-equal 2153718000 st-atime)
       (assert-equal 2153718000 st-mtime))))
 
+#+linux
 (define-test stat.64-bit-timestamp-2106
     (:tag :issues)
   (let ((test-file #.(merge-pathnames "resources/64-bit-timestamp-2106.txt"
