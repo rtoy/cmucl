@@ -90,8 +90,12 @@
 
 (define-test %acosh.exceptions
   (:tag :fdlibm)
+  ;; Core-math returns infinity instead of signaling overflow.
+  #-core-math
   (assert-error 'floating-point-overflow
 		(kernel:%acosh ext:double-float-positive-infinity))
+  ;; Core-math currently returns QNaN
+  #-core-math
   (assert-error 'floating-point-invalid-operation
 		(kernel:%acosh 0d0))
   (ext:with-float-traps-masked (:overflow)
@@ -104,8 +108,12 @@
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
 		(kernel:%asinh *snan*))
+  ;; Core-math returns the signed infinity instead of signaling an
+  ;; overflow.
+  #-core-math
   (assert-error 'floating-point-overflow
 		(kernel:%asinh ext:double-float-positive-infinity))
+  #-core-math
   (assert-error 'floating-point-overflow
 		(kernel:%asinh ext:double-float-negative-infinity))
   (assert-true (ext:float-nan-p (kernel:%asinh *qnan*)))
@@ -172,10 +180,12 @@
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
 		(kernel:%log1p -2d0))
-  (assert-error 'floating-point-overflow
+  (assert-error #-core-math 'floating-point-overflow
+		#+core-math 'division-by-zero
 		(kernel:%log1p -1d0))
   (assert-true (ext:float-nan-p (kernel:%log1p *qnan*)))
-  (ext:with-float-traps-masked (:overflow)
+  (ext:with-float-traps-masked (#-core-math :overflow
+				#+core-math :divide-by-zero)
     (assert-equal ext:double-float-negative-infinity
 		  (kernel:%log1p -1d0)))
   (ext:with-float-traps-masked (:invalid)
@@ -345,11 +355,15 @@
   ;; acosh(1.5) = log((sqrt(5)+3)/2, case 1 < x < 2
   (assert-eql 0.9624236501192069d0 (acosh 1.5d0))
   ;; acosh(4) = log(sqrt(15)+4), case 2 < x < 2^28
-  (assert-eql 2.0634370688955608d0 (acosh 4d0))
+  (assert-eql #-core-math 2.0634370688955608d0
+	      #+core-math 2.0634370688955603d0
+	      (acosh 4d0))
   ;; acosh(2^50), case 2^28 < x
   (assert-eql 35.35050620855721d0 (acosh (scale-float 1d0 50)))
   ;; No overflow for most positive
-  (assert-eql 710.4758600739439d0 (acosh most-positive-double-float)))
+  (assert-eql #-core-math 710.4758600739439d0
+	      #+core-math 710.475860073944d0
+	      (acosh most-positive-double-float)))
 
 (define-test asinh-basic-tests
     (:tag :fdlibm)
@@ -378,8 +392,12 @@
     (assert-eql -20.101268236238415d0 (asinh (- x))))
   (let ((x most-positive-double-float))
     ;; No overflow for most-positive-double-float
-    (assert-eql 710.4758600739439d0 (asinh x))
-    (assert-eql -710.4758600739439d0 (asinh (- x)))))
+    (assert-eql #-core-math 710.4758600739439d0
+		#+core-math 710.475860073944d0
+		(asinh x))
+    (assert-eql #-core-math -710.4758600739439d0
+		#+core-math -710.475860073944d0
+		(asinh (- x)))))
   
 (define-test atanh-basic-tests
     (:tag :fdlibm)
@@ -517,34 +535,52 @@
   ;; |log(x) + log(1/x)| < 1.77635684e-15, x = 1.2^k, 0 <= k < 2000
   ;; The threshold is experimentally determined
   (let ((x 1d0)
-	(max-value -1d0))
+	(max-value -1d0)
+	(worst-x 0d0))
     (declare (double-float max-value)
 	     (type (double-float 1d0) x))
     (dotimes (k 2000)
       (let ((y (abs (+ (log x) (log (/ x))))))
-	(setf max-value (max max-value y))
+	(when (> y max-value)
+	  (setf worst-x x
+		max-value y))
 	(setf x (* x 1.4d0))))
-    (assert-true (< max-value 1.77635684d-15)))
+    (assert-true (< max-value
+		    #-core-math 1.77635684d-15
+		    #+core-math 1.42108548d-14)
+		 max-value
+		 worst-x))
   ;; |exp(log(x)) - x|/x < 5.6766649d-14, x = 1.4^k, 0 <= k < 2000
   (let ((x 1d0)
-	(max-error 0d0))
-    (declare (double-float max-error)
+	(max-error 0d0)
+	(worst-x 0d0))
+    (declare (double-float max-error worst-x worst-y)
 	     (type (double-float 1d0) x))
     (dotimes (k 2000)
       (let ((y (abs (/ (- (exp (log x)) x) x))))
-	(setf max-error (max max-error y))
+	(when (> y max-error)
+	  (setf worst-x x
+		max-error y))
 	(setf x (* x 1.4d0))))
-    (assert-true (< max-error 5.6766649d-14)))
+    (assert-true (< max-error 5.6766649d-14)
+		 max-error
+		 worst-x
+		 worst-y))
   ;; |exp(log(x)) - x|/x < 5.68410245d-14, x = 1.4^(-k), 0 <= k < 2000
   (let ((x 1d0)
-	(max-error 0d0))
-    (declare (double-float max-error)
+	(max-error 0d0)
+	(worst-x 0d0))
+    (declare (double-float max-error worst-x worst-y)
 	     (type (double-float (0d0)) x))
     (dotimes (k 2000)
       (let ((y (abs (/ (- (exp (log x)) x) x))))
-	(setf max-error (max max-error y))
+	(when (> y max-error)
+	  (setf worst-x x
+		max-error y))
 	(setf x (/ x 1.4d0))))
-    (assert-true (< max-error 5.68410245d-14))))
+    (assert-true (< max-error 5.68410245d-14)
+		 max-error
+		 worst-x)))
 
 (define-test sinh-basic-tests
     (:tag :fdlibm)

@@ -36,9 +36,24 @@
         (assert-eql status 0)))
 
 #+linux
-(define-test stat.64-bit-timestamp
+(define-test stat.64-bit-timestamp-2038
     (:tag :issues)
-  (let ((test-file #.(merge-pathnames "resources/64-bit-timestamp.txt"
+  (let ((test-file #.(merge-pathnames "resources/64-bit-timestamp-2038.txt"
+				      cl:*load-pathname*)))
+    (assert-true (probe-file test-file))
+    (multiple-value-bind (ok st-dev st-ino st-mode st-nlink st-uid st-gid st-rdev st-size
+			  st-atime st-mtime
+			  st-ctime st-blksize st-blocks)
+	(unix:unix-stat (namestring test-file))
+      (declare (ignore st-dev st-ino st-mode st-nlink st-uid st-gid st-rdev st-size
+		       st-ctime st-blksize st-blocks))
+      (assert-true ok)
+      (assert-equal 2153718000 st-atime)
+      (assert-equal 2153718000 st-mtime))))
+
+(define-test stat.64-bit-timestamp-2106
+    (:tag :issues)
+  (let ((test-file #.(merge-pathnames "resources/64-bit-timestamp-2106.txt"
 				      cl:*load-pathname*)))
     (assert-true (probe-file test-file))
     (multiple-value-bind (ok st-dev st-ino st-mode st-nlink st-uid st-gid st-rdev st-size
@@ -48,5 +63,5 @@
       (declare (ignore st-dev st-ino st-mode st-nlink st-uid st-gid st-rdev
 		       st-ctime st-blksize st-blocks))
       (assert-true ok)
-      (assert-equal st-atime 2153718000)
-      (assert-equal st-mtime 2153718000))))
+      (assert-equal 4299548400 st-atime)
+      (assert-equal 4299548400 st-mtime))))

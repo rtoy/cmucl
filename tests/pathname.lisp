@@ -142,3 +142,15 @@
                                               "/*.*")
                                  :truenamep nil :follow-links nil)))
       (assert-equal dir-tilde dir-home))))
+
+(define-test delete-directory
+  (:tag :issues)
+  (ext:with-temporary-directory (path)
+    (let ((dir (ensure-directories-exist (merge-pathnames "tmp/a/b/c/" path))))
+      ;; Try to delete the directory.  It should fail..
+      (assert-error 'kernel:simple-file-error
+		    (ext:delete-directory (merge-pathnames "tmp/" path)))
+      ;; Now recursively delete the directory.
+      (assert-true (ext:delete-directory (merge-pathnames "tmp/" path)
+					 :recursive t))
+      (assert-false (directory "tmp/")))))

@@ -1,7 +1,5 @@
 # CMUCL 21f
 
-# Work in progress
-
 The CMUCL project is pleased to announce the release of CMUCL 21f.
 This is a major release which contains numerous enhancements and bug
 fixes from the <previous> release.

@@ -104,42 +104,39 @@
 		(pathname-directory "/tmp/Foo/BAR/" :case :common)))
   
 (define-test trac.36
-  (:tag :trac)
-  (let ((path "/tmp/trac.36.bom.txt"))
-    (flet ((bug (&optional (format :utf16))
+    (:tag :trac)
+  (flet ((bug (&optional (format :utf16))
+	   (ext:with-temporary-file (path)
 	     (with-open-file (s path
 				:direction :output
-				:if-exists :supersede
 				:external-format format)
 	       (format s "Hello~%"))
 	     (with-open-file (s path 
 				:direction :input
 				:external-format format)
 	       (let ((ch (read-char s)))
-		 (values ch (file-position s))))))
-      (assert-equal (values #\H 4)
-		    (bug :utf16))
-      (assert-equal (values #\H 8)
-		    (bug :utf32)))))
+		 (values ch (file-position s)))))))
+    (assert-equal (values #\H 4)
+		  (bug :utf16))
+    (assert-equal (values #\H 8)
+		  (bug :utf32))))
 
 (define-test trac.43
-  (:tag :trac)
+    (:tag :trac)
   (assert-true
-   (let ((path "/tmp/trac.43.txt"))
-     (unwind-protect
-	  (progn
-	    (with-open-file (ostream path :direction :output
-					  :external-format :utf-8)
-	      (dotimes (i 1000)
-		(write-char (code-char #x1234) ostream)))
+   (ext:with-temporary-file (path)
+     (with-open-file (ostream path :direction :output
+				   :external-format :utf-8)
+       (dotimes (i 1000)
+	 (write-char (code-char #x1234) ostream)))
 
-	    (with-open-file (stream path :direction :input
-					 :external-format :utf-8)
-	      (let ((p0 (file-position stream))
-		    (ch (read-char stream)))
-		(unread-char ch stream)
-		(let ((p0* (file-position stream)))
-		  (eql p0* p0)))))))))
+     (with-open-file (stream path :direction :input
+				  :external-format :utf-8)
+       (let ((p0 (file-position stream))
+	     (ch (read-char stream)))
+	 (unread-char ch stream)
+	 (let ((p0* (file-position stream)))
+	   (eql p0* p0)))))))
 
 (define-test trac.50
   (:tag :trac)
@@ -147,23 +144,21 @@
 		(princ-to-string (make-pathname :directory '(:absolute "tmp" "" "a" "" "b")))))
 
 (define-test trac.58
-  (:tag :trac)
+    (:tag :trac)
   (assert-false
-   (let ((path "/tmp/trac.58.txt")
-	 failures)
-     (unwind-protect
-	  (progn
-	    (with-open-file (s path :direction :output :external-format :utf-16)
-	      (dotimes (i 300)
-		(write-char (code-char i) s)))
+   (let (failures)
+     (ext:with-temporary-file (path)
+       (with-open-file (s path :direction :output :external-format :utf-16)
+	 (dotimes (i 300)
+	   (write-char (code-char i) s)))
 
-	    (with-open-file (s path :direction :input :external-format :utf-16)
-	      (dotimes (i 300)
-		(let ((ch (read-char s nil nil)))
-		  (unless (= i (char-code ch))
-		    (push (list i ch (char-code ch)) failures)))))
-	    failures)
-       (delete-file path)))))
+       (with-open-file (s path :direction :input :external-format :utf-16)
+	 (dotimes (i 300)
+	   (let ((ch (read-char s nil nil)))
+	     (unless (= i (char-code ch))
+	       (push (list i ch (char-code ch)) failures)))))
+       failures))
+   failures))
 
 (define-test trac.63
   (:tag :trac)
@@ -254,19 +249,16 @@
   ;; Create a temp file full of latin1 characters.
   (assert-equal
    '(0 1)
-   (let ((path "/tmp/trac.70.txt"))
-     (unwind-protect
-	  (progn
-	    (with-open-file (s path :direction :output :if-exists :supersede
-				    :external-format :latin1)
-	      (dotimes (k 255)
-		(write-char (code-char k) s)))
-	    (with-open-file (s path :direction :input :external-format :latin1)
-	      (list (file-position s)
-		    (progn
-		      (read-char s)
-		      (file-position s)))))
-       (delete-file path)))))
+   (ext:with-temporary-file (path)
+     (with-open-file (s path :direction :output :if-exists :supersede
+			     :external-format :latin1)
+       (dotimes (k 255)
+	 (write-char (code-char k) s)))
+     (with-open-file (s path :direction :input :external-format :latin1)
+       (list (file-position s)
+	     (progn
+	       (read-char s)
+	       (file-position s)))))))
 
 (define-test trac.80
   (:tag :trac)
@@ -278,49 +270,43 @@
   (:tag :trac)
   ;; Test that run-program accepts :element-type and produces the
   ;; correct output.
-  (let ((path "/tmp/trac.87.output")
-	(string "Hello"))
-    (unwind-protect
-	 (progn
-	   (with-open-file (s path :direction :output :if-exists :supersede
+  (let ((string "Hello"))
+    (ext:with-temporary-file (path)
+      (with-open-file (s path :direction :output :if-exists :supersede
 			      :external-format :latin1)
-	     (write-string string s))
-	   (let* ((expected (stream:string-to-octets string :external-format :latin1))
-		  (octets (make-array (length expected)
-				      :element-type '(unsigned-byte 8)))
-		  (proc (ext:run-program "/bin/cat" (list path)
-					 :output :stream
-					 :element-type '(unsigned-byte 8))))
-	     (read-sequence octets (ext:process-output proc))
-	     (assert-equalp
-	      expected
-	      octets)))
-      (delete-file path))))
+	(write-string string s))
+      (let* ((expected (stream:string-to-octets string :external-format :latin1))
+	     (octets (make-array (length expected)
+				 :element-type '(unsigned-byte 8)))
+	     (proc (ext:run-program "/bin/cat" (list (namestring path))
+				    :output :stream
+				    :element-type '(unsigned-byte 8))))
+	(read-sequence octets (ext:process-output proc))
+	(assert-equalp
+	 expected
+	 octets)))))
 
 (define-test trac.87.input
   (:tag :trac)
   ;; Test that run-program accepts :element-type and produces the
   ;; correct input (and output).
-  (let ((path "/tmp/trac.87.input")
-	(string "Hello"))
-    (unwind-protect
-	 (progn
-	   (with-open-file (s path :direction :output :if-exists :supersede
+  (let ((string "Hello"))
+    (ext:with-temporary-file (path)
+      (with-open-file (s path :direction :output :if-exists :supersede
 			      :external-format :latin1)
-	     (write-string string s))
-	   (let ((octets (stream:string-to-octets string :external-format :latin1))
-		 (output (make-array (length string)
-				     :element-type '(unsigned-byte 8)))
-		 (proc (ext:run-program "/bin/cat" (list path)
-					:input :stream
-					:output :stream
-					:element-type '(unsigned-byte 8))))
-	     (write-sequence octets (ext:process-input proc))
-	     (read-sequence output (ext:process-output proc))
-	     (assert-equalp
-	      octets
-	      output)))
-      (delete-file path))))
+	(write-string string s))
+      (let ((octets (stream:string-to-octets string :external-format :latin1))
+	    (output (make-array (length string)
+				:element-type '(unsigned-byte 8)))
+	    (proc (ext:run-program "/bin/cat" (list (namestring path))
+				   :input :stream
+				   :output :stream
+				   :element-type '(unsigned-byte 8))))
+	(write-sequence octets (ext:process-input proc))
+	(read-sequence output (ext:process-output proc))
+	(assert-equalp
+	 octets
+	 output)))))
       
 (define-test trac.92
   (:tag :trac)
@@ -384,18 +370,15 @@
   (:tag :trac)
   (assert-eql
    0
-   (let ((s (open *test-file*
-		  :direction :output
-		  :if-exists :supersede)))
-     (unwind-protect
-	  (progn
-	    (write-char #\a s)
-	    (clear-output s)
-	    (close s)
-	    (setf s (open *test-file*))
-	    (file-length s))
+   (ext:with-temporary-file (test-file)
+     (let ((s (open test-file
+		    :direction :output
+		    :if-exists :supersede)))
+       (write-char #\a s)
+       (clear-output s)
        (close s)
-       (delete-file *test-file*)))))
+       (setf s (open test-file))
+       (file-length s)))))
 
 (defun read-string-fn (str)
      (handler-case
