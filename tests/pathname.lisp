@@ -153,4 +153,30 @@
       ;; Now recursively delete the directory.
       (assert-true (ext:delete-directory (merge-pathnames "tmp/" path)
 					 :recursive t))
-      (assert-false (directory "tmp/")))))
+      (assert-false (directory (merge-pathnames "tmp/" path))))))
+
+(define-test issue.454.illegal-pathname-chars
+    (:tag :issues)
+  ;; A slash (Unix directory separater) is not allowed.
+  (assert-error 'simple-error
+		(make-pathname :name "a/b"))
+  (assert-error 'simple-error
+		(make-pathname :type "a/b"))
+  (assert-error 'simple-error
+		(make-pathname :directory '(:relative "a/b")))
+  ;; ASCII NUL characters are not allowed in Unix pathnames.
+  (let ((string-with-nul (concatenate 'string "a" (string #\nul) "b")))
+    (assert-error 'simple-error
+		  (make-pathname :name string-with-nul))
+    (assert-error 'simple-error
+		  (make-pathname :type string-with-nul))
+    (assert-error 'simple-error
+		  (make-pathname :directory (list :relative string-with-nul)))))
+  
+(define-test issue.454.illegal-pathname-dot
+    (:tag :issues)
+  (assert-error 'simple-error
+		(make-pathname :name "."))
+  (assert-error 'simple-error
+		(make-pathname :name "..")))
+
