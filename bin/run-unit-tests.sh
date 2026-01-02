@@ -9,8 +9,8 @@ usage() {
     echo "run-tests.sh [-?h] [-d test-dir] [-l lisp] [tests]"
     echo "    -d test-dir  Directory containing the unit test files"
     echo "    -l lisp      Lisp to use for the tests; defaults to lisp"
-    echo "    -u           Skip lisp-unit tests"
     echo "    -p           Skip package-local-nicknames test"
+    echo "    -u           Skip lisp-unit tests"
     echo "    -?           This help message"
     echo "    -h           This help message"
     echo ""
@@ -27,13 +27,13 @@ usage() {
 }
 
 LISP=lisp
-while getopts "uph?l:d:" arg
+while getopts "puh?l:d:" arg
 do
     case $arg in
       l) LISP=$OPTARG ;;
       d) TESTDIR=$OPTARG ;;
-      u) SKIP_UNIT=yes ;;
       p) SKIP_PLN=yes ;;
+      u) SKIP_UNIT=yes ;;
       h|\?) usage ;;
     esac
 done
@@ -102,8 +102,6 @@ if [ "$SKIP_UNIT" != "yes" ]; then
 fi
 
 ## Now run tests for trivial-package-local-nicknames
-echo SKIP_PLN = $SKIP_PLN
-
 if [ "$SKIP_PLN" != "yes" ]; then
     REPO=trivial-package-local-nicknames
     BRANCH=cmucl-updates
