@@ -635,7 +635,7 @@
 	   ;; Thus tt = (c + d*r).
 	   (cond ((>= (abs r) +rmin+)
 		  (let ((br (* b r)))
-		    (if (/= br 0)
+		    (if (/= br 0d0)
 			(/ (+ a br) tt)
 			;; b*r underflows.  Instead, compute
 			;;
@@ -726,28 +726,26 @@
 		    (multiple-value-bind (e f)
 			(robust-subinternal b a d c)
 		      (complex e (- f))))))))))
-      (let* ((a (realpart x))
-	     (b (imagpart x))
-	     (c (realpart y))
-	     (d (imagpart y))
-	     (ab (max (abs a) (abs b)))
-	     (cd (max (abs c) (abs d)))
+      (let* ((max-ab (max (abs (realpart x))
+			  (abs (imagpart x))))
+	     (max-cd (max (abs (realpart y))
+			  (abs (imagpart y))))
 	     (s 1d0))
 	(declare (double-float s))
 	;; If a or b is big, scale down a and b.
-	(when (>= ab +rbig+)
-	  (setf x (/ x 2)
-		s (* s 2)))
+	(when (>= max-ab +rbig+)
+	  (setf x (/ x 2d0)
+		s (* s 2d0)))
 	;; If c or d is big, scale down c and d.
-	(when (>= cd +rbig+)
-	  (setf y (/ y 2)
-		s (/ s 2)))
+	(when (>= max-cd +rbig+)
+	  (setf y (/ y 2d0)
+		s (/ s 2d0)))
 	;; If a or b is tiny, scale up a and b.
-	(when (<= ab (* +rmin+ +2/eps+))
+	(when (<= max-ab (* +rmin+ +2/eps+))
 	  (setf x (* x +be+)
 		s (/ s +be+)))
 	;; If c or d is tiny, scale up c and d.
-	(when (<= cd (* +rmin+ +2/eps+))
+	(when (<= max-cd (* +rmin+ +2/eps+))
 	  (setf y (* y +be+)
 		s (* s +be+)))
 	(* s
@@ -908,6 +906,7 @@
 	    (gcd (gcd nx y)))
        (build-ratio (maybe-truncate nx gcd)
 		    (* (maybe-truncate y gcd) (denominator x)))))))
+
 
 (defun %negate (n)
   (number-dispatch ((n number))

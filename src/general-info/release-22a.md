@@ -35,6 +35,8 @@ public domain.
             defpackage with errno symbols
     * #453: Use correct flags for analyzer and always save logs.
     * #456: Improve accuracy for division of complex double-floats
+            using Baudin and Smith's robust complex division algorithm
+            with improvements by Patrick McGehearty.
     * #458: Spurious overflow in double-double-float multiply
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
