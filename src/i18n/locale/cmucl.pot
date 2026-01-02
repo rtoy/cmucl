@@ -6011,8 +6011,13 @@ msgstr ""
 msgid ""
 "Delete the directory Dirname.  If the Recursive is non-NIL,\n"
 "  recursively delete the directory Dirname including all files and\n"
-"  subdirectories. Dirname must be a pathname to a directory.  Any NAME\n"
-"  or TYPE components in Dirname are ignored."
+"  subdirectories. Dirname must name a directory.  Any NAME or TYPE\n"
+"  components in Dirname are ignored.  A FILE-ERROR is signaled if any\n"
+"  directory cannot be deleted."
+msgstr ""
+
+#: src/code/extensions.lisp
+msgid "Could not remove directory \"~A\": ~A."
 msgstr ""
 
 #: src/code/extensions.lisp

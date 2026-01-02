@@ -19,6 +19,8 @@ variables:
   script:
     - echo PATH = $PATH
     - ls -F /usr/local/bin
+    # Make sure gitlab-runner is available because it's needed by the
+    # VM to upload artifacts.
     - type -all gitlab-runner
     # Download binaries.  (Do we really need the extras tarball?)
     - $CURL -o cmucl-$version-$osname.tar.$tar_ext $download_url/cmucl-$version-$osname.tar.$tar_ext
@@ -133,6 +135,7 @@ linux:install:
     - if: $CI_PIPELINE_SOURCE == "push"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_PIPELINE_SOURCE == "branch"
+    - if: $CI_PIPELINE_SOURCE == "web"
 
 linux:build:
   <<: *build_configuration
@@ -148,6 +151,7 @@ linux:build:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "push"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "web"
 
 linux:cross-build:
   stage: build
@@ -316,38 +320,38 @@ linux:static-analyzer:
     - make -C build-4/lisp ANALYZER=-fanalyzer > analyzer.log 2>&1
 
 #### OpenSUSE jobs ####
-opensuse:install:
+ubuntu:install:
   <<: *install_configuration
   tags:
-    - opensuse
+    - ubuntu
   variables:
     osname: "linux"
     CURL: "curl"
 
-opensuse:build:
+ubuntu:build:
   <<: *build_configuration
   tags:
-    - opensuse
+    - ubuntu
   needs:
-    - job: opensuse:install
+    - job: ubuntu:install
       artifacts: true
 
-opensuse:test:
+ubuntu:test:
   <<: *unit_test_configuration
   tags:
-    - opensuse
+    - ubuntu
   needs:
     # Needs artifacts from build (dist/)
-    - job: opensuse:build
+    - job: ubuntu:build
       artifacts: true
 
-opensuse:ansi-test:
+ubuntu:ansi-test:
   <<: *ansi_test_configuration
   tags:
-    - opensuse
+    - ubuntu
   needs:
     # Needs artifacts from build (dist/)
-    - job: opensuse:build
+    - job: ubuntu:build
       artifacts: true
 
 # Optional job that runs the markdown link checker.  This is optional
