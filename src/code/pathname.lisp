@@ -838,14 +838,18 @@ a host-structure or string."
 			       (%pathname-directory defaults)
 			       diddle-defaults)))
 
-    ;; A bit of sanity checking on user arguments.
+    ;; A bit of sanity checking on user arguments.  We don't allow a
+    ;; "/" or NUL in any string that's part of a pathname object.
     (flet ((check-component-validity (name name-or-type)
 	     (when (stringp name)
-	       (let ((unix-directory-separator #\/))
-		 (when (eq host (%pathname-host *default-pathname-defaults*))
-		   (when (find unix-directory-separator name)
-		     (warn (intl:gettext "Silly argument for a unix ~A: ~S")
-			   name-or-type name)))))))
+	       (when (eq host (%pathname-host *default-pathname-defaults*))
+		 (when (some #'(lambda (c)
+				 ;; Illegal characters are a slash or NUL.
+				 (case c
+				   ((#\/ #\null) t)))
+				name)
+		   (error _"Pathname component ~A cannot contain a slash or nul character: ~S"
+			   name-or-type name))))))
       (check-component-validity name :pathname-name)
       (check-component-validity type :pathname-type)
       (mapc #'(lambda (d)
@@ -856,8 +860,9 @@ a host-structure or string."
 			  (not type))
 		     (and (string= name ".")
 			  (not type))))
-	;; 
-	(warn (intl:gettext "Silly argument for a unix PATHNAME-NAME: ~S") name)))
+	;;
+	(cerror _"Continue anyway"
+		_"PATHNAME-NAME cannot be \".\" or \"..\"")))
 
     ;; More sanity checking
     (when dir
