@@ -5,6 +5,11 @@
 
 (in-package "FLOAT-X86-TESTS")
 
+;; This tests the floating-point modes for x86.  This works only if we
+;; have the feature :sse2 but not :darwin since darwin has always used
+;; sse2 and not x87.  But see also how FLOATING-POINT-MODES is
+;; implemented in src/code/float-trap.lisp.
+#+(and sse2 (not darwin))
 (define-test set-floating-point-modes
   (let ((old-x87-modes (x86::x87-floating-point-modes))
 	(old-sse2-modes (x86::sse2-floating-point-modes))
