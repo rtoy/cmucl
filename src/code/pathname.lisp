@@ -843,13 +843,12 @@ a host-structure or string."
     (flet ((check-component-validity (name name-or-type)
 	     (when (stringp name)
 	       (when (eq host (%pathname-host *default-pathname-defaults*))
-		 (when (find-if #'(lambda (c)
-				    ;; Illegal characters are a slash or NUL.
-				    (or (char= c #\/)
-					(char= c #\nul)))
+		 (when (some #'(lambda (c)
+				 ;; Illegal characters are a slash or NUL.
+				 (case c
+				   ((#\/ #\null) t)))
 				name)
-		   (cerror _"Continue anyway"
-			   _"Pathname component ~A cannot contain a slash or nul character: ~S"
+		   (error _"Pathname component ~A cannot contain a slash or nul character: ~S"
 			   name-or-type name))))))
       (check-component-validity name :pathname-name)
       (check-component-validity type :pathname-type)
