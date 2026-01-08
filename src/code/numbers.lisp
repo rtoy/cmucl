@@ -593,26 +593,250 @@
 	    (build-ratio x y)
 	    (build-ratio (truncate x gcd) (truncate y gcd))))))
 
+;; An implementation of Baudin and Smith's robust complex division for
+;; double-floats.  This is a pretty straightforward translation of the
+;; original in https://arxiv.org/pdf/1210.4539.
+;;
+;; This also includes improvements mentioned in
+;; https://lpc.events/event/11/contributions/1005/attachments/856/1625/Complex_divide.pdf.
+;; In particular iteration 1 and 3 are added.  Iteration 2 and 4 were
+;; not added.  The test examples from iteration 2 and 4 didn't change
+;; with or without changes added.
+(defconstant +cdiv-rmin+ least-positive-normalized-double-float)
+(defconstant +cdiv-rbig+ (/ most-positive-double-float 2))
+(defconstant +cdiv-rmin2+ (scale-float 1d0 -53))
+(defconstant +cdiv-rminscal+ (scale-float 1d0 51))
+(defconstant +cdiv-rmax2+ (* +cdiv-rbig+ +cdiv-rmin2+))
+;; This is the value of %eps from Scilab
+(defconstant +cdiv-eps+ (scale-float 1d0 -52))
+(defconstant +cdiv-be+ (/ 2 (* +cdiv-eps+ +cdiv-eps+)))
+(defconstant +cdiv-2/eps+ (/ 2 +cdiv-eps+))
+
+;; Make these functions accessible.  cdiv-double-float and
+;; cdiv-single-float are used by deftransforms.  Of course, two-arg-/
+;; is the interface to division.  cdiv-generic isn't used anywhere
+;; else.
+(declaim (ext:start-block cdiv-double-float cdiv-single-float two-arg-/))
+
+(defun cdiv-double-float (x y)
+  "Accurate division of complex double-float numbers x and y."
+  (declare (type (complex double-float) x y)
+	   (optimize (speed 3) (safety 0)))
+  (labels
+      ((internal-compreal (a b c d r tt)
+	 (declare (double-float a b c d r tt))
+	 ;; Compute the real part of the complex division
+	 ;; (a+ib)/(c+id), assuming |c| <= |d|.  r = d/c and tt = 1/(c+d*r).
+	 ;;
+	 ;; The realpart is (a*c+b*d)/(c^2+d^2).
+	 ;;
+	 ;;   c^2+d^2 = c*(c+d*(d/c)) = c*(c+d*r)
+	 ;;
+	 ;; Then
+	 ;;
+	 ;;   (a*c+b*d)/(c^2+d^2) = (a*c+b*d)/(c*(c+d*r))
+	 ;;                       = (a + b*d/c)/(c+d*r)
+	 ;;                       = (a + b*r)/(c + d*r).
+	 ;;
+	 ;; Thus tt = (c + d*r).
+	 (cond ((>= (abs r) +cdiv-rmin+)
+		(let ((br (* b r)))
+		  (if (/= br 0)
+		      (/ (+ a br) tt)
+		      ;; b*r underflows.  Instead, compute
+		      ;;
+		      ;; (a + b*r)*tt = a*tt + b*tt*r
+		      ;;              = a*tt + (b*tt)*r
+		      ;; (a + b*r)/tt = a/tt + b/tt*r
+		      ;;              = a*tt + (b*tt)*r
+		      (+ (/ a tt)
+			 (* (/ b tt)
+			    r)))))
+	       (t
+		;; r = 0 so d is very tiny compared to c.
+		;;
+		(/ (+ a (* d (/ b c)))
+		   tt))))
+       (robust-subinternal (a b c d)
+	 (declare (double-float a b c d))
+	 (let* ((r (/ d c))
+		(tt (+ c (* d r))))
+	   ;; e is the real part and f is the imaginary part.  We
+	   ;; can use internal-compreal for the imaginary part by
+	   ;; noticing that the imaginary part of (a+i*b)/(c+i*d) is
+	   ;; the same as the real part of (b-i*a)/(c+i*d).
+	   (let ((e (internal-compreal a b c d r tt))
+		 (f (internal-compreal b (- a) c d r tt)))
+	     (values e
+		     f))))
+	 
+       (robust-internal (x y)
+	 (declare (type (complex double-float) x y))
+	 (let ((a (realpart x))
+	       (b (imagpart x))
+	       (c (realpart y))
+	       (d (imagpart y)))
+	   (declare (double-float a b c d))
+	   (flet ((maybe-scale (abs-tst a b c d)
+		    (declare (double-float a b c d))
+		    ;; This implements McGehearty's iteration 3 to
+		    ;; handle the case when some values are too big
+		    ;; and should be scaled down.  Also if some
+		    ;; values are too tiny, scale them up.
+		    (let ((abs-a (abs a))
+			  (abs-b (abs b)))
+		      (if (or (> abs-tst +cdiv-rbig+)
+			      (> abs-a +cdiv-rbig+)
+			      (> abs-b +cdiv-rbig+))
+			  (setf a (* a 0.5d0)
+				b (* b 0.5d0)
+				c (* c 0.5d0)
+				d (* d 0.5d0))
+			  (if (< abs-tst +cdiv-rmin2+)
+			      (setf a (* a +cdiv-rminscal+)
+				    b (* b +cdiv-rminscal+)
+				    c (* c +cdiv-rminscal+)
+				    d (* d +cdiv-rminscal+))
+			      (if (or (and (< abs-a +cdiv-rmin+)
+					   (< abs-b +cdiv-rmax2+)
+					   (< abs-tst +cdiv-rmax2+))
+				      (and (< abs-b +cdiv-rmin+)
+					   (< abs-a +cdiv-rmax2+)
+					   (< abs-tst +cdiv-rmax2+)))
+				  (setf a (* a +cdiv-rminscal+)
+					b (* b +cdiv-rminscal+)
+					c (* c +cdiv-rminscal+)
+					d (* d +cdiv-rminscal+)))))
+		      (values a b c d))))
+	     (cond
+	       ((<= (abs d) (abs c))
+		;; |d| <= |c|, so we can use robust-subinternal to
+		;; perform the division.
+		(multiple-value-bind (a b c d)
+		    (maybe-scale (abs c) a b c d)
+		  (multiple-value-bind (e f)
+		      (robust-subinternal a b c d)
+		    (complex e f))))
+	       (t
+		;; |d| > |c|.  So, instead compute
+		;;
+		;;   (b + i*a)/(d + i*c) = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
+		;;
+		;; Compare this to (a+i*b)/(c+i*d) and we see that
+		;; realpart of the former is the same, but the
+		;; imagpart of the former is the negative of the
+		;; desired division.
+		(multiple-value-bind (a b c d)
+		    (maybe-scale (abs d) a b c d)
+		  (multiple-value-bind (e f)
+		      (robust-subinternal b a d c)
+		    (complex e (- f))))))))))
+    (let* ((a (realpart x))
+	   (b (imagpart x))
+	   (c (realpart y))
+	   (d (imagpart y))
+	   (ab (max (abs a) (abs b)))
+	   (cd (max (abs c) (abs d)))
+	   (s 1d0))
+      (declare (double-float s))
+      ;; If a or b is big, scale down a and b.
+      (when (>= ab +cdiv-rbig+)
+	(setf x (/ x 2)
+	      s (* s 2)))
+      ;; If c or d is big, scale down c and d.
+      (when (>= cd +cdiv-rbig+)
+	(setf y (/ y 2)
+	      s (/ s 2)))
+      ;; If a or b is tiny, scale up a and b.
+      (when (<= ab (* +cdiv-rmin+ +cdiv-2/eps+))
+	(setf x (* x +cdiv-be+)
+	      s (/ s +cdiv-be+)))
+      ;; If c or d is tiny, scale up c and d.
+      (when (<= cd (* +cdiv-rmin+ +cdiv-2/eps+))
+	(setf y (* y +cdiv-be+)
+	      s (* s +cdiv-be+)))
+      (* s
+	 (robust-internal x y)))))
+
+;; Smith's algorithm for complex division for (complex single-float).
+;; We convert the parts to double-floats before computing the result.
+(defun cdiv-single-float (x y)
+  "Accurate division of complex single-float numbers x and y."
+  (declare (type (complex single-float) x y))
+  (let ((a (float (realpart x) 1d0))
+	(b (float (imagpart x) 1d0))
+	(c (float (realpart y) 1d0))
+	(d (float (imagpart y) 1d0)))
+    (cond ((< (abs c) (abs d))
+	   (let* ((r (/ c d))
+		  (denom (+ (* c r) d))
+		  (e (float (/ (+ (* a r) b) denom) 1f0))
+		  (f (float (/ (- (* b r) a) denom) 1f0)))
+	     (complex e f)))
+	  (t
+	   (let* ((r (/ d c))
+		  (denom (+ c (* d r)))
+		  (e (float (/ (+ a (* b r)) denom) 1f0))
+		  (f (float (/ (- b (* a r)) denom) 1f0)))
+	     (complex e f))))))
+
+;; Generic implementation of Smith's algorithm.
+(defun cdiv-generic (x y)
+  "Complex division of generic numbers x and y.  One of x or y should be
+  a complex."
+  (let ((a (realpart x))
+	(b (imagpart x))
+	(c (realpart y))
+	(d (imagpart y)))
+    (cond ((< (abs c) (abs d))
+	   (let* ((r (/ c d))
+		  (denom (+ (* c r) d))
+		  (e (/ (+ (* a r) b) denom))
+		  (f (/ (- (* b r) a) denom)))
+	     (canonical-complex e f)))
+	  (t
+	   (let* ((r (/ d c))
+		  (denom (+ c (* d r)))
+		  (e (/ (+ a (* b r)) denom))
+		  (f (/ (- b (* a r)) denom)))
+	     (canonical-complex e f))))))
 
 (defun two-arg-/ (x y)
   (number-dispatch ((x number) (y number))
     (float-contagion / x y (ratio integer))
-     
-    ((complex complex)
-     (let* ((rx (realpart x))
-	    (ix (imagpart x))
-	    (ry (realpart y))
-	    (iy (imagpart y)))
-       (if (> (abs ry) (abs iy))
-	   (let* ((r (/ iy ry))
-		  (dn (+ ry (* r iy))))
-	     (canonical-complex (/ (+ rx (* ix r)) dn)
-				(/ (- ix (* rx r)) dn)))
-	   (let* ((r (/ ry iy))
-		  (dn (+ iy (* r ry))))
-	     (canonical-complex (/ (+ (* rx r) ix) dn)
-				(/ (- (* ix r) rx) dn))))))
-    (((foreach integer ratio single-float double-float) complex)
+
+    (((complex single-float)
+      (foreach (complex rational) (complex single-float)))
+     (cdiv-single-float x (coerce y '(complex single-float))))
+    (((complex double-float)
+      (foreach (complex rational) (complex single-float) (complex double-float)))
+     (cdiv-double-float x (coerce y '(complex double-float))))
+
+    (((foreach integer ratio single-float (complex rational))
+      (complex single-float))
+     (cdiv-single-float (coerce x '(complex single-float))
+			y))
+    
+    (((foreach integer ratio single-float double-float (complex rational)
+	       (complex single-float))
+      (complex double-float))
+     (cdiv-double-float (coerce x '(complex double-float))
+			y))
+    (((complex double-double-float)
+      (foreach (complex rational) (complex single-float) (complex double-float)
+	       (complex double-double-float)))
+     ;; We should do something better for double-double floats.
+     (cdiv-generic x y))
+    
+    (((foreach integer ratio single-float double-float double-double-float
+	       (complex rational) (complex single-float) (complex double-float))
+      (complex double-double-float))
+     (cdiv-generic x y))
+
+    (((foreach integer ratio single-float double-float double-double-float)
+      (complex rational))
+     ;; Smith's algorithm, but takes advantage of the fact that the
+     ;; numerator is a real number and not complex.
      (let* ((ry (realpart y))
 	    (iy (imagpart y)))
        (if (> (abs ry) (abs iy))
@@ -624,10 +848,23 @@
 		  (dn (* iy (+ 1 (* r r)))))
 	     (canonical-complex (/ (* x r) dn)
 				(/ (- x) dn))))))
-    ((complex (or rational float))
+    (((complex rational)
+      (complex rational))
+     ;; We probably don't need to do Smith's algorithm for rationals.
+     ;; A naive implementation of coplex division has no issues.
+     (cdiv-generic x y))
+
+    (((foreach (complex rational) (complex single-float) (complex double-float)
+	       (complex double-double-float))
+      (or rational float))
      (canonical-complex (/ (realpart x) y)
 			(/ (imagpart x) y)))
-    
+      
+    ((double-float
+      (complex single-float))
+     (cdiv-double-float (coerce x '(complex double-float))
+			(coerce y '(complex double-float))))
+
     ((ratio ratio)
      (let* ((nx (numerator x))
 	    (dx (denominator x))
@@ -656,6 +893,7 @@
        (build-ratio (maybe-truncate nx gcd)
 		    (* (maybe-truncate y gcd) (denominator x)))))))
 
+(declaim (ext:end-block))
 
 (defun %negate (n)
   (number-dispatch ((n number))
