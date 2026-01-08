@@ -616,7 +616,9 @@
 ;; cdiv-single-float are used by deftransforms.  Of course, two-arg-/
 ;; is the interface to division.  cdiv-generic isn't used anywhere
 ;; else.
-(declaim (ext:start-block cdiv-double-float cdiv-single-float two-arg-/))
+(declaim (ext:start-block cdiv-double-float cdiv-single-float
+			  cdiv-double-double-float
+			  two-arg-/))
 
 (defun cdiv-double-float (x y)
   "Accurate division of complex double-float numbers x and y."
@@ -779,6 +781,162 @@
 		  (f (float (/ (- b (* a r)) denom) 1f0)))
 	     (complex e f))))))
 
+(defconstant +cdiv-dd-eps+
+  (scale-float 1w0 -104))
+(defconstant +cdiv-dd-rmin+
+  least-positive-normalized-double-double-float)
+(defconstant +cdiv-dd-rbig+
+  (/ most-positive-double-double-float 2))
+(defconstant +cdiv-dd-rmin2+
+  (scale-float 1w0 -105))
+(defconstant +cdiv-dd-rminscal+
+  (scale-float 1w0 102))
+(defconstant +cdiv-dd-rmax2+
+  (* +cdiv-dd-rbig+ +cdiv-dd-rmin2+))
+(defconstant +cdiv-dd-be+
+  (/ 2 (* +cdiv-dd-eps+ +cdiv-dd-eps+)))
+(defconstant +cdiv-dd-2/eps+
+  (/ 2 +cdiv-dd-eps+))
+
+(defun cdiv-double-double-float (x y)
+  (declare (type (complex double-double-float) x y)
+	   (optimize (speed 2) (safety 0)))
+  (labels
+      ((internal-compreal (a b c d r tt)
+	 (declare (double-double-float a b c d r tt))
+	 ;; Compute the real part of the complex division
+	 ;; (a+ib)/(c+id), assuming |c| <= |d|.  r = d/c and tt = 1/(c+d*r).
+	 ;;
+	 ;; The realpart is (a*c+b*d)/(c^2+d^2).
+	 ;;
+	 ;;   c^2+d^2 = c*(c+d*(d/c)) = c*(c+d*r)
+	 ;;
+	 ;; Then
+	 ;;
+	 ;;   (a*c+b*d)/(c^2+d^2) = (a*c+b*d)/(c*(c+d*r))
+	 ;;                       = (a + b*d/c)/(c+d*r)
+	 ;;                       = (a + b*r)/(c + d*r).
+	 ;;
+	 ;; Thus tt = (c + d*r).
+	 (cond ((>= (abs r) +cdiv-dd-rmin+)
+		(let ((br (* b r)))
+		  (if (/= br 0)
+		      (/ (+ a br) tt)
+		      ;; b*r underflows.  Instead, compute
+		      ;;
+		      ;; (a + b*r)*tt = a*tt + b*tt*r
+		      ;;              = a*tt + (b*tt)*r
+		      ;; (a + b*r)/tt = a/tt + b/tt*r
+		      ;;              = a*tt + (b*tt)*r
+		      (+ (/ a tt)
+			 (* (/ b tt)
+			    r)))))
+	       (t
+		;; r = 0 so d is very tiny compared to c.
+		;;
+		(/ (+ a (* d (/ b c)))
+		   tt))))
+       (robust-subinternal (a b c d)
+	 (declare (double-double-float a b c d))
+	 (let* ((r (/ d c))
+		(tt (+ c (* d r))))
+	   ;; e is the real part and f is the imaginary part.  We
+	   ;; can use internal-compreal for the imaginary part by
+	   ;; noticing that the imaginary part of (a+i*b)/(c+i*d) is
+	   ;; the same as the real part of (b-i*a)/(c+i*d).
+	   (let ((e (internal-compreal a b c d r tt))
+		 (f (internal-compreal b (- a) c d r tt)))
+	     (values e
+		     f))))
+	 
+       (robust-internal (x y)
+	 (declare (type (complex double-double-float) x y))
+	 (let ((a (realpart x))
+	       (b (imagpart x))
+	       (c (realpart y))
+	       (d (imagpart y)))
+	   (declare (double-double-float a b c d))
+	   (flet ((maybe-scale (abs-tst a b c d)
+		    (declare (double-double-float a b c d))
+		    ;; This implements McGehearty's iteration 3 to
+		    ;; handle the case when some values are too big
+		    ;; and should be scaled down.  Also if some
+		    ;; values are too tiny, scale them up.
+		    (let ((abs-a (abs a))
+			  (abs-b (abs b)))
+		      (if (or (> abs-tst +cdiv-dd-rbig+)
+			      (> abs-a +cdiv-dd-rbig+)
+			      (> abs-b +cdiv-dd-rbig+))
+			  (setf a (* a 0.5d0)
+				b (* b 0.5d0)
+				c (* c 0.5d0)
+				d (* d 0.5d0))
+			  (if (< abs-tst +cdiv-dd-rmin2+)
+			      (setf a (* a +cdiv-dd-rminscal+)
+				    b (* b +cdiv-dd-rminscal+)
+				    c (* c +cdiv-dd-rminscal+)
+				    d (* d +cdiv-dd-rminscal+))
+			      (if (or (and (< abs-a +cdiv-dd-rmin+)
+					   (< abs-b +cdiv-dd-rmax2+)
+					   (< abs-tst +cdiv-dd-rmax2+))
+				      (and (< abs-b +cdiv-dd-rmin+)
+					   (< abs-a +cdiv-dd-rmax2+)
+					   (< abs-tst +cdiv-dd-rmax2+)))
+				  (setf a (* a +cdiv-dd-rminscal+)
+					b (* b +cdiv-dd-rminscal+)
+					c (* c +cdiv-dd-rminscal+)
+					d (* d +cdiv-dd-rminscal+)))))
+		      (values a b c d))))
+	     (cond
+	       ((<= (abs d) (abs c))
+		;; |d| <= |c|, so we can use robust-subinternal to
+		;; perform the division.
+		(multiple-value-bind (a b c d)
+		    (maybe-scale (abs c) a b c d)
+		  (multiple-value-bind (e f)
+		      (robust-subinternal a b c d)
+		    (complex e f))))
+	       (t
+		;; |d| > |c|.  So, instead compute
+		;;
+		;;   (b + i*a)/(d + i*c) = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
+		;;
+		;; Compare this to (a+i*b)/(c+i*d) and we see that
+		;; realpart of the former is the same, but the
+		;; imagpart of the former is the negative of the
+		;; desired division.
+		(multiple-value-bind (a b c d)
+		    (maybe-scale (abs d) a b c d)
+		  (multiple-value-bind (e f)
+		      (robust-subinternal b a d c)
+		    (complex e (- f))))))))))
+    (let* ((a (realpart x))
+	   (b (imagpart x))
+	   (c (realpart y))
+	   (d (imagpart y))
+	   (ab (max (abs a) (abs b)))
+	   (cd (max (abs c) (abs d)))
+	   (s 1w0))
+      (declare (double-double-float s))
+      ;; If a or b is big, scale down a and b.
+      (when (>= ab +cdiv-dd-rbig+)
+	(setf x (/ x 2)
+	      s (* s 2)))
+      ;; If c or d is big, scale down c and d.
+      (when (>= cd +cdiv-dd-rbig+)
+	(setf y (/ y 2)
+	      s (/ s 2)))
+      ;; If a or b is tiny, scale up a and b.
+      (when (<= ab (* +cdiv-dd-rmin+ +cdiv-dd-2/eps+))
+	(setf x (* x +cdiv-dd-be+)
+	      s (/ s +cdiv-dd-be+)))
+      ;; If c or d is tiny, scale up c and d.
+      (when (<= cd (* +cdiv-dd-rmin+ +cdiv-dd-2/eps+))
+	(setf y (* y +cdiv-dd-be+)
+	      s (* s +cdiv-dd-be+)))
+      (* s
+	 (robust-internal x y)))))
+
 ;; Generic implementation of Smith's algorithm.
 (defun cdiv-generic (x y)
   "Complex division of generic numbers x and y.  One of x or y should be
@@ -825,9 +983,7 @@
       (foreach (complex rational) (complex single-float) (complex double-float)
 	       (complex double-double-float)))
      (c::cdiv-double-double-float x
-				  (coerce y '(complex double-double-float)))
-     ;; We should do something better for double-double floats.
-     (cdiv-generic x y))
+				  (coerce y '(complex double-double-float))))
     
     (((foreach integer ratio single-float double-float double-double-float
 	       (complex rational) (complex single-float) (complex double-float))

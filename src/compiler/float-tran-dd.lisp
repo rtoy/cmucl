@@ -705,6 +705,7 @@
 ;; This is a pretty straightforward change of
 ;; kernel::cdiv-double-float for double-double-float.  The constants
 ;; may need some tweaking.
+#+nil
 (let* ((+dd-eps+ (scale-float 1w0 -104))
        (+dd-rmin+ least-positive-normalized-double-double-float)
        (+dd-rbig+ (/ most-positive-double-double-float 2))
@@ -856,5 +857,5 @@
 
 (deftransform / ((x y) ((complex double-double-float) (complex double-double-float))
 		 *)
-  `(cdiv-double-double-float x y))	      
+  `(kernel::cdiv-double-double-float x y))
 ) ; end progn
