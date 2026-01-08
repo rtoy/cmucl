@@ -578,7 +578,7 @@
 
 (deftransform / ((a b) ((complex vm::double-double-float) (complex vm::double-double-float))
 		 *)
-  `(kernel::cdiv-double-double-float a b))	      
+  `(kernel::cdiv-double-double-float a b))
   	      
 (declaim (inline sqr-d))
 (defun sqr-d (a)
@@ -691,8 +691,4 @@
 	(kernel:double-double-lo a)
 	(kernel:double-double-hi b)
 	(kernel:double-double-lo b)))
-
-(deftransform / ((x y) ((complex double-double-float) (complex double-double-float))
-		 *)
-  `(kernel::cdiv-double-double-float x y))
 ) ; end progn
