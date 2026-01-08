@@ -612,9 +612,14 @@
 (defconstant +cdiv-be+ (/ 2 (* +cdiv-eps+ +cdiv-eps+)))
 (defconstant +cdiv-2/eps+ (/ 2 +cdiv-eps+))
 
+;; Make these functions accessible.  cdiv-double-float and
+;; cdiv-single-float are used by deftransforms.  Of course, two-arg-/
+;; is the interface to division.  cdiv-generic isn't used anywhere
+;; else.
 (declaim (ext:start-block cdiv-double-float cdiv-single-float two-arg-/))
 
 (defun cdiv-double-float (x y)
+  "Accurate division of complex double-float numbers x and y."
   (declare (type (complex double-float) x y)
 	   (optimize (speed 3) (safety 0)))
   (labels
@@ -756,6 +761,7 @@
 ;; Smith's algorithm for complex division for (complex single-float).
 ;; We convert the parts to double-floats before computing the result.
 (defun cdiv-single-float (x y)
+  "Accurate division of complex single-float numbers x and y."
   (declare (type (complex single-float) x y))
   (let ((a (float (realpart x) 1d0))
 	(b (float (imagpart x) 1d0))
@@ -776,6 +782,8 @@
 
 ;; Generic implementation of Smith's algorithm.
 (defun cdiv-generic (x y)
+  "Complex division of generic numbers x and y.  One of x or y should be
+  a complex."
   (let ((a (realpart x))
 	(b (imagpart x))
 	(c (realpart y))
