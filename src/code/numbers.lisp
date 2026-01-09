@@ -612,6 +612,31 @@
 (defconstant +cdiv-be+ (/ 2 (* +cdiv-eps+ +cdiv-eps+)))
 (defconstant +cdiv-2/eps+ (/ 2 +cdiv-eps+))
 
+;; Same constants but for double-double-floats.  Some of these aren't
+;; well-defined for double-double-floats so we make our best guess at
+;; what they might be.  Since double-doubles have about twice as many
+;; bits of precision as a double-float, we generally just double the
+;; exponent of the corresponding double-float values above.
+(defconstant +cdiv-dd-rmin+
+  least-positive-normalized-double-double-float)
+(defconstant +cdiv-dd-rbig+
+  (/ most-positive-double-double-float 2))
+(defconstant +cdiv-dd-rmin2+
+  (scale-float 1w0 -106))
+(defconstant +cdiv-dd-rminscal+
+  (scale-float 1w0 102))
+(defconstant +cdiv-dd-rmax2+
+  (* +cdiv-dd-rbig+ +cdiv-dd-rmin2+))
+;; Epsilon for double-doubles isn't really well-defined because things
+;; like (+ 1w0 1w-200) is a valid double-double float.
+(defconstant +cdiv-dd-eps+
+  (scale-float 1w0 -104))
+(defconstant +cdiv-dd-be+
+  (/ 2 (* +cdiv-dd-eps+ +cdiv-dd-eps+)))
+(defconstant +cdiv-dd-2/eps+
+  (/ 2 +cdiv-dd-eps+))
+
+
 ;; Make these functions accessible.  cdiv-double-float and
 ;; cdiv-single-float are used by deftransforms.  Of course, two-arg-/
 ;; is the interface to division.  cdiv-generic isn't used anywhere
@@ -781,24 +806,8 @@
 		  (f (float (/ (- b (* a r)) denom) 1f0)))
 	     (complex e f))))))
 
-(defconstant +cdiv-dd-eps+
-  (scale-float 1w0 -104))
-(defconstant +cdiv-dd-rmin+
-  least-positive-normalized-double-double-float)
-(defconstant +cdiv-dd-rbig+
-  (/ most-positive-double-double-float 2))
-(defconstant +cdiv-dd-rmin2+
-  (scale-float 1w0 -105))
-(defconstant +cdiv-dd-rminscal+
-  (scale-float 1w0 102))
-(defconstant +cdiv-dd-rmax2+
-  (* +cdiv-dd-rbig+ +cdiv-dd-rmin2+))
-(defconstant +cdiv-dd-be+
-  (/ 2 (* +cdiv-dd-eps+ +cdiv-dd-eps+)))
-(defconstant +cdiv-dd-2/eps+
-  (/ 2 +cdiv-dd-eps+))
-
 (defun cdiv-double-double-float (x y)
+  "Accurate division of complex double-double-float numbers x and y."
   (declare (type (complex double-double-float) x y)
 	   (optimize (speed 2) (safety 0)))
   (labels
