@@ -991,13 +991,13 @@
     (((complex double-double-float)
       (foreach (complex rational) (complex single-float) (complex double-float)
 	       (complex double-double-float)))
-     (c::cdiv-double-double-float x
+     (cdiv-double-double-float x
 				  (coerce y '(complex double-double-float))))
     
     (((foreach integer ratio single-float double-float double-double-float
 	       (complex rational) (complex single-float) (complex double-float))
       (complex double-double-float))
-     (c::cdiv-double-double-float (coerce x '(complex double-double-float))
+     (cdiv-double-double-float (coerce x '(complex double-double-float))
 				  y))
 
     (((foreach integer ratio single-float double-float double-double-float)
