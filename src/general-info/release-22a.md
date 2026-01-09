@@ -38,6 +38,9 @@ public domain.
             using Baudin and Smith's robust complex division algorithm
             with improvements by Patrick McGehearty.
     * #458: Spurious overflow in double-double-float multiply
+    * #459: Improve accuracy for division of complex
+            double-double-floats.  The same algorithm is used here as
+            for #456.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
