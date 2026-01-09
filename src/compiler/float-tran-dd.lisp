@@ -578,7 +578,10 @@
 
 (deftransform / ((a b) ((complex vm::double-double-float) (complex vm::double-double-float))
 		 *)
-  `(kernel::cdiv-double-double-float a b))
+  `(kernel::cdiv-double-double-float (realpart a)
+				     (imagpart a)
+				     (realpart b)
+				     (imagpart b)))
   	      
 (declaim (inline sqr-d))
 (defun sqr-d (a)

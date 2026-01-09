@@ -667,9 +667,9 @@
 	      (+eps+ (symbolicate "+CDIV-" dd "EPS+"))
 	      (+be+ (symbolicate "+CDIV-" dd "BE+"))
 	      (+2/eps+ (symbolicate "+CDIV-" dd "2/EPS+")))
-	 `(defun ,name (x y)
+	 `(defun ,name (xr xi yr yi)
 	    ,docstring
-	    (declare (type (complex ,type) x y)
+	    (declare (,type xr xi yr yi)
 		     (optimize (speed 3) (safety 0)))
 	    (labels
 		((internal-compreal (a b c d r tt)
@@ -718,93 +718,88 @@
 			   (f (internal-compreal b (- a) c d r tt)))
 		       (values e
 			       f))))
-		 (robust-internal (x y)
-		   (declare (type (complex ,type) x y))
-		   (let ((a (realpart x))
-			 (b (imagpart x))
-			 (c (realpart y))
-			 (d (imagpart y)))
-		     (declare (,type a b c d))
-		     (flet ((maybe-scale (abs-tst a b c d)
-			      (declare (,type a b c d))
-			      ;; This implements McGehearty's iteration 3 to
-			      ;; handle the case when some values are too big
-			      ;; and should be scaled down.  Also if some
-			      ;; values are too tiny, scale them up.
-			      (let ((abs-a (abs a))
-				    (abs-b (abs b)))
-				(if (or (> abs-tst ,+rbig+)
-					(> abs-a ,+rbig+)
-					(> abs-b ,+rbig+))
-				    (setf a (* a 0.5d0)
-					  b (* b 0.5d0)
-					  c (* c 0.5d0)
-					  d (* d 0.5d0))
-				    (if (< abs-tst ,+rmin2+)
-					(setf a (* a ,+rminscal+)
-					      b (* b ,+rminscal+)
-					      c (* c ,+rminscal+)
-					      d (* d ,+rminscal+))
-					(if (or (and (< abs-a ,+rmin+)
-						     (< abs-b ,+rmax2+)
-						     (< abs-tst ,+rmax2+))
-						(and (< abs-b ,+rmin+)
-						     (< abs-a ,+rmax2+)
-						     (< abs-tst ,+rmax2+)))
-					    (setf a (* a ,+rminscal+)
-						  b (* b ,+rminscal+)
-						  c (* c ,+rminscal+)
-						  d (* d ,+rminscal+)))))
-				(values a b c d))))
-		       (cond
-			 ((<= (abs d) (abs c))
-			  ;; |d| <= |c|, so we can use robust-subinternal to
-			  ;; perform the division.
-			  (multiple-value-bind (a b c d)
-			      (maybe-scale (abs c) a b c d)
-			    (multiple-value-bind (e f)
-				(robust-subinternal a b c d)
-			      (complex e f))))
-			 (t
-			  ;; |d| > |c|.  So, instead compute
-			  ;;
-			  ;;   (b + i*a)/(d + i*c) = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
-			  ;;
-			  ;; Compare this to (a+i*b)/(c+i*d) and we see that
-			  ;; realpart of the former is the same, but the
-			  ;; imagpart of the former is the negative of the
-			  ;; desired division.
-			  (multiple-value-bind (a b c d)
-			      (maybe-scale (abs d) a b c d)
-			    (multiple-value-bind (e f)
-				(robust-subinternal b a d c)
-			      (complex e (- f))))))))))
-	      (let* ((a (realpart x))
-		     (b (imagpart x))
-		     (c (realpart y))
-		     (d (imagpart y))
-		     (ab (max (abs a) (abs b)))
-		     (cd (max (abs c) (abs d)))
+		 (robust-internal (a b c d)
+		   (declare (type ,type a b c d))
+		   (flet ((maybe-scale (abs-tst a b c d)
+			    (declare (,type a b c d))
+			    ;; This implements McGehearty's iteration 3 to
+			    ;; handle the case when some values are too big
+			    ;; and should be scaled down.  Also if some
+			    ;; values are too tiny, scale them up.
+			    (let ((abs-a (abs a))
+				  (abs-b (abs b)))
+			      (if (or (> abs-tst ,+rbig+)
+				      (> abs-a ,+rbig+)
+				      (> abs-b ,+rbig+))
+				  (setf a (* a 0.5d0)
+					b (* b 0.5d0)
+					c (* c 0.5d0)
+					d (* d 0.5d0))
+				  (if (< abs-tst ,+rmin2+)
+				      (setf a (* a ,+rminscal+)
+					    b (* b ,+rminscal+)
+					    c (* c ,+rminscal+)
+					    d (* d ,+rminscal+))
+				      (if (or (and (< abs-a ,+rmin+)
+						   (< abs-b ,+rmax2+)
+						   (< abs-tst ,+rmax2+))
+					      (and (< abs-b ,+rmin+)
+						   (< abs-a ,+rmax2+)
+						   (< abs-tst ,+rmax2+)))
+					  (setf a (* a ,+rminscal+)
+						b (* b ,+rminscal+)
+						c (* c ,+rminscal+)
+						d (* d ,+rminscal+)))))
+			      (values a b c d))))
+		     (cond
+		       ((<= (abs d) (abs c))
+			;; |d| <= |c|, so we can use robust-subinternal to
+			;; perform the division.
+			(multiple-value-bind (a b c d)
+			    (maybe-scale (abs c) a b c d)
+			  (multiple-value-bind (e f)
+			      (robust-subinternal a b c d)
+			    (complex e f))))
+		       (t
+			;; |d| > |c|.  So, instead compute
+			;;
+			;;   (b + i*a)/(d + i*c) = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
+			;;
+			;; Compare this to (a+i*b)/(c+i*d) and we see that
+			;; realpart of the former is the same, but the
+			;; imagpart of the former is the negative of the
+			;; desired division.
+			(multiple-value-bind (a b c d)
+			    (maybe-scale (abs d) a b c d)
+			  (multiple-value-bind (e f)
+			      (robust-subinternal b a d c)
+			    (complex e (- f)))))))))
+	      (let* ((xabs (max (abs xr) (abs xi)))
+		     (yabs (max (abs yr) (abs yi)))
 		     (s (coerce 1 ',type)))
 		(declare (,type s))
-		;; If a or b is big, scale down a and b.
-		(when (>= ab ,+rbig+)
-		  (setf x (/ x 2)
+		;; If xr or xi is big, scale down xr and xi.
+		(when (>= xabs ,+rbig+)
+		  (setf xr (/ xr 2)
+			xi (/ xi 2)
 			s (* s 2)))
-		;; If c or d is big, scale down c and d.
-		(when (>= cd ,+rbig+)
-		  (setf y (/ y 2)
+		;; If yr or yi is big, scale down yr and yi.
+		(when (>= yabs ,+rbig+)
+		  (setf yr (/ yr 2)
+			yi (/ yi 2)
 			s (/ s 2)))
-		;; If a or b is tiny, scale up a and b.
-		(when (<= ab (* ,+rmin+ ,+2/eps+))
-		  (setf x (* x ,+be+)
+		;; If xr or xi is tiny, scale up xr and xi.
+		(when (<= xabs (* ,+rmin+ ,+2/eps+))
+		  (setf xr (* xr ,+be+)
+			xi (* xi ,+be+)
 			s (/ s ,+be+)))
-		;; If c or d is tiny, scale up c and d.
-		(when (<= cd (* ,+rmin+ ,+2/eps+))
-		  (setf y (* y ,+be+)
+		;; If yr or yi is tiny, scale up yr and yi.
+		(when (<= yabs (* ,+rmin+ ,+2/eps+))
+		  (setf yr (* yr ,+be+)
+			yi (* yi ,+be+)
 			s (* s ,+be+)))
 		(* s
-		   (robust-internal x y))))))))
+		   (robust-internal xr xi yr yi))))))))
   (frob double-float)
   #+double-double
   (frob double-double-float))
@@ -861,7 +856,10 @@
      (cdiv-single-float x (coerce y '(complex single-float))))
     (((complex double-float)
       (foreach (complex rational) (complex single-float) (complex double-float)))
-     (cdiv-double-float x (coerce y '(complex double-float))))
+     (cdiv-double-float (realpart x)
+			(imagpart x)
+			(coerce (realpart y) 'double-float)
+			(coerce (imagpart y) 'double-float)))
 
     (((foreach integer ratio single-float (complex rational))
       (complex single-float))
@@ -871,19 +869,25 @@
     (((foreach integer ratio single-float double-float (complex rational)
 	       (complex single-float))
       (complex double-float))
-     (cdiv-double-float (coerce x '(complex double-float))
-			y))
+     (cdiv-double-float (coerce (realpart x) 'double-float)
+			(coerce (imagpart x) 'double-float)
+			(realpart y)
+			(imagpart y)))
     (((complex double-double-float)
       (foreach (complex rational) (complex single-float) (complex double-float)
 	       (complex double-double-float)))
-     (cdiv-double-double-float x
-				  (coerce y '(complex double-double-float))))
+     (cdiv-double-double-float (realpart x)
+			       (imagpart x)
+			       (coerce (realpart y) 'double-double-float)
+			       (coerce (imagpart y) 'double-double-float)))
     
     (((foreach integer ratio single-float double-float double-double-float
 	       (complex rational) (complex single-float) (complex double-float))
       (complex double-double-float))
-     (cdiv-double-double-float (coerce x '(complex double-double-float))
-				  y))
+     (cdiv-double-double-float (coerce (realpart x) 'double-double-float)
+			       (coerce (imagpart x) 'double-double-float)
+			       (realpart y)
+			       (imagpart y)))
 
     (((foreach integer ratio single-float double-float double-double-float)
       (complex rational))
@@ -914,8 +918,10 @@
       
     ((double-float
       (complex single-float))
-     (cdiv-double-float (coerce x '(complex double-float))
-			(coerce y '(complex double-float))))
+     (cdiv-double-float x
+			0d0
+			(coerce (realpart y) 'double-float)
+			(coerce (imagpart y) 'double-float)))
 
     ((ratio ratio)
      (let* ((nx (numerator x))
