@@ -1804,46 +1804,13 @@
   #+double-double
   (frob double-double-float))
   
-#+(and sse2 complex-fp-vops)
 (macrolet
-    ((frob (type one)
-       `(deftransform / ((x y) (,type ,type) *
-			 :policy (> speed space))
-	  ;; Divide a complex by a complex
+    ((frob (type name)
+       `(deftransform / ((x y) ((complex ,type) (complex ,type)) *)
+		      (,name x y))))
+  (frob double-float kernel::cdiv-double-float)
+  (frob single-float kernel::cdiv-single-float))
 
-	  ;; Here's how we do a complex division
-	  ;;
-	  ;; Compute (xr + i*xi)/(yr + i*yi)
-	  ;;
-	  ;; Assume |yi| < |yr|.  Then
-	  ;;
-	  ;; (xr + i*xi)      (xr + i*xi)
-	  ;; ----------- = -----------------
-	  ;; (yr + i*yi)   yr*(1 + i*(yi/yr))
-	  ;;
-	  ;;               (xr + i*xi)*(1 - i*(yi/yr))
-	  ;;             = ---------------------------
-	  ;;                   yr*(1 + (yi/yr)^2)
-	  ;;
-	  ;;               (xr + i*xi)*(1 - i*(yi/yr))
-	  ;;             = ---------------------------
-	  ;;                   yr + (yi/yr)*yi
-	  ;;
-	  ;; This allows us to use a fast complex multiply followed by
-	  ;; a real division.
-	  '(let* ((ry (realpart y))
-		  (iy (imagpart y)))
-	    (if (> (abs ry) (abs iy))
-		(let* ((r (/ iy ry))
-		       (dn (+ ry (* r iy))))
-		  (/ (* x (complex ,one r))
-		     dn))
-		(let* ((r (/ ry iy))
-		       (dn (+ iy (* r ry))))
-		  (/ (* x (complex r ,(- one)))
-		     dn)))))))
-  (frob (complex single-float) 1f0)
-  (frob (complex double-float) 1d0))
 
 ;;;; Complex contagion:
 
