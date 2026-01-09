@@ -4390,11 +4390,11 @@ msgid "Accurate division of complex double-float numbers x and y."
 msgstr ""
 
 #: src/code/numbers.lisp
-msgid "Accurate division of complex single-float numbers x and y."
+msgid "Accurate division of complex double-double-float numbers x and y."
 msgstr ""
 
 #: src/code/numbers.lisp
-msgid "Accurate division of complex double-double-float numbers x and y."
+msgid "Accurate division of complex single-float numbers x and y."
 msgstr ""
 
 #: src/code/numbers.lisp
