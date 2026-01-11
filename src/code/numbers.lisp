@@ -789,12 +789,12 @@
 		(declare (,type s))
 		;; If a or b is big, scale down a and b.
 		(when (>= ab ,+rbig+)
-		  (setf x (/ x 2)
+		  (setf x (* x 0.5d0)
 			s (* s 2)))
 		;; If c or d is big, scale down c and d.
 		(when (>= cd ,+rbig+)
-		  (setf y (/ y 2)
-			s (/ s 2)))
+		  (setf y (* y 0.5d0)
+			s (* s 0.5d0)))
 		;; If a or b is tiny, scale up a and b.
 		(when (<= ab (* ,+rmin+ ,+2/eps+))
 		  (setf x (* x ,+be+)
