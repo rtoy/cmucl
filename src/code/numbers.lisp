@@ -612,25 +612,33 @@
 (defconstant +cdiv-be+ (/ 2 (* +cdiv-eps+ +cdiv-eps+)))
 (defconstant +cdiv-2/eps+ (/ 2 +cdiv-eps+))
 
-;; Same constants but for double-double-floats.  Some of these aren't
-;; well-defined for double-double-floats so we make our best guess at
+;; Same constants but for DOUBLE-DOUBLE-FLOATS.  Some of these aren't
+;; well-defined for DOUBLE-DOUBLE-FLOATS so we make our best guess at
 ;; what they might be.  Since double-doubles have about twice as many
-;; bits of precision as a double-float, we generally just double the
-;; exponent of the corresponding double-float values above.
+;; bits of precision as a DOUBLE-FLOAT, we generally just double the
+;; exponent (for SCALE-FLOAT) of the corresponding DOUBLE-FLOAT values
+;; above.
+;;
+;; Note also that both LEAST-POSITIVE-NORMALIZED-DOUBLE-DOUBLE-FLOAT
+;; and MOST-POSITIVE-DOUBLE-DOUBLE-FLOAT have a low component of 0, so
+;; there's no loss of precision if we use the corresponding
+;; DOUBLE-FLOAT values.  Likewise, all the other constants here are
+;; powers of 2, so the DOUBLE-DOUBLE-FLOAT values can be represented
+;; exactly as a DOUBLE-FLOAT.  We can use DOUBLE-FLOAT values.
 (defconstant +cdiv-dd-rmin+
-  least-positive-normalized-double-double-float)
+  least-positive-normalized-double-float)
 (defconstant +cdiv-dd-rbig+
-  (/ most-positive-double-double-float 2))
+  (/ most-positive-double-float 2))
 (defconstant +cdiv-dd-rmin2+
-  (scale-float 1w0 -106))
+  (scale-float 1d0 -106))
 (defconstant +cdiv-dd-rminscal+
-  (scale-float 1w0 102))
+  (scale-float 1d0 102))
 (defconstant +cdiv-dd-rmax2+
   (* +cdiv-dd-rbig+ +cdiv-dd-rmin2+))
 ;; Epsilon for double-doubles isn't really well-defined because things
 ;; like (+ 1w0 1w-200) is a valid double-double float.
 (defconstant +cdiv-dd-eps+
-  (scale-float 1w0 -104))
+  (scale-float 1d0 -104))
 (defconstant +cdiv-dd-be+
   (/ 2 (* +cdiv-dd-eps+ +cdiv-dd-eps+)))
 (defconstant +cdiv-dd-2/eps+
@@ -674,10 +682,13 @@
        (defun ,compreal (a b c d r tt)
 	 (declare (,type a b c d r tt)
 		  ,@opt)
-	 ;; Compute the real part of the complex division
-	 ;; (a+ib)/(c+id), assuming |c| <= |d|.  r = d/c and tt = 1/(c+d*r).
+	 ;; Computes the real part of the complex division
+	 ;; (a+ib)/(c+id), assuming |d| <= |c|.  Then let r = d/c and
+	 ;; tt = (c+d*r).
 	 ;;
 	 ;; The realpart is (a*c+b*d)/(c^2+d^2).
+	 ;;
+	 ;; The denominator is
 	 ;;
 	 ;;   c^2+d^2 = c*(c+d*(d/c)) = c*(c+d*r)
 	 ;;
@@ -694,15 +705,12 @@
 		      (/ (+ a br) tt)
 		      ;; b*r underflows.  Instead, compute
 		      ;;
-		      ;; (a + b*r)*tt = a*tt + b*tt*r
-		      ;;              = a*tt + (b*tt)*r
 		      ;; (a + b*r)/tt = a/tt + b/tt*r
-		      ;;              = a*tt + (b*tt)*r
 		      (+ (/ a tt)
 			 (* (/ b tt)
 			    r)))))
 	       (t
-		;; r = 0 so d is very tiny compared to c.
+		;; r is very small so d is very tiny compared to c.
 		;;
 		(/ (+ a (* d (/ b c)))
 		   tt))))
@@ -763,9 +771,7 @@
 		;; perform the division.
 		(multiple-value-bind (a b c d)
 		    (maybe-scale (abs c) a b c d)
-		  (multiple-value-bind (e f)
-		      (,subinternal a b c d)
-		    (complex e f))))
+		  (,subinternal a b c d)))
 	       (t
 		;; |d| > |c|.  So, instead compute
 		;;
@@ -779,7 +785,7 @@
 		    (maybe-scale (abs d) a b c d)
 		  (multiple-value-bind (e f)
 		      (,subinternal b a d c)
-		    (complex e (- f)))))))))
+		    (values e (- f)))))))))
        (defun ,name (x y)
 	 ,docstring
 	 (declare (type (complex ,type) x y)
@@ -814,13 +820,14 @@
 	   (when (<= cd (* ,+rmin+ ,+2/eps+))
 	     (setf y (* y ,+be+)
 		   s (* s ,+be+)))
-	   (* s
-	      (,internal x y)))))))
+	   (multiple-value-bind (e f)
+	       (,internal x y)
+	     (complex (* s e)
+		      (* s f))))))))
 )
 
 (define-cdiv double-float)
 (define-cdiv double-double-float)
-
 
 ;; Smith's algorithm for complex division for (complex single-float).
 ;; We convert the parts to double-floats before computing the result.
