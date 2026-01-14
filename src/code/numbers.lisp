@@ -729,59 +729,58 @@
        (defun ,internal (a b c d)
 	 (declare (,type a b c d)
 		  ,@opt)
-	 (let ()
-	   (flet ((maybe-scale (abs-tst a b c d)
-		    (declare (,type a b c d))
-		    ;; This implements McGehearty's iteration 3 to
-		    ;; handle the case when some values are too big
-		    ;; and should be scaled down.  Also if some
-		    ;; values are too tiny, scale them up.
-		    (let ((abs-a (abs a))
-			  (abs-b (abs b)))
-		      (if (or (> abs-tst ,+rbig+)
-			      (> abs-a ,+rbig+)
-			      (> abs-b ,+rbig+))
-			  (setf a (* a 0.5d0)
-				b (* b 0.5d0)
-				c (* c 0.5d0)
-				d (* d 0.5d0))
-			  (if (< abs-tst ,+rmin2+)
-			      (setf a (* a ,+rminscal+)
-				    b (* b ,+rminscal+)
-				    c (* c ,+rminscal+)
-				    d (* d ,+rminscal+))
-			      (if (or (and (< abs-a ,+rmin+)
-					   (< abs-b ,+rmax2+)
-					   (< abs-tst ,+rmax2+))
-				      (and (< abs-b ,+rmin+)
-					   (< abs-a ,+rmax2+)
-					   (< abs-tst ,+rmax2+)))
-				  (setf a (* a ,+rminscal+)
-					b (* b ,+rminscal+)
-					c (* c ,+rminscal+)
-					d (* d ,+rminscal+)))))
-		      (values a b c d))))
-	     (cond
-	       ((<= (abs d) (abs c))
-		;; |d| <= |c|, so we can use robust-subinternal to
-		;; perform the division.
-		(multiple-value-bind (a b c d)
-		    (maybe-scale (abs c) a b c d)
-		  (,subinternal a b c d)))
-	       (t
-		;; |d| > |c|.  So, instead compute
-		;;
-		;;   (b + i*a)/(d + i*c) = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
-		;;
-		;; Compare this to (a+i*b)/(c+i*d) and we see that
-		;; realpart of the former is the same, but the
-		;; imagpart of the former is the negative of the
-		;; desired division.
-		(multiple-value-bind (a b c d)
-		    (maybe-scale (abs d) a b c d)
-		  (multiple-value-bind (e f)
-		      (,subinternal b a d c)
-		    (values e (- f)))))))))
+	 (flet ((maybe-scale (abs-tst a b c d)
+		  (declare (,type a b c d))
+		  ;; This implements McGehearty's iteration 3 to
+		  ;; handle the case when some values are too big
+		  ;; and should be scaled down.  Also if some
+		  ;; values are too tiny, scale them up.
+		  (let ((abs-a (abs a))
+			(abs-b (abs b)))
+		    (if (or (> abs-tst ,+rbig+)
+			    (> abs-a ,+rbig+)
+			    (> abs-b ,+rbig+))
+			(setf a (* a 0.5d0)
+			      b (* b 0.5d0)
+			      c (* c 0.5d0)
+			      d (* d 0.5d0))
+			(if (< abs-tst ,+rmin2+)
+			    (setf a (* a ,+rminscal+)
+				  b (* b ,+rminscal+)
+				  c (* c ,+rminscal+)
+				  d (* d ,+rminscal+))
+			    (if (or (and (< abs-a ,+rmin+)
+					 (< abs-b ,+rmax2+)
+					 (< abs-tst ,+rmax2+))
+				    (and (< abs-b ,+rmin+)
+					 (< abs-a ,+rmax2+)
+					 (< abs-tst ,+rmax2+)))
+				(setf a (* a ,+rminscal+)
+				      b (* b ,+rminscal+)
+				      c (* c ,+rminscal+)
+				      d (* d ,+rminscal+)))))
+		    (values a b c d))))
+	   (cond
+	     ((<= (abs d) (abs c))
+	      ;; |d| <= |c|, so we can use robust-subinternal to
+	      ;; perform the division.
+	      (multiple-value-bind (a b c d)
+		  (maybe-scale (abs c) a b c d)
+		(,subinternal a b c d)))
+	     (t
+	      ;; |d| > |c|.  So, instead compute
+	      ;;
+	      ;;   (b + i*a)/(d + i*c) = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
+	      ;;
+	      ;; Compare this to (a+i*b)/(c+i*d) and we see that
+	      ;; realpart of the former is the same, but the
+	      ;; imagpart of the former is the negative of the
+	      ;; desired division.
+	      (multiple-value-bind (a b c d)
+		  (maybe-scale (abs d) a b c d)
+		(multiple-value-bind (e f)
+		    (,subinternal b a d c)
+		  (values e (- f))))))))
        (defun ,name (a b c d)
 	 ,docstring
 	 (declare (,type a b c d)
