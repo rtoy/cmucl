@@ -612,25 +612,33 @@
 (defconstant +cdiv-be+ (/ 2 (* +cdiv-eps+ +cdiv-eps+)))
 (defconstant +cdiv-2/eps+ (/ 2 +cdiv-eps+))
 
-;; Same constants but for double-double-floats.  Some of these aren't
-;; well-defined for double-double-floats so we make our best guess at
+;; Same constants but for DOUBLE-DOUBLE-FLOATS.  Some of these aren't
+;; well-defined for DOUBLE-DOUBLE-FLOATS so we make our best guess at
 ;; what they might be.  Since double-doubles have about twice as many
-;; bits of precision as a double-float, we generally just double the
-;; exponent of the corresponding double-float values above.
+;; bits of precision as a DOUBLE-FLOAT, we generally just double the
+;; exponent (for SCALE-FLOAT) of the corresponding DOUBLE-FLOAT values
+;; above.
+;;
+;; Note also that both LEAST-POSITIVE-NORMALIZED-DOUBLE-DOUBLE-FLOAT
+;; and MOST-POSITIVE-DOUBLE-DOUBLE-FLOAT have a low component of 0, so
+;; there's no loss of precision if we use the corresponding
+;; DOUBLE-FLOAT values.  Likewise, all the other constants here are
+;; powers of 2, so the DOUBLE-DOUBLE-FLOAT values can be represented
+;; exactly as a DOUBLE-FLOAT.  We can use DOUBLE-FLOAT values.
 (defconstant +cdiv-dd-rmin+
-  least-positive-normalized-double-double-float)
+  least-positive-normalized-double-float)
 (defconstant +cdiv-dd-rbig+
-  (/ most-positive-double-double-float 2))
+  (/ most-positive-double-float 2))
 (defconstant +cdiv-dd-rmin2+
-  (scale-float 1w0 -106))
+  (scale-float 1d0 -106))
 (defconstant +cdiv-dd-rminscal+
-  (scale-float 1w0 102))
+  (scale-float 1d0 102))
 (defconstant +cdiv-dd-rmax2+
   (* +cdiv-dd-rbig+ +cdiv-dd-rmin2+))
 ;; Epsilon for double-doubles isn't really well-defined because things
 ;; like (+ 1w0 1w-200) is a valid double-double float.
 (defconstant +cdiv-dd-eps+
-  (scale-float 1w0 -104))
+  (scale-float 1d0 -104))
 (defconstant +cdiv-dd-be+
   (/ 2 (* +cdiv-dd-eps+ +cdiv-dd-eps+)))
 (defconstant +cdiv-dd-2/eps+
@@ -648,161 +656,174 @@
 ;; The code for both the double-float and double-double-float
 ;; implementation is basically identical except for the constants.
 ;; use a macro to generate both versions.
-(macrolet
-    ((frob (type)
-       (let* ((dd (if (eq type 'double-float)
-		      ""
-		      "DD-"))
-	      (name (symbolicate "CDIV-" type))
-	      (docstring (let ((*print-case* :downcase))
-			   (format nil "Accurate division of complex ~A numbers x and y."
-				   type)))
-	      ;; Create the correct symbols for the constants we need,
-	      ;; as defined above.
-	      (+rmin+ (symbolicate "+CDIV-" dd "RMIN+"))
-	      (+rbig+ (symbolicate "+CDIV-" dd "RBIG+"))
-	      (+rmin2+ (symbolicate "+CDIV-" dd "RMIN2+"))
-	      (+rminscal+ (symbolicate "+CDIV-" dd "RMINSCAL+"))
-	      (+rmax2+ (symbolicate "+CDIV-" dd "RMAX2+"))
-	      (+eps+ (symbolicate "+CDIV-" dd "EPS+"))
-	      (+be+ (symbolicate "+CDIV-" dd "BE+"))
-	      (+2/eps+ (symbolicate "+CDIV-" dd "2/EPS+")))
-	 `(defun ,name (xr xi yr yi)
-	    ,docstring
-	    (declare (,type xr xi yr yi)
-		     (optimize (speed 3) (safety 0)))
-	    (labels
-		((internal-compreal (a b c d r tt)
-		   (declare (,type a b c d r tt))
-		   ;; Compute the real part of the complex division
-		   ;; (a+ib)/(c+id), assuming |c| <= |d|.  r = d/c and tt = 1/(c+d*r).
-		   ;;
-		   ;; The realpart is (a*c+b*d)/(c^2+d^2).
-		   ;;
-		   ;;   c^2+d^2 = c*(c+d*(d/c)) = c*(c+d*r)
-		   ;;
-		   ;; Then
-		   ;;
-		   ;;   (a*c+b*d)/(c^2+d^2) = (a*c+b*d)/(c*(c+d*r))
-		   ;;                       = (a + b*d/c)/(c+d*r)
-		   ;;                       = (a + b*r)/(c + d*r).
-		   ;;
-		   ;; Thus tt = (c + d*r).
-		   (cond ((>= (abs r) ,+rmin+)
-			  (let ((br (* b r)))
-			    (if (/= br 0)
-				(/ (+ a br) tt)
-				;; b*r underflows.  Instead, compute
-				;;
-				;; (a + b*r)*tt = a*tt + b*tt*r
-				;;              = a*tt + (b*tt)*r
-				;; (a + b*r)/tt = a/tt + b/tt*r
-				;;              = a*tt + (b*tt)*r
-				(+ (/ a tt)
-				   (* (/ b tt)
-				      r)))))
-			 (t
-			  ;; r = 0 so d is very tiny compared to c.
-			  ;;
-			  (/ (+ a (* d (/ b c)))
-			     tt))))
-		 (robust-subinternal (a b c d)
-		   (declare (,type a b c d))
-		   (let* ((r (/ d c))
-			  (tt (+ c (* d r))))
-		     ;; e is the real part and f is the imaginary part.  We
-		     ;; can use internal-compreal for the imaginary part by
-		     ;; noticing that the imaginary part of (a+i*b)/(c+i*d) is
-		     ;; the same as the real part of (b-i*a)/(c+i*d).
-		     (let ((e (internal-compreal a b c d r tt))
-			   (f (internal-compreal b (- a) c d r tt)))
-		       (values e
-			       f))))
-		 (robust-internal (a b c d)
-		   (declare (type ,type a b c d))
-		   (flet ((maybe-scale (abs-tst a b c d)
-			    (declare (,type a b c d))
-			    ;; This implements McGehearty's iteration 3 to
-			    ;; handle the case when some values are too big
-			    ;; and should be scaled down.  Also if some
-			    ;; values are too tiny, scale them up.
-			    (let ((abs-a (abs a))
-				  (abs-b (abs b)))
-			      (if (or (> abs-tst ,+rbig+)
-				      (> abs-a ,+rbig+)
-				      (> abs-b ,+rbig+))
-				  (setf a (* a 0.5d0)
-					b (* b 0.5d0)
-					c (* c 0.5d0)
-					d (* d 0.5d0))
-				  (if (< abs-tst ,+rmin2+)
-				      (setf a (* a ,+rminscal+)
-					    b (* b ,+rminscal+)
-					    c (* c ,+rminscal+)
-					    d (* d ,+rminscal+))
-				      (if (or (and (< abs-a ,+rmin+)
-						   (< abs-b ,+rmax2+)
-						   (< abs-tst ,+rmax2+))
-					      (and (< abs-b ,+rmin+)
-						   (< abs-a ,+rmax2+)
-						   (< abs-tst ,+rmax2+)))
-					  (setf a (* a ,+rminscal+)
-						b (* b ,+rminscal+)
-						c (* c ,+rminscal+)
-						d (* d ,+rminscal+)))))
-			      (values a b c d))))
-		     (cond
-		       ((<= (abs d) (abs c))
-			;; |d| <= |c|, so we can use robust-subinternal to
-			;; perform the division.
-			(multiple-value-bind (a b c d)
-			    (maybe-scale (abs c) a b c d)
-			  (multiple-value-bind (e f)
-			      (robust-subinternal a b c d)
-			    (complex e f))))
-		       (t
-			;; |d| > |c|.  So, instead compute
-			;;
-			;;   (b + i*a)/(d + i*c) = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
-			;;
-			;; Compare this to (a+i*b)/(c+i*d) and we see that
-			;; realpart of the former is the same, but the
-			;; imagpart of the former is the negative of the
-			;; desired division.
-			(multiple-value-bind (a b c d)
-			    (maybe-scale (abs d) a b c d)
-			  (multiple-value-bind (e f)
-			      (robust-subinternal b a d c)
-			    (complex e (- f)))))))))
-	      (let* ((xabs (max (abs xr) (abs xi)))
-		     (yabs (max (abs yr) (abs yi)))
-		     (s (coerce 1 ',type)))
-		(declare (,type s))
-		;; If xr or xi is big, scale down xr and xi.
-		(when (>= xabs ,+rbig+)
-		  (setf xr (/ xr 2)
-			xi (/ xi 2)
-			s (* s 2)))
-		;; If yr or yi is big, scale down yr and yi.
-		(when (>= yabs ,+rbig+)
-		  (setf yr (/ yr 2)
-			yi (/ yi 2)
-			s (/ s 2)))
-		;; If xr or xi is tiny, scale up xr and xi.
-		(when (<= xabs (* ,+rmin+ ,+2/eps+))
-		  (setf xr (* xr ,+be+)
-			xi (* xi ,+be+)
-			s (/ s ,+be+)))
-		;; If yr or yi is tiny, scale up yr and yi.
-		(when (<= yabs (* ,+rmin+ ,+2/eps+))
-		  (setf yr (* yr ,+be+)
-			yi (* yi ,+be+)
-			s (* s ,+be+)))
-		(* s
-		   (robust-internal xr xi yr yi))))))))
-  (frob double-float)
-  #+double-double
-  (frob double-double-float))
+(eval-when (:compile-toplevel)
+(defmacro define-cdiv (type)
+  (let* ((dd (if (eq type 'double-float)
+		 ""
+		 "DD-"))
+	 (opt '((optimize (speed 3) (safety 0))))
+	 (name (symbolicate "CDIV-" type))
+	 (compreal (symbolicate "CDIV-" type "-INTERNAL-COMPREAL"))
+	 (subinternal (symbolicate "CDIV-" type "-ROBUST-SUBINTERNAL"))
+	 (internal (symbolicate "CDIV-" type "-ROBUST-INTERNAL"))
+	 (docstring (let ((*print-case* :downcase))
+		      (format nil "Accurate division of complex ~A numbers x and y."
+			      type)))
+	 ;; Create the correct symbols for the constants we need,
+	 ;; as defined above.
+	 (+rmin+ (symbolicate "+CDIV-" dd "RMIN+"))
+	 (+rbig+ (symbolicate "+CDIV-" dd "RBIG+"))
+	 (+rmin2+ (symbolicate "+CDIV-" dd "RMIN2+"))
+	 (+rminscal+ (symbolicate "+CDIV-" dd "RMINSCAL+"))
+	 (+rmax2+ (symbolicate "+CDIV-" dd "RMAX2+"))
+	 (+be+ (symbolicate "+CDIV-" dd "BE+"))
+	 (+2/eps+ (symbolicate "+CDIV-" dd "2/EPS+")))
+    `(progn
+       (defun ,compreal (a b c d r tt)
+	 (declare (,type a b c d r tt)
+		  ,@opt)
+	 ;; Computes the real part of the complex division
+	 ;; (a+ib)/(c+id), assuming |d| <= |c|.  Then let r = d/c and
+	 ;; tt = (c+d*r).
+	 ;;
+	 ;; The realpart is (a*c+b*d)/(c^2+d^2).
+	 ;;
+	 ;; The denominator is
+	 ;;
+	 ;;   c^2+d^2 = c*(c+d*(d/c)) = c*(c+d*r)
+	 ;;
+	 ;; Then
+	 ;;
+	 ;;   (a*c+b*d)/(c^2+d^2) = (a*c+b*d)/(c*(c+d*r))
+	 ;;                       = (a + b*d/c)/(c+d*r)
+	 ;;                       = (a + b*r)/(c + d*r).
+	 ;;
+	 ;; Thus tt = (c + d*r).
+	 (cond ((>= (abs r) ,+rmin+)
+		(let ((br (* b r)))
+		  (if (/= br 0)
+		      (/ (+ a br) tt)
+		      ;; b*r underflows.  Instead, compute
+		      ;;
+		      ;; (a + b*r)/tt = a/tt + b/tt*r
+		      (+ (/ a tt)
+			 (* (/ b tt)
+			    r)))))
+	       (t
+		;; r is very small so d is very tiny compared to c.
+		;;
+		(/ (+ a (* d (/ b c)))
+		   tt))))
+       (defun ,subinternal (a b c d)
+	 (declare (,type a b c d)
+		  ,@opt)
+	 (let* ((r (/ d c))
+		(tt (+ c (* d r))))
+	   ;; e is the real part and f is the imaginary part.  We
+	   ;; can use internal-compreal for the imaginary part by
+	   ;; noticing that the imaginary part of (a+i*b)/(c+i*d) is
+	   ;; the same as the real part of (b-i*a)/(c+i*d).
+	   (let ((e (,compreal a b c d r tt))
+		 (f (,compreal b (- a) c d r tt)))
+	     (values e f))))
+       (defun ,internal (a b c d)
+	 (declare (,type a b c d)
+		  ,@opt)
+	 (let ()
+	   (flet ((maybe-scale (abs-tst a b c d)
+		    (declare (,type a b c d))
+		    ;; This implements McGehearty's iteration 3 to
+		    ;; handle the case when some values are too big
+		    ;; and should be scaled down.  Also if some
+		    ;; values are too tiny, scale them up.
+		    (let ((abs-a (abs a))
+			  (abs-b (abs b)))
+		      (if (or (> abs-tst ,+rbig+)
+			      (> abs-a ,+rbig+)
+			      (> abs-b ,+rbig+))
+			  (setf a (* a 0.5d0)
+				b (* b 0.5d0)
+				c (* c 0.5d0)
+				d (* d 0.5d0))
+			  (if (< abs-tst ,+rmin2+)
+			      (setf a (* a ,+rminscal+)
+				    b (* b ,+rminscal+)
+				    c (* c ,+rminscal+)
+				    d (* d ,+rminscal+))
+			      (if (or (and (< abs-a ,+rmin+)
+					   (< abs-b ,+rmax2+)
+					   (< abs-tst ,+rmax2+))
+				      (and (< abs-b ,+rmin+)
+					   (< abs-a ,+rmax2+)
+					   (< abs-tst ,+rmax2+)))
+				  (setf a (* a ,+rminscal+)
+					b (* b ,+rminscal+)
+					c (* c ,+rminscal+)
+					d (* d ,+rminscal+)))))
+		      (values a b c d))))
+	     (cond
+	       ((<= (abs d) (abs c))
+		;; |d| <= |c|, so we can use robust-subinternal to
+		;; perform the division.
+		(multiple-value-bind (a b c d)
+		    (maybe-scale (abs c) a b c d)
+		  (,subinternal a b c d)))
+	       (t
+		;; |d| > |c|.  So, instead compute
+		;;
+		;;   (b + i*a)/(d + i*c) = ((b*d+a*c) + (a*d-b*c)*i)/(d^2+c^2)
+		;;
+		;; Compare this to (a+i*b)/(c+i*d) and we see that
+		;; realpart of the former is the same, but the
+		;; imagpart of the former is the negative of the
+		;; desired division.
+		(multiple-value-bind (a b c d)
+		    (maybe-scale (abs d) a b c d)
+		  (multiple-value-bind (e f)
+		      (,subinternal b a d c)
+		    (values e (- f)))))))))
+       (defun ,name (a b c d)
+	 ,docstring
+	 (declare (,type a b c d)
+		  ,@opt)
+	 (let* ((ab (max (abs a) (abs b)))
+		(cd (max (abs c) (abs d)))
+		;; S is always multipled by a power of 2.  It's either
+		;; 2, 0.5, or +be+, which is also a power of two.
+		;; (Either 2^105 or 2^209).  Hence, we can just use a
+		;; double-float instead of a double-double-float
+		;; because the double-double always has 0d0 for the lo
+		;; part.
+		(s 1d0))
+	   (declare (double-float s))
+	   ;; If a or b is big, scale down a and b.
+	   (when (>= ab ,+rbig+)
+	     (setf a (* a 0.5d0)
+		   b (* b 0.5d0)
+		   s (* s 2)))
+	   ;; If c or d is big, scale down c and d.
+	   (when (>= cd ,+rbig+)
+	     (setf c (* c 0.5d0)
+		   d (* d 0.5d0)
+		   s (* s 0.5d0)))
+	   ;; If a or b is tiny, scale up a and b.
+	   (when (<= ab (* ,+rmin+ ,+2/eps+))
+	     (setf a (* a ,+be+)
+		   b (* b ,+be+)
+		   s (/ s ,+be+)))
+	   ;; If c or d is tiny, scale up c and d.
+	   (when (<= cd (* ,+rmin+ ,+2/eps+))
+	     (setf c (* c ,+be+)
+		   d (* d ,+be+)
+		   s (* s ,+be+)))
+	   (multiple-value-bind (e f)
+	       (,internal a b c d)
+	     (complex (* s e)
+		      (* s f))))))))
+)
+
+(define-cdiv double-float)
+(define-cdiv double-double-float)
 
 ;; Smith's algorithm for complex division for (complex single-float).
 ;; We convert the parts to double-floats before computing the result.
