@@ -40,7 +40,8 @@ else
     # name as appropriate.  This is much more informative.  However,
     # we have to remove everything before the first slash which
     # contains things like "tag/" or "head/".
-    GIT_HASH="`(git describe --all --dirty | sed 's;^[^/]\+/;;' 2>/dev/null || git describe 2>/dev/null)`"
+    GIT_DESC="`(git describe --all --dirty || git describe 2>/dev/null)`"
+    GIT_HASH="`echo ${GIT_DESC} | sed 's;^[^/]\+/;;' 2>/dev/null"
     BRANCH="`git rev-parse --abbrev-ref HEAD`*"
 
     if [ `expr "X$GIT_HASH" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]'` != 0 ]; then
@@ -54,14 +55,14 @@ else
 	# The hash looks like the current branch with possibly more
 	# stuff at the end.  Use the hash as the version.
 	DEFAULT_VERSION="${GIT_HASH}"
-    elif [ `expr "${GIT_HASH}" : "pipelines/[0-9]*"` != 0]; then
+    elif [ `expr "${GIT_HASH}" : "[0-9]*"` != 0]; then
 	# Assuming this is CI which seems to produce a githash like
 	# "pipeline/<digits>".
 	DEFAULT_VERSION="${GIT_HASH}"
     fi
 
     if [ -z "$DEFAULT_VERSION" ]; then
-	echo "Unable to determine a default version from hash $GIT_HASH"
+	echo "Unable to determine a default version from git describe: $GIT_DESC"
 	exit 1;
     fi
 fi
