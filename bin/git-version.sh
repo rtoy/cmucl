@@ -36,7 +36,12 @@ if [ -n "$VERSION" ]; then
     GIT_HASH="$VERSION"
     DEFAULT_VERSION="$VERSION"
 else
-    GIT_HASH="`(git describe --dirty 2>/dev/null || git describe 2>/dev/null)`"
+    # The option --all allows use to use the the branch name or tag
+    # name as appropriate.  This is much more informative.  However,
+    # we have to remove everything before the first slash which
+    # contains things like "tag/" or "head/".
+    GIT_HASH="`(git describe --all --dirty | sed 's;^[^/]\+/;;' 2>/dev/null || git describe 2>/dev/null)`"
+    BRANCH="`git rev-parse --abbrev-ref HEAD`*"
 
     if [ `expr "X$GIT_HASH" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]'` != 0 ]; then
 	# The git hash looks like snapshot-yyyy-mm-<stuff>.  Remove the
@@ -44,6 +49,10 @@ else
 	DEFAULT_VERSION=`expr "$GIT_HASH" : "snapshot-\(.*\)"`
     elif [ `expr "X$GIT_HASH" : 'X[0-9][0-9][a-f]'` != 0 ]; then
 	# The git hash looks like a release which is 3 hex digits.  Use it as is.
+	DEFAULT_VERSION="${GIT_HASH}"
+    elif [ `expr  "${GIT_HASH}" : "${BRANCH}"` != 0 ]; then
+	# The hash looks like the current branch with possibly more
+	# stuff at the end.  Use the hash as the version.
 	DEFAULT_VERSION="${GIT_HASH}"
     fi
 
