@@ -47,7 +47,7 @@ variables:
       # Save this so we can see the generated errno
       - src/code/errno.lisp
   script:
-    bin/git-version.sh
+    - bin/git-version.sh
     # Do cross compile first
     #- bin/create-target.sh xtarget x86_linux_clang
     #- bin/create-target.sh xcross x86_linux_clang
