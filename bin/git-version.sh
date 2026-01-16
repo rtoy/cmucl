@@ -55,7 +55,7 @@ else
 	# The hash looks like the current branch with possibly more
 	# stuff at the end.  Use the hash as the version.
 	DEFAULT_VERSION="${GIT_HASH}"
-    elif [ `expr "${GIT_HASH}" : "[0-9]*"` != 0]; then
+    elif [ `expr "${GIT_HASH}" : "[0-9]*"` != 0 ]; then
 	# Assuming this is CI which seems to produce a githash like
 	# "pipeline/<digits>".
 	DEFAULT_VERSION="${GIT_HASH}"
