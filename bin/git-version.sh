@@ -57,8 +57,9 @@ else
 	DEFAULT_VERSION="${GIT_HASH}"
     elif [ `expr "${GIT_HASH}" : "[0-9]*"` != 0 ]; then
 	# Assuming this is CI which seems to produce a githash like
-	# "pipeline/<digits>".
-	DEFAULT_VERSION="${GIT_HASH}"
+	# "pipeline/<digits>".  Make the version include "ci-" so we
+	# know this was done via CI.
+	DEFAULT_VERSION="ci-${GIT_HASH}"
     fi
 
     if [ -z "$DEFAULT_VERSION" ]; then
