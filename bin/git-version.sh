@@ -41,7 +41,7 @@ else
     # we have to remove everything before the first slash which
     # contains things like "tag/" or "head/".
     GIT_DESC="`git describe --all --dirty || git describe 2>/dev/null`"
-    GIT_HASH="`echo ${GIT_DESC} | sed 's;^[^/]\+/;;' 2>/dev/null`"
+    GIT_HASH="`echo ${GIT_DESC} | sed 's;^[^/]*/;;' 2>/dev/null`"
     BRANCH="`git rev-parse --abbrev-ref HEAD`*"
 
     case "$GIT_HASH" in
