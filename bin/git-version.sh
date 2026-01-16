@@ -8,7 +8,7 @@ git-version.sh [-hfv]
     -f    The version is printed as a C file #define expression.
           Otherwise, the version is just printed to stdout
 
-    -v    Use this as the version instead of using `git describe`, which
+    -v    Use this as the version instead of using 'git describe', which
           is the default
 
 Determine the version of cmucl.  By
@@ -40,7 +40,7 @@ else
     # name as appropriate.  This is much more informative.  However,
     # we have to remove everything before the first slash which
     # contains things like "tag/" or "head/".
-    GIT_DESC="`(git describe --all --dirty || git describe 2>/dev/null)`"
+    GIT_DESC="`git describe --all --dirty || git describe 2>/dev/null`"
     GIT_HASH="`echo ${GIT_DESC} | sed 's;^[^/]\+/;;' 2>/dev/null`"
     BRANCH="`git rev-parse --abbrev-ref HEAD`*"
 
@@ -75,7 +75,7 @@ else
 fi
 
 if [ -z "$FILE" ]; then
-    echo $DEFAULT_VERSION
+    echo "$DEFAULT_VERSION"
 else
     cat <<EOF
 /*
