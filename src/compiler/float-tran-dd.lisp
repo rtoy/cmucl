@@ -678,6 +678,18 @@
 	(kernel:double-double-hi b)
 	(kernel:double-double-lo b)))
 
+(deftransform = ((a b) (vm::double-double-float double-float) *)
+  `(dd= (kernel:double-double-hi a)
+	(kernel:double-double-lo a)
+	b
+	0d0))
+
+(deftransform = ((a b) (double-float vm::double-double-float) *)
+  `(dd= a
+	0d0
+	(kernel:double-double-hi b)
+	(kernel:double-double-lo b)))
+
 
 (deftransform < ((a b) (vm::double-double-float vm::double-double-float) *)
   `(dd< (kernel:double-double-hi a)
@@ -685,10 +697,34 @@
 	(kernel:double-double-hi b)
 	(kernel:double-double-lo b)))
 
+(deftransform < ((a b) (vm::double-double-float double-float) *)
+  `(dd< (kernel:double-double-hi a)
+	(kernel:double-double-lo a)
+	b
+	0d0))
+
+(deftransform < ((a b) (double-float vm::double-double-float) *)
+  `(dd< a
+	0d0
+	(kernel:double-double-hi b)
+	(kernel:double-double-lo b)))
+
 
 (deftransform > ((a b) (vm::double-double-float vm::double-double-float) *)
   `(dd> (kernel:double-double-hi a)
 	(kernel:double-double-lo a)
+	(kernel:double-double-hi b)
+	(kernel:double-double-lo b)))
+
+(deftransform > ((a b) (vm::double-double-float double-float) *)
+  `(dd> (kernel:double-double-hi a)
+	(kernel:double-double-lo a)
+	b
+	0d0))
+
+(deftransform > ((a b) (double-float vm::double-double-float) *)
+  `(dd> a
+	0d0
 	(kernel:double-double-hi b)
 	(kernel:double-double-lo b)))
 ) ; end progn
