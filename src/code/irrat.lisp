@@ -32,7 +32,10 @@
   (log 2w0)
   "Natural log of 2w0")
 
-  
+(defconstant +log2-e+
+  (log (exp 1d0) 2d0)
+  "Base 2 logarithm of e")
+
 ;;; Make these INLINE, since the call to C is at least as compact as a Lisp
 ;;; call, and saves number consing to boot.
 ;;;
@@ -836,7 +839,7 @@
 	 (if (minusp number)
 	     (complex (coerce (log (- number)) 'single-float)
 		      (coerce pi 'single-float))
-	     (coerce (/ (log2 number) #.(log (exp 1d0) 2d0)) 'single-float)))
+	     (coerce (/ (log2 number) +log2-e+) 'single-float)))
 	((ratio)
 	 (if (minusp number)
 	     (complex (coerce (log (- number)) 'single-float)
@@ -861,7 +864,7 @@
 		   (coerce (%log1p (coerce (- number 1) 'double-float))
 			   'single-float)
 		   (coerce (/ (- (log2 top) (log2 bot))
-			      #.(log (exp 1d0) 2d0))
+			      +log2-e+)
 			   'single-float)))))
 	(((foreach single-float double-float))
 	 ;; Is (log -0) -infinity (libm.a) or -infinity + i*pi (Kahan)?
