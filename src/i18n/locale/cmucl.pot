@@ -5005,6 +5005,14 @@ msgid ""
 msgstr ""
 
 #: src/code/irrat.lisp
+msgid "Natural log of 2d0"
+msgstr ""
+
+#: src/code/irrat.lisp
+msgid "Natural log of 2w0"
+msgstr ""
+
+#: src/code/irrat.lisp
 msgid "Return e raised to the power NUMBER."
 msgstr ""
 
