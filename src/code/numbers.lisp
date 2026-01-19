@@ -672,7 +672,7 @@
 	   (let ((e (,compreal a b c d r tt))
 		 (f (,compreal b (- a) c d r tt)))
 	     (values e f))))
-       (defun ,internal (x y)
+       (defun ,internal (a b c d)
 	   (declare (,type a b c d)
 		    ,@opt)
 	 (flet ((maybe-scale (abs-tst a b c d)
