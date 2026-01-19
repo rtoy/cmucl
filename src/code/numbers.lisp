@@ -751,12 +751,12 @@
 		    (d (imagpart y))
 		    (ab (max (abs a) (abs b)))
 		    (cd (max (abs c) (abs d)))
-		    ;; S is always multipled by a power of 2.  It's either
-		    ;; 2, 0.5, or +be+, which is also a power of two.
-		    ;; (Either 2^105 or 2^209).  Hence, we can just use a
-		    ;; double-float instead of a double-double-float
-		    ;; because the double-double always has 0d0 for the lo
-		    ;; part.
+		    ;; S is always multipled by a power of 2.  It's
+		    ;; multiplied by either 2, 0.5, or +be+, which is
+		    ;; also a power of two.  (Either 2^105 or 2^209).
+		    ;; Hence, we can just use a double-float instead
+		    ;; of a double-double-float because the
+		    ;; double-double always has 0d0 for the lo part.
 		    (s 1d0))
 	       (declare (double-float s))
 	       ;; If a or b is big, scale down a and b.
