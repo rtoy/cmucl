@@ -602,53 +602,11 @@
 ;; In particular iteration 1 and 3 are added.  Iteration 2 and 4 were
 ;; not added.  The test examples from iteration 2 and 4 didn't change
 ;; with or without changes added.
-(defconstant +cdiv-rmin+ least-positive-normalized-double-float)
-(defconstant +cdiv-rbig+ (/ most-positive-double-float 2))
-(defconstant +cdiv-rmin2+ (scale-float 1d0 -53))
-(defconstant +cdiv-rminscal+ (scale-float 1d0 51))
-(defconstant +cdiv-rmax2+ (* +cdiv-rbig+ +cdiv-rmin2+))
-;; This is the value of %eps from Scilab
-(defconstant +cdiv-eps+ (scale-float 1d0 -52))
-(defconstant +cdiv-be+ (/ 2 (* +cdiv-eps+ +cdiv-eps+)))
-(defconstant +cdiv-2/eps+ (/ 2 +cdiv-eps+))
-
-;; Same constants but for DOUBLE-DOUBLE-FLOATS.  Some of these aren't
-;; well-defined for DOUBLE-DOUBLE-FLOATS so we make our best guess at
-;; what they might be.  Since double-doubles have about twice as many
-;; bits of precision as a DOUBLE-FLOAT, we generally just double the
-;; exponent (for SCALE-FLOAT) of the corresponding DOUBLE-FLOAT values
-;; above.
 ;;
-;; Note also that both LEAST-POSITIVE-NORMALIZED-DOUBLE-DOUBLE-FLOAT
-;; and MOST-POSITIVE-DOUBLE-DOUBLE-FLOAT have a low component of 0, so
-;; there's no loss of precision if we use the corresponding
-;; DOUBLE-FLOAT values.  Likewise, all the other constants here are
-;; powers of 2, so the DOUBLE-DOUBLE-FLOAT values can be represented
-;; exactly as a DOUBLE-FLOAT.  We can use DOUBLE-FLOAT values.
-(defconstant +cdiv-dd-rmin+
-  least-positive-normalized-double-float)
-(defconstant +cdiv-dd-rbig+
-  (/ most-positive-double-float 2))
-(defconstant +cdiv-dd-rmin2+
-  (scale-float 1d0 -106))
-(defconstant +cdiv-dd-rminscal+
-  (scale-float 1d0 102))
-(defconstant +cdiv-dd-rmax2+
-  (* +cdiv-dd-rbig+ +cdiv-dd-rmin2+))
-;; Epsilon for double-doubles isn't really well-defined because things
-;; like (+ 1w0 1w-200) is a valid double-double float.
-(defconstant +cdiv-dd-eps+
-  (scale-float 1d0 -104))
-(defconstant +cdiv-dd-be+
-  (/ 2 (* +cdiv-dd-eps+ +cdiv-dd-eps+)))
-(defconstant +cdiv-dd-2/eps+
-  (/ 2 +cdiv-dd-eps+))
-
-
-;; Make these functions accessible.  cdiv-double-float and
-;; cdiv-single-float are used by deftransforms.  Of course, two-arg-/
-;; is the interface to division.  cdiv-generic isn't used anywhere
-;; else.
+;; Make these functions accessible outside the block compilation.
+;; CDIV-DOUBLE-FLOAT and CDIV-SINGLE-FLOAT are used by deftransforms.
+;; Of course, TWO-ARG-/ is the interface to division.  CDIV-GENERIC
+;; isn't used anywhere else.
 (declaim (ext:start-block cdiv-double-float cdiv-single-float
 			  cdiv-double-double-float
 			  two-arg-/))
@@ -707,10 +665,10 @@
 		  ,@opt)
 	 (let* ((r (/ d c))
 		(tt (+ c (* d r))))
-	   ;; e is the real part and f is the imaginary part.  We
-	   ;; can use internal-compreal for the imaginary part by
-	   ;; noticing that the imaginary part of (a+i*b)/(c+i*d) is
-	   ;; the same as the real part of (b-i*a)/(c+i*d).
+	   ;; e is the real part and f is the imaginary part.  We can
+	   ;; use COMPREAL for the imaginary part by noticing that the
+	   ;; imaginary part of (a+i*b)/(c+i*d) is the same as the
+	   ;; real part of (b-i*a)/(c+i*d).
 	   (let ((e (,compreal a b c d r tt))
 		 (f (,compreal b (- a) c d r tt)))
 	     (values e f))))
@@ -828,7 +786,26 @@
   :rbig (/ most-positive-double-float 2)
   :rmin2 (scale-float 1d0 -53)
   :rminscal (scale-float 1d0 51)
+  ;; This is the value of %eps from Scilab
   :eps (scale-float 1d0 -52))
+
+;; Same constants but for DOUBLE-DOUBLE-FLOATS.  Some of these aren't
+;; well-defined for DOUBLE-DOUBLE-FLOATS (like eps) so we make our
+;; best guess at what they might be.  Since double-doubles have
+;; twice as many bits of precision as a DOUBLE-FLOAT, we generally
+;; just double the exponent (for SCALE-FLOAT) of the corresponding
+;; DOUBLE-FLOAT values above.
+;;
+;; Note also that since both
+;; LEAST-POSITIVE-NORMALIZED-DOUBLE-DOUBLE-FLOAT and
+;; MOST-POSITIVE-DOUBLE-DOUBLE-FLOAT have a low component of 0,
+;; there's no loss of precision if we use the corresponding
+;; DOUBLE-FLOAT values.  Likewise, all the other constants here are
+;; powers of 2, so the DOUBLE-DOUBLE-FLOAT values can be represented
+;; exactly as a DOUBLE-FLOAT.  We can use DOUBLE-FLOAT values.  This
+;; also makes some of the operations a bit simpler since operations
+;; between a DOUBLE-DOUBLE-FLOAT and a DOUBLE-FLOAT are simpler than
+;; if both were DOUBLE-DOUBLE-FLOATs.
 (define-cdiv double-double-float
   :rmin least-positive-normalized-double-float
   :rbig (/ most-positive-double-float 2)
