@@ -1807,7 +1807,7 @@
 (macrolet
     ((frob (type name)
        `(deftransform / ((x y) ((complex ,type) (complex ,type)) *)
-		      (,name x y))))
+		      '(,name x y))))
   (frob double-float kernel::cdiv-double-float)
   (frob single-float kernel::cdiv-single-float))
 
