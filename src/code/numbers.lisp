@@ -811,13 +811,13 @@
 
 ;; Smith's algorithm for complex division for (complex single-float).
 ;; We convert the parts to double-floats before computing the result.
-(defun cdiv-single-float (x y)
+(defun cdiv-single-float (xr xi yr yi)
   "Accurate division of complex single-float numbers x and y."
-  (declare (type (complex single-float) x y))
-  (let ((a (float (realpart x) 1d0))
-	(b (float (imagpart x) 1d0))
-	(c (float (realpart y) 1d0))
-	(d (float (imagpart y) 1d0)))
+  (declare (single-float xr xi yr yi))
+  (let ((a (float xr 1d0))
+	(b (float xi 1d0))
+	(c (float yr 1d0))
+	(d (float yi 1d0)))
     (cond ((< (abs c) (abs d))
 	   (let* ((r (/ c d))
 		  (denom (+ (* c r) d))
@@ -858,7 +858,10 @@
 
     (((complex single-float)
       (foreach (complex rational) (complex single-float)))
-     (cdiv-single-float x (coerce y '(complex single-float))))
+     (cdiv-single-float (realpart x)
+			(imagpart x)
+			(coerce (realpart y) 'single-float)
+			(coerce (imagpart y) 'single-float)))
     (((complex double-float)
       (foreach (complex rational) (complex single-float) (complex double-float)))
      (cdiv-double-float (realpart x)
@@ -868,8 +871,10 @@
 
     (((foreach integer ratio single-float (complex rational))
       (complex single-float))
-     (cdiv-single-float (coerce x '(complex single-float))
-			y))
+     (cdiv-single-float (coerce (realpart x) 'single-float)
+			(coerce (imagpart x) 'single-float)
+			(realpart y)
+			(imagpart y)))
     
     (((foreach integer ratio single-float double-float (complex rational)
 	       (complex single-float))
