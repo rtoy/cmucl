@@ -28,6 +28,7 @@ public domain.
     * #373: Add macros to handle temp files and directories
     * #387: Update CLX from upstream to version from 2024-09-11
     * #408: Add C functions to get user name and home dir
+    * #428: Add some constants for common values in irrat.lisp
     * #437: Use `realpath` to find the lisp executable
     * #444: `unix-stat` and friends return wrong timestamp
     * #449: Touch 64-bit timestamp.txt with desired time for testing
