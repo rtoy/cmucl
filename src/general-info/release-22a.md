@@ -28,13 +28,20 @@ public domain.
     * #373: Add macros to handle temp files and directories
     * #387: Update CLX from upstream to version from 2024-09-11
     * #408: Add C functions to get user name and home dir
+    * #428: Add some constants for common values in irrat.lisp
     * #437: Use `realpath` to find the lisp executable
     * #444: `unix-stat` and friends return wrong timestamp
     * #449: Touch 64-bit timestamp.txt with desired time for testing
     * #446: Use C compiler to get errno values to update UNIX
             defpackage with errno symbols
     * #453: Use correct flags for analyzer and always save logs.
+    * #456: Improve accuracy for division of complex double-floats
+            using Baudin and Smith's robust complex division algorithm
+            with improvements by Patrick McGehearty.
     * #458: Spurious overflow in double-double-float multiply
+    * #459: Improve accuracy for division of complex
+            double-double-floats.  The same algorithm is used here as
+            for #456.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

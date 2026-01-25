@@ -4386,6 +4386,24 @@ msgid "Returns NUMBER - 1."
 msgstr ""
 
 #: src/code/numbers.lisp
+msgid "Accurate division of complex double-float numbers x and y."
+msgstr ""
+
+#: src/code/numbers.lisp
+msgid "Accurate division of complex double-double-float numbers x and y."
+msgstr ""
+
+#: src/code/numbers.lisp
+msgid "Accurate division of complex single-float numbers x and y."
+msgstr ""
+
+#: src/code/numbers.lisp
+msgid ""
+"Complex division of generic numbers x and y.  One of x or y should be\n"
+"  a complex."
+msgstr ""
+
+#: src/code/numbers.lisp
 msgid ""
 "Returns number (or number/divisor) as an integer, rounded toward 0.\n"
 "  The second returned value is the remainder."
@@ -4988,6 +5006,18 @@ msgid ""
 "  representation exploiting the assumption that floats are only accurate to\n"
 "  their precision.  RATIONALIZE (and also RATIONAL) preserve the invariant:\n"
 "      (= x (float (rationalize x) x))"
+msgstr ""
+
+#: src/code/irrat.lisp
+msgid "Natural log of 2d0"
+msgstr ""
+
+#: src/code/irrat.lisp
+msgid "Natural log of 2w0"
+msgstr ""
+
+#: src/code/irrat.lisp
+msgid "Base 2 logarithm of e"
 msgstr ""
 
 #: src/code/irrat.lisp
@@ -7717,7 +7747,7 @@ msgstr ""
 msgid ", type="
 msgstr ""
 
-#: src/code/print.lisp
+#: src/code/pathname.lisp src/code/print.lisp
 msgid "Continue anyway"
 msgstr ""
 
@@ -9785,17 +9815,17 @@ msgid "~S is not allowed as a directory component."
 msgstr ""
 
 #: src/code/pathname.lisp
+msgid "Pathname component ~A cannot contain a slash or nul character: ~S"
+msgstr ""
+
+#: src/code/pathname.lisp
+msgid "PATHNAME-NAME cannot be \".\" or \"..\""
+msgstr ""
+
+#: src/code/pathname.lisp
 msgid ""
 "Makes a new pathname from the component arguments.  Note that host is\n"
 "a host-structure or string."
-msgstr ""
-
-#: src/code/pathname.lisp
-msgid "Silly argument for a unix ~A: ~S"
-msgstr ""
-
-#: src/code/pathname.lisp
-msgid "Silly argument for a unix PATHNAME-NAME: ~S"
 msgstr ""
 
 #: src/code/pathname.lisp

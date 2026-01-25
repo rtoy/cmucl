@@ -576,6 +576,10 @@
      (truly-the ,(type-specifier (node-derived-type node))
 		(kernel:%make-double-double-float hi lo))))
 
+(deftransform / ((a b) ((complex vm::double-double-float) (complex vm::double-double-float))
+		 *)
+  `(kernel::cdiv-double-double-float a b))
+  	      
 (declaim (inline sqr-d))
 (defun sqr-d (a)
   "Square"
@@ -674,6 +678,18 @@
 	(kernel:double-double-hi b)
 	(kernel:double-double-lo b)))
 
+(deftransform = ((a b) (vm::double-double-float double-float) *)
+  `(dd= (kernel:double-double-hi a)
+	(kernel:double-double-lo a)
+	b
+	0d0))
+
+(deftransform = ((a b) (double-float vm::double-double-float) *)
+  `(dd= a
+	0d0
+	(kernel:double-double-hi b)
+	(kernel:double-double-lo b)))
+
 
 (deftransform < ((a b) (vm::double-double-float vm::double-double-float) *)
   `(dd< (kernel:double-double-hi a)
@@ -681,10 +697,34 @@
 	(kernel:double-double-hi b)
 	(kernel:double-double-lo b)))
 
+(deftransform < ((a b) (vm::double-double-float double-float) *)
+  `(dd< (kernel:double-double-hi a)
+	(kernel:double-double-lo a)
+	b
+	0d0))
+
+(deftransform < ((a b) (double-float vm::double-double-float) *)
+  `(dd< a
+	0d0
+	(kernel:double-double-hi b)
+	(kernel:double-double-lo b)))
+
 
 (deftransform > ((a b) (vm::double-double-float vm::double-double-float) *)
   `(dd> (kernel:double-double-hi a)
 	(kernel:double-double-lo a)
+	(kernel:double-double-hi b)
+	(kernel:double-double-lo b)))
+
+(deftransform > ((a b) (vm::double-double-float double-float) *)
+  `(dd> (kernel:double-double-hi a)
+	(kernel:double-double-lo a)
+	b
+	0d0))
+
+(deftransform > ((a b) (double-float vm::double-double-float) *)
+  `(dd> a
+	0d0
 	(kernel:double-double-hi b)
 	(kernel:double-double-lo b)))
 ) ; end progn

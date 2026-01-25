@@ -343,57 +343,459 @@
     (assert-true (typep new-mode 'x86::float-modes))
     (assert-equal new-mode (setf (x86::x87-floating-point-modes) new-mode))))
 
-(define-test set-floating-point-modes
-  (let ((old-x87-modes (x86::x87-floating-point-modes))
-	(old-sse2-modes (x86::sse2-floating-point-modes)))
-    (unwind-protect
-	 (progn
-	   ;; Set some new traps and rounding mode
-	   (ext:set-floating-point-modes :traps '(:underflow
-						  :overflow
-						  :invalid
-						  :divide-by-zero)
-					 :rounding-mode :zero)
-	   (let* ((x87-modes (x86::x87-floating-point-modes))
-		  (x87-exceptions-enabled (ldb x86::x87-float-traps-byte x87-modes))
-		  (x87-rc (ldb x86::x87-float-rounding-mode x87-modes))
-		  (sse2-modes (x86::sse2-floating-point-modes))
-		  (sse2-exceptions-enabled (ldb x86::float-traps-byte sse2-modes))
-		  (sse2-rc (ldb x86::float-rounding-mode sse2-modes)))
-	     (x86::print-x87-fp-modes x87-modes)
-	     ;; Verify that we set the enabled exceptions
-	     ;; correctly. First for sse2, then for x87.
-	     (assert-false (logbitp 5 sse2-exceptions-enabled)) ; precision
-	     (assert-true (logbitp 4 sse2-exceptions-enabled))	; underflow
-	     (assert-true (logbitp 3 sse2-exceptions-enabled))	; overflow
-	     (assert-true (logbitp 2 sse2-exceptions-enabled))	; divide-by-zero
-	     (assert-false (logbitp 1 sse2-exceptions-enabled))	; denormal
-	     (assert-true (logbitp 0 sse2-exceptions-enabled))	; invalid
-	   
-	     (assert-false (logbitp 5 x87-exceptions-enabled))  ; precision
-	     (assert-true (logbitp 4 x87-exceptions-enabled))	; underflow
-	     (assert-true (logbitp 3 x87-exceptions-enabled))	; overflow
-	     (assert-true (logbitp 2 x87-exceptions-enabled))	; divide-by-zero
-	     (assert-false (logbitp 1 x87-exceptions-enabled))	; denormal
-	     (assert-true (logbitp 0 x87-exceptions-enabled))	; invalid
+;; Rudimentary code to read C %a formatted numbers that look like
+;; "-0x1.c4dba4ba1ee79p-620".  We assume STRING is exactly in this
+;; format.  No error-checking is done.
+(defun parse-hex-float (string)
+  (let* ((sign (if (char= (aref string 0) #\-)
+		   -1
+		   1))
+	 (dot-posn (position #\. string))
+	 (p-posn (position #\p string))
+	 (lead (parse-integer string :start (1- dot-posn) :end dot-posn))
+	 (frac (parse-integer string :start (1+ dot-posn) :end p-posn :radix 16))
+	 (exp (parse-integer string :start (1+ p-posn))))
+    (* sign
+       (scale-float (float (+ (ash lead 52)
+			      frac)
+			   1d0)
+		    (- exp 52)))))
 
-	     ;; Verify the rounding mode is set to zero
-	     (assert-eql :zero (car (rassoc sse2-rc x86::rounding-mode-alist)))
-	     (assert-eql :zero (car (rassoc x87-rc x86::rounding-mode-alist)))
+;; Relative error in terms of bits of accuracy.  This is the
+;; definition used by Baudin and Smith.  A result of 53 means the two
+;; numbers have identical bits.  For complex numbers, we use the min
+;; of the bits of accuracy of the real and imaginary parts.
+(defun rel-err (computed expected)
+  (flet ((rerr (c e)
+	   (let ((diff (abs (- c e))))
+	     (if (zerop diff)
+		 (float-digits diff)
+		 (floor (- (log (/ diff (abs e)) 2d0)))))))
+    (min (rerr (realpart computed) (realpart expected))
+	 (rerr (imagpart computed) (imagpart expected)))))
 
-	     ;; Verify precision for x87
-	     (assert-eql :64-bits
-			 (car (rassoc (ldb x86::x87-float-precision-control-byte x87-modes)
-				      x86::x87-float-precision-control-alist)))))
+(defun do-cdiv-test (x y z-true expected-rel)
+  (let* ((z (/ x y))
+	 (rel (rel-err z z-true)))
+    (assert-equal expected-rel
+		  rel
+		  x y z z-true rel)))
 
-      (setf (x86::x87-floating-point-modes) old-x87-modes)
-      (setf (x86::sse2-floating-point-modes) old-sse2-modes))))
+(defun do-cdiv-dd-test (x y z-true expected-rel)
+  (flet ((compute-true (a b)
+	   ;; Convert a and b to complex rationals, do the
+	   ;; division and convert back to get the true
+	   ;; expected result.
+	   (coerce
+	    (/ (complex (rational (realpart a))
+			(rational (imagpart a)))
+	       (complex (rational (realpart b))
+			(rational (imagpart b))))
+	    '(complex ext:double-double-float))))
+    (let* ((z (/ (coerce x '(complex ext:double-double-float))
+		 (coerce y '(complex ext:double-double-float))))
+	   (z-true (compute-true x y))
+	   (rel (rel-err z z-true)))
+      (assert-equal expected-rel
+		    rel
+		    k x y z z-true rel))))
 
-(define-test x87-set-floating-point-modes
+;; Issue #456: improve accuracy of division of complex double-floats.
+;;
+;; Tests for complex division.  Tests 1-10 are from Baudin and Smith.
+;; Test 11 is an example from Maxima.  Test 12 is an example from the
+;; ansi-tests where (/ z z) didn't produce exactly 1.  Tests 13-16 are
+;; for examples for improvement iterations 1-4 from McGehearty.
+(macrolet
+    ((frob (name x y z-true rel dd-rel)
+       `(define-test ,name
+	  (:tag :issues)
+	  (do-cdiv-test ,x ,y ,z-true ,rel)
+	  (do-cdiv-dd-test ,x ,y ,z-true ,dd-rel))))
+  ;; First cases are from Baudin and Smith
+  ;; 1
+  (frob cdiv.baudin-case.1
+	(complex 1d0 1d0)
+	(complex 1d0 (scale-float 1d0 1023))
+	(complex (scale-float 1d0 -1023)
+		 (scale-float -1d0 -1023))
+	53
+	106)
+  ;; 2
+  (frob cdiv.baudin-case.2
+	(complex 1d0 1d0)
+	(complex (scale-float 1d0 -1023) (scale-float 1d0 -1023))
+	(complex (scale-float 1d0 1023) 0)
+	53
+	106)
+  ;; 3
+  (frob cdiv.baudin-case.3
+	(complex (scale-float 1d0 1023) (scale-float 1d0 -1023))
+	(complex (scale-float 1d0 677) (scale-float 1d0 -677))
+	(complex (scale-float 1d0 346) (scale-float -1d0 -1008))
+	53
+	106)
+  ;; 4
+  (frob cdiv.baudin-case.4.overflow
+	(complex (scale-float 1d0 1023) (scale-float 1d0 1023))
+	(complex 1d0 1d0)
+	(complex (scale-float 1d0 1023) 0)
+	53
+	106)
+  ;; 5
+  (frob cdiv.baudin-case.5.underflow-ratio
+	(complex (scale-float 1d0 1020) (scale-float 1d0 -844))
+	(complex (scale-float 1d0 656) (scale-float 1d0 -780))
+	(complex (scale-float 1d0 364) (scale-float -1d0 -1072))
+	53
+	106)
+  ;; 6
+  (frob cdiv.baudin-case.6.underflow-realpart
+	(complex (scale-float 1d0 -71) (scale-float 1d0 1021))
+	(complex (scale-float 1d0 1001) (scale-float 1d0 -323))
+	(complex (scale-float 1d0 -1072) (scale-float 1d0 20))
+	53
+	106)
+  ;; 7
+  (frob cdiv.baudin-case.7.overflow-both-parts
+	(complex (scale-float 1d0 -347) (scale-float 1d0 -54))
+	(complex (scale-float 1d0 -1037) (scale-float 1d0 -1058))
+	(complex 3.898125604559113300d289 8.174961907852353577d295)
+	53
+	106)
+  ;; 8
+  (frob cdiv.baudin-case.8
+	(complex (scale-float 1d0 -1074) (scale-float 1d0 -1074))
+	(complex (scale-float 1d0 -1073) (scale-float 1d0 -1074))
+	(complex 0.6d0 0.2d0)
+	53
+	106)
+  ;; 9
+  (frob cdiv.baudin-case.9
+	(complex (scale-float 1d0 1015) (scale-float 1d0 -989))
+	(complex (scale-float 1d0 1023) (scale-float 1d0 1023))
+	(complex 0.001953125d0 -0.001953125d0)
+	53
+	106)
+  ;; 10
+  (frob cdiv.baudin-case.10.improve-imagpart-accuracy
+	(complex (scale-float 1d0 -622) (scale-float 1d0 -1071))
+	(complex (scale-float 1d0 -343) (scale-float 1d0 -798))
+	(complex 1.02951151789360578d-84 6.97145987515076231d-220)
+	53
+	106)
+  ;; 11
+  ;;
+  ;; From Maxima.  This was from a (private) email where Maxima used
+  ;; CL:/ to compute the ratio but was not very accurate.
+  (frob cdiv.maxima-case
+	#c(5.43d-10 1.13d-100)
+	#c(1.2d-311 5.7d-312)
+	#c(3.691993880674614517999740937026568563794896024143749539711267954d301
+	   -1.753697093319947872394996242210428954266103103602859195409591583d301)
+	52
+	107)
+  ;; 12
+  ;;
+  ;; Found by ansi tests. z/z should be exactly 1.
+  (frob cdiv.ansi-test-z/z
+	#c(1.565640716292489d19 0.0d0)
+	#c(1.565640716292489d19 0.0d0)
+	#c(1d0 0)
+	53
+	106)
+  ;; 13
+  ;; Iteration 1.  Without this, we would instead return
+  ;;
+  ;;   (complex (parse-hex-float "0x1.ba8df8075bceep+155")
+  ;;            (parse-hex-float "-0x1.a4ad6329485f0p-895"))
+  ;;
+  ;; whose imaginary part is quite a bit off.
+  (frob cdiv.mcgehearty-iteration.1
+	(complex (parse-hex-float "0x1.73a3dac1d2f1fp+509")
+		 (parse-hex-float "-0x1.c4dba4ba1ee79p-620"))
+	(complex (parse-hex-float "0x1.adf526c249cf0p+353")
+		 (parse-hex-float "0x1.98b3fbc1677bbp-697"))
+	(complex (parse-hex-float "0x1.BA8DF8075BCEEp+155")
+		 (parse-hex-float "-0x1.A4AD628DA5B74p-895"))
+	53
+	106)
+  ;; 14
+  ;; Iteration 2.
+  (frob cdiv.mcgehearty-iteration.2
+	(complex (parse-hex-float "-0x0.000000008e4f8p-1022")
+		 (parse-hex-float "0x0.0000060366ba7p-1022"))
+	(complex (parse-hex-float "-0x1.605b467369526p-245")
+		 (parse-hex-float "0x1.417bd33105808p-256"))
+	(complex (parse-hex-float "0x1.cde593daa4ffep-810")
+		 (parse-hex-float "-0x1.179b9a63df6d3p-799"))
+	52
+	106)
+  ;; 15
+  ;; Iteration 3
+  (frob cdiv.mcgehearty-iteration.3
+	(complex (parse-hex-float "0x1.cb27eece7c585p-355 ")
+		 (parse-hex-float "0x0.000000223b8a8p-1022"))
+	(complex (parse-hex-float "-0x1.74e7ed2b9189fp-22")
+		 (parse-hex-float "0x1.3d80439e9a119p-731"))
+	(complex (parse-hex-float "-0x1.3b35ed806ae5ap-333")
+		 (parse-hex-float "-0x0.05e01bcbfd9f6p-1022"))
+	53
+	106)
+  ;; 16
+  ;; Iteration 4
+  (frob cdiv.mcgehearty-iteration.4
+	(complex (parse-hex-float "-0x1.f5c75c69829f0p-530")
+		 (parse-hex-float "-0x1.e73b1fde6b909p+316"))
+	(complex (parse-hex-float "-0x1.ff96c3957742bp+1023")
+		 (parse-hex-float "0x1.5bd78c9335899p+1021"))
+	(complex (parse-hex-float "-0x1.423c6ce00c73bp-710")
+		 (parse-hex-float "0x1.d9edcf45bcb0ep-708"))
+	52
+	106))
+
+(define-test complex-division.misc
+    (:tag :issue)
+  (let ((num '(1
+	       1/2
+	       1.0
+	       1d0
+	       #c(1 2)
+	       #c(1.0 2.0)
+	       #c(1d0 2d0)
+	       #c(1w0 2w0))))
+    ;; Try all combinations of divisions of different types.  This is
+    ;; primarily to test that we got all the numeric contagion cases
+    ;; for division in CL:/.
+    (dolist (x num)
+      (dolist (y num)
+	(assert-true (/ x y)
+		     x y)))))
+
+(define-test complex-division.single
     (:tag :issues)
-  (let ((new-mode (setf (x86::x87-floating-point-modes)
-			(dpb 2 (byte 2 24)
-			     (x86::x87-floating-point-modes)))))
-    (assert-true (typep new-mode 'x86::float-modes))
-    (assert-equal new-mode (setf (x86::x87-floating-point-modes) new-mode))))
+  (let* ((x #c(1 2))
+	 (y (complex (expt 2 127) (expt 2 127)))
+	 (expected (coerce (/ x y)
+			   '(complex single-float))))
+    ;; A naive implementation of complex division would cause an
+    ;; overflow in computing the denominator.
+    (assert-equal expected
+		  (/ (coerce x '(complex single-float))
+		     (coerce y '(complex single-float)))
+		  x
+		  y)))
 
+;; Issue #458
+(define-test dd-mult-overflow
+  (:tag :issues)
+  (assert-equal -2w300
+		(* -2w300 1w0)))
+
+
+
+;; Rudimentary code to read C %a formatted numbers that look like
+;; "-0x1.c4dba4ba1ee79p-620".  We assume STRING is exactly in this
+;; format.  No error-checking is done.
+(defun parse-hex-float (string)
+  (let* ((sign (if (char= (aref string 0) #\-)
+		   -1
+		   1))
+	 (dot-posn (position #\. string))
+	 (p-posn (position #\p string))
+	 (lead (parse-integer string :start (1- dot-posn) :end dot-posn))
+	 (frac (parse-integer string :start (1+ dot-posn) :end p-posn :radix 16))
+	 (exp (parse-integer string :start (1+ p-posn))))
+    (* sign
+       (scale-float (float (+ (ash lead 52)
+			      frac)
+			   1d0)
+		    (- exp 52)))))
+
+;; Relative error in terms of bits of accuracy.  This is the
+;; definition used by Baudin and Smith.  A result of 53 means the two
+;; numbers have identical bits.  For complex numbers, we use the min
+;; of the bits of accuracy of the real and imaginary parts.
+(defun rel-err (computed expected)
+  (flet ((rerr (c e)
+	   (let ((diff (abs (- c e))))
+	     (if (zerop diff)
+		 (float-digits diff)
+		 (floor (- (log (/ diff (abs e)) 2d0)))))))
+    (min (rerr (realpart computed) (realpart expected))
+	 (rerr (imagpart computed) (imagpart expected)))))
+
+(defun do-cdiv-test (x y z-true expected-rel)
+  (let* ((z (/ x y))
+	 (rel (rel-err z z-true)))
+    (assert-equal expected-rel
+		  rel
+		  x y z z-true rel)))
+;; Issue #456: improve accuracy of division of complex double-floats.
+;;
+;; Tests for complex division.  Tests 1-10 are from Baudin and Smith.
+;; Test 11 is an example from Maxima.  Test 12 is an example from the
+;; ansi-tests where (/ z z) didn't produce exactly 1.  Tests 13-16 are
+;; for examples for improvement iterations 1-4 from McGehearty.
+(macrolet
+    ((frob (name x y z-true rel)
+       `(define-test ,name
+	  (:tag :issues)
+	  (do-cdiv-test ,x ,y ,z-true ,rel))))
+  ;; First cases are from Baudin and Smith
+  ;; 1
+  (frob cdiv.baudin-case.1
+	(complex 1d0 1d0)
+	(complex 1d0 (scale-float 1d0 1023))
+	(complex (scale-float 1d0 -1023)
+		 (scale-float -1d0 -1023))
+	53)
+  ;; 2
+  (frob cdiv.baudin-case.2
+	(complex 1d0 1d0)
+	(complex (scale-float 1d0 -1023) (scale-float 1d0 -1023))
+	(complex (scale-float 1d0 1023) 0)
+	53)
+  ;; 3
+  (frob cdiv.baudin-case.3
+	(complex (scale-float 1d0 1023) (scale-float 1d0 -1023))
+	(complex (scale-float 1d0 677) (scale-float 1d0 -677))
+	(complex (scale-float 1d0 346) (scale-float -1d0 -1008))
+	53)
+  ;; 4
+  (frob cdiv.baudin-case.4.overflow
+	(complex (scale-float 1d0 1023) (scale-float 1d0 1023))
+	(complex 1d0 1d0)
+	(complex (scale-float 1d0 1023) 0)
+	53)
+  ;; 5
+  (frob cdiv.baudin-case.5.underflow-ratio
+	(complex (scale-float 1d0 1020) (scale-float 1d0 -844))
+	(complex (scale-float 1d0 656) (scale-float 1d0 -780))
+	(complex (scale-float 1d0 364) (scale-float -1d0 -1072))
+	53)
+  ;; 6
+  (frob cdiv.baudin-case.6.underflow-realpart
+	(complex (scale-float 1d0 -71) (scale-float 1d0 1021))
+	(complex (scale-float 1d0 1001) (scale-float 1d0 -323))
+	(complex (scale-float 1d0 -1072) (scale-float 1d0 20))
+	53)
+  ;; 7
+  (frob cdiv.baudin-case.7.overflow-both-parts
+	(complex (scale-float 1d0 -347) (scale-float 1d0 -54))
+	(complex (scale-float 1d0 -1037) (scale-float 1d0 -1058))
+	(complex 3.898125604559113300d289 8.174961907852353577d295)
+	53)
+  ;; 8
+  (frob cdiv.baudin-case.8
+	(complex (scale-float 1d0 -1074) (scale-float 1d0 -1074))
+	(complex (scale-float 1d0 -1073) (scale-float 1d0 -1074))
+	(complex 0.6d0 0.2d0)
+	53)
+  ;; 9
+  (frob cdiv.baudin-case.9
+	(complex (scale-float 1d0 1015) (scale-float 1d0 -989))
+	(complex (scale-float 1d0 1023) (scale-float 1d0 1023))
+	(complex 0.001953125d0 -0.001953125d0)
+	53)
+  ;; 10
+  (frob cdiv.baudin-case.10.improve-imagpart-accuracy
+	(complex (scale-float 1d0 -622) (scale-float 1d0 -1071))
+	(complex (scale-float 1d0 -343) (scale-float 1d0 -798))
+	(complex 1.02951151789360578d-84 6.97145987515076231d-220)
+	53)
+  ;; 11
+  ;;
+  ;; From Maxima.  This was from a (private) email where Maxima used
+  ;; CL:/ to compute the ratio but was not very accurate.
+  (frob cdiv.maxima-case
+	#c(5.43d-10 1.13d-100)
+	#c(1.2d-311 5.7d-312)
+	#c(3.691993880674614517999740937026568563794896024143749539711267954d301
+	   -1.753697093319947872394996242210428954266103103602859195409591583d301)
+	52)
+  ;; 12
+  ;;
+  ;; Found by ansi tests. z/z should be exactly 1.
+  (frob cdiv.ansi-test-z/z
+	#c(1.565640716292489d19 0.0d0)
+	#c(1.565640716292489d19 0.0d0)
+	#c(1d0 0)
+	53)
+  ;; 13
+  ;; Iteration 1.  Without this, we would instead return
+  ;;
+  ;;   (complex (parse-hex-float "0x1.ba8df8075bceep+155")
+  ;;            (parse-hex-float "-0x1.a4ad6329485f0p-895"))
+  ;;
+  ;; whose imaginary part is quite a bit off.
+  (frob cdiv.mcgehearty-iteration.1
+	(complex (parse-hex-float "0x1.73a3dac1d2f1fp+509")
+		 (parse-hex-float "-0x1.c4dba4ba1ee79p-620"))
+	(complex (parse-hex-float "0x1.adf526c249cf0p+353")
+		 (parse-hex-float "0x1.98b3fbc1677bbp-697"))
+	(complex (parse-hex-float "0x1.BA8DF8075BCEEp+155")
+		 (parse-hex-float "-0x1.A4AD628DA5B74p-895"))
+	53)
+  ;; 14
+  ;; Iteration 2.
+  (frob cdiv.mcgehearty-iteration.2
+	(complex (parse-hex-float "-0x0.000000008e4f8p-1022")
+		 (parse-hex-float "0x0.0000060366ba7p-1022"))
+	(complex (parse-hex-float "-0x1.605b467369526p-245")
+		 (parse-hex-float "0x1.417bd33105808p-256"))
+	(complex (parse-hex-float "0x1.cde593daa4ffep-810")
+		 (parse-hex-float "-0x1.179b9a63df6d3p-799"))
+	52)
+  ;; 15
+  ;; Iteration 3
+  (frob cdiv.mcgehearty-iteration.3
+	(complex (parse-hex-float "0x1.cb27eece7c585p-355 ")
+		 (parse-hex-float "0x0.000000223b8a8p-1022"))
+	(complex (parse-hex-float "-0x1.74e7ed2b9189fp-22")
+		 (parse-hex-float "0x1.3d80439e9a119p-731"))
+	(complex (parse-hex-float "-0x1.3b35ed806ae5ap-333")
+		 (parse-hex-float "-0x0.05e01bcbfd9f6p-1022"))
+	53)
+  ;; 16
+  ;; Iteration 4
+  (frob cdiv.mcgehearty-iteration.4
+	(complex (parse-hex-float "-0x1.f5c75c69829f0p-530")
+		 (parse-hex-float "-0x1.e73b1fde6b909p+316"))
+	(complex (parse-hex-float "-0x1.ff96c3957742bp+1023")
+		 (parse-hex-float "0x1.5bd78c9335899p+1021"))
+	(complex (parse-hex-float "-0x1.423c6ce00c73bp-710")
+		 (parse-hex-float "0x1.d9edcf45bcb0ep-708"))
+	52))
+
+(define-test complex-division.misc
+    (:tag :issue)
+  (let ((num '(1
+	       1/2
+	       1.0
+	       1d0
+	       #c(1 2)
+	       #c(1.0 2.0)
+	       #c(1d0 2d0)
+	       #c(1w0 2w0))))
+    ;; Try all combinations of divisions of different types.  This is
+    ;; primarily to test that we got all the numeric contagion cases
+    ;; for division in CL:/.
+    (dolist (x num)
+      (dolist (y num)
+	(assert-true (/ x y)
+		     x y)))))
+
+(define-test complex-division.single
+    (:tag :issues)
+  (let* ((x #c(1 2))
+	 (y (complex (expt 2 127) (expt 2 127)))
+	 (expected (coerce (/ x y)
+			   '(complex single-float))))
+    ;; A naive implementation of complex division would cause an
+    ;; overflow in computing the denominator.
+    (assert-equal expected
+		  (/ (coerce x '(complex single-float))
+		     (coerce y '(complex single-float)))
+		  x
+		  y)))

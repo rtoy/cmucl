@@ -24,6 +24,18 @@
 (defconstant pi 3.14159265358979323846264338327950288419716939937511L0)
 ;(defconstant e 2.71828182845904523536028747135266249775724709369996L0)
 
+(defconstant +log-2d0+
+  (log 2d0)
+  "Natural log of 2d0")
+
+(defconstant +log-2w0+
+  (log 2w0)
+  "Natural log of 2w0")
+
+(defconstant +log2-e+
+  (log (exp 1d0) 2d0)
+  "Base 2 logarithm of e")
+
 ;;; Make these INLINE, since the call to C is at least as compact as a Lisp
 ;;; call, and saves number consing to boot.
 ;;;
@@ -576,14 +588,14 @@
 	  complex)
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
-	     (exp (* power (* (log2 base 1w0) (log 2w0))))))
+	     (exp (* power (* (log2 base 1w0) +log-2w0+)))))
 	(((foreach fixnum (or bignum ratio) single-float double-float)
 	  (foreach (complex double-float)))
 	 ;; Result should have double-float accuracy.  Use log2 in
 	 ;; case the base won't fit in a double-float.
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
-	     (exp (* power (* (log2 base) (log 2d0))))))
+	     (exp (* power (* (log2 base) +log-2d0+)))))
 	((double-float
 	  (foreach (complex rational) (complex single-float)))
 	 (if (and (zerop base) (plusp (realpart power)))
@@ -596,7 +608,7 @@
 	 ;; in case the base won't fit in a double-float.
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
-	     (exp (* power (* (log2 base 1w0) (log 2w0))))))
+	     (exp (* power (* (log2 base 1w0) +log-2w0+)))))
 	(((foreach fixnum (or bignum ratio) single-float)
 	  (foreach (complex rational) (complex single-float)))
 	 (if (and (zerop base) (plusp (realpart power)))
@@ -654,18 +666,18 @@
 	     ;; log(2), with the precision specified by the type of F
 	     (number-dispatch ((f real))
 	       ((double-float)
-		#.(log 2d0))
+		+log-2d0+)
 	       #+double-double
 	       ((double-double-float)
-		#.(log 2w0))))
+		+log-2w0+)))
 	   (log-2-pi (f)
 	     ;; log(pi), with the precision specified by the type of F
 	     (number-dispatch ((f real))
 	       ((double-float)
-		#.(/ pi (log 2d0)))
+		#.(/ pi +log-2d0+))
 	       #+double-double
 	       ((double-double-float)
-		#.(/ dd-pi (log 2w0)))))
+		#.(/ dd-pi +log-2w0+))))
 	   (log1p (x)
 	     ;; log(1+x), with the precision specified by the type of
 	     ;; X
@@ -915,7 +927,7 @@
 	 (if (minusp number)
 	     (complex (coerce (log (- number)) 'single-float)
 		      (coerce pi 'single-float))
-	     (coerce (/ (log2 number) #.(log (exp 1d0) 2d0)) 'single-float)))
+	     (coerce (/ (log2 number) +log2-e+) 'single-float)))
 	((ratio)
 	 (if (minusp number)
 	     (complex (coerce (log (- number)) 'single-float)
@@ -940,7 +952,7 @@
 		   (coerce (%log1p (coerce (- number 1) 'double-float))
 			   'single-float)
 		   (coerce (/ (- (log2 top) (log2 bot))
-			      #.(log (exp 1d0) 2d0))
+			      +log2-e+)
 			   'single-float)))))
 	(((foreach single-float double-float))
 	 ;; Is (log -0) -infinity (libm.a) or -infinity + i*pi (Kahan)?
@@ -1481,7 +1493,7 @@ This is for use with J /= 0 only when |z| is huge."
   (let ((t0 #.(/ 1 (sqrt 2.0d0)))
 	(t1 1.2d0)
 	(t2 3d0)
-	(ln2 #.(log 2d0))
+	(ln2 +log-2d0+)
 	(x (float (realpart z) 1.0d0))
 	(y (float (imagpart z) 1.0d0)))
     (multiple-value-bind (rho k)
