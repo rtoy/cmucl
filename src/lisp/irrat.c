@@ -136,3 +136,126 @@ lisp_scalbn(double x, int n)
 {
     return fdlibm_scalbn(x, n);
 }
+
+/*
+ * Wrappers for the single-float versions
+ */
+float
+lisp_sinf(float x)
+{
+    return (float) fdlibm_sin((double) x);
+}
+
+float
+lisp_cosf(float x)
+{
+    return (float) fdlibm_cos((double) x);
+}
+
+float
+lisp_tanf(float x)
+{
+    return (float) fdlibm_tan((double) x);
+}
+
+float
+lisp_atanf(float x)
+{
+    return (float) fdlibm_atan((double) x);
+}
+
+float
+lisp_atan2f(float y, float x)
+{
+    return (float) __ieee754_atan2((double) y, (double) x);
+}
+
+float
+lisp_asinf(float x)
+{
+    return (float) __ieee754_asin((double) x);
+}
+
+float
+lisp_acosf(float x)
+{
+    return (float) __ieee754_acos((double) x);
+}
+
+float
+lisp_sinhf(float x)
+{
+    return (float) __ieee754_sinh((double) x);
+}
+
+float
+lisp_coshf(float x)
+{
+    return (float) __ieee754_cosh((double) x);
+}
+
+float
+lisp_tanhf(float x)
+{
+    return (float) fdlibm_tanh((double) x);
+}
+
+float
+lisp_asinhf(float x)
+{
+    return (float) fdlibm_asinh((double) x);
+}
+
+float
+lisp_acoshf(float x)
+{
+    return (float) __ieee754_acosh((double) x);
+}
+
+float
+lisp_atanhf(float x)
+{
+    return (float) __ieee754_atanh((double) x);
+}
+
+float
+lisp_expf(float x)
+{
+    return (float) __ieee754_exp((double) x);
+}
+
+float
+lisp_logf(float x)
+{
+    return (float) __ieee754_log((double) x);
+}
+
+float
+lisp_log10f(float x)
+{
+    return (float) __ieee754_log10((double) x);
+}
+
+float
+lisp_powf(float x, float y)
+{
+    return (float) __ieee754_pow((double) x, (double) y);
+}
+
+float
+lisp_hypotf(float x, float y)
+{
+    return (float) __ieee754_hypot((double) x, (double) y);
+}
+
+float
+lisp_log1pf(float x)
+{
+    return (float) fdlibm_log1p((double) x);
+}
+
+float
+lisp_expm1f(float x)
+{
+    return (float) fdlibm_expm1((double) x);
+}

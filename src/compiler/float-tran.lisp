@@ -620,40 +620,82 @@
 	  (double-float) double-float
   (movable foldable flushable))
 
+(defknown (%tanf %sinhf %asinhf %atanhf %logf %log10f)
+	  (single-float) single-float
+  (movable foldable flushable))
+
 (defknown (%sin %cos %tanh #+x87 %sin-quick #+x87 %cos-quick)
     (double-float) (double-float -1.0d0 1.0d0)
+    (movable foldable flushable))
+
+(defknown (%sinf %cosf %tanhf)
+    (single-float) (single-float -1.0f0 1.0f0)
     (movable foldable flushable))
 
 (defknown (%asin %atan)
     (double-float) (double-float #.(- (/ pi 2)) #.(/ pi 2))
     (movable foldable flushable))
     
+(defknown (%asinf %atanf)
+    (single-float) (single-float #.(coerce (- (/ pi 2)) 'single-float)
+				 #.(coerce (/ pi 2) 'single-float))
+    (movable foldable flushable))
+    
 (defknown (%acos)
     (double-float) (double-float 0.0d0 #.pi)
+    (movable foldable flushable))
+    
+(defknown (%acosf)
+    (single-float) (single-float 0.0f0 #.(coerce pi 'single-float))
     (movable foldable flushable))
     
 (defknown (%cosh)
     (double-float) (double-float 1.0d0)
     (movable foldable flushable))
 
+(defknown (%coshf)
+    (single-float) (single-float 1.0f0)
+    (movable foldable flushable))
+
 (defknown (%acosh %exp %sqrt)
     (double-float) (double-float 0.0d0)
+    (movable foldable flushable))
+
+(defknown (%acoshf %expf)
+    (single-float) (single-float 0.0f0)
     (movable foldable flushable))
 
 (defknown %expm1
     (double-float) (double-float -1d0)
     (movable foldable flushable))
 
+(defknown %expm1f
+    (single-float) (single-float -1f0)
+    (movable foldable flushable))
+
 (defknown (%hypot)
     (double-float double-float) (double-float 0d0)
+  (movable foldable flushable))
+
+(defknown (%hypotf)
+    (single-float single-float) (single-float 0f0)
   (movable foldable flushable))
 
 (defknown (%pow)
     (double-float double-float) double-float
   (movable foldable flushable))
 
+(defknown (%powf)
+    (single-float single-float) single-float
+  (movable foldable flushable))
+
 (defknown (%atan2)
     (double-float double-float) (double-float #.(- pi) #.pi)
+  (movable foldable flushable))
+
+(defknown (%atan2f)
+    (single-float single-float) (single-float #.(coerce (- pi) 'single-float)
+					      #.(coerce pi 'single-float))
   (movable foldable flushable))
 
 (defknown (%scalb)
@@ -666,6 +708,10 @@
 
 (defknown (%log1p)
     (double-float) double-float
+    (movable foldable flushable))
+
+(defknown (%log1pf)
+    (single-float) single-float
     (movable foldable flushable))
 
 (dolist (stuff '((exp %exp *)
@@ -684,10 +730,11 @@
 		 (acosh %acosh float)
 		 (atanh %atanh float)))
   (destructuring-bind (name prim rtype) stuff
-    (deftransform name ((x) '(single-float) rtype :eval-name t)
-      `(coerce (,prim (coerce x 'double-float)) 'single-float))
-    (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
-      `(,prim x))))
+    (let ((primf (symbolicate prim "F")))
+      (deftransform name ((x) '(single-float) rtype :eval-name t)
+	`(,primf x))
+      (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
+	`(,prim x)))))
 
 (defknown (%sincos)
     (double-float) (values double-float double-float)
