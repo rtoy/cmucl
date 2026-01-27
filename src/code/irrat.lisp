@@ -47,29 +47,21 @@
 		  (intern (concatenate 'simple-string
 				       "%"
 				       (string-upcase name)))))
-    (let ((c-name-f (concatenate 'simple-string c-name "f"))
-	  (lisp-name-f (symbolicate lisp-name "F")))
     `(progn
-       (declaim (inline ,lisp-name ,lisp-name-f))
-       (export '(,lisp-name ,lisp-name-f))
+       (declaim (inline ,lisp-name))
+       (export '(,lisp-name))
        (alien:def-alien-routine (,c-name ,lisp-name) double-float
 	 ,@(let ((results nil))
 	     (dotimes (i num-args (nreverse results))
 	       (push (list (intern (format nil "ARG-~D" i))
 			   'double-float)
-		     results))))
-       (alien:def-alien-routine (,c-name-f ,lisp-name-f) single-float
-	 ,@(let ((results nil))
-	     (dotimes (i num-args (nreverse results))
-	       (push (list (intern (format nil "ARG-~D" i))
-			   'single-float)
-		     results))))))))
+		     results)))))))
 
 (eval-when (compile load eval)
 
 (defun handle-reals (function var)
   `((((foreach fixnum single-float bignum ratio))
-     (,(symbolicate function "F") (coerce ,var 'single-float)))
+     (coerce (,function (coerce ,var 'double-float)) 'single-float))
     ((double-float)
      (,function ,var))
     #+double-double
