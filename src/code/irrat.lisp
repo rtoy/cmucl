@@ -49,7 +49,7 @@
 				       (string-upcase name)))))
     `(progn
        (declaim (inline ,lisp-name))
-       (export '(,lisp-name))
+       (export ,lisp-name)
        (alien:def-alien-routine (,c-name ,lisp-name) double-float
 	 ,@(let ((results nil))
 	     (dotimes (i num-args (nreverse results))
