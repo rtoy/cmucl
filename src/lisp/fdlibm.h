@@ -54,8 +54,21 @@ extern double fdlibm_tan(double x);
 extern double fdlibm_expm1(double x);
 extern double fdlibm_log1p(double x);
 extern double fdlibm_atan(double x);
+extern double fdlibm_tanh(double x);
+extern double fdlibm_asinh(double x);
 extern double __ieee754_exp(double x);
 extern double __ieee754_log(double x);
+extern double __ieee754_atan2(double y, double x);
+extern double __ieee754_asin(double x);
+extern double __ieee754_acos(double x);
+extern double __ieee754_sinh(double x);
+extern double __ieee754_cosh(double x);
+extern double __ieee754_atanh(double x);
+extern double __ieee754_acosh(double x);
+extern double __ieee754_log10(double x);
+extern double __ieee754_pow(double x, double y);
+extern double __ieee754_hypot(double x, double y);
+extern double fdlibm_scalbn(double x, int n);
 
 enum FDLIBM_EXCEPTION {
   FDLIBM_DIVIDE_BY_ZERO,

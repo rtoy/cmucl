@@ -35,6 +35,7 @@ SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	vars.c parse.c interrupt.c search.c validate.c globals.c \
 	dynbind.c breakpoint.c regnames.c backtrace.c save.c purify.c \
 	runprog.c time.c case-mapping.c exec-init.c \
+	irrat.c \
 	${FDLIBM} ${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC} ${GC_SRC}
 
 OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
