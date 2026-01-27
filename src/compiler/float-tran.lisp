@@ -716,7 +716,6 @@
 
 (dolist (stuff '((exp %exp *)
 		 (log %log float)
-		 (sqrt %sqrt float)
 		 (sin %sin float)
 		 (cos %cos float)
 		 (tan %tan float)
@@ -735,6 +734,14 @@
 	`(,primf x))
       (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
 	`(,prim x)))))
+
+(deftransform sqrt ((x) (double-float) double-float :when :both)
+  `(%sqrt x))
+
+;; We don't currently have sqrt specialized for single-floats, so use
+;; the double-float version.
+(deftransform sqrt ((x) (single-float) single-float)
+  `(coerce (%sqrt (coerce x 'double-float)) 'single-float))
 
 (defknown (%sincos)
     (double-float) (values double-float double-float)
