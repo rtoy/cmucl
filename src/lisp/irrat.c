@@ -113,6 +113,11 @@ double
 lisp_sinh(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    /* Signal overflow if x is infinite */
+    if (isinf(x)) {
+	return fdlibm_setexception(x, FDLIBM_OVERFLOW);
+    }
+	
     return cr_sinh(x);
 #else    
     return __ieee754_sinh(x);
@@ -153,6 +158,15 @@ double
 lisp_acosh(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    /* Signals invalid if x is not in the domain x >= 1 */
+    if (x < 1) {
+	return fdlibm_setexception(x, FDLIBM_INVALID);
+    }
+    /* Signal overflow if x is infinite */
+    if (isinf(x)) {
+	return fdlibm_setexception(x, FDLIBM_OVERFLOW);
+    }
+    
     return cr_acosh(x);
 #else    
     return __ieee754_acosh(x);
