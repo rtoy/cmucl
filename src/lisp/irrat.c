@@ -7,6 +7,8 @@
 
 #include "lisp.h"
 #include "internals.h"
+#include "fdlibm.h"
+
 #ifdef FEATURE_CORE_MATH
 #include <math.h>
 extern double cr_sin(double);
@@ -29,8 +31,6 @@ extern double cr_pow(double, double);
 extern double cr_hypot(double, double);
 extern double cr_log1p(double);
 extern double cr_expm1(double);
-#else
-#include "fdlibm.h"
 #endif
 
 
@@ -241,9 +241,5 @@ lisp_expm1(double x)
 double
 lisp_scalbn(double x, int n)
 {
-#ifdef FEATURE_CORE_MATH
-    return scalbn(x, n);
-#else    
     return fdlibm_scalbn(x, n);
-#endif
 }
