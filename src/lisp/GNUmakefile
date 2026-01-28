@@ -36,7 +36,7 @@ SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	dynbind.c breakpoint.c regnames.c backtrace.c save.c purify.c \
 	runprog.c time.c case-mapping.c exec-init.c \
 	irrat.c \
-	${CORE64_OBJS:.o=.c} \
+	${CORE64_SRCS} \
 	${FDLIBM} ${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC} ${GC_SRC}
 
 
@@ -61,8 +61,8 @@ lisp: ${OBJS} ${CORE64_OBJS} version.o
 
 # Create a library out of all the object files so we can build an
 # executable.  However, we need to remove exec-init.o from the library
-lisp.a:	version.o ${OBJS} ${CORE64_OBJS} ${EXEC_FINAL_OBJ}
-	$(AR) crs lisp.a ${OBJS} ${CORE64_OBJS} version.o
+lisp.a:	version.o ${OBJS} ${EXEC_FINAL_OBJ}
+	$(AR) crs lisp.a ${OBJS} version.o
 ifneq (${EXEC_FINAL_OBJ},)
 	$(AR) d lisp.a exec-init.o
 endif
