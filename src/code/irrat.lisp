@@ -75,40 +75,6 @@
 
 ;;; Please refer to the Unix man pages for details about these routines.
 
-#+core-math
-(progn
-;;; Trigonometric.
-(def-math-rtn ("cr_sin" %sin) 1)
-(def-math-rtn ("cr_cos" %cos) 1)
-(def-math-rtn ("cr_tan" %tan) 1)
-(def-math-rtn ("cr_atan" %atan) 1)
-(def-math-rtn ("cr_atan2" %atan2) 2)
-(def-math-rtn ("cr_asin" %asin) 1)
-(def-math-rtn ("cr_acos" %acos) 1)
-(def-math-rtn ("cr_sinh" %sinh) 1)
-(def-math-rtn ("cr_cosh" %cosh) 1)
-(def-math-rtn ("cr_tanh" %tanh) 1)
-(def-math-rtn ("cr_asinh" %asinh) 1)
-(def-math-rtn ("cr_acosh" %acosh) 1)
-(def-math-rtn ("cr_atanh" %atanh) 1)
-
-;;; Exponential and Logarithmic.
-(def-math-rtn ("cr_exp" %exp) 1)
-(def-math-rtn ("cr_log" %log) 1)
-(def-math-rtn ("cr_log10" %log10) 1)
-(def-math-rtn ("cr_log2" %log2) 1)
-
-(def-math-rtn ("__ieee754_pow" %pow) 2)
-#-(or x86 sparc-v7 sparc-v8 sparc-v9)
-(def-math-rtn "sqrt" 1)
-(def-math-rtn ("cr_hypot" %hypot) 2)
-
-(def-math-rtn ("cr_log1p" %log1p) 1)
-(def-math-rtn ("cr_expm1" %expm1) 1)
-)
-
-#-core-math
-(progn
 ;;; Trigonometric.
 (def-math-rtn ("lisp_sin" %sin) 1)
 (def-math-rtn ("lisp_cos" %cos) 1)
