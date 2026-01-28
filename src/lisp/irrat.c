@@ -31,6 +31,7 @@ extern double cr_pow(double, double);
 extern double cr_hypot(double, double);
 extern double cr_log1p(double);
 extern double cr_expm1(double);
+extern void cr_sincos(double, double *, double *);
 #endif
 
 
@@ -242,4 +243,16 @@ double
 lisp_scalbn(double x, int n)
 {
     return fdlibm_scalbn(x, n);
+}
+
+void
+lisp_sincos (double x, double *s, double *c)
+{
+#ifdef FEATURE_CORE_MATH
+    cr_sincos(x, s, c);
+#else    
+    extern void cmucl_sincos(double, double*, double*);
+
+    cmucl_sincos(x, s, c);
+#endif
 }

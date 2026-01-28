@@ -214,9 +214,7 @@
   (y1 double-float :out))
 
 (declaim (inline %%sincos))
-(alien:def-alien-routine (#-core-math "lisp_sincos"
-			  #+core-math "cr_sincos"
-			  %%sincos)
+(alien:def-alien-routine ("lisp_sincos" %%sincos)
   c-call:void
   (x double-float)
   (s double-float :out)
