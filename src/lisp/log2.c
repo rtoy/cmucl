@@ -39,7 +39,7 @@ cp    =  9.61796693925975554329e-01, /* 0x3FEEC709, 0xDC3A03FD =2/(3ln2) */
 cp_h  =  9.61796700954437255859e-01, /* 0x3FEEC709, 0xE0000000 =(float)cp */
 cp_l  = -7.02846165095275826516e-09; /* 0xBE3E2FE0, 0x145B01F5 =tail of cp_h*/
 
-double cmucl_log2(double x)
+double lisp_log2(double x)
 {
     double ax;
     int k, hx, lx, ix;

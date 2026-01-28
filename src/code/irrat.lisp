@@ -110,38 +110,37 @@
 #-core-math
 (progn
 ;;; Trigonometric.
-(def-math-rtn ("fdlibm_sin" %sin) 1)
-(def-math-rtn ("fdlibm_cos" %cos) 1)
-(def-math-rtn ("fdlibm_tan" %tan) 1)
-(def-math-rtn ("fdlibm_atan" %atan) 1)
-(def-math-rtn ("__ieee754_atan2" %atan2) 2)
-(def-math-rtn ("__ieee754_asin" %asin) 1)
-(def-math-rtn ("__ieee754_acos" %acos) 1)
-(def-math-rtn ("__ieee754_sinh" %sinh) 1)
-(def-math-rtn ("__ieee754_cosh" %cosh) 1)
-(def-math-rtn ("fdlibm_tanh" %tanh) 1)
-(def-math-rtn ("fdlibm_asinh" %asinh) 1)
-(def-math-rtn ("__ieee754_acosh" %acosh) 1)
-(def-math-rtn ("__ieee754_atanh" %atanh) 1)
+(def-math-rtn ("lisp_sin" %sin) 1)
+(def-math-rtn ("lisp_cos" %cos) 1)
+(def-math-rtn ("lisp_tan" %tan) 1)
+(def-math-rtn ("lisp_atan" %atan) 1)
+(def-math-rtn ("lisp_atan2" %atan2) 2)
+(def-math-rtn ("lisp_asin" %asin) 1)
+(def-math-rtn ("lisp_acos" %acos) 1)
+(def-math-rtn ("lisp_sinh" %sinh) 1)
+(def-math-rtn ("lisp_cosh" %cosh) 1)
+(def-math-rtn ("lisp_tanh" %tanh) 1)
+(def-math-rtn ("lisp_asinh" %asinh) 1)
+(def-math-rtn ("lisp_acosh" %acosh) 1)
+(def-math-rtn ("lisp_atanh" %atanh) 1)
 
 ;;; Exponential and Logarithmic.
-(def-math-rtn ("__ieee754_exp" %exp) 1)
-(def-math-rtn ("__ieee754_log" %log) 1)
-(def-math-rtn ("__ieee754_log10" %log10) 1)
-(def-math-rtn ("cmucl_log2" %log2) 1)
+(def-math-rtn ("lisp_exp" %exp) 1)
+(def-math-rtn ("lisp_log" %log) 1)
+(def-math-rtn ("lisp_log10" %log10) 1)
+(def-math-rtn ("lisp_log2" %log2) 1)
 
-(def-math-rtn ("__ieee754_pow" %pow) 2)
+(def-math-rtn ("lisp_pow" %pow) 2)
 #-(or x86 sparc-v7 sparc-v8 sparc-v9)
 (def-math-rtn "sqrt" 1)
-(def-math-rtn ("__ieee754_hypot" %hypot) 2)
+(def-math-rtn ("lisp_hypot" %hypot) 2)
 
-(def-math-rtn ("fdlibm_log1p" %log1p) 1)
-(def-math-rtn ("fdlibm_expm1" %expm1) 1)
-)
+(def-math-rtn ("lisp_log1p" %log1p) 1)
+(def-math-rtn ("lisp_expm1" %expm1) 1)
 
 (declaim (inline %scalbn))
 (export '%scalbn)
-(alien:def-alien-routine ("fdlibm_scalbn" %scalbn) c-call:double
+(alien:def-alien-routine ("lisp_scalbn" %scalbn) c-call:double
   (x double-float)
   (n c-call:int))
 
