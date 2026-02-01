@@ -13,7 +13,7 @@
  * reduction just once.
  */
 void
-lisp_sincos (double x, double *s, double *c)
+cmucl_sincos (double x, double *s, double *c)
 {
     int ix;
     union { int i[2]; double d; } ux;

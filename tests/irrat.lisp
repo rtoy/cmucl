@@ -255,3 +255,20 @@
 		(realpart result))
     (assert-eql -132.16721026205448d0
 		(imagpart result))))
+
+(define-test cos-tiny
+    (:tag issues)
+  ;; This test comes from the Maxima testsuite where core-math was not
+  ;; computing cos(8.881784197001252d-16) correctly.  It should be
+  ;; exactly 1.  We were getting one bit less.
+  (assert-eql 1d0
+	      (cos (kernel:make-double-float 1020264448 0))))
+
+(define-test log.special-value
+    (:tag issues)
+  ;; This test comes from the Maxima testsuite where core-math was not
+  ;; computing log(0.6899991035461426d0) => -0.37106498060016496d0.
+  ;; The computed result looked it had like a single-precision accuracy.
+  (assert-eql -0.37106498060016496d0
+	      (kernel:%log (kernel:make-double-float (+ 1071644672 398457) 0))))
+

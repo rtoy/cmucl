@@ -41,7 +41,7 @@
   (:save-p t)
   (:ignore args ecx edx)
   (:guard (backend-featurep :sse2))
-  (:generator 0 
+  (:generator 0
     (cond ((policy node (> space speed))
 	   (move eax function)
 	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign)))
