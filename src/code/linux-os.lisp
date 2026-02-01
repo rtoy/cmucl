@@ -25,6 +25,9 @@
 (register-lisp-feature :linux)
 (register-lisp-feature :elf)
 (register-lisp-runtime-feature :executable)
+;; Core-math is used for the special functions providing
+;; correctly-rounded numerical results.
+(register-lisp-runtime-feature :core-math)
 
 (setq *software-type* "Linux")
 

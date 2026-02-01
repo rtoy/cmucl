@@ -36,6 +36,37 @@ ifdef FEATURE_ELF
 CPP_DEFINE_OPTIONS += -DFEATURE_ELF
 endif
 
+# If core-math feature is set, we use core-math routines for the
+# special functions.
+
+ifdef FEATURE_CORE_MATH
+CORE_MATH_64=core-math/src/binary64
+
+CORE64_SRCS=\
+	$(CORE_MATH_64)/sin/sin.c \
+	$(CORE_MATH_64)/cos/cos.c \
+	$(CORE_MATH_64)/tan/tan.c \
+	$(CORE_MATH_64)/atan2/atan2.c \
+	$(CORE_MATH_64)/asin/asin.c \
+	$(CORE_MATH_64)/acos/acos.c \
+	$(CORE_MATH_64)/atan/atan.c \
+	$(CORE_MATH_64)/sinh/sinh.c \
+	$(CORE_MATH_64)/cosh/cosh.c \
+	$(CORE_MATH_64)/tanh/tanh.c \
+	$(CORE_MATH_64)/asinh/asinh.c \
+	$(CORE_MATH_64)/acosh/acosh.c \
+	$(CORE_MATH_64)/atanh/atanh.c \
+	$(CORE_MATH_64)/exp/exp.c \
+	$(CORE_MATH_64)/log/log.c \
+	$(CORE_MATH_64)/log10/log10.c \
+	$(CORE_MATH_64)/log2/log2.c \
+	$(CORE_MATH_64)/pow/pow.c \
+	$(CORE_MATH_64)/hypot/hypot.c \
+	$(CORE_MATH_64)/log1p/log1p.c \
+	$(CORE_MATH_64)/expm1/expm1.c \
+	$(CORE_MATH_64)/sincos/sincos.c
+endif
+
 ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
 CPP_INCLUDE_OPTIONS := -iquote . -iquote $(PATH1)
 else

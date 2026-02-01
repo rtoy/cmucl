@@ -36,7 +36,9 @@ SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	dynbind.c breakpoint.c regnames.c backtrace.c save.c purify.c \
 	runprog.c time.c case-mapping.c exec-init.c \
 	irrat.c \
+	${CORE64_SRCS} \
 	${FDLIBM} ${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC} ${GC_SRC}
+
 
 OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 
@@ -53,7 +55,7 @@ version.o : version.c version
 	mv ,version version
 	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
 
-lisp: ${OBJS} version.o
+lisp: ${OBJS} ${CORE64_OBJS} version.o
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp $^ ${OS_LIBS} -lm
 	mv -f ,lisp lisp
 
@@ -73,7 +75,7 @@ internals.h internals.inc:
 	@false
 
 clean:
-	$(RM) Depends *.o lisp lisp.nm core lisp.a
+	$(RM) Depends *.o $(CORE64_OBJS) lisp lisp.nm core lisp.a
 	echo 'Map file for lisp version 0' > lisp.nm
 
 depend: Depends
