@@ -54,8 +54,10 @@ variables:
     #- bin/cross-build-world.sh -crl -B boot-2020-04-1 xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
     # Regular build using the cross-compiled result or snapshot.  The
     # analyzer job requires gcc, so make sure we build with gcc here
-    # instead of clang. 
-    - bin/build.sh $bootstrap -b build -R -C "" -o snapshot/bin/lisp
+    # instead of clang.
+    #
+    # Set CONFIG in appropriately each build.
+    - bin/build.sh $bootstrap -b build -R -C $CONFIG -o snapshot/bin/lisp
     # When the result of `git describe` cannot be used as a version
     # string, an alternative can be provided with the -V flag
     # The following stages need this to run tests and such.
@@ -145,6 +147,8 @@ linux:build:
   needs:
     - job: linux:install
       artifacts: true
+  variables:
+    CONFIG: "x86_linux_clang"
   # These rules is needed so that the static analyzer job can run on a
   # schedule because this is a prerequisite of the analyzer build.  A
   # regular push or merge request does the normal stuff.
@@ -166,6 +170,10 @@ linux:cross-build:
       - linux-4/*.log
       # The lisp directory is needed for the static analyzer job.
       - linux-4/lisp
+  variables:
+    # This must match the config used for the linux build!
+    CONFIG: "x86_linux_clang"
+
   needs:
 
     # Normally need the linux:install stage to get the compiler to
@@ -176,10 +184,10 @@ linux:cross-build:
     #- job: linux:install
       artifacts: true
   script:
-    - bin/create-target.sh xtarget
-    - bin/create-target.sh xcross
+    - bin/create-target.sh xtarget $CONFIG
+    - bin/create-target.sh xcross $CONFIG
     - bin/cross-build-world.sh -crl xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp dist/bin/lisp
-    - bin/build.sh -b xlinux $bootstrap -R -C "" -o "xtarget/lisp/lisp -lib xtarget/lisp"
+    - bin/build.sh -b xlinux $bootstrap -R -C $CONFIG -o "xtarget/lisp/lisp -lib xtarget/lisp"
     - bin/make-dist.sh -I xdist xlinux-4
 
 linux:test:
@@ -249,6 +257,8 @@ osx:build:
   needs:
     - job: osx:install
       artifacts: true
+  variables:
+    CONFIG: "x86_darwin"
 
 osx:test:
   <<: *unit_test_configuration
@@ -336,6 +346,8 @@ ubuntu:build:
   needs:
     - job: ubuntu:install
       artifacts: true
+  variables:
+    CONFIG: "x86_linux_clang"
 
 ubuntu:test:
   <<: *unit_test_configuration
