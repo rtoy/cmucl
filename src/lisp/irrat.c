@@ -202,13 +202,17 @@ lisp_log10(double x)
 double
 lisp_pow(double x, double y)
 {
+#ifdef FEATURE_CORE_MATH
     /*
      * cr_pow seems causes ansi-tests to fail in test WRITE.1 among
      * others.  Somewhere an invalid operation is occurring.  Thus
      * just use fdlibm for now until we can figure out what's causing
      * the failure.
      */
+    return cr_pow(x, y);
+#else    
     return __ieee754_pow(x, y);
+#endif
 }
 
 double
