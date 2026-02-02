@@ -147,6 +147,8 @@ linux:build:
     - job: linux:install
       artifacts: true
   variables:
+    # Fedora 41 must build with gcc because the clang build fails some
+    # ansi-tests.  See [#469].
     CONFIG: "x86_linux"
   # These rules is needed so that the static analyzer job can run on a
   # schedule because this is a prerequisite of the analyzer build.  A
@@ -346,7 +348,7 @@ ubuntu:build:
     - job: ubuntu:install
       artifacts: true
   variables:
-    # gcc can't compile the core-math routines.
+    # Ubuntu 25.10 can build with either gcc or clang and pass the ansi-tests.
     CONFIG: "x86_linux_clang"
 
 ubuntu:test:

@@ -204,10 +204,10 @@ lisp_pow(double x, double y)
 {
 #ifdef FEATURE_CORE_MATH
     /*
-     * cr_pow seems causes ansi-tests to fail in test WRITE.1 among
-     * others.  Somewhere an invalid operation is occurring.  Thus
-     * just use fdlibm for now until we can figure out what's causing
-     * the failure.
+     * cr_pow when compiled with older versions of gcc or clang can
+     * cause failures in the ansi-tests [#469].  Ubuntu 25.10 and Fedora 41
+     * (gcc only) are known to have compilers that work well enough
+     * that the ansi-tests pass.
      */
     return cr_pow(x, y);
 #else    
