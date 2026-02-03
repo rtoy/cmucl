@@ -42,14 +42,9 @@ done
 shift $((OPTIND - 1))
 
 # Create the test directory needed by the issue.45 test.
-rm -rf test-tmp
-mkdir test-tmp
-# Some OSes like Ubuntu 25.10 have a symlink for /bin/ls.  Find actual target if so.
-if [ -h /bin/ls ]; then
-    ln -s `readlink /bin/ls` test-tmp/ls-link
-else
-    ln -s /bin/ls test-tmp/ls-link
-fi
+#rm -rf test-tmp
+#mkdir test-tmp
+#ln -s /bin/ls test-tmp/ls-link
 
 # Set the timestamps on 64-bit-timestamp-2038.txt and
 # 64-bit-timestamp-2106.txt, but only for OSes where we know this

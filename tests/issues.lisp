@@ -436,7 +436,7 @@
 (define-test issue.45
   (:tag :issues)
   ;; This depends on run-tests to setup the test directory correctly!
-  (let* ((test-dir #p"test-tmp/")
+  (let* ((test-dir #p"tests/test-run-prog/")
 	 (test-dir-name (namestring test-dir)))
     (flet ((do-test (program)
 	     (with-output-to-string (s)
