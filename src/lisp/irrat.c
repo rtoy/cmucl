@@ -43,6 +43,11 @@ double
 lisp_sin(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    /* Signals invalid if x is infinite */
+    if (isinf(x)) {
+	return fdlibm_setexception(x, FDLIBM_INVALID);
+    }
+
     return cr_sin(x);
 #else    
     return fdlibm_sin(x);
@@ -53,6 +58,11 @@ double
 lisp_cos(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    /* Signals invalid if x is infinite */
+    if (isinf(x)) {
+	return fdlibm_setexception(x, FDLIBM_INVALID);
+    }
+
     return cr_cos(x);
 #else    
     return fdlibm_cos(x);
@@ -63,6 +73,11 @@ double
 lisp_tan(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    /* Signals invalid if x is infinite */
+    if (isinf(x)) {
+	return fdlibm_setexception(x, FDLIBM_INVALID);
+    }
+
     return cr_tan(x);
 #else    
     return fdlibm_tan(x);
