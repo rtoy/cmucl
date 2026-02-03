@@ -39,14 +39,21 @@ extern void cr_sincos(double, double *, double *);
  * Wrappers for the special functions
  */
 
+#define MAYBE_SIGNAL_INVALID(test, val)		\
+    if ((test)) {				\ 
+        return fdlibm_setexception(val, FDLIBM_INVALID);	\
+    }
+
+#define MAYBE_SIGNAL_OVERFLOW(x)	\
+    if (isinf(x)) {	\
+	return fdlibm_setexception(x, FDLIBM_OVERFLOW); \
+    }
+
 double
 lisp_sin(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    /* Signals invalid if x is infinite */
-    if (isinf(x)) {
-	return fdlibm_setexception(x, FDLIBM_INVALID);
-    }
+    MAYBE_SIGNAL_INVALID(isinf(x), x)
 
     return cr_sin(x);
 #else    
@@ -58,10 +65,7 @@ double
 lisp_cos(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    /* Signals invalid if x is infinite */
-    if (isinf(x)) {
-	return fdlibm_setexception(x, FDLIBM_INVALID);
-    }
+    MAYBE_SIGNAL_INVALID(isinf(x), x)
 
     return cr_cos(x);
 #else    
@@ -73,10 +77,7 @@ double
 lisp_tan(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    /* Signals invalid if x is infinite */
-    if (isinf(x)) {
-	return fdlibm_setexception(x, FDLIBM_INVALID);
-    }
+    MAYBE_SIGNAL_INVALID(isinf(x), x)
 
     return cr_tan(x);
 #else    
@@ -128,10 +129,7 @@ double
 lisp_sinh(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    /* Signal overflow if x is infinite */
-    if (isinf(x)) {
-	return fdlibm_setexception(x, FDLIBM_OVERFLOW);
-    }
+    MAYBE_SIGNAL_OVERFLOW(x)
 	
     return cr_sinh(x);
 #else    
@@ -163,10 +161,7 @@ double
 lisp_asinh(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    /* Signal overflow if x is infinite */
-    if (isinf(x)) {
-	return fdlibm_setexception(x, FDLIBM_OVERFLOW);
-    }
+    MAYBE_SIGNAL_OVERFLOW(x)
 
     return cr_asinh(x);
 #else    
@@ -178,14 +173,9 @@ double
 lisp_acosh(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    /* Signals invalid if x is not in the domain x >= 1 */
-    if (x < 1) {
-	return fdlibm_setexception(x, FDLIBM_INVALID);
-    }
-    /* Signal overflow if x is infinite */
-    if (isinf(x)) {
-	return fdlibm_setexception(x, FDLIBM_OVERFLOW);
-    }
+    MAYBE_SIGNAL_INVALID(x < 1, x)
+
+    MAYBE_SIGNAL_OVERFLOW(x)
     
     return cr_acosh(x);
 #else    
