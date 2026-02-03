@@ -223,7 +223,6 @@ lisp_pow(double x, double y)
      * the failure.
      */
     return __ieee754_pow(x, y);
-#endif
 }
 
 double
