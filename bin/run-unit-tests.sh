@@ -56,8 +56,9 @@ ln -s /bin/ls test-tmp/ls-link
 # tests/os.lisp.
 case `uname -s` in
     Linux)
-	touch -d "1 April 2038" tests/resources/64-bit-timestamp-2038.txt
-	touch -d "1 April 2106" tests/resources/64-bit-timestamp-2106.txt
+	# -t format is [[CC]YY]MMDDhhmm[.ss]
+	touch -t 203804010000 tests/resources/64-bit-timestamp-2038.txt
+	touch -t 210604010000 tests/resources/64-bit-timestamp-2106.txt
 	;;
 esac
 
