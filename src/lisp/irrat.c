@@ -148,6 +148,11 @@ double
 lisp_asinh(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    /* Signal overflow if x is infinite */
+    if (isinf(x)) {
+	return fdlibm_setexception(x, FDLIBM_OVERFLOW);
+    }
+
     return cr_asinh(x);
 #else    
     return fdlibm_asinh(x);
