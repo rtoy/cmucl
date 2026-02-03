@@ -214,7 +214,6 @@
   (ext:with-float-traps-masked (:overflow)
     (assert-equal ext:double-float-positive-infinity
 		  (kernel:%exp 710d0)))
-  #-core-math
   (let ((modes (ext:get-floating-point-modes)))
     (unwind-protect
 	 (progn
