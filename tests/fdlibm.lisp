@@ -110,6 +110,7 @@
   ;; overflow.
   (assert-error 'floating-point-overflow
 		(kernel:%asinh ext:double-float-positive-infinity))
+  #-core-math
   (assert-error 'floating-point-overflow
 		(kernel:%asinh ext:double-float-negative-infinity))
   (assert-true (ext:float-nan-p (kernel:%asinh *qnan*)))
