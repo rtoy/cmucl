@@ -91,7 +91,7 @@ CORE32_SRCS=\
 	$(CORE_MATH_32)/expm1/expm1f.c \
 	$(CORE_MATH_32)/sincos/sincosf.c
 
-CORE_MATH_SRCS = $(CORE64_OBJS) $(CORE32_OBJS)
+CORE_MATH_SRCS = $(CORE64_SRCS) $(CORE32_SRCS)
 
 endif
 
