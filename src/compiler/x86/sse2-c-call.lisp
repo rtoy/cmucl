@@ -36,12 +36,6 @@
 		   :from :eval :to :result) edx)
   (:temporary (:sc single-stack) temp-single)
   (:temporary (:sc double-stack) temp-double)
-  #+core-math
-  (:temporary (:sc unsigned-stack) save-fpu-cw)
-  #+core-math
-  (:temporary (:sc unsigned-stack) fpu-cw)
-  #+core-math
-  (:temporary (:sc unsigned-reg :offset esi-offset) temp-cw)
   (:node-var node)
   (:vop-var vop)
   (:save-p t)
@@ -69,10 +63,7 @@
 	 (inst movss xmm0-tn (ea-for-sf-stack temp-single)))
 	(double-reg
 	 (inst fstpd (ea-for-df-stack temp-double))
-	 (inst movsd xmm0-tn (ea-for-df-stack temp-double)))))
-    ;; Restore the x87 FPU control settings
-    #+(and nil core-math)
-    (inst fldcw save-fpu-cw)))
+	 (inst movsd xmm0-tn (ea-for-df-stack temp-double)))))))
 
 (define-vop (alloc-number-stack-space)
   (:info amount)
