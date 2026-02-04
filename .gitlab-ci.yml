@@ -348,8 +348,10 @@ ubuntu:build:
     - job: ubuntu:install
       artifacts: true
   variables:
-    # Ubuntu 25.10 can build with either gcc or clang and pass the ansi-tests.
-    CONFIG: "x86_linux_clang"
+    # Build with gcc on Ubuntu 25.10.  It produces a lisp than passes
+    # the ansi-tests.  Clang seems to fail the ansi-tests WRITE.1,
+    # PRINT.1, and friends when cr_pow is used.
+    CONFIG: "x86_linux"
 
 ubuntu:test:
   <<: *unit_test_configuration
