@@ -48,21 +48,6 @@
   (:ignore args ecx edx)
   (:guard (backend-featurep :sse2))
   (:generator 0
-    #+(and nil core-math)
-    (progn
-      ;; Save the x87 FPU control word.  Then modify it to set the
-      ;; precision bits to 3 for 64-bit mantissas for 80-bit
-      ;; arithmetic.  If we don't some of some special functions
-      ;; return incorrect values because the x87 precision was set to
-      ;; single.
-      (inst fnstcw save-fpu-cw)
-      (move temp-cw save-fpu-cw)
-      (inst and temp-cw (dpb 0 (byte 2 8) #xffff)) ; Zap the precision control bits
-      (inst or temp-cw (dpb 3 (byte 3 8) 0)) ; Set precision control bits
-      (move fpu-cw temp-cw)
-      (inst fldcw fpu-cw)		; New CW
-      )
-
     (cond ((policy node (> space speed))
 	   (move eax function)
 	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign)))

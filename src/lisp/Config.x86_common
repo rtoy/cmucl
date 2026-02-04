@@ -42,56 +42,56 @@ endif
 ifdef FEATURE_CORE_MATH
 CORE_MATH_64=core-math/src/binary64
 
-CORE64_OBJS=\
-	$(CORE_MATH_64)/sin/sin.o \
-	$(CORE_MATH_64)/cos/cos.o \
-	$(CORE_MATH_64)/tan/tan.o \
-	$(CORE_MATH_64)/atan2/atan2.o \
-	$(CORE_MATH_64)/asin/asin.o \
-	$(CORE_MATH_64)/acos/acos.o \
-	$(CORE_MATH_64)/atan/atan.o \
-	$(CORE_MATH_64)/sinh/sinh.o \
-	$(CORE_MATH_64)/cosh/cosh.o \
-	$(CORE_MATH_64)/tanh/tanh.o \
-	$(CORE_MATH_64)/asinh/asinh.o \
-	$(CORE_MATH_64)/acosh/acosh.o \
-	$(CORE_MATH_64)/atanh/atanh.o \
-	$(CORE_MATH_64)/exp/exp.o \
-	$(CORE_MATH_64)/log/log.o \
-	$(CORE_MATH_64)/log10/log10.o \
-	$(CORE_MATH_64)/log2/log2.o \
-	$(CORE_MATH_64)/pow/pow.o \
-	$(CORE_MATH_64)/hypot/hypot.o \
-	$(CORE_MATH_64)/log1p/log1p.o \
-	$(CORE_MATH_64)/expm1/expm1.o \
-	$(CORE_MATH_64)/sincos/sincos.o
+CORE64_SRCS=\
+	$(CORE_MATH_64)/sin/sin.c \
+	$(CORE_MATH_64)/cos/cos.c \
+	$(CORE_MATH_64)/tan/tan.c \
+	$(CORE_MATH_64)/atan2/atan2.c \
+	$(CORE_MATH_64)/asin/asin.c \
+	$(CORE_MATH_64)/acos/acos.c \
+	$(CORE_MATH_64)/atan/atan.c \
+	$(CORE_MATH_64)/sinh/sinh.c \
+	$(CORE_MATH_64)/cosh/cosh.c \
+	$(CORE_MATH_64)/tanh/tanh.c \
+	$(CORE_MATH_64)/asinh/asinh.c \
+	$(CORE_MATH_64)/acosh/acosh.c \
+	$(CORE_MATH_64)/atanh/atanh.c \
+	$(CORE_MATH_64)/exp/exp.c \
+	$(CORE_MATH_64)/log/log.c \
+	$(CORE_MATH_64)/log10/log10.c \
+	$(CORE_MATH_64)/log2/log2.c \
+	$(CORE_MATH_64)/pow/pow.c \
+	$(CORE_MATH_64)/hypot/hypot.c \
+	$(CORE_MATH_64)/log1p/log1p.c \
+	$(CORE_MATH_64)/expm1/expm1.c \
+	$(CORE_MATH_64)/sincos/sincos.c
 
 CORE_MATH_32=core-math/src/binary32
-CORE32_OBJS=\
-	$(CORE_MATH_32)/sin/sinf.o \
-	$(CORE_MATH_32)/cos/cosf.o \
-	$(CORE_MATH_32)/tan/tanf.o \
-	$(CORE_MATH_32)/atan2/atan2f.o \
-	$(CORE_MATH_32)/asin/asinf.o \
-	$(CORE_MATH_32)/acos/acosf.o \
-	$(CORE_MATH_32)/atan/atanf.o \
-	$(CORE_MATH_32)/sinh/sinhf.o \
-	$(CORE_MATH_32)/cosh/coshf.o \
-	$(CORE_MATH_32)/tanh/tanhf.o \
-	$(CORE_MATH_32)/asinh/asinhf.o \
-	$(CORE_MATH_32)/acosh/acoshf.o \
-	$(CORE_MATH_32)/atanh/atanhf.o \
-	$(CORE_MATH_32)/exp/expf.o \
-	$(CORE_MATH_32)/log/logf.o \
-	$(CORE_MATH_32)/log10/log10f.o \
-	$(CORE_MATH_32)/log2/log2f.o \
-	$(CORE_MATH_32)/pow/powf.o \
-	$(CORE_MATH_32)/hypot/hypotf.o \
-	$(CORE_MATH_32)/log1p/log1pf.o \
-	$(CORE_MATH_32)/expm1/expm1f.o \
-	$(CORE_MATH_32)/sincos/sincosf.o
+CORE32_SRCS=\
+	$(CORE_MATH_32)/sin/sinf.c \
+	$(CORE_MATH_32)/cos/cosf.c \
+	$(CORE_MATH_32)/tan/tanf.c \
+	$(CORE_MATH_32)/atan2/atan2f.c \
+	$(CORE_MATH_32)/asin/asinf.c \
+	$(CORE_MATH_32)/acos/acosf.c \
+	$(CORE_MATH_32)/atan/atanf.c \
+	$(CORE_MATH_32)/sinh/sinhf.c \
+	$(CORE_MATH_32)/cosh/coshf.c \
+	$(CORE_MATH_32)/tanh/tanhf.c \
+	$(CORE_MATH_32)/asinh/asinhf.c \
+	$(CORE_MATH_32)/acosh/acoshf.c \
+	$(CORE_MATH_32)/atanh/atanhf.c \
+	$(CORE_MATH_32)/exp/expf.c \
+	$(CORE_MATH_32)/log/logf.c \
+	$(CORE_MATH_32)/log10/log10f.c \
+	$(CORE_MATH_32)/log2/log2f.c \
+	$(CORE_MATH_32)/pow/powf.c \
+	$(CORE_MATH_32)/hypot/hypotf.c \
+	$(CORE_MATH_32)/log1p/log1pf.c \
+	$(CORE_MATH_32)/expm1/expm1f.c \
+	$(CORE_MATH_32)/sincos/sincosf.c
 
-CORE_MATH_OBJS = $(CORE64_OBJS) $(CORE32_OBJS)
+CORE_MATH_SRCS = $(CORE64_OBJS) $(CORE32_OBJS)
 
 endif
 

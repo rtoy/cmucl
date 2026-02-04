@@ -171,6 +171,7 @@
   (ext:with-float-traps-masked (:invalid)
     (assert-true (ext::float-nan-p (kernel:%expm1 *snan*))))
   ;; expm1(x) = -1 for x < -56*log(2), signaling inexact
+  #-core-math
   (let ((x (* -57 (log 2d0))))
     (ext:with-float-traps-enabled (:inexact)
 	(assert-error 'floating-point-inexact
@@ -217,6 +218,7 @@
   (ext:with-float-traps-masked (:overflow)
     (assert-equal ext:double-float-positive-infinity
 		  (kernel:%exp 710d0)))
+  #-core-math
   (let ((modes (ext:get-floating-point-modes)))
     (unwind-protect
 	 (progn

@@ -35,6 +35,8 @@ SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	vars.c parse.c interrupt.c search.c validate.c globals.c \
 	dynbind.c breakpoint.c regnames.c backtrace.c save.c purify.c \
 	runprog.c time.c case-mapping.c exec-init.c \
+	irrat.c \
+	${CORE_MATH_SRCS} \
 	${FDLIBM} ${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC} ${GC_SRC}
 
 
@@ -53,14 +55,14 @@ version.o : version.c version
 	mv ,version version
 	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
 
-lisp: ${OBJS} ${CORE_MATH_OBJS} version.o
+lisp: ${OBJS} version.o
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp $^ ${OS_LIBS} -lm
 	mv -f ,lisp lisp
 
 # Create a library out of all the object files so we can build an
 # executable.  However, we need to remove exec-init.o from the library
-lisp.a:	version.o ${OBJS} ${CORE_MATH_OBJS} ${EXEC_FINAL_OBJ}
-	$(AR) crs lisp.a ${OBJS} ${CORE_MATH_OBJS} version.o
+lisp.a:	version.o ${OBJS} ${EXEC_FINAL_OBJ}
+	$(AR) crs lisp.a ${OBJS} version.o
 ifneq (${EXEC_FINAL_OBJ},)
 	$(AR) d lisp.a exec-init.o
 endif
@@ -73,7 +75,7 @@ internals.h internals.inc:
 	@false
 
 clean:
-	$(RM) Depends *.o $(CORE64_OBJS) lisp lisp.nm core lisp.a
+	$(RM) Depends $(OBJS) lisp lisp.nm core lisp.a
 	echo 'Map file for lisp version 0' > lisp.nm
 
 depend: Depends
