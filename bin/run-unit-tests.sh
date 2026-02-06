@@ -42,9 +42,9 @@ done
 shift $((OPTIND - 1))
 
 # Create the test directory needed by the issue.45 test.
-rm -rf test-tmp
-mkdir test-tmp
-ln -s /bin/ls test-tmp/ls-link
+#rm -rf test-tmp
+#mkdir test-tmp
+#ln -s /bin/ls test-tmp/ls-link
 
 # Set the timestamps on 64-bit-timestamp-2038.txt and
 # 64-bit-timestamp-2106.txt, but only for OSes where we know this
@@ -56,8 +56,9 @@ ln -s /bin/ls test-tmp/ls-link
 # tests/os.lisp.
 case `uname -s` in
     Linux)
-	touch -d "1 April 2038" tests/resources/64-bit-timestamp-2038.txt
-	touch -d "1 April 2106" tests/resources/64-bit-timestamp-2106.txt
+	# -t format is [[CC]YY]MMDDhhmm[.ss]
+	touch -t 203804010000 tests/resources/64-bit-timestamp-2038.txt
+	touch -t 210604010000 tests/resources/64-bit-timestamp-2106.txt
 	;;
 esac
 

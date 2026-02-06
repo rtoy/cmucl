@@ -147,7 +147,9 @@ linux:build:
     - job: linux:install
       artifacts: true
   variables:
-    CONFIG: "x86_linux_clang"
+    # Fedora 41 must build with gcc because the clang build fails some
+    # ansi-tests.  See [#469].
+    CONFIG: "x86_linux"
   # These rules is needed so that the static analyzer job can run on a
   # schedule because this is a prerequisite of the analyzer build.  A
   # regular push or merge request does the normal stuff.
@@ -171,7 +173,7 @@ linux:cross-build:
       - linux-4/lisp
   variables:
     # This must match the config used for the linux build!
-    CONFIG: "x86_linux_clang"
+    CONFIG: "x86_linux"
 
   needs:
 
@@ -346,7 +348,10 @@ ubuntu:build:
     - job: ubuntu:install
       artifacts: true
   variables:
-    CONFIG: "x86_linux_clang"
+    # Build with gcc on Ubuntu 25.10.  It produces a lisp than passes
+    # the ansi-tests.  Clang seems to fail the ansi-tests WRITE.1,
+    # PRINT.1, and friends when cr_pow is used.
+    CONFIG: "x86_linux"
 
 ubuntu:test:
   <<: *unit_test_configuration

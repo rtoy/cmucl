@@ -55,7 +55,7 @@ version.o : version.c version
 	mv ,version version
 	$(CC) ${CFLAGS} $(CPPFLAGS) -DVERSION=`cat version` -c $<
 
-lisp: ${OBJS} ${CORE64_OBJS} version.o
+lisp: ${OBJS} version.o
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp $^ ${OS_LIBS} -lm
 	mv -f ,lisp lisp
 
@@ -75,7 +75,7 @@ internals.h internals.inc:
 	@false
 
 clean:
-	$(RM) Depends *.o $(CORE64_OBJS) lisp lisp.nm core lisp.a
+	$(RM) Depends $(OBJS) lisp lisp.nm core lisp.a
 	echo 'Map file for lisp version 0' > lisp.nm
 
 depend: Depends
