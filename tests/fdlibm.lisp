@@ -826,16 +826,28 @@
 (define-test %pow.case.12
     (:tag :fdlibm)
   ;; +0 ^ (-anything except 0, Nan) is +inf
-  (assert-equal ext:double-float-positive-infinity
+  ;;
+  ;; But fdlibm signals error for (+0)^(-10) instead of returning inf.  Check this.
+  (assert-error 'division-by-zero
 		(kernel:%pow +0d0 -10d0))
+  (ext:with-float-traps-masked (:divide-by-zero)
+    (assert-equal ext:double-float-positive-infinity
+		  (kernel:%pow +0d0 -10d0)))
+  ;; No signals here.
   (assert-equal ext:double-float-positive-infinity
 		(kernel:%pow +0d0 ext:double-float-negative-infinity)))
 
 (define-test %pow.case.13
     (:tag :fdlibm)
   ;; -0 ^ (-anything except 0, Nan, odd integer) is +inf
-  (assert-equal ext:double-float-positive-infinity
+  ;;
+  ;; But (-0)^(-10) signals division by zero
+  (assert-error 'division-by-zero
 		(kernel:%pow -0d0 -10d0))
+  (ext:with-float-traps-masked (:divide-by-zero)
+    (assert-equal ext:double-float-positive-infinity
+		  (kernel:%pow -0d0 -10d0)))
+  ;; But no error here.
   (assert-equal ext:double-float-positive-infinity
 		(kernel:%pow +0d0 ext:double-float-negative-infinity)))
 
@@ -860,7 +872,10 @@
 (define-test %pow.case.17
     (:tag :fdlibm)
   ;; -inf ^ (anything) = -0 ^ (-anything)
-  (assert-equal (kernel:%pow -0d0 (- pi))
+  (assert-equal (ext:with-float-traps-masked (:divide-by-zero)
+		  ;; This produces a divide-by-zero error so mask it
+		  ;; to get a value.
+		  (kernel:%pow -0d0 (- pi)))
 		(kernel:%pow ext:double-float-negative-infinity pi))
   (assert-equal (kernel:%pow -0d0 pi)
 		(kernel:%pow ext:double-float-negative-infinity (- pi))))
@@ -878,5 +893,10 @@
 (define-test %pow.case.19
     (:tag :fdlibm)
   ;; (-anything except 0 and inf) ^ non-integer is NaN
-  (assert-true (ext:float-nan-p
-		(kernel:%pow -2d0 1.5d0))))
+  ;;
+  ;; But this signals invalid, so check for that too.
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%pow -2d0 1.5d0))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p
+		  (kernel:%pow -2d0 1.5d0)))))
