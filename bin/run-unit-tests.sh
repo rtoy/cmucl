@@ -41,6 +41,11 @@ done
 # Shift out the options
 shift $((OPTIND - 1))
 
+# Create the test directory needed by the issue.45 test.
+#rm -rf test-tmp
+#mkdir test-tmp
+#ln -s /bin/ls test-tmp/ls-link
+
 # Set the timestamps on 64-bit-timestamp-2038.txt and
 # 64-bit-timestamp-2106.txt, but only for OSes where we know this
 # works.  (This is so we don't an annoying error message from touch
