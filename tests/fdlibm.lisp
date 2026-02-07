@@ -785,10 +785,27 @@
 
 (define-test %pow.case.9
     (:tag :fdlibm)
+  ;; std::pow says 1^exp is 1 for any exp, including NaN.  (-1)^(+/-inf)
+  ;; is 1.  No errors signaled.
+  #+core-math
+  (progn
+    (assert-equal 1d0
+		  (kernel:%pow 1d0 ext:double-float-positive-infinity))
+    (assert-equal 1d0
+		  (kernel:%pow 1d0 ext:double-float-negative-infinity))
+    (assert-equal 1d0
+		  (kernel:%pow 1d0 *qnan*))
+    (assert-equal 1d0
+		  (kernel:%pow -1d0 ext:double-float-positive-infinity))
+    (assert-equal 1d0
+		  (kernel:%pow -1d0 ext:double-float-negative-infinity)))
+  #-core-math
   ;; +-1 ^ +-inf is NaN.
   ;;
   ;; But the implementation signals invalid operation, so we need to
   ;; check for that.
+  ;;
+  (progn
   (assert-error 'floating-point-invalid-operation
 		(kernel:%pow 1d0 ext:double-float-positive-infinity))
   (assert-error 'floating-point-invalid-operation
@@ -805,7 +822,7 @@
     (assert-true (ext:float-nan-p
 		  (kernel:%pow -1d0 ext:double-float-positive-infinity)))
     (assert-true (ext:float-nan-p
-		  (kernel:%pow -1d0 ext:double-float-negative-infinity)))))
+		  (kernel:%pow -1d0 ext:double-float-negative-infinity))))))
 
 (define-test %pow.case.10
     (:tag :fdlibm)
