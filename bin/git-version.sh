@@ -36,37 +36,39 @@ if [ -n "$VERSION" ]; then
     GIT_HASH="$VERSION"
     DEFAULT_VERSION="$VERSION"
 else
-    # The option --all allows use to use the the branch name or tag
-    # name as appropriate.  This is much more informative.  However,
-    # we have to remove everything before the first slash which
-    # contains things like "tag/" or "head/".
-    GIT_DESC="`git describe --all --dirty || git describe 2>/dev/null`"
-    GIT_HASH="`echo ${GIT_DESC} | sed 's;^[^/]*/;;' 2>/dev/null`"
-    BRANCH="`git rev-parse --abbrev-ref HEAD`*"
+    # Get the current branch.
+    BRANCH="`git rev-parse --abbrev-ref HEAD`"
+    if [ "$BRANCH" = "master" ]; then
+	# On the master branch, use simple git describe --dirty for the version
+	DEFAULT_VERSION="`git describe --all || git describe 2>/dev/null`"
+    else
+	# We're not on the master branch.  Do something different.
+	# The option --all allows use to use the the branch name or tag
+	# name as appropriate.  This is much more informative.  However,
+	# we have to remove everything before the first slash which
+	# contains things like "tag/" or "head/".
+	GIT_DESC="`git describe --all --dirty || git describe 2>/dev/null`"
+	GIT_HASH="`echo ${GIT_DESC} | sed 's;^[^/]*/;;' 2>/dev/null`"
 
-    case "$GIT_HASH" in
-	snapshot-[0-9][0-9][0-9][0-9]-[01][0-9])
-	    # The git hash looks like snapshot-yyyy-mm-<stuff>.  Remove the
-	    # "snapshot-" part.
-	    DEFAULT_VERSION=`expr "$GIT_HASH" : "snapshot-\(.*\)"`
-	    ;;
-	[0-9][0-9][a-f])
-	    # The git hash looks like a release which is 3 hex digits.
-	    # Use it as is.
-	    DEFAULT_VERSION="${GIT_HASH}"
-	    ;;
-	${BRANCH}*)
-	    # The hash looks like the current branch with possibly more
-	    # stuff at the end.  Use the hash as the version.
-	    DEFAULT_VERSION="${GIT_HASH}"
-	    ;;
-	[0-9]*)
-	    # Assuming this is CI which seems to produce a githash like
-	    # "pipeline/<digits>".  Make the version include "ci-" so we
-	    # know this was done via CI.
-	    DEFAULT_VERSION="ci-${GIT_HASH}"
-	    ;;
-    esac
+	case "$GIT_HASH" in
+	    snapshot-[0-9][0-9][0-9][0-9]-[01][0-9])
+		# The git hash looks like snapshot-yyyy-mm-<stuff>.  Remove the
+		# "snapshot-" part.
+		DEFAULT_VERSION=`expr "$GIT_HASH" : "snapshot-\(.*\)"`
+		;;
+	    [0-9][0-9][a-f])
+		# The git hash looks like a release which is 3 hex digits.
+		# Use it as is.
+		DEFAULT_VERSION="${GIT_HASH}"
+		;;
+	    [0-9]*)
+		# Assuming this is CI which seems to produce a githash like
+		# "pipeline/<digits>".  Make the version include "ci-" so we
+		# know this was done via CI.
+		DEFAULT_VERSION="ci-${GIT_HASH}"
+		;;
+	esac
+    fi
 
     if [ -z "$DEFAULT_VERSION" ]; then
 	echo "Unable to determine a default version from git describe: $GIT_DESC"
