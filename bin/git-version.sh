@@ -40,7 +40,7 @@ else
     BRANCH="`git rev-parse --abbrev-ref HEAD`"
     if [ "$BRANCH" = "master" ]; then
 	# On the master branch, use simple git describe --dirty for the version
-	DEFAULT_VERSION="`git describe --all || git describe 2>/dev/null`"
+	DEFAULT_VERSION="`git describe --dirty || git describe 2>/dev/null`"
     else
 	# We're not on the master branch.  Do something different.
 	# The option --all allows use to use the the branch name or tag
