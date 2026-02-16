@@ -90,12 +90,8 @@
 
 (define-test %acosh.exceptions
   (:tag :fdlibm)
-  ;; Core-math returns infinity instead of signaling overflow.
-  #-core-math
   (assert-error 'floating-point-overflow
 		(kernel:%acosh ext:double-float-positive-infinity))
-  ;; Core-math currently returns QNaN
-  #-core-math
   (assert-error 'floating-point-invalid-operation
 		(kernel:%acosh 0d0))
   (ext:with-float-traps-masked (:overflow)
@@ -108,12 +104,8 @@
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
 		(kernel:%asinh *snan*))
-  ;; Core-math returns the signed infinity instead of signaling an
-  ;; overflow.
-  #-core-math
   (assert-error 'floating-point-overflow
 		(kernel:%asinh ext:double-float-positive-infinity))
-  #-core-math
   (assert-error 'floating-point-overflow
 		(kernel:%asinh ext:double-float-negative-infinity))
   (assert-true (ext:float-nan-p (kernel:%asinh *qnan*)))
@@ -218,7 +210,6 @@
   (ext:with-float-traps-masked (:overflow)
     (assert-equal ext:double-float-positive-infinity
 		  (kernel:%exp 710d0)))
-  #-core-math
   (let ((modes (ext:get-floating-point-modes)))
     (unwind-protect
 	 (progn
@@ -675,6 +666,14 @@
 
 (define-test %cos.exceptions
     (:tag :fdlibm)
+  ;; cos(inf) signals invalid operation
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%cos ext:double-float-positive-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%cos ext:double-float-negative-infinity))
+  ;; cos(nan) is NaN
+  (assert-true (ext:float-nan-p (kernel:%cos *qnan*)))
+  
   ;; cos(x) = 1 for |x| < 2^-27.  Signal inexact unless x = 0
   (let ((x (scale-float 1d0 -28))
 	(x0 0d0))
@@ -690,6 +689,14 @@
 
 (define-test %sin.exceptions
     (:tag :fdlibm)
+  ;; sin(inf) signals invalid operation
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%sin ext:double-float-positive-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%sin ext:double-float-negative-infinity))
+  ;; sin(nan) is NaN
+  (assert-true (ext:float-nan-p (kernel:%sin *qnan*)))
+
   ;; sin(x) = x for |x| < 2^-27.  Signal inexact unless x = 0
   (let ((x (scale-float 1d0 -28))
 	(x0 0d0))
@@ -705,6 +712,14 @@
 
 (define-test %tan.exceptions
     (:tag :fdlibm)
+  ;; tan(inf) signals invalid operation
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%tan ext:double-float-positive-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%tan ext:double-float-negative-infinity))
+  ;; tan(nan) is NaN
+  (assert-true (ext:float-nan-p (kernel:%sin *qnan*)))
+
   ;; tan(x) = x for |x| < 2^-28.  Signal inexact unless x = 0
   (let ((x (scale-float 1d0 -29))
 	(x0 0d0))
