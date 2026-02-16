@@ -73,7 +73,6 @@ variables:
       - ansi-test/test.out
   script:
     - bin/run-ansi-tests.sh -l dist/bin/lisp
-    - ls -l test.log
     - ls -l ansi-test
 
 # Default configuration for running unit tests.
@@ -81,7 +80,6 @@ variables:
   stage: test
   artifacts:
     paths:
-      - ansi-test/test.out
       - test.log
   script:
     - echo LANG = $LANG
