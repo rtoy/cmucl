@@ -84,6 +84,8 @@ variables:
   script:
     - echo LANG = $LANG
     - bin/run-unit-tests.sh -l dist/bin/lisp 2>&1 | tee test.log
+    - ls -l test.log
+    - ls -l ansi-test
 
 # Default configuration to test creation of lisp executable and
 # testing the exectuable works.
