@@ -40,7 +40,7 @@ extern void cr_sincos(double, double *, double *);
  */
 
 #define MAYBE_SIGNAL_INVALID(test, val)		\
-    if ((test)) {				\ 
+    if ((test)) {				\
         return fdlibm_setexception(val, FDLIBM_INVALID);	\
     }
 
@@ -197,6 +197,16 @@ double
 lisp_exp(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    /*
+     * Can't depend on cr_exp to signal underflow.  It seems the
+     * underflow has been constant-folded to zero.  Hence, check for
+     * underflow here and explicitly signal an underflow.  The
+     * constant here is from core-math exp.c.
+     */
+    if (x <= -0x1.74910d52d3052p+9) {
+	return fdlibm_setexception(0.0, FDLIBM_UNDERFLOW);
+    }
+
     return cr_exp(x);
 #else    
     return __ieee754_exp(x);

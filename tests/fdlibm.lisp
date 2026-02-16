@@ -210,13 +210,9 @@
   (ext:with-float-traps-masked (:overflow)
     (assert-equal ext:double-float-positive-infinity
 		  (kernel:%exp 710d0)))
-  (let ((modes (ext:get-floating-point-modes)))
-    (unwind-protect
-	 (progn
-	   (ext:set-floating-point-modes :traps '(:underflow))
-	   (assert-error 'floating-point-underflow
-			 (kernel:%exp -1000d0)))
-      (apply #'ext:set-floating-point-modes modes)))
+  (ext:with-float-traps-enabled (:underflow)
+    (assert-error 'floating-point-underflow
+		  (kernel:%exp -1000d0)))
   (let ((x (scale-float 1d0 -29))
 	(x0 0d0))
     ;; exp(x) = x, |x| < 2^-28, with inexact exception unlees x = 0
