@@ -169,6 +169,23 @@
 	(assert-error 'floating-point-inexact
 		      (kernel:%tanh x)))))
 
+(define-test %tanhf.exceptions
+  (:tag :fdlibm)
+  (assert-true (ext:float-nan-p (kernel:%tanhf *qnan-single-float*)))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%tanhf *snan-single-float*))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%tanhf *snan-single-float*))))
+  ;; tanhf(x) = +/- 1 for |x| > 9.1, raising inexact, always.  The
+  ;; exact value from cr_tanhf appears to be 0x41102cb3u.  That is
+  ;; 9.010913.
+  (let ((x 9.1f0))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%tanhf x)))))
+
 (define-test %acosh.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
