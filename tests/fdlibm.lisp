@@ -198,6 +198,18 @@
   (ext:with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%acosh 0d0)))))
 
+(define-test %acoshf.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-overflow
+		(kernel:%acoshf ext:single-float-positive-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%acoshf 0f0))
+  (ext:with-float-traps-masked (:overflow)
+    (assert-equal ext:single-float-positive-infinity
+		  (kernel:%acoshf ext:single-float-positive-infinity)))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%acoshf 0f0)))))
+
 (define-test %asinh.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
@@ -219,12 +231,43 @@
     (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
-	(assert-eql 0d0 (asinh x0)))
+	(assert-eql 0d0 (kernel:%asinh x0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
-		      (asinh x)))))
+		      (kernel:%asinh x)))))
+
+(define-test %asinh.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%asinhf *snan-single-float*))
+  (assert-error 'floating-point-overflow
+		(kernel:%asinhf ext:single-float-positive-infinity))
+  (assert-error 'floating-point-overflow
+		(kernel:%asinhf ext:single-float-negative-infinity))
+  (assert-true (ext:float-nan-p (kernel:%asinhf *qnan-single-float*)))
+  (ext:with-float-traps-masked (:overflow)
+    (assert-equal ext:single-float-positive-infinity
+		  (kernel:%asinhf ext:single-float-positive-infinity))
+    (assert-error ext:single-float-negative-infinity
+		  (kernel:%asinhf ext:single-float-negative-infinity)))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%asinhf *snan-single-float*))))
+  ;; asinh(x) = x - x^3/6 + o(x^5).  For small enough x, asinh(x) = x
+  ;; but we should signal inexact for those cases, except for when x =
+  ;; 0.  The threshold is approximately 2^-17.
+  (let ((x (scale-float 1f0 -17))
+	(x0 0f0))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 0f0 (kernel:%asinhf x0)))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%asinhf x)))))
 
 (define-test %atanh.exceptions
   (:tag :fdlibm)
