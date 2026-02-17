@@ -138,7 +138,10 @@
   ;; Test NaN
   (ext:with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%sinhf *qnan-single-float*))))
-  ;; sinh(x) = x for |x| < 2^-28.  Should signal inexact unless x = 0.
+  ;; sinh(x) = x + x^3/6 + o(x^3).  Thus, if |x| < 2^-17, sinh(x) = x,
+  ;; but we should signal inexact except if x is 0.  We're not trying
+  ;; to get the exact value where sinh(x) = x.  Just something
+  ;; obviously small enough.
   (let ((x (scale-float 1f0 -29))
 	(x0 0f0))
     (ext:with-float-traps-enabled (:inexact)
