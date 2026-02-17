@@ -8,14 +8,23 @@
 (defparameter *qnan*
   (ext:with-float-traps-masked (:invalid)
     (* 0 ext:double-float-positive-infinity))
-  "Some randon quiet MaN value")
+  "Some randon quiet double-float MaN value")
+
+(defparameter *qnan-single-float*
+  (ext:with-float-traps-masked (:invalid)
+    (* 0 ext:single-float-positive-infinity))
+  "Some randon quiet single-float MaN value")
 
 (defparameter *snan*
   (kernel:make-double-float #x7ff00000 1)
-  "A randon signaling MaN value")
+  "A randon signaling double-float MaN value")
+
+(defparameter *snan-single-float*
+  (kernel:make-single-float #x7f800001)
+  "A randon signaling single-float MaN value")
 
 (define-test %cosh.exceptions
-  (:tag :fdlibm)
+    (:tag :fdlibm)
   (assert-error 'floating-point-overflow
 		(kernel:%cosh 1000d0))
   (assert-error 'floating-point-overflow
@@ -23,6 +32,10 @@
   (assert-error 'floating-point-invalid-operation
 		(kernel:%cosh *snan*))
   (assert-true (ext:float-nan-p (kernel:%cosh *qnan*)))
+  (assert-error 'float-point-overflow
+		(kernel:%cosh double-float-positive-infinity))
+  (assert-error 'float-point-overflow
+		(kernel:%cosh double-float-negative-infinity))
   
   ;; Same, but with overflow's masked
   (ext:with-float-traps-masked (:overflow)
@@ -37,6 +50,34 @@
   ;; Test NaN
   (ext:with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%cosh *snan*)))))
+
+(define-test %coshf.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-overflow
+		(kernel:%coshf 100f0))
+  (assert-error 'floating-point-overflow
+		(kernel:%coshf -100f0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%coshf *snan-single-float*))
+  (assert-true (ext:float-nan-p (kernel:%coshf *qnan-single-float*)))
+  (assert-error 'float-point-overflow
+		(kernel:%cosh single-float-positive-infinity))
+  (assert-error 'float-point-overflow
+		(kernel:%cosh single-float-negative-infinity))
+  
+  ;; Same, but with overflow's masked
+  (ext:with-float-traps-masked (:overflow)
+    (assert-equal ext:single-float-positive-infinity
+		  (kernel:%coshf 100f0))
+    (assert-equal ext:single-float-positive-infinity
+		  (kernel:%coshf -100f0))
+    (assert-equal ext:single-float-positive-infinity
+		  (kernel:%coshf ext:single-float-positive-infinity))
+    (assert-equal ext:single-float-positive-infinity
+		  (kernel:%coshf ext:single-float-negative-infinity)))
+  ;; Test NaN
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%coshf *snan-single-float*)))))
 
 (define-test %sinh.exceptions
   (:tag :fdlibm)

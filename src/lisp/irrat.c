@@ -163,6 +163,8 @@ double
 lisp_cosh(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_OVERFLOW(x)
+
     return cr_cosh(x);
 #else    
     return __ieee754_cosh(x);
@@ -319,6 +321,8 @@ float
 lisp_sinf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_INVALID(isinf(x), x)
+
     return cr_sinf(x);
 #else    
     return (float) fdlibm_sin((double) x);
@@ -329,6 +333,8 @@ float
 lisp_cosf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_INVALID(isinf(x), x)
+
     return cr_cosf(x);
 #else    
     return (float) fdlibm_cos((double) x);
@@ -339,6 +345,8 @@ float
 lisp_tanf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_INVALID(isinf(x), x)
+
     return cr_tanf(x);
 #else    
     return (float) fdlibm_tan((double) x);
@@ -389,6 +397,8 @@ float
 lisp_sinhf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_OVERFLOW(x)
+
     return cr_sinhf(x);
 #else    
     return (float) __ieee754_sinh((double) x);
@@ -399,6 +409,8 @@ float
 lisp_coshf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_OVERFLOW(x)
+
     return cr_coshf(x);
 #else    
     return (float) __ieee754_cosh((double) x);
@@ -419,6 +431,8 @@ float
 lisp_asinhf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_OVERFLOW(x)
+
     return cr_asinhf(x);
 #else    
     return (float) fdlibm_asinh((double) x);
@@ -429,6 +443,10 @@ float
 lisp_acoshf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_INVALID(x < 1, x)
+
+    MAYBE_SIGNAL_OVERFLOW(x)
+
     return cr_acoshf(x);
 #else    
     return (float) __ieee754_acosh((double) x);
