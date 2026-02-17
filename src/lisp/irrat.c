@@ -198,6 +198,17 @@ lisp_exp(double x)
 {
 #ifdef FEATURE_CORE_MATH
     /*
+     * For consistency, silently return NaN when x is NaN.  Do not
+     * signal an invalid operation, even if invalid operation trap is
+     *  enabled.  This is what fdlibm does, and also what many of the
+     *  other core-math routines do.
+     */
+
+    if (isnan(x)) {
+	return x;
+    }
+    
+    /*
      * Can't depend on cr_exp to signal underflow.  It seems the
      * underflow has been constant-folded to zero.  Hence, check for
      * underflow here and explicitly signal an underflow.  The
