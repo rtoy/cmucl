@@ -70,10 +70,10 @@ variables:
   stage: ansi-test
   artifacts:
     paths:
-      - ../ansi-test/test.out
+      - ansi-test.out
   script:
     - bin/run-ansi-tests.sh -l dist/bin/lisp
-    - ls -l ../ansi-test
+    - cp ../ansi-test/test.out ansi-test.out
 
 # Default configuration for running unit tests.
 .unit_test_template: &unit_test_configuration
