@@ -73,7 +73,7 @@ variables:
       - ansi-test/test.out
   script:
     - bin/run-ansi-tests.sh -l dist/bin/lisp
-    - ls -l ansi-test
+    - ls -l ../ansi-test
 
 # Default configuration for running unit tests.
 .unit_test_template: &unit_test_configuration
