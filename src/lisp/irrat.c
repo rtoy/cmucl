@@ -163,7 +163,7 @@ double
 lisp_cosh(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    MAYBE_SIGNAL_OVERFLOW(x)
+    MAYBE_SIGNAL_OVERFLOW(fabs(x))
 
     return cr_cosh(x);
 #else    
@@ -409,7 +409,7 @@ float
 lisp_coshf(float x)
 {
 #ifdef FEATURE_CORE_MATH
-    MAYBE_SIGNAL_OVERFLOW(x)
+    MAYBE_SIGNAL_OVERFLOW(fabs(x))
 
     return cr_coshf(x);
 #else    

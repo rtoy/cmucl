@@ -32,10 +32,10 @@
   (assert-error 'floating-point-invalid-operation
 		(kernel:%cosh *snan*))
   (assert-true (ext:float-nan-p (kernel:%cosh *qnan*)))
-  (assert-error 'float-point-overflow
-		(kernel:%cosh double-float-positive-infinity))
-  (assert-error 'float-point-overflow
-		(kernel:%cosh double-float-negative-infinity))
+  (assert-error 'floating-point-overflow
+		(kernel:%cosh ext:double-float-positive-infinity))
+  (assert-error 'floating-point-overflow
+		(kernel:%cosh ext:double-float-negative-infinity))
   
   ;; Same, but with overflow's masked
   (ext:with-float-traps-masked (:overflow)
@@ -60,10 +60,10 @@
   (assert-error 'floating-point-invalid-operation
 		(kernel:%coshf *snan-single-float*))
   (assert-true (ext:float-nan-p (kernel:%coshf *qnan-single-float*)))
-  (assert-error 'float-point-overflow
-		(kernel:%cosh single-float-positive-infinity))
-  (assert-error 'float-point-overflow
-		(kernel:%cosh single-float-negative-infinity))
+  (assert-error 'floating-point-overflow
+		(kernel:%coshf ext:single-float-positive-infinity))
+  (assert-error 'floating-point-overflow
+		(kernel:%coshf ext:single-float-negative-infinity))
   
   ;; Same, but with overflow's masked
   (ext:with-float-traps-masked (:overflow)
@@ -88,6 +88,7 @@
   (assert-error 'floating-point-invalid-operation
 		(kernel:%sinh *snan*))
   (assert-true (ext:float-nan-p (kernel:%sinh *qnan*)))
+
   ;; Same, but with overflow's masked
   (ext:with-float-traps-masked (:overflow)
     (assert-equal ext:double-float-positive-infinity
