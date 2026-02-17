@@ -476,8 +476,17 @@ lisp_log10f(float x)
 }
 
 float
-lisp_powf(double x, double y)
+lisp_powf(float x, float y)
 {
+#ifdef FEATURE_CORE_MATH
+    /*
+     * cr_pow when compiled with older versions of gcc or clang can
+     * cause failures in the ansi-tests [#469].  Ubuntu 25.10 and Fedora 41
+     * (gcc only) are known to have compilers that work well enough
+     * that the ansi-tests pass.
+     */
+    return cr_powf(x, y);
+#else    
     /*
      * cr_pow seems causes ansi-tests to fail in test WRITE.1 among
      * others.  Somewhere an invalid operation is occurring.  Thus
@@ -485,6 +494,7 @@ lisp_powf(double x, double y)
      * the failure.
      */
     return (float) __ieee754_pow((double) x, (double) y);
+#endif
 }
 
 float
