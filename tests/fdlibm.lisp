@@ -115,6 +115,42 @@
 	(assert-error 'floating-point-inexact
 		      (kernel:%sinh x)))))
 
+(define-test %sinhf.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-overflow
+		(kernel:%sinhf 100f0))
+  (assert-error 'floating-point-overflow
+		(kernel:%sinhf -100f0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%sinhf *snan-single-float*))
+  (assert-true (ext:float-nan-p (kernel:%sinhf *qnan-single-float*)))
+
+  ;; Same, but with overflow's masked
+  (ext:with-float-traps-masked (:overflow)
+    (assert-equal ext:single-float-positive-infinity
+		  (kernel:%sinhf 100f0))
+    (assert-equal ext:single-float-negative-infinity
+		  (kernel:%sinhf -100f0))
+    (assert-equal ext:single-float-positive-infinity
+		  (kernel:%sinhf ext:single-float-positive-infinity))
+    (assert-equal ext:single-float-negative-infinity
+		  (kernel:%sinhf ext:single-float-negative-infinity)))
+  ;; Test NaN
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%sinhf *qnan-single-float*))))
+  ;; sinh(x) = x for |x| < 2^-28.  Should signal inexact unless x = 0.
+  (let ((x (scale-float 1f0 -29))
+	(x0 0f0))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 0f0 (kernel:%sinhf x0)))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%sinhf x)))))
+
 (define-test %tanh.exceptions
   (:tag :fdlibm)
   (assert-true (ext:float-nan-p (kernel:%tanh *qnan*)))
