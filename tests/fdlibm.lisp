@@ -288,6 +288,25 @@
     (assert-equal ext:double-float-negative-infinity
 		  (kernel:%atanh -1d0))))
 
+(define-test %atanh.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%atanhf 2f0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%atanhf -2f0))
+  (assert-error 'division-by-zero
+		(kernel:%atanhf 1f0))
+  (assert-error 'division-by-zero
+		(kernel:%atanhf -1f0))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%atanhf 2f0)))
+    (assert-true (ext:float-nan-p (kernel:%atanhf -2f0))))
+  (ext:with-float-traps-masked (:divide-by-zero)
+    (assert-equal ext:single-float-positive-infinity
+		  (kernel:%atanhf 1f0))
+    (assert-equal ext:single-float-negative-infinity
+		  (kernel:%atanhf -1f0))))
+
 (define-test %expm1.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
