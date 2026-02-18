@@ -523,6 +523,16 @@
     (assert-true (ext:float-nan-p (kernel:%acos 2d0)))
     (assert-true (ext:float-nan-p (kernel:%acos -2d0)))))
 
+(define-test %acosf.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%acosf 2f0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%acosf -2f0))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%acosf 2f0)))
+    (assert-true (ext:float-nan-p (kernel:%acosf -2f0)))))
+
 (define-test %asin.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
@@ -532,6 +542,16 @@
   (ext:with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%asin 2d0)))
     (assert-true (ext:float-nan-p (kernel:%asin -2d0)))))
+
+(define-test %asinf.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%asinf 2f0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%asinf -2f0))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%asinf 2f0)))
+    (assert-true (ext:float-nan-p (kernel:%asinf -2f0)))))
 
 (define-test %atan.exceptions
   (:tag :fdlibm)
@@ -553,6 +573,26 @@
 	(assert-error 'floating-point-inexact
 		      (kernel:%atan x)))))
 
+(define-test %atanf.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%atanf *snan-single-float*))
+  (assert-true (ext:float-nan-p (kernel:%atanf *qnan-single-float*)))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%atanf *snan-single-float*))))
+  ;; atan(x) = x for small x, signaling inexact except when x = 0.
+  (let ((x (scale-float 1f0 -30))
+	(x0 0f0))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 0f0 (kernel:%atanf x0)))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%atanf x)))))
+
 (define-test %log10.exceptions
   (:tag :fdlibm)
   ;; %log10(2^k) = k
@@ -573,6 +613,27 @@
 		  (kernel:%log10 -0d0)))
   (ext:with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (kernel:%log10 -1d0)))))
+
+(define-test %log10f.exceptions
+  (:tag :fdlibm)
+  ;; %log10(2^k) = k
+  (dotimes (k 23)
+    (assert-equalp k
+		  (kernel:%log10f (float (expt 10 k) 1f0))))
+  (assert-error 'division-by-zero
+		(kernel:%log10f 0f0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%log10f -1f0))
+  (assert-true (ext:float-nan-p (kernel:%log10f *qnan-single-float*)))
+  (assert-equal ext:single-float-positive-infinity
+		(kernel:%log10f ext:single-float-positive-infinity))
+  (ext:with-float-traps-masked (:divide-by-zero)
+    (assert-equal ext:single-float-negative-infinity
+		  (kernel:%log10f 0f0))
+    (assert-equal ext:single-float-negative-infinity
+		  (kernel:%log10f -0f0)))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%log10f -1f0)))))
 
 (define-test %scalbn.exceptions
   (:tag :fdlibm)
