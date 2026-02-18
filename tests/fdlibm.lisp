@@ -440,6 +440,39 @@
 	(assert-error 'floating-point-inexact
 		      (kernel:%exp x)))))
 
+(define-test %expf.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-overflow
+		(kernel:%expf 89f0))
+  (assert-true (ext:float-nan-p (kernel:%expf *qnan-single-float*)))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%expf *snan-single-float*))
+  (assert-equal ext:single-float-positive-infinity
+		(kernel:%expf ext:single-float-positive-infinity))
+  (assert-equal 0f0
+		(kernel:%expf -200f0))
+  (ext:with-float-traps-masked (:overflow)
+    (assert-equal ext:single-float-positive-infinity
+		  (kernel:%expf 89f0)))
+  (ext:with-float-traps-enabled (:underflow)
+    (assert-error 'floating-point-underflow
+		  (kernel:%expf -200f0)))
+
+  (let ((x (scale-float 1f0 -13))
+	(x0 0f0))
+    ;; exp(x) = 1 + x, |x| < 2^-12, with inexact exception unlees x =
+    ;; 0.  The actual threshold is closer to sqrt(2*eps) or about
+    ;; 2.44e-4, about 2^-12
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 1f0 (kernel:%expf x0)))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%expf x)))))
+
 (define-test %log.exception
   (:tag :fdlibm)
   (assert-error 'division-by-zero
