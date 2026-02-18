@@ -28,20 +28,35 @@ public domain.
     * #373: Add macros to handle temp files and directories
     * #387: Update CLX from upstream to version from 2024-09-11
     * #408: Add C functions to get user name and home dir
+    * #424: Use fdlibm `hypot` to implement the `hypot` function
+            instead of using the version from libm.
+    * #426: Type `float-modes` is incorrect for x87 FPU modes
     * #428: Add some constants for common values in irrat.lisp
+    * #431: `set-floating-point-modes` incorrectly clears out x87
+             precision and rounding modes
     * #437: Use `realpath` to find the lisp executable
+    * #441: Fedora 42 unable to compile core-math pow.c function
+    * #443: cim-info.tar.bz2 missing from cmucl.org
     * #444: `unix-stat` and friends return wrong timestamp
+    * #446: Simplify getting the errno values.
     * #449: Touch 64-bit timestamp.txt with desired time for testing
     * #446: Use C compiler to get errno values to update UNIX
             defpackage with errno symbols
+    * #452: Move bin/errno-foo.lisp to src/tools.
     * #453: Use correct flags for analyzer and always save logs.
+    * #454: `make-pathname` signals errors for "silly" values.
     * #456: Improve accuracy for division of complex double-floats
             using Baudin and Smith's robust complex division algorithm
             with improvements by Patrick McGehearty.
-    * #458: Spurious overflow in double-double-float multiply
-    * #459: Improve accuracy for division of complex
+    * #457: `delete-directory` was not returning anything so you
+	     couldn't tell if it succeeded or not.
+    * #458: Spurious overflow in double-double-float multiply.
+    * #459: Improve accuracy for division of complex.
             double-double-floats.  The same algorithm is used here as
             for #456.
+    * #460: Unit tests were not being recognized as failing on CI.
+    * #463: `double-double-float` is missing comparison operations
+            between `double-double-float` and `double-float`
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
