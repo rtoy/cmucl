@@ -493,6 +493,26 @@
     (assert-true (ext:float-nan-p (kernel:%log -1d0)))
     (assert-true (ext:float-nan-p (kernel:%log *snan*)))))
 
+(define-test %logf.exception
+  (:tag :fdlibm)
+  (assert-error 'division-by-zero
+		(kernel:%logf 0f0))
+  (assert-error 'division-by-zero
+		(kernel:%logf -0f0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%logf -1f0))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%logf *snan-single-float*))
+  (assert-true (ext:float-nan-p (kernel:%logf *qnan-single-float*)))
+  (ext:with-float-traps-masked (:divide-by-zero)
+    (assert-equal ext:single-float-negative-infinity
+		  (kernel:%logf 0f0))
+    (assert-equal ext:single-float-negative-infinity
+		  (kernel:%logf -0f0)))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%logf -1f0)))
+    (assert-true (ext:float-nan-p (kernel:%logf *snan-single-float*)))))
+
 (define-test %acos.exceptions
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
