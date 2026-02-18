@@ -62,7 +62,7 @@ extern void cr_sincosf(float, float *, float *);
  */
 
 #define MAYBE_SIGNAL_INVALID(test, val)		\
-    if ((test)) {				\ 
+    if ((test)) {				\
         return fdlibm_setexception(val, FDLIBM_INVALID);	\
     }
 
@@ -221,6 +221,27 @@ double
 lisp_exp(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    /*
+     * For consistency, silently return NaN when x is NaN.  Do not
+     * signal an invalid operation, even if invalid operation trap is
+     *  enabled.  This is what fdlibm does, and also what many of the
+     *  other core-math routines do.
+     */
+
+    if (isnan(x)) {
+	return x;
+    }
+    
+    /*
+     * Can't depend on cr_exp to signal underflow.  It seems the
+     * underflow has been constant-folded to zero.  Hence, check for
+     * underflow here and explicitly signal an underflow.  The
+     * constant here is from core-math exp.c.
+     */
+    if (x <= -0x1.74910d52d3052p+9) {
+	return fdlibm_setexception(0.0, FDLIBM_UNDERFLOW);
+    }
+
     return cr_exp(x);
 #else    
     return __ieee754_exp(x);
