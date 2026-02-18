@@ -311,7 +311,7 @@
   (:tag :fdlibm)
   (assert-error 'floating-point-overflow
 		(kernel:%expm1 709.8d0))
-  (assert-equal ext:double-float-positive-infinity
+  (assert-error 'floating-point-overflow
 		(kernel:%expm1 ext:double-float-positive-infinity))
   (assert-error 'floating-point-invalid-operation
 		(kernel:%expm1 *snan*))
@@ -322,12 +322,35 @@
     )
   (ext:with-float-traps-masked (:invalid)
     (assert-true (ext::float-nan-p (kernel:%expm1 *snan*))))
-  ;; expm1(x) = -1 for x < -56*log(2), signaling inexact
+  ;; expm1(x) = -1 for x < -56*log(2), signaling inexact.
   #-core-math
   (let ((x (* -57 (log 2d0))))
     (ext:with-float-traps-enabled (:inexact)
 	(assert-error 'floating-point-inexact
 		      (kernel:%expm1 x)))))
+
+(define-test %expm1f.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-overflow
+		(kernel:%expm1f 709.8f0))
+  (assert-error 'floating-point-overflow
+		(kernel:%expm1f ext:single-float-positive-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%expm1f *snan-single-float*))
+  (assert-true (ext:float-nan-p (kernel:%expm1f *qnan-single-float*)))
+  (ext:with-float-traps-masked (:overflow)
+    (assert-equal ext:single-float-positive-infinity
+		 (kernel:%expm1f 709.8f0))
+    )
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext::float-nan-p (kernel:%expm1f *snan-single-float*))))
+  ;; expm1(x) = -1 for negative enough x.  When x = -26*log(2), exp(x)
+  ;; is about 1.49e-8, which is smaller than single-float-epsilon so
+  ;; expm1(x) = -1.
+  (let ((x (log (scale-float 1f0 -26))))
+    (ext:with-float-traps-enabled (:inexact)
+	(assert-error 'floating-point-inexact
+		      (kernel:%expm1f x)))))
 
 (define-test %log1p.exceptions
   (:tag :fdlibm)
@@ -355,6 +378,33 @@
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
 		      (kernel:%log1p x)))))
+
+(define-test %log1pf.exceptions
+  (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%log1pf -2f0))
+  (assert-error #-core-math 'floating-point-overflow
+		#+core-math 'division-by-zero
+		(kernel:%log1pf -1f0))
+  (assert-true (ext:float-nan-p (kernel:%log1pf *qnan-single-float*)))
+  (ext:with-float-traps-masked (#-core-math :overflow
+				#+core-math :divide-by-zero)
+    (assert-equal ext:single-float-negative-infinity
+		  (kernel:%log1pf -1f0)))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (kernel:%log1pf *snan-single-float*))))
+  ;; log1p(x) = x for |x| < 2^-54, signaling inexact except for x = 0.
+  (let ((x (scale-float 1f0 -55))
+	(x0 0f0))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql 0f0 (kernel:%log1pf x0)))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (kernel:%log1pf x)))))
 
 (define-test %exp.exceptions
   (:tag :fdlibm)

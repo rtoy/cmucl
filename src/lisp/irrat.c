@@ -287,6 +287,10 @@ double
 lisp_expm1(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    if (isinf(x) == 1) {
+	return fdlibm_setexception(x, FDLIBM_OVERFLOW);
+    }
+
     return cr_expm1(x);
 #else    
     return fdlibm_expm1(x);
@@ -539,6 +543,10 @@ float
 lisp_expm1f(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    if (isinf(x) == 1) {
+	return fdlibm_setexception(x, FDLIBM_OVERFLOW);
+    }
+
     return cr_expm1f(x);
 #else    
     return (float) fdlibm_expm1((double) x);
