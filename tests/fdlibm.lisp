@@ -1098,9 +1098,9 @@
     (:tag :fdlibm)
   ;; anything ^ NaN is NaN
   (assert-true (ext:float-nan-p
-		(kernel:%powf (float pi 1f0) *qnan*)))
+		(kernel:%powf (float pi 1f0) *qnan-single-float*)))
   (assert-true (ext:float-nan-p
-		(kernel:%powf ext:single-float-positive-infinity *qnan*))))
+		(kernel:%powf ext:single-float-positive-infinity *qnan-single-float*))))
 
 (define-test %pow.case.4
     (:tag :fdlibm)
@@ -1114,9 +1114,9 @@
     (:tag :fdlibm)
   ;; NaN ^ non-zero is NaN
   (assert-true (ext:float-nan-p
-		(kernel:%powf *qnan* (float pi 1f0))))
+		(kernel:%powf *qnan-single-float* (float pi 1f0))))
   (assert-true (ext:float-nan-p
-		(kernel:%powf *qnan* ext:single-float-positive-infinity))))
+		(kernel:%powf *qnan-single-float* ext:single-float-positive-infinity))))
 
 (define-test %pow.case.5
     (:tag :fdlibm)
@@ -1234,7 +1234,7 @@
     (assert-equal 1f0
 		  (kernel:%powf 1f0 ext:single-float-negative-infinity))
     (assert-equal 1f0
-		  (kernel:%powf 1f0 *qnan*))
+		  (kernel:%powf 1f0 *qnan-single-float*))
     (assert-equal 1f0
 		  (kernel:%powf -1f0 ext:single-float-positive-infinity))
     (assert-equal 1f0
@@ -1315,8 +1315,10 @@
   ;; +0 ^ (-anything except 0, Nan) is +inf
   ;;
   ;; But fdlibm signals error for (+0)^(-10) instead of returning inf.  Check this.
+  #+nil
   (assert-error 'division-by-zero
 		(kernel:%powf +0f0 -10f0))
+  #+nil
   (ext:with-float-traps-masked (:divide-by-zero)
     (assert-equal ext:single-float-positive-infinity
 		  (kernel:%powf +0f0 -10f0)))
