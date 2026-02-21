@@ -1,7 +1,6 @@
-/* Correctly-rounded inverse hyperbolic sine function for the
-   binary64 floating point format.
+/* Correctly-rounded inverse hyperbolic sine function for binary64.
 
-Copyright (c) 2023-2025 Alexei Sibidanov.
+Copyright (c) 2023-2025 Alexei Sibidanov <sibid@uvic.ca>.
 
 This file is part of the CORE-MATH project
 (https://core-math.gitlabpages.inria.fr/).
@@ -51,7 +50,7 @@ static inline double adddd(double xh, double xl, double ch, double cl, double *l
   return s;
 }
 
-static inline double muldd(double xh, double xl, double ch, double cl, double *l){
+static inline double muldd_acc(double xh, double xl, double ch, double cl, double *l){
   double ahlh = ch*xl, alhh = cl*xh, ahhh = ch*xh, ahhl = __builtin_fma(ch, xh, -ahhh);
   ahhl += alhh + ahlh;
   ch = ahhh + ahhl;
@@ -71,7 +70,7 @@ static inline double polydd(double xh, double xl, int n, const double c[][2], do
   int i = n-1;
   double ch = c[i][0] + *l, cl = ((c[i][0] - ch) + *l) + c[i][1];
   while(--i>=0){
-    ch = muldd(xh, xl, ch, cl, &cl);
+    ch = muldd_acc(xh, xl, ch, cl, &cl);
     double th = ch + c[i][0], tl = (c[i][0] - th) + ch;
     ch = th;
     cl += tl + c[i][1];
@@ -94,7 +93,7 @@ static double __attribute__((noinline)) as_asinh_zero(double x, double x2h, doub
   double y2 = x2h * (cl[0] + x2h * (cl[1] + x2h * (cl[2] + x2h * (cl[3] + x2h * (cl[4])))));
   double y1 = polydd(x2h, x2l, 12, ch, &y2);
 
-  y1 = muldd(y1,y2, x2h,x2l, &y2);
+  y1 = muldd_acc(y1,y2, x2h,x2l, &y2);
   y1 = mulddd(y1,y2, x, &y2);
   double y0 = fasttwosum(x, y1, &y1);
   y1 = fasttwosum(y1,y2,&y2);
@@ -178,10 +177,10 @@ double cr_asinh(double x){
   double ax = __builtin_fabs(x);
   b64u64_u ix = {.f = ax};
   u64 u = ix.u;
-  if(__builtin_expect(u<0x3fbb000000000000, 0)){ // |x| < 0x1.bp-4
+  if(__builtin_expect(u<0x3fbb000000000000ull, 0)){ // |x| < 0x1.bp-4
     // for |x| < 0x1.7137449123ef7p-26, asinh(x) rounds to x to nearest
     // for |x| < 0x1p-1022 we have underflow but not for 0x1p-1022 (to nearest)
-    if(__builtin_expect(u<0x3e57137449123ef7, 0)){ // |x| < 0x1.7137449123ef7p-26
+    if(__builtin_expect(u<0x3e57137449123ef7ull, 0)){ // |x| < 0x1.7137449123ef7p-26
       if(__builtin_expect(!u, 0)) return x;
       double res = __builtin_fma(-0x1p-60,x,x);
 #ifdef CORE_MATH_SUPPORT_ERRNO
@@ -192,9 +191,9 @@ double cr_asinh(double x){
     }
     double x2h = x*x, x2l = __builtin_fma(x, x, -x2h);
     double x3h = x2h*x, sl;
-    if(__builtin_expect(u<0x3f93000000000000, 0)){ // |x| < 0x1.3p-6
-      if(__builtin_expect(u<0x3f30000000000000, 0)){ // |x| < 0x1p-12
-	if(__builtin_expect(u<0x3e5a000000000000, 0)){ // |x| < 0x1.ap-26
+    if(__builtin_expect(u<0x3f93000000000000ull, 0)){ // |x| < 0x1.3p-6
+      if(__builtin_expect(u<0x3f30000000000000ull, 0)){ // |x| < 0x1p-12
+	if(__builtin_expect(u<0x3e5a000000000000ull, 0)){ // |x| < 0x1.ap-26
 	  static const double cl[] = {-0x1.5555555555555p-3};
 	  sl = x3h*cl[0];
 	} else {
@@ -205,7 +204,12 @@ double cr_asinh(double x){
 	static const double cl[] = {-0x1.5555555555555p-3, 0x1.333333332f2ffp-4, -0x1.6db6d9a665159p-5, 0x1.f186866d775fp-6};
 	sl = x3h*(cl[0] + x2h*(cl[1] + x2h*(cl[2] + x2h*cl[3])));
       }
-    } else {
+    } else { // 0x1.3p-6 <= |x| < 0x1.bp-4
+      /* p = x + cl[0]*x^3 + ... + cl[6]*x^15 is a minimax polynomial
+         with relative error < 2^-63.091 on [0x1.3p-6, 0x1.bp-4].
+         This branch (0x1.3p-6 <= x < 0x1.bp-4) was tested exhaustively
+         by Vincenzo Innocente (both with/without FMA) with revision 702a447.
+         All found failures were added to asinh.wc. */
       static const double cl[] = {-0x1.5555555555555p-3, 0x1.333333333331p-4, -0x1.6db6db6da466cp-5, 0x1.f1c71c2ea7be4p-6,
 				 -0x1.6e8b651b09d72p-6, 0x1.1c309fc0e69c2p-6, -0x1.bab7833c1ep-7};
       double c1 = cl[1] + x2h*cl[2];
@@ -214,7 +218,8 @@ double cr_asinh(double x){
       double x4 = x2h*x2h;
       sl = x3h*(cl[0] + x2h*(c1 + x4*(c3 + x4*c5)));
     }
-    double eps = 0x1.6p-53*x3h;
+    double eps = 0x1.79p-53*x3h;
+    // revision 03523e1 fails with 0.999*eps and x=0x1.019bcf56d16f7p-4 (rndz)
     double lb = x + (sl - eps), ub = x + (sl + eps);
     if(lb == ub) return lb;
     return as_asinh_zero(x,x2h,x2l);
@@ -223,11 +228,11 @@ double cr_asinh(double x){
   double x2h = 0, x2l = 0;
   double ah, al;
   int off = 0x3ff;
-  if(__builtin_expect(u<0x4190000000000000, 1)){ // x < 0x1p+26
+  if(__builtin_expect(u<0x4190000000000000ull, 1)){ // |x| < 0x1p+26
     double th, tl;
     x2h = x * x;
     x2l = __builtin_fma(x, x, -x2h);
-    if(__builtin_expect(u<0x3ff0000000000000, 0)){
+    if(__builtin_expect(u<0x3ff0000000000000ull, 0)){
       th = fasttwosum(1, x2h, &tl);
     } else {
       th = fasttwosum(x2h, 1, &tl);
@@ -237,10 +242,12 @@ double cr_asinh(double x){
     al = (tl - __builtin_fma(ah,ah,-th))*(rs*ah);
     ah = fasttwosum(ah, ax, &tl);
     al += tl;
-  } else if(u<0x4330000000000000){
+  } else if(u<0x4330000000000000ull){ // |x| < 0x1p+52
+    /* this branch was tested exhaustively with/without FMA by Vincenzo
+       Innocente from 2^51 to 2^52 (commit 1bd85b8) */
     ah = 2*ax;
     al = 0.5/ax;
-  } else {
+  } else { // |x| >= 0x1p+52
     if(__builtin_expect(u>=(u64)0x7ff0000000000000ull, 0)) return x + x; // +-inf or nan
     off = 0x3fe;
     ah = ax;
@@ -265,13 +272,15 @@ double cr_asinh(double x){
   lh *= __builtin_copysign(1, x);
   ll *= __builtin_copysign(1, x);
   double eps = 1.63e-19;
+  // revision 03523e1 fails with eps=0.997*eps, x=0x1.eece8f7802fbp+468 and rndz
   double lb = lh + (ll - eps), ub = lh + (ll + eps);
   if (lb == ub) return lb;
   if(ax<0x1p-2) return as_asinh_zero(x,x2h,x2l);
   return as_asinh_refine(x, ah, al, 0x1.71547652b82fep+0*__builtin_fabs(lb));
 }
 
-static __attribute__((noinline)) double as_asinh_database(double x, double f){
+static __attribute__((noinline)) double
+as_asinh_database(double x, double f){
   static const double db[][3] = {
     {0x1.00f9476450863p-2, 0x1.fcb35067f343cp-3, 0x1p-57},
     {0x1.1f0a79315b287p-2, 0x1.1b68aae88febap-2, 0x1p-56},
@@ -449,11 +458,13 @@ static double as_asinh_refine(double x, double zh, double zl, double a){
   xh = adddd(xh, xl, sh, sl, &xl);
   sl = xh*(cl[0] + xh*(cl[1] + xh*cl[2]));
   sh = polydd(xh, xl, 3, ch, &sl);
-  sh = muldd(xh, xl, sh, sl, &sl);
+  sh = muldd_acc(xh, xl, sh, sl, &sl);
   sh = adddd(sh, sl, el1, el2, &sl);
   sh = adddd(sh, sl, L[1], L[2], &sl);
   double v2, v0 = fasttwosum(L[0], sh, &v2);
   double v1 = fasttwosum(v2, sl, &v2);
+  v0 = fasttwosum(v0,v1, &v1);
+  v1 = fasttwosum(v1,v2, &v2);
   v0 *= __builtin_copysign(2,x);
   v1 *= __builtin_copysign(2,x);
   v2 *= __builtin_copysign(2,x);
@@ -467,8 +478,8 @@ static double as_asinh_refine(double x, double zh, double zl, double a){
     v1 = t.f;
   }
   b64u64_u t0 = {.f = v0};
-  uint64_t er = ((t.u + 33) & (~(u64)0>>12)), de = ((t0.u>>52)&0x7ff) - ((t.u>>52)&0x7ff);
+  uint64_t er = ((t.u + 41) & (~(u64)0>>12)), de = ((t0.u>>52)&0x7ff) - ((t.u>>52)&0x7ff);
   double res = v0 + v1;
-  if(__builtin_expect(de>99 || er<66, 0)) return as_asinh_database(x,res);
+  if(__builtin_expect(de>99 || er<80, 0)) return as_asinh_database(x,res);
   return res;
 }

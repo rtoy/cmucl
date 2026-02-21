@@ -24,13 +24,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/* stdio.h and stdlib.h are needed in case the rounding test of the accurate
-   step fails, to print the corresponding input and exit. */
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
-#include <fenv.h>
+#include <fenv.h> // for fegetround, FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, ...
 #include <errno.h>
 
 // Warning: clang also defines __GNUC__
@@ -2013,9 +2009,8 @@ sin_accurate (double x)
             return (x > 0) ? exceptions[j][1] + exceptions[j][2]
               : -exceptions[j][1] - exceptions[j][2];
         }
-      printf ("Rounding test of accurate path failed for sin(%la)\n", x);
-      printf ("Please report the above to core-math@inria.fr\n");
-      exit (1);
+      /* if we go here, we have a hard-to-round case, but since all hard-to-round
+         cases are known and pass all tests, we are ok */
     }
 
   if (neg)
@@ -2177,9 +2172,8 @@ cos_accurate (double x)
           if (__builtin_fabs (x) == exceptions[k][0])
             return exceptions[k][1] + exceptions[k][2];
         }
-      printf ("Rounding test of accurate path failed for cos(%la)\n", x);
-      printf ("Please report the above to core-math@inria.fr\n");
-      exit (1);
+      /* if we go here, we have a hard-to-round case, but since all hard-to-round
+         cases are known and pass all tests, we are ok */
     }
 
   if (neg)

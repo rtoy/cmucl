@@ -37,7 +37,7 @@ SOFTWARE.
 /* __builtin_roundeven was introduced in gcc 10:
    https://gcc.gnu.org/gcc-10/changes.html,
    and in clang 17 */
-#if ((defined(__GNUC__) && __GNUC__ >= 10) || (defined(__clang__) && __clang_major__ >= 17)) && (defined(__aarch64__) || defined(__x86_64__) || defined(__i386__))
+#if ((defined(__GNUC__) && __GNUC__ >= 10) || (defined(__clang__) && __clang_major__ >= 17)) && !defined(_MSC_VER) && (defined(__aarch64__) || defined(__x86_64__) || defined(__i386__))
 # define roundeven_finite(x) __builtin_roundeven (x)
 #else
 /* round x to nearest integer, breaking ties to even */
@@ -370,7 +370,12 @@ double cr_log1p(double x){
     } else {
       rs.u -= (i64)1021<<52;
       static const double sc[] = {0x1p-1, 0x1p-2, 0x1p-3};
-      rs.f *= sc[je-1022];
+      /* Erik Enikeev suggested to replace rs.f *= sc[je-1022], which causes
+         issues on platforms with FTZ (flush-to-zero) but without DAZ
+         (denormals are zero) */
+      // rs.f *= sc[je-1022];
+      t.f *= sc[je-1022];
+      dt.f *= sc[je-1022];
     }
     double dh = rs.f*t.f, dl = __builtin_fma(rs.f,t.f,-dh) + rs.f*dt.f;
     double xl, xh = fasttwosum(dh-1.0, dl, &xl), x2 = xh*xh;

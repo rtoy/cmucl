@@ -1,7 +1,6 @@
-/* Correctly-rounded inverse hyperbolic tangent function for the
-   binary64 floating point format.
+/* Correctly-rounded inverse hyperbolic tangent function for binary64.
 
-Copyright (c) 2023 Alexei Sibidanov.
+Copyright (c) 2023-2025 Alexei Sibidanov <sibid@uvic.ca>.
 
 This file is part of the CORE-MATH project
 (https://core-math.gitlabpages.inria.fr/).
@@ -56,29 +55,52 @@ static inline double adddd(double xh, double xl, double ch, double cl, double *l
   return s;
 }
 
+/* Note: in revision 085972b, we replaced the last two lines
+   ch = ahhh + ahhl and *l = (ahhh - ch) + ahhl by fasttwosum (ahhh, ahhl, l).
+   Indeed, these last two lines did emulate a FastTwoSum.
+   However, they did emulate another variant of fasttwosum, with
+   z = x - s and e = z + y.
+   Note that these two variants differ when the fasttwosum condition
+   |x| >= |y| is not satisfied.
+   Take for example with precision 3 and rounding upwards, x=-7 and
+   y=28. Then s = RU(x + y) = 24. With the first variant, z = RU(s-x) = 32
+   and e = RU(y - z) = -4, thus s + e = 20. With the second variant,
+   z = RU(x-s) = -28 and e = RU(z + y) = 0, thus s + e = 24. In this case,
+   the first variant is closer to the sum x + y = 21.
+   Still with precision 3 and rounding upwards, now take x=7 and
+   y=-28. Then s = RU(x + y) = -20. With the first variant, z = RU(s-x) = -24
+   and e = RU(y - z) = -4, thus s + e = -28. With the second variant,
+   z = RU(x-s) = 28 and e = RU(z + y) = 0, thus s + e = -20. In this case,
+   the second variant is closer to the sum x + y = -21.
+*/
+static inline double muldd_acc(double xh, double xl, double ch, double cl, double *l){
+  double ahlh = ch*xl, alhh = cl*xh, ahhh = ch*xh, ahhl = __builtin_fma(ch, xh, -ahhh);
+ ahhl += alhh + ahlh;
+ return fasttwosum (ahhh, ahhl, l);
+}
 
+// same as muldd_acc, but without the fasttwosum() normalization
 static inline double muldd(double xh, double xl, double ch, double cl, double *l){
   double ahlh = ch*xl, alhh = cl*xh, ahhh = ch*xh, ahhl = __builtin_fma(ch, xh, -ahhh);
-  ahhl += alhh + ahlh;
-  ch = ahhh + ahhl;
-  *l = (ahhh - ch) + ahhl;
-  return ch;
+ *l = ahhl + (alhh + ahlh);
+ return ahhh;
 }
 
 static inline double mulddd(double xh, double xl, double ch, double *l){
-  double ahlh = ch*xl, ahhh = ch*xh, ahhl = __builtin_fma(ch, xh, -ahhh);
-  ahhl += ahlh;
-  ch = ahhh + ahhl;
-  *l = (ahhh - ch) + ahhl;
-  return ch;
+  double hh = xh*ch;
+  *l = __builtin_fma(ch, xh, -hh) + xl*ch;
+  return hh;
 }
 
 static inline double polydd(double xh, double xl, int n, const double c[][2], double *l){
   int i = n-1;
-  double ch = c[i][0] + *l, cl = ((c[i][0] - ch) + *l) + c[i][1];
+  double ch, cl;
+  ch = fasttwosum(c[i][0], *l, &cl);
+  cl += c[i][1];
   while(--i>=0){
-    ch = muldd(xh, xl, ch, cl, &cl);
-    double th = ch + c[i][0], tl = (c[i][0] - th) + ch;
+    ch = muldd_acc(xh, xl, ch, cl, &cl);
+    double th, tl;
+    th = fasttwosum(c[i][0], ch, &tl);
     ch = th;
     cl += tl + c[i][1];
   }
@@ -89,25 +111,38 @@ static inline double polydd(double xh, double xl, int n, const double c[][2], do
 static double __attribute__((noinline)) as_atanh_refine(double, double, double, double);
 static double __attribute__((noinline)) as_atanh_zero(double x){
   static const double ch[][2] = {
-    {0x1.5555555555555p-2, 0x1.5555555555555p-56}, {0x1.999999999999ap-3, -0x1.999999999611cp-57},
-    {0x1.2492492492492p-3, 0x1.2492490f76b25p-57}, {0x1.c71c71c71c71cp-4, 0x1.c71cd5c38a112p-58},
-    {0x1.745d1745d1746p-4, -0x1.7556c4165f4cap-59}, {0x1.3b13b13b13b14p-4, -0x1.b893c3b36052ep-59},
-    {0x1.1111111111105p-4, 0x1.4e1afd723ed1fp-59}, {0x1.e1e1e1e1e2678p-5, -0x1.f86ea96fb1435p-59},
-    {0x1.af286bc9f90ccp-5, 0x1.1e51a6e54fde9p-60}, {0x1.8618618c779b6p-5, -0x1.ab913de95c3bfp-61},
-    {0x1.642c84aa383ebp-5, 0x1.632e747641b12p-59}, {0x1.47ae2d205013cp-5, -0x1.0c9617e7bcff2p-60},
-    {0x1.2f664d60473f9p-5, 0x1.3adb3e2b7f35ep-61}};
+    {0x1.5555555555555p-2, 0x1.5555555555555p-56},  // degree 3
+    {0x1.999999999999ap-3, -0x1.999999999611cp-57}, // degree 5
+    {0x1.2492492492492p-3, 0x1.2492490f76b25p-57},  // degree 7
+    {0x1.c71c71c71c71cp-4, 0x1.c71cd5c38a112p-58},  // degree 9
+    {0x1.745d1745d1746p-4, -0x1.7556c4165f4cap-59}, // degree 11
+    {0x1.3b13b13b13b14p-4, -0x1.b893c3b36052ep-59}, // degree 13
+    {0x1.1111111111105p-4, 0x1.4e1afd723ed1fp-59},  // degree 15
+    {0x1.e1e1e1e1e2678p-5, -0x1.f86ea96fb1435p-59}, // degree 17
+    {0x1.af286bc9f90ccp-5, 0x1.1e51a6e54fde9p-60},  // degree 19
+    {0x1.8618618c779b6p-5, -0x1.ab913de95c3bfp-61}, // degree 21
+    {0x1.642c84aa383ebp-5, 0x1.632e747641b12p-59},  // degree 23
+    {0x1.47ae2d205013cp-5, -0x1.0c9617e7bcff2p-60}, // degree 25
+    {0x1.2f664d60473f9p-5, 0x1.3adb3e2b7f35ep-61}}; // degree 27
 
   static const double cl[] = {
-    0x1.1a9a91fd692afp-5, 0x1.06dfbb35e7f44p-5, 0x1.037bed4d7588fp-5, 0x1.5aca6d6d720d6p-6,
-    0x1.99ea5700d53a5p-5};
+    0x1.1a9a91fd692afp-5, // degree 29
+    0x1.06dfbb35e7f44p-5, // degree 31
+    0x1.037bed4d7588fp-5, // degree 33
+    0x1.5aca6d6d720d6p-6, // degree 35
+    0x1.99ea5700d53a5p-5}; // degree 37
 
   double x2 = x*x , x2l = __builtin_fma(x, x,-x2);
   double y2 = x2 * (cl[0] + x2 * (cl[1] + x2 * (cl[2] + x2 * (cl[3] + x2 * (cl[4])))));
   double y1 = polydd(x2, x2l, 13, ch, &y2);
   y1 = mulddd(y1, y2, x, &y2);
-  y1 = muldd(y1, y2, x2, x2l, &y2);
+  y1 = muldd_acc(x2, x2l, y1, y2, &y2);
   double y0 = fasttwosum(x, y1, &y1);
   y1 = fasttwosum(y1, y2, &y2);
+  /* We have 22 failures (only for RNDN, 11 up to sign) if we disable this
+     check, all with 53 or 54 identical bits after the round bit.
+     For example x=0x1.cc7092205cfafp-10 we have y0=0x1.cc70b12857108p-10
+     and y1=-0x1p-63. */
   b64u64_u t = {.f = y1};
   if(__builtin_expect(!(t.u&(~(uint64_t)0>>12)), 0)){
     b64u64_u w = {.f = y2};
@@ -151,26 +186,41 @@ double cr_atanh(double x){
 #endif
       return __builtin_fma(x,0x1p-55,x);
     }
+    /* checked exhautively this branch (with and without FMA):
+     * for 0x1.d12ed0af1a27fp-27 <= x < 2^-24
+     */
     double x2 = x * x;
+    /* the polynomial c(x) = c[0]+c[1]*x^2+...+c[8]*x^16 is a minimax
+       approximation of (atanh(x) - x - x^3/3)/x^5, which yields for
+       p(x) = x + (0x1.5555555555555p-2 + 0x1.5555555555555p-56) x^3 + x^5 c(x)
+       an approximation of atanh(x) with relative error <= 2^-64.377
+       on [0x1.d12ed0af1a27fp-27,1/4], cf atanh.sollya */
     static const double c[] = 
       {0x1.999999999999ap-3, 0x1.2492492492244p-3, 0x1.c71c71c79715fp-4, 0x1.745d16f777723p-4,
        0x1.3b13ca4174634p-4, 0x1.110c9724989bdp-4, 0x1.e2d17608a5b2ep-5, 0x1.a0b56308cba0bp-5, 0x1.fb6341208ad2ep-5};
     double dx2 = __builtin_fma(x,x,-x2);
     double x4 = x2*x2, x3 = x2*x, x8 = x4*x4;
     double dx3 = __builtin_fma(x2,x,-x3) + dx2*x;
+    /* following the C standard, the following is equivalent to (a + b) + c,
+       where a = c[0] + x2*c[1], b = x4*(...) and c = x8*(...) */
     double p = (c[0] + x2*c[1]) + x4*(c[2] + x2*c[3]) + x8*((c[4] + x2*c[5]) + x4*(c[6] + x2*c[7]) + x8*c[8]);
-    double t = 0x1.5555555555555p-56 + x2*p;
+    double t = __builtin_fma (x2, p, 0x1.5555555555555p-56);
     double pl, ph = fasttwosum(0x1.5555555555555p-2, t, &pl);
     ph = muldd(ph, pl,  x3, dx3, &pl);
     double tl;
     ph = fasttwosum(x,ph,&tl);
     pl += tl;
     double eps = x*(x4*0x1.dp-53 + 0x1p-103);
+    // revision 221543c fails with 0.737*eps and x=0x1.2f67d96be6eafp-9 (rndu)
     double lb = ph + (pl - eps), ub = ph + (pl + eps);
     if(__builtin_expect(lb == ub,1)) return lb;
     return as_atanh_zero(x);
   }
 
+  /* We have performed an exhaustive search of branch |x| >= 0.25 on 221543c
+     both with default CFLAGS (with FMA) and with CFLAGS="-O3 -march=x86-64"
+     (no FMA). We found no failure, except the ones in atanh.wc which are fixed
+     in a later commit. */
   double pl, ph = fasttwosum(1,ax,&pl), ql, qh = fasttwosub(1,ax,&ql), iqh = 1/qh, th = ph*iqh,
      tl = __builtin_fma(ph,iqh,-th) + (pl + ph*(__builtin_fma(-qh,iqh,1) - ql*iqh))*iqh;
   
@@ -255,7 +305,8 @@ double cr_atanh(double x){
   ll += f;
   lh *= __builtin_copysign(1,x);
   ll *= __builtin_copysign(1,x);
-  double eps = 31e-24 + dx2*0x1p-49;
+  double eps = 38e-24 + dx2*0x1p-49;
+  // revision bbe3f8c fails with 0.989 * eps and x=0x1.ebf0bfefa727dp-1 (rndz)
   double lb = lh + (ll - eps), ub = lh + (ll + eps);
   if(__builtin_expect(lb==ub, 1)) return lb;
   th = fasttwosum(th, tl, &tl);
@@ -402,7 +453,7 @@ static double as_atanh_refine(double x, double zh, double zl, double a){
   xh = adddd(xh, xl, sh, sl, &xl);
   sl = xh*(cl[0] + xh*(cl[1] + xh*cl[2]));
   sh = polydd(xh, xl, 3, ch, &sl);
-  sh = muldd(xh, xl, sh, sl, &sl);
+  sh = muldd_acc(xh, xl, sh, sl, &sl);
   sh = adddd(sh, sl, el1, el2, &sl);
   sh = adddd(sh, sl, L[1], L[2], &sl);
   double v2, v0 = fasttwosum(L[0], sh, &v2), v1 = fasttwosum(v2, sl, &v2);

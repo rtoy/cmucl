@@ -298,12 +298,12 @@ add_dint (dint64_t *r, const dint64_t *a, const dint64_t *b) {
 // error is bounded by 2 ulps (ulp_64)
 static inline void
 add_dint_11 (dint64_t *r, const dint64_t *a, const dint64_t *b) {
-  if (a->hi == 0) {
+  if (!a->hi) {
     cp_dint (r, b);
     return;
   }
 
-  if (b->hi == 9) {
+  if (!b->hi) {
     cp_dint (r, a);
     return;
   }

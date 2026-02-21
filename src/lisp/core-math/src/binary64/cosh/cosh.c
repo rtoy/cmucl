@@ -1,6 +1,6 @@
 /* Correctly rounded hyperbolic cosine for binary64 values.
 
-Copyright (c) 2023 Alexei Sibidanov.
+Copyright (c) 2023-2025 Alexei Sibidanov <sibid@uvic.ca>
 
 This file is part of the CORE-MATH project
 (https://core-math.gitlabpages.inria.fr/).
@@ -48,21 +48,18 @@ static inline double fasttwosum(double x, double y, double *e){
 }
 
 static inline double muldd(double xh, double xl, double ch, double cl, double *l){
-  double ahlh = ch*xl, alhh = cl*xh, ahhh = ch*xh, ahhl = __builtin_fma(ch, xh, -ahhh);
-  ahhl += alhh + ahlh;
-  ch = ahhh + ahhl;
-  *l = (ahhh - ch) + ahhl;
-  return ch;
+  double h = ch*xh;
+  *l = __builtin_fma(ch,xh, -h) + xh*cl + ch*xl;
+  return h;
 }
 
 static inline double polydd(double xh, double xl, int n, const double c[][2], double *l){
   int i = n-1;
-  double ch = c[i][0] + *l, cl = ((c[i][0] - ch) + *l) + c[i][1];
+  double ch = c[i][0] + *l, cl = ((c[i][0] - ch) + *l) + c[i][1], e;
   while(--i>=0){
     ch = muldd(xh, xl, ch, cl, &cl);
-    double th = ch + c[i][0], tl = (c[i][0] - th) + ch;
-    ch = th;
-    cl += tl + c[i][1];
+    ch = fasttwosum(c[i][0], ch, &e);
+    cl = (cl + c[i][1]) + e;
   }
   *l = cl;
   return ch;
@@ -151,7 +148,7 @@ static __attribute__((noinline)) double as_cosh_database(double x, double f){
 
 double cr_cosh(double x){
   /*
-    The function sinh(x) is approximated by a minimax polynomial
+    The function cosh(x) is approximated by a minimax polynomial
     cosh(x)~1+x^2*P(x^2) for |x|<0.125. For other arguments the
     identity cosh(x)=(exp(|x|)+exp(-|x|))/2 is used. For |x|<5 both
     exponents are calculated with slightly higher precision than
@@ -245,11 +242,13 @@ double cr_cosh(double x){
 #endif
   b64u64_u ix = {.f = ax};
   u64 aix = ix.u;
-  if(__builtin_expect(aix<0x3fc0000000000000ull, 0)){
-    if(__builtin_expect(aix<0x3e50000000000000ull, 0)) return __builtin_fma(ax,0x1p-55,1);
+  if(__builtin_expect(aix<0x3fc0000000000000ull, 0)){ // |x| < 0.125
+    if(__builtin_expect(aix<0x3e50000000000000ull, 0)) // |x| < 0x1p-26
+      return __builtin_fma(ax,0x1p-55,1);
     static const double c[] = {
       0x1p-1, 0x1.555555555554ep-5, 0x1.6c16c16c26737p-10, 0x1.a019ffbbcdbdap-16, 0x1.27ffe2df106cbp-22};
     double x2 = x*x, x4 = x2*x2, p = x2*((c[0] + x2*c[1]) + x4*((c[2] + x2*c[3]) + x4*c[4]));
+    // failure with e = x2*(2.82*0x1p-53) and x=0x1.02f8f4ed3ecbp-12 (RNDU)
     double e = x2*(4*0x1p-53), lb = 1 + (p - e), ub = 1 + (p + e);
     if(lb == ub) return lb;
     return as_cosh_zero(x);
@@ -266,6 +265,7 @@ double cr_cosh(double x){
     return 0x1p1023 * 2.0;
   }
 
+  // now 0.125 <= |x| <= 0x1.633ce8fb9f87dp+9
   int64_t il = ((uint64_t)jt.u<<14)>>40, jl = -il;
   int64_t i1 = il&0x3f, i0 = (il>>6)&0x3f, ie = il>>12;
   int64_t j1 = jl&0x3f, j0 = (jl>>6)&0x3f, je = jl>>12;
@@ -294,6 +294,9 @@ double cr_cosh(double x){
       th += tl;
       th *= 2;
       th *= sp.f;
+      /* if the exponent difference between eh and el is larger than 103,
+         or if the last bits from ml are <= 8 in absolute value,
+         call the accurate path */
       if(ml<=16 || eh-el>103) return as_cosh_database(x, th);
       return th;
     }
@@ -306,11 +309,13 @@ double cr_cosh(double x){
     rh = th;
     rl = (tl + em) + th*pp;
 
-    double e = 0.09e-18*rh, lb = rh + (rl - e), ub = rh + (rl + e);
+    double e = 0.117e-18*rh, lb = rh + (rl - e), ub = rh + (rl + e);
+    // fails with e = 0.091e-18*rh and x=0x1.4173941572a71p+2 (rndz)
     if(lb == ub) return lb;
 
     th = as_exp_accurate( ax, t, th, tl, &tl);
     if(__builtin_expect(aix>0x403f666666666666ull, 0)){
+      // |x| > 0x1.f666666666666p+4
       rh = th + qh; rl = ((th - rh) + qh) + tl;
     } else {
       qh = q0h*q1h;
@@ -321,7 +326,7 @@ double cr_cosh(double x){
       qh = as_exp_accurate(-ax,-t, qh, ql, &ql);
       rh = th + qh; rl = (((th - rh) + qh) + ql) + tl;
     }
-  } else {
+  } else { // |x| <= 5
     double q0h = t0[j0][1], q0l = t0[j0][0];
     double q1h = t1[j1][1], q1l = t1[j1][0];
     double qh = q0h*q1h, ql = q0h*q1l + q1h*q0l + __builtin_fma(q0h,q1h,-qh);
@@ -335,7 +340,8 @@ double cr_cosh(double x){
 
     rh = fph + fmh;
     rl = ((fph - rh) + fmh) + fml + fpl;
-    double e = 0.28e-18*rh, lb = rh + (rl - e), ub = rh + (rl + e);
+    double e = 0.33e-18*rh, lb = rh + (rl - e), ub = rh + (rl + e);
+    // fails with e = 0.076e-18*rh and x=0x1.c334ce55f09f7p+1 (rndu)
     if(lb == ub) return lb;
     th = as_exp_accurate( ax, t, th, tl, &tl);
     qh = as_exp_accurate(-ax,-t, qh, ql, &ql);

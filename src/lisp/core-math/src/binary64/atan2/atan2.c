@@ -28,7 +28,7 @@ SOFTWARE.
    who designed the code to generate a rational approximation of atan(z)
    over (0,1). See comments before P[] and Q[] below. */
 
-#include <fenv.h>
+#include <fenv.h> // for fenv_t, feholdexcept, fetestexcept, ...
 #include <stdio.h> // needed in case of correct rounding failure
 #include <stdint.h>
 #include <errno.h>

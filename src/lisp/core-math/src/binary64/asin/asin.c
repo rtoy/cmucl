@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 #include <errno.h>
-#include <fenv.h>
+#include <fenv.h> // for FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, feraiseexcept...
 #include <stdint.h>
 
 #ifdef __x86_64__
@@ -43,7 +43,7 @@ SOFTWARE.
 // fegetexceptflag accesses the FPSR register, which seems to be much slower
 // than accessing FPCR, so it should be avoided if possible.
 // Adapted from sse2neon: https://github.com/DLTcollab/sse2neon
-#if (defined(__arm64__) || defined(_M_ARM64)) && !defined(__aarch64__)
+#if defined(__arm64__) || defined(_M_ARM64) || defined(__aarch64__)
 #if defined(_MSC_VER)
 #include <arm64intr.h>
 #endif
@@ -59,7 +59,7 @@ typedef struct
   uint32_t res3;
 } fpcr_bitfield;
 
-inline static unsigned int _mm_getcsr(void)
+inline static unsigned int get_arm_rounding_mode(void)
 {
   union
   {
@@ -72,18 +72,34 @@ inline static unsigned int _mm_getcsr(void)
 #else
   __asm__ __volatile__("mrs %0, FPCR" : "=r"(r.value));
 #endif
-  static const unsigned int lut[2][2] = {{0x0000, 0x2000}, {0x4000, 0x6000}};
-  return lut[r.field.bit22][r.field.bit23];
+  static const unsigned int lut[2][2] = {{FE_TONEAREST, FE_UPWARD}, {FE_DOWNWARD, FE_TOWARDZERO}};
+  return lut[r.field.bit23][r.field.bit22];
 }
-#endif  // (defined(__arm64__) || defined(_M_ARM64)) && !defined(__aarch64__)
+#endif  // defined(__arm64__) || defined(_M_ARM64) || defined(__aarch64__)
 
 static inline int get_rounding_mode (void)
 {
-  /* Warning: on __aarch64__ (for example cfarm103), FE_UPWARD=0x400000
-     instead of 0x800. */
-#if (defined(__x86_64__) || defined(__arm64__) || defined(_M_ARM64)) && !defined(__aarch64__)
-  const unsigned flagp = _mm_getcsr ();
-  return (flagp&(3<<13))>>3;
+#if defined(__x86_64__)
+  #if defined(__WIN32__) || defined(__WIN64__)
+    // Windows 10 14393 swapped FE_UPWARD and FE_DOWNWARD.
+    // Before: FE_UPWARD = 0x0100, FE_DOWNWARD = 0x0200
+    // After:  FE_UPWARD = 0x0200, FE_DOWNWARD = 0x0100
+    // The amount we need to shift changes depending on the value.
+    #if FE_UPWARD == 0x0200
+      return _MM_GET_ROUNDING_MODE()>>5;
+    #elif FE_UPWARD == 0x0100
+      // Lookup table used to eliminate branches.
+      static const unsigned lut[4] = {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
+      return lut[_MM_GET_ROUNDING_MODE()>>13];
+    #else
+      #warning The floating point rounding constants have an unknown value. A slower path will be taken.
+      return fegetround();
+    #endif
+  #else
+    return _MM_GET_ROUNDING_MODE()>>3;
+  #endif
+#elif defined(__arm64__) || defined(_M_ARM64) || defined(__aarch64__)
+  return get_arm_rounding_mode();
 #else
   return fegetround ();
 #endif

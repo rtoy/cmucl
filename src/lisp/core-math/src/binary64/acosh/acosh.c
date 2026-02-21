@@ -29,10 +29,6 @@ SOFTWARE. */
        double-word arithmetic, by Mioara Joldeş, Jean-Michel Muller,
        and Valentina Popescu, ACM Transactions on Mathematical Software,
        44(2), 2017.
-   [2] Formalization of double-word arithmetic, and comments on ”Tight and
-       rigorous error bounds for basic building blocks of double-word
-       arithmetic”, Jean-Michel Muller, Laurence Rideau,
-       https://hal.science/hal-02972245v2, 2021.
 */
 
 #include <stdint.h>
@@ -62,16 +58,14 @@ static inline double adddd(double xh, double xl, double ch, double cl, double *l
 }
 
 /* This function implements Algorithm 10 (DWTimesDW1) from [1]
-   Its relative error (for round-to-nearest ties-to-even) is bounded by 5u^2
-   (Theorem 2.6 of [2]), where u = 2^-53 for double precision,
+   Its relative error (for round-to-nearest ties-to-even) is bounded by 7u^2
+   (Theorem 5.1 of [1]), where u = 2^-53 for double precision,
    assuming xh = RN(xh + xl), which implies |xl| <= 1/2 ulp(xh),
    and similarly for ch, cl. */
-static inline double muldd(double xh, double xl, double ch, double cl, double *l){
+static inline double muldd_acc(double xh, double xl, double ch, double cl, double *l){
   double ahlh = ch*xl, alhh = cl*xh, ahhh = ch*xh, ahhl = __builtin_fma(ch, xh, -ahhh);
   ahhl += alhh + ahlh;
-  ch = ahhh + ahhl;
-  *l = (ahhh - ch) + ahhl;
-  return ch;
+  return fasttwosum(ahhh, ahhl, l);
 }
 
 static inline double mulddd(double xh, double xl, double ch, double *l){
@@ -86,7 +80,7 @@ static inline double polydd(double xh, double xl, int n, const double c[][2], do
   int i = n-1;
   double ch = c[i][0] + *l, cl = ((c[i][0] - ch) + *l) + c[i][1];
   while(--i>=0){
-    ch = muldd(xh, xl, ch, cl, &cl);
+    ch = muldd_acc(xh, xl, ch, cl, &cl);
     double th = ch + c[i][0], tl = (c[i][0] - th) + ch;
     ch = th;
     cl += tl + c[i][1];
@@ -106,14 +100,14 @@ static double __attribute__((noinline)) as_acosh_one(double x, double sh, double
 
   static const double cl[] = {
     -0x1.df3b9d1296ea9p-19, 0x1.a681d7d2298ebp-20, -0x1.77ead7b1ca449p-21, 0x1.4edd2ddb3721fp-22,
-    -0x1.1bf173531ee23p-23,0x1.613229230e255p-25};
+    -0x1.1bf173531ee23p-23, 0x1.613229230e255p-25};
 
   double y2 = x * (cl[0] + x * (cl[1] + x * (cl[2] + x * (cl[3] + x * (cl[4] + x * (cl[5]))))));
   double y1 = polydd(x, 0, 10, ch, &y2);
   y1 = mulddd(y1, y2, x, &y2);
   double y0 = fasttwosum(1, y1, &y1);
   y1 += y2;
-  y0 = muldd(y0, y1, sh, sl, &y1);
+  y0 = muldd_acc(y0, y1, sh, sl, &y1);
   return y0 + y1;
 }
 
@@ -182,7 +176,7 @@ static const double c[] = {-0x1p-1, 0x1.555555555553p-2, -0x1.fffffffffffap-3, 0
 
 double cr_acosh(double x){
   b64u64_u ix = {.f = x};
-  if(__builtin_expect(ix.u>=0x7ff0000000000000ull, 0)){
+  if(__builtin_expect(ix.u>=0x7ff0000000000000ull, 0)){ // x<0 or NaN/Inf
       u64 aix = ix.u<<1;
       if(ix.u==0x7ff0000000000000ull || aix>((u64)0x7ff<<53)) return x + x; // +inf or nan
 #ifdef CORE_MATH_SUPPORT_ERRNO
@@ -201,7 +195,7 @@ double cr_acosh(double x){
   double g;
   int off = 0x3fe;
   b64u64_u t = ix;
-  if(ix.u<0x3ff1e83e425aee63ull){
+  if(ix.u<0x3ff1e83e425aee63ull){ // 0 <= x < 0x1.1e83e425aee63p+0
     double z = x-1;
     double iz = (-0.25)/z, zt = 2*z;
     double sh = __builtin_sqrt(zt), sl = __builtin_fma(sh,sh,-zt)*(sh*iz);
@@ -209,32 +203,34 @@ double cr_acosh(double x){
       -0x1.5555555555555p-4, 0x1.3333333332f95p-6, -0x1.6db6db6d5534cp-8, 0x1.f1c71c1e04356p-10,
       -0x1.6e8b8e3e40d58p-11, 0x1.1c4ba825ac4fep-12, -0x1.c9045534e6d9ep-14, 0x1.71fedae26a76bp-15,
       -0x1.f1f4f8cc65342p-17};
-    double z2 = z*z, z4 = z2*z2, ds = (sh*z)*(cl[0] + z*(((cl[1] + z*cl[2]) + z2*(cl[3] + z*cl[4])) + z4*((cl[5] + z*cl[6]) + z2*(cl[7] + z*cl[8]))));
+    double z2 = z*z, z4 = z2*z2, ds = __builtin_fma(sh*z,(cl[0] + z*(((cl[1] + z*cl[2]) + z2*(cl[3] + z*cl[4])) + z4*((cl[5] + z*cl[6]) + z2*(cl[7] + z*cl[8])))), sl);
     double eps = ds*0x1.fcp-51 - 0x1p-104*sh;
-    ds += sl;
     double lb = sh + (ds - eps), ub = sh + (ds + eps);
     if(lb == ub) return lb;
     return as_acosh_one(z, sh, sl);
-  } else if(__builtin_expect(ix.u<0x405bf00000000000, 1)){
+  } else if(__builtin_expect(ix.u<0x405bf00000000000ull, 1)){
+    /* 0x1.1e83e425aee63p+0 <= x < 0x1.bfp+6: this branch was checked
+       exhaustively (revision 1bd85b8) with/without FMA */
     off = 0x3ff;
     double x2h = x*x, wh = x2h - 1, wl = __builtin_fma(x,x,-x2h);
     double sh = __builtin_sqrt(wh), ish = 0.5/wh, sl = (wl - __builtin_fma(sh,sh,-wh))*(sh*ish);
     double tl, th = fasttwosum(x, sh, &tl); tl += sl;
     t.f = th;
     g = tl/th;
-  } else if(ix.u<0x4087100000000000){
+  } else if(ix.u<0x4087100000000000ull){ // 0x1.bfp+6 <= x < 0x1.71p+9
+    /* this branch was tested exhaustively (revision 28faf30) with/without FMA */
     static const double cl[] = {0x1.5c4b6148816e2p-66, -0x1.000000000005cp-2, -0x1.7fffffebf3e6cp-4, -0x1.aab6691f2bae7p-5};
     double z = 1/(x*x);
     g = cl[0] + z*(cl[1] + z*(cl[2] + z*cl[3]));
-  } else if(ix.u<0x40e0100000000000){
+  } else if(ix.u<0x40e0100000000000ull){ // 0x1.71p+9 <= x < 0x1.01p+15
     static const double cl[] = {-0x1.7f77c8429c6c6p-67, -0x1.ffffffffff214p-3, -0x1.8000268641bfep-4};
     double z = 1/(x*x);
     g = cl[0] + z*(cl[1] + z*cl[2]);
-  } else if(ix.u<0x41ea000000000000){
+  } else if(ix.u<0x41ea000000000000ull){ // 0x1.01p+15 <= x < 0x1.ap+31
     static const double cl[] = {0x1.7a0ed2effdd1p-67, -0x1.000000017d048p-2};
     double z = 1/(x*x);
     g = cl[0] + z*cl[1];
-  } else {
+  } else { // 0x1.ap+31 <= x
     g = 0;
   }
   int ex = t.u>>52, e = ex - off;
@@ -258,7 +254,8 @@ double cr_acosh(double x){
   return as_acosh_refine(x, 0x1.71547652b82fep+0*lb);
 }
 
-static __attribute__((noinline)) double as_acosh_database(double x, double f){
+static __attribute__((noinline)) double
+as_acosh_database(double x, double f){
   static const double db[][3] = {
     {0x1.5bff041b260fep+0, 0x1.a6031cd5f93bap-1, 0x1p-55},
     {0x1.9efdca62b700ap+0, 0x1.104b648f113a1p+0, 0x1p-54},
@@ -382,14 +379,14 @@ static double as_acosh_refine(double x, double a){
   static const double cl[3] = {-0x1p-3, 0x1.9999999a0754fp-4,-0x1.55555555c3157p-4};
   b64u64_u ix = {.f = x};
   double zh,zl;
-  if(ix.u<0x4190000000000000){
+  if(ix.u<0x4190000000000000ull){
     double x2h = x*x, x2l = __builtin_fma(x,x,-x2h);
     double wl, wh = x2h - 1;
     wh = fasttwosum(wh,x2l,&wl);
     double sh = __builtin_sqrt(wh), ish = 0.5/wh, sl = (ish*sh)*(wl - __builtin_fma(sh,sh,-wh));
     zh = fasttwosum(x, sh, &zl); zl += sl;
     zh = fasttwosum(zh, zl, &zl);
-  } else if(ix.u<0x4330000000000000){
+  } else if(ix.u<0x4330000000000000ull){
     zh = 2*x;
     zl = -0.5/x;
   } else {
@@ -424,7 +421,7 @@ static double as_acosh_refine(double x, double a){
   xh = adddd(xh, xl, sh, sl, &xl);
   sl = xh*(cl[0] + xh*(cl[1] + xh*cl[2]));
   sh = polydd(xh, xl, 3, ch, &sl);
-  sh = muldd(xh, xl, sh, sl, &sl);
+  sh = muldd_acc(xh, xl, sh, sl, &sl);
   sh = adddd(sh, sl, el1, el2, &sl);
   sh = adddd(sh, sl, L[1], L[2], &sl);
   double v2, v0 = fasttwosum(L[0], sh, &v2), v1 = fasttwosum(v2, sl, &v2);

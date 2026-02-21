@@ -37,7 +37,7 @@ SOFTWARE.
 /* __builtin_roundeven was introduced in gcc 10:
    https://gcc.gnu.org/gcc-10/changes.html,
    and in clang 17 */
-#if ((defined(__GNUC__) && __GNUC__ >= 10) || (defined(__clang__) && __clang_major__ >= 17)) && (defined(__aarch64__) || defined(__x86_64__) || defined(__i386__))
+#if ((defined(__GNUC__) && __GNUC__ >= 10) || (defined(__clang__) && __clang_major__ >= 17)) && !defined(_MSC_VER) && (defined(__aarch64__) || defined(__x86_64__) || defined(__i386__))
 # define roundeven_finite(x) __builtin_roundeven (x)
 #else
 /* round x to nearest integer, breaking ties to even */

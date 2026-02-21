@@ -27,7 +27,6 @@ SOFTWARE.
 
 #include <errno.h>
 #include <stdint.h>
-#include <fenv.h>
 #include "dint.h"
 
 // Warning: clang also defines __GNUC__

@@ -50,19 +50,17 @@ static inline double adddd(double xh, double xl, double ch, double cl, double *l
   return s;
 }
 
-static inline double muldd(double xh, double xl, double ch, double cl, double *l){
+static inline double muldd_acc(double xh, double xl, double ch, double cl, double *l){
   double ahlh = ch*xl, alhh = cl*xh, ahhh = ch*xh, ahhl = __builtin_fma(ch, xh, -ahhh);
   ahhl += alhh + ahlh;
-  ch = ahhh + ahhl;
-  *l = (ahhh - ch) + ahhl;
-  return ch;
+  return fasttwosum (ahhh, ahhl, l);
 }
 
 static double polydd(double xh, double xl, int n, const double c[][2], double *l){
   int i = n-1;
   double ch = c[i][0] + *l, cl = (c[i][0] - ch) + *l + c[i][1];
   while(--i>=0){
-    ch = muldd(xh,xl,ch,cl,&cl);
+    ch = muldd_acc(xh,xl,ch,cl,&cl);
     double th = ch + c[i][0], tl = (c[i][0] - th) + ch;
     ch = th;
     cl += tl + c[i][1];
@@ -174,10 +172,10 @@ static double __attribute__((cold,noinline)) as_atan_refine2(double x, double a)
     h = r*zmta;
     hl = __builtin_fma(r,zmta,-h) + rl*zmta;
   }
-  double h2l, h2 = muldd(h, hl, h, hl, &h2l), h4 = h2*h2;
-  double h3l, h3 = muldd(h, hl, h2, h2l, &h3l);
+  double h2l, h2 = muldd_acc(h, hl, h, hl, &h2l), h4 = h2*h2;
+  double h3l, h3 = muldd_acc(h, hl, h2, h2l, &h3l);
   double fl = h2*((cl[0] + h2*cl[1]) + h4*(cl[2] + h2*cl[3])), f = polydd(h2, h2l, 3, ch, &fl);
-  f = muldd(h3,h3l,f,fl,&fl);
+  f = muldd_acc(h3,h3l,f,fl,&fl);
   double ah, al, at;
   if(i==0){
     ah = h;

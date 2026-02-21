@@ -24,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <stdlib.h>
 #include <inttypes.h>
 #if defined(__x86_64__)
 #include <x86intrin.h>
@@ -35,6 +34,8 @@ typedef unsigned _BitInt(128) u128;
 #else
 typedef unsigned __int128 u128;
 #endif
+
+#include <stdlib.h>
 
 // the following represent (-1)^sgn*(h/2^64+m/2^128+l/2^192)*2^ex
 // we have either h=m=l=0 to represent +0 or -0

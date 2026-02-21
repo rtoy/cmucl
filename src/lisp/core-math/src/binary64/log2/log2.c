@@ -50,19 +50,17 @@ static inline double adddd(double xh, double xl, double ch, double cl, double *l
   return s;
 }
 
-static inline double muldd(double xh, double xl, double ch, double cl, double *l){
+static inline double muldd_acc(double xh, double xl, double ch, double cl, double *l){
   double ahlh = ch*xl, alhh = cl*xh, ahhh = ch*xh, ahhl = __builtin_fma(ch, xh, -ahhh);
   ahhl += alhh + ahlh;
-  ch = ahhh + ahhl;
-  *l = (ahhh - ch) + ahhl;
-  return ch;
+  return fasttwosum (ahhh, ahhl, l);
 }
 
 static inline double polydd(double xh, double xl, int n, const double c[][2], double *l){
   int i = n-1;
   double ch = c[i][0] + *l, cl = ((c[i][0] - ch) + *l) + c[i][1];
   while(--i>=0){
-    ch = muldd(xh, xl, ch, cl, &cl);
+    ch = muldd_acc(xh, xl, ch, cl, &cl);
     double th = ch + c[i][0], tl = (c[i][0] - th) + ch;
     ch = th;
     cl += tl + c[i][1];
@@ -297,7 +295,7 @@ static double __attribute__((noinline)) as_log2_refine(double x, double a){
   xh = adddd(xh, xl, sh, sl, &xl);
   sl = xh*(cl[0] + xh*(cl[1] + xh*cl[2]));
   sh = polydd(xh, xl, 3, cy, &sl);
-  sh = muldd(xh, xl, sh, sl, &sl);
+  sh = muldd_acc(xh, xl, sh, sl, &sl);
   sh = adddd(sh, sl, L[1], L[2], &sl);
   double v2, v0 = fasttwosum(L[0], sh, &v2), v1 = fasttwosum(v2, sl, &v2);
   t.f = v1;

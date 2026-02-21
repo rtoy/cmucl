@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include <stdint.h>
 #include <errno.h>
-#include <fenv.h>
+#include <fenv.h> // for feraiseexcept, FE_UNDERFLOW
 #if defined(__x86_64__)
 #include <x86intrin.h>
 #endif
@@ -41,7 +41,7 @@ SOFTWARE.
 /* __builtin_roundeven was introduced in gcc 10:
    https://gcc.gnu.org/gcc-10/changes.html,
    and in clang 17 */
-#if ((defined(__GNUC__) && __GNUC__ >= 10) || (defined(__clang__) && __clang_major__ >= 17)) && (defined(__aarch64__) || defined(__x86_64__) || defined(__i386__))
+#if ((defined(__GNUC__) && __GNUC__ >= 10) || (defined(__clang__) && __clang_major__ >= 17)) && !defined(_MSC_VER) && (defined(__aarch64__) || defined(__x86_64__) || defined(__i386__))
 # define roundeven_finite(x) __builtin_roundeven (x)
 #else
 /* round x to nearest integer, breaking ties to even */
@@ -340,7 +340,8 @@ double cr_exp(double x){
 #ifdef CORE_MATH_SUPPORT_ERRNO
       errno = ERANGE; // underflow
 #endif
-      return 0x1.8p-1022 * 0x1p-55;
+      volatile double z = 0x1p-1022;
+      return z * z;
     }
   }
   const double s = 0x1.71547652b82fep+12;
@@ -353,7 +354,12 @@ double cr_exp(double x){
   /* Use Cody-Waite argument reduction: since |x| < 745, we have |t| < 2^23,
      thus since l2h is exactly representable on 29 bits, l2h*t is exact. */
   double dx = (x - l2h*t) + l2l*t, dx2 = dx*dx;
-  static const double ch[] = {0x1p+0, 0x1p-1, 0x1.55555557e54ffp-3, 0x1.55555553a12f4p-5};
+  // |dx| < log(2)/2^13 (experimentally)
+  /* 1 + x*(c0 + c1*x + ... + c3*x^3) is a degree-4 approximation of exp(x)
+     on [-log(2)/2^13,log(2)/2^13] with absolute error bounded by 2^-76.173
+     according to Sollya */
+  static const double ch[] = {0x1p+0, 0x1p-1, 0x1.55555557e54ffp-3,
+                              0x1.55555553a12f4p-5};
   double p = (ch[0] + dx*ch[1]) + dx2*(ch[2] + dx*ch[3]);
   double fh = th, tx = th*dx, fl = tl + tx*p;
   double eps = 1.64e-19;

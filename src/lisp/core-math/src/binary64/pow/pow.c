@@ -54,20 +54,19 @@ SOFTWARE.
    This code corresponds to reference [5].       
 */
 
-#include "pow.h"
-#include <stdio.h>
+#include <stdio.h> // needed in case of rounding-test failure
 #include <stdint.h>
-#include <stdlib.h>
+#include <stdlib.h> // for exit
 #include <errno.h>
+#include <fenv.h> // for fegetround, FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, ...
 #ifdef __x86_64__
 #include <x86intrin.h>
-#endif
-#if defined(__x86_64__)
 #define FLAG_T uint32_t
 #else
-#include <fenv.h>
 #define FLAG_T fexcept_t
 #endif
+
+#include "pow.h"
 
 // Warning: clang also defines __GNUC__
 #if defined(__GNUC__) && !defined(__clang__)
@@ -85,48 +84,10 @@ SOFTWARE.
 #define ENABLE_EXACT (POW_ITERATION & 0x4)
 #define ENABLE_ZIV3 (POW_ITERATION & 0x8)
 
-// This code emulates the _mm_getcsr SSE intrinsic by reading the FPCR register.
-// fegetexceptflag accesses the FPSR register, which seems to be much slower
-// than accessing FPCR, so it should be avoided if possible.
-// Adapted from sse2neon: https://github.com/DLTcollab/sse2neon
-#if defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
-#if defined(_MSC_VER)
-#include <arm64intr.h>
-#endif
-
-typedef struct
-{
-  uint16_t res0;
-  uint8_t  res1  : 6;
-  uint8_t  bit22 : 1;
-  uint8_t  bit23 : 1;
-  uint8_t  bit24 : 1;
-  uint8_t  res2  : 7;
-  uint32_t res3;
-} fpcr_bitfield;
-
-inline static unsigned int _mm_getcsr(void)
-{
-  union
-  {
-    fpcr_bitfield field;
-    uint64_t value;
-  } r;
-
-#if defined(_MSC_VER) && !defined(__clang__)
-  r.value = _ReadStatusReg(ARM64_FPCR);
-#else
-  __asm__ __volatile__("mrs %0, FPCR" : "=r"(r.value));
-#endif
-  static const unsigned int lut[2][2] = {{0x0000, 0x2000}, {0x4000, 0x6000}};
-  return lut[r.field.bit22][r.field.bit23];
-}
-#endif  // defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
-
 static FLAG_T
 get_flag (void)
 {
-#if defined(__x86_64__) || defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+#if defined(__x86_64__)
   return _mm_getcsr ();
 #else
   fexcept_t flag;
@@ -138,7 +99,7 @@ get_flag (void)
 static void
 set_flag (FLAG_T flag)
 {
-#ifdef __x86_64__
+#if defined(__x86_64__)
   _mm_setcsr (flag);
 #else
   fesetexceptflag (&flag, FE_INEXACT);
@@ -989,7 +950,6 @@ static void log_3 (qint64_t *r, qint64_t *x) {
 */
 static inline void
 exp_1 (double *eh, double *el, double rh, double rl, double s) {
-
 #define RHO0 -0x1.74910ee4e8a27p+9
 // #define RHO1 -0x1.577453f1799a6p+9
 /* We increase the initial value of RHO1 to avoid spurious underflow in
@@ -1000,9 +960,13 @@ exp_1 (double *eh, double *el, double rh, double rl, double s) {
 #define RHO2 0x1.62e42e709a95bp+9
 #define RHO3 0x1.62e4316ea5df9p+9
 
-  // use !(rh <= RHO2) instead of rh < RHO2 to catch rh = NaN too
-  if (__builtin_expect(!(rh <= RHO2), 0)) {
-    if (rh > RHO3) {
+  /* Section 7.12.17 from the C standard (N3220) says: "Relational operators
+     may raise the "invalid" floating-point exception when argument
+     values are NaNs". We thus first check rh != rh to detect NaNs,
+     hoping this will not raise invalid. */
+  if (__builtin_expect(rh != rh || rh > RHO2, 0)) {
+    // again, first check rh == rh to detect NaNs
+    if (rh == rh && rh > RHO3) {
       /* If rh > RHO3, we are sure there is overflow,
          For s=1 we return eh = el = DBL_MAX, which yields
          res_min = res_max = +Inf for rounding up or to nearest,
@@ -1282,7 +1246,7 @@ exact_pow (double *r, double x, double y, const dint64_t *z,
       int64_t g = (int64_t) G;
       pow2(r, g);
 #ifdef CORE_MATH_SUPPORT_ERRNO
-      if (g >= 1024)
+      if (g >= 1024 || g <= -1075)
         errno = ERANGE;
 #endif
       return 1;
@@ -1528,6 +1492,7 @@ is_exact (double x, double y)
 // Correctly rounded power function
 double cr_pow (double x, double y) {
   double s = 1.0; /* sign of the result */
+  double x0 = x; // original value of x
 
   f64_u _x = {.f = x};
   f64_u _y = {.f = y};
@@ -1536,7 +1501,7 @@ double cr_pow (double x, double y) {
 
     if (__builtin_isnan(x)) {
       // IEEE 754-2019: pow(x,+/-0) = 1 if x is not a signaling NaN
-      if (y == 0.0 && !issignaling(x))
+      if (y == 0.0 && !is_signaling(x))
         return 1.0;
 
       /* pow(sNaN, y) = qNaN. This is implicit in IEEE 754-2019,
@@ -1561,7 +1526,7 @@ double cr_pow (double x, double y) {
 
     if (__builtin_isnan(y)) {
       // IEEE 754-2019: pow(1,y) = 1 for any y (even a quiet NaN)
-      if (x == 1.0 && !issignaling(y))
+      if (x == 1.0 && !is_signaling(y))
         return 1.0;
 
       // pow(x, sNaN) = qNaN (see above)
@@ -1820,7 +1785,7 @@ double cr_pow (double x, double y) {
   }
 
   if (y == 0.5)
-    return sqrt (x);
+    return __builtin_sqrt (x);
 
   if (y == 0.0)
     return 1.0;
@@ -1912,7 +1877,7 @@ double cr_pow (double x, double y) {
   // Detect rounding boundary cases
   double e;
 
-  if (exact_pow (&e, x, y, &R, exact))
+  if (exact_pow (&e, x0, y, &R, exact))
     return e;
 #endif /* ENABLE_EXACT */
 #endif /* ENABLE_ZIV2 */

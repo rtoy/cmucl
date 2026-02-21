@@ -1,6 +1,6 @@
 /* Correctly rounded hyperbolic sine for binary64 values.
 
-Copyright (c) 2023 Alexei Sibidanov.
+Copyright (c) 2023-2025 Alexei Sibidanov <sibid@uvic.ca>.
 
 This file is part of the CORE-MATH project
 (https://core-math.gitlabpages.inria.fr/).
@@ -47,29 +47,24 @@ static inline double fasttwosum(double x, double y, double *e){
 }
 
 static inline double muldd(double xh, double xl, double ch, double cl, double *l){
-  double ahlh = ch*xl, alhh = cl*xh, ahhh = ch*xh, ahhl = __builtin_fma(ch, xh, -ahhh);
-  ahhl += alhh + ahlh;
-  ch = ahhh + ahhl;
-  *l = (ahhh - ch) + ahhl;
-  return ch;
+  double h = ch*xh;
+  *l = __builtin_fma(ch,xh, -h) + xh*cl + ch*xl;
+  return h;
 }
 
 static inline double mulddd(double xh, double xl, double ch, double *l){
-  double ahlh = ch*xl, ahhh = ch*xh, ahhl = __builtin_fma(ch, xh, -ahhh);
-  ahhl += ahlh;
-  ch = ahhh + ahhl;
-  *l = (ahhh - ch) + ahhl;
-  return ch;
+  double h = ch*xh;
+  *l = __builtin_fma(ch,xh, -h) + ch*xl;
+  return h;
 }
 
 static inline double polydd(double xh, double xl, int n, const double c[][2], double *l){
   int i = n-1;
-  double ch = c[i][0] + *l, cl = ((c[i][0] - ch) + *l) + c[i][1];
+  double ch = c[i][0] + *l, cl = ((c[i][0] - ch) + *l) + c[i][1], e;
   while(--i>=0){
     ch = muldd(xh, xl, ch, cl, &cl);
-    double th = ch + c[i][0], tl = (c[i][0] - th) + ch;
-    ch = th;
-    cl += tl + c[i][1];
+    ch = fasttwosum(c[i][0], ch, &e);
+    cl = (cl + c[i][1]) + e;
   }
   *l = cl;
   return ch;
@@ -123,6 +118,7 @@ static __attribute__((noinline)) double as_sinh_database(double x, double f){
     {0x1.4169f234f23b9p-2, 0x1.46b7b3b358f99p-2, -0x1p-56},
     {0x1.616cc75d49226p-2, 0x1.687bd068c1c1ep-2, 0x1.ap-111},
     {0x1.ae3773250e7d2p-2, 0x1.bafc3479fc9ccp-2, -0x1p-105},
+    {0x1.b7efa91915c95p-2, 0x1.c59869f17b483p-2, -0x1p-104},
     {0x1.d68039861ab53p-2, 0x1.e73b46abb01e1p-2, -0x1.2p-109},
     {0x1.e90f16eb88c09p-2, 0x1.fbdd4a37760b7p-2, -0x1.f8p-108},
     {0x1.a3fc7e4dd47d1p-1, 0x1.d4b21ebf542fp-1, 0x1.ep-107},
@@ -144,6 +140,7 @@ static __attribute__((noinline)) double as_sinh_database(double x, double f){
     {0x1.43a81752eabe7p+3, 0x1.81d364845ecfap+13, -0x1p-90},
     {0x1.16369cd53bb69p+4, 0x1.0fbc6c02b1c9p+24, -0x1.9p-81},
     {0x1.20e29ea8b51e2p+4, 0x1.08b8abba28abcp+25, 0x1.9bp-79},
+    {0x1.92a5c27afbe82p+4, 0x1.3c81f9a247253p+35, 0x1p-67},
     {0x1.a1e4f11b513d7p+4, 0x1.9a65b6c2e2185p+36, -0x1.bcp-70},
     {0x1.c089fcf166171p+4, 0x1.5c452e0e37569p+39, 0x1.4p-69},
     {0x1.e42a98b3a0be5p+4, 0x1.938768ca4f8aap+42, 0x1.6dp-62},
@@ -282,7 +279,7 @@ double cr_sinh(double x){
   u64 aix = ix.u;
   if(__builtin_expect(aix<0x3fd0000000000000ull, 0)){ // |x| < 0x1p-2
     if(__builtin_expect(aix<0x3e57137449123ef7ull, 0)) {
-      // |x| < 0x1.7137449123ef7p-26
+      // |x| < x0 = 0x1.7137449123ef7p-26
       /* We have underflow exactly when 0 < |x| < 2^-1022:
          for RNDU, sinh(2^-1022-2^-1074) would round to 2^-1022-2^-1075
          with unbounded exponent range */
@@ -292,20 +289,30 @@ double cr_sinh(double x){
 #endif
       return __builtin_fma(x,0x1p-55,x);
     }
+    /* x + p where p = c[0]*x^3 + c[1]*x^5 + c[2]*x^7 + c[3]*x^9 + c[4]*x^11
+       is a minimax approximation of sinh(x) on [x0,1/4] with relative error
+       less than 2^-60.509 */
     static const double c[] =
-      {0x1.5555555555555p-3, 0x1.1111111111087p-7, 0x1.a01a01a12e1c3p-13, 0x1.71de2e415aa36p-19, 0x1.aed2bff4269e6p-26};
-    double x2 = x*x, x3 = x2*x, x4 = x2*x2, p = x3*((c[0] + x2*c[1]) + x4*((c[2] + x2*c[3]) + x4*c[4]));
-    double e = x3*0x1.9p-53, lb = x + (p - e), ub = x + (p + e);
+      {0x1.5555555555555p-3, 0x1.1111111111087p-7, 0x1.a01a01a12e1c3p-13,
+       0x1.71de2e415aa36p-19, 0x1.aed2bff4269e6p-26};
+    double x2 = x*x, x3 = x2*x, x4 = x2*x2,
+      p = x3*((c[0] + x2*c[1]) + x4*((c[2] + x2*c[3]) + x4*c[4]));
+    // fails with e = x3*0x1.5p-53 and x=0x1.71c5b3515d069p-8 (rndz, no fma)
+    double e = x3*0x1.ep-53, lb = x + (p - e), ub = x + (p + e);
     if(lb == ub) return lb;
     return as_sinh_zero(x);
   }
   if(__builtin_expect(aix>0x408633ce8fb9f87dull, 0)){ // |x| >~ 710.47586
     if(aix>=0x7ff0000000000000ull) return x + x; // nan Inf
 #ifdef CORE_MATH_SUPPORT_ERRNO
-  errno = ERANGE;
+    errno = ERANGE;
 #endif
-	return __builtin_copysign(0x1p1023, x)*2.0;
-      }
+    return __builtin_copysign(0x1p1023, x)*2.0;
+  }
+  // now 0.25 <= |x| < 710.47586
+  /* checked exhaustively with/without FMA:
+   * 0.25 <= x < 4
+   */
   int64_t il = ((u64)jt.u<<14)>>40, jl = -il;
   int64_t i1 = il&0x3f, i0 = (il>>6)&0x3f, ie = il>>12;
   int64_t j1 = jl&0x3f, j0 = (jl>>6)&0x3f, je = jl>>12;
@@ -341,6 +348,7 @@ double cr_sinh(double x){
       if(ml<=16 || eh-el>103) return as_sinh_database(x, th);
       return th;
     }
+    // now 5 < |x| < 36.736801
     double q0h = t0[j0][1], q1h = t1[j1][1], qh = q0h*q1h;
     th *= sp.f;
     tl *= sp.f;
@@ -352,13 +360,14 @@ double cr_sinh(double x){
 
     rh *= __builtin_copysign(1, x);
     rl *= __builtin_copysign(1, x);
-    double e = 0.09e-18*rh, lb = rh + (rl - e), ub = rh + (rl + e);
+    // fails with e = 0.1162e-18*rh and x=0x1.4059050000564p+2 (rndz, no fma)
+    double e = 0.117e-18*rh, lb = rh + (rl - e), ub = rh + (rl + e);
     if(lb == ub) return lb;
 
     th = as_exp_accurate( ax, t, th, tl, &tl);
-    if(__builtin_expect(aix>0x403f666666666666ull, 0)){
+    if(__builtin_expect(aix>0x403f666666666666ull, 0)){ // |x| > 31.4
       rh = th - qh; rl = ((th - rh) - qh) + tl;
-    } else {
+    } else { // 5 < |x| <= 31.4
       qh = q0h*q1h;
       double q0l = t0[j0][0], q1l = t1[j1][0];
       double ql = q0h*q1l + q1h*q0l + __builtin_fma(q0h,q1h,-qh);
@@ -367,7 +376,7 @@ double cr_sinh(double x){
       qh = as_exp_accurate(-ax,-t, qh, ql, &ql);
       rh = th - qh; rl = (((th - rh) - qh) - ql) + tl;
     }
-  } else {
+  } else { // 0.25 <= |x| <= 5
     double q0h = t0[j0][1], q0l = t0[j0][0];
     double q1h = t1[j1][1], q1l = t1[j1][0];
     double qh = q0h*q1h, ql = q0h*q1l + q1h*q0l + __builtin_fma(q0h,q1h,-qh);
@@ -383,7 +392,7 @@ double cr_sinh(double x){
     rl = ((fph - rh) - fmh) - fml + fpl;
     rh *= __builtin_copysign(1, x);
     rl *= __builtin_copysign(1, x);
-    double e = 0.28e-18*rh, lb = rh + (rl - e), ub = rh + (rl + e);
+    double e = 0.33e-18*rh, lb = rh + (rl - e), ub = rh + (rl + e);
     if(lb == ub) return lb;
     th = as_exp_accurate( ax, t, th, tl, &tl);
     qh = as_exp_accurate(-ax,-t, qh, ql, &ql);
@@ -396,6 +405,7 @@ double cr_sinh(double x){
   rh *= __builtin_copysign(1, x);
   rl *= __builtin_copysign(1, x);
   rh += rl;
+  // fails with ml<=14 and ul.u + 7 above with x=0x1.c13876341b62ep-1 and rndz
   if(__builtin_expect(ml<=16 || eh-el>103, 0)) return as_sinh_database(x, rh);
   return rh;
 }
