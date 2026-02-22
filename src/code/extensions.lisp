@@ -852,6 +852,56 @@
                      (hex-parse-error-text c) (hex-parse-error-message c)))))
 
 (defun parse-hex-float (str)
+  "Parses C-style hex strings by converting to an exact rational, then to double-float."
+  (let* ((str (string-trim '(#\Space #\Tab #\Newline #\Return) (string-downcase str)))
+         (len (length str)))
+    (when (zerop len) (error 'hex-parse-error :text str :message "Empty string"))
+    (let* ((has-sign (or (char= (char str 0) #\-) (char= (char str 0) #\+)))
+           (sign (if (and has-sign (char= (char str 0) #\-)) -1 1))
+           (start (if has-sign 1 0)))
+      (cond
+        ((string= str "inf" :start1 start) 
+         (if (= sign 1) double-float-positive-infinity double-float-negative-infinity))
+        ((string= str "nan" :start1 start) :nan)
+        (t
+         (unless (and (<= (+ start 2) len) (string= str "0x" :start1 start :end1 (+ start 2)))
+           (error 'hex-parse-error :text str :message "Missing '0x' prefix"))
+         (let ((p-pos (position #\p str :start start)))
+           (unless p-pos (error 'hex-parse-error :text str :message "Missing exponent 'p'"))
+           
+           (loop for i from start below len
+                 when (member (char str i) '(#\Space #\Tab #\Newline #\Return))
+                 do (error 'hex-parse-error :text str :message "Internal whitespace detected"))
+
+           (let* ((sig-start (+ start 2))
+                  (dot-pos (position #\. str :start sig-start :end p-pos))
+                  (exp-start (1+ p-pos)))
+             (when (or (= sig-start p-pos) 
+                       (and dot-pos (= (1+ sig-start) p-pos) (= sig-start dot-pos)))
+               (error 'hex-parse-error :text str :message "No hex digits in significand"))
+             
+             (handler-case
+                 (let* ((frac-hex-len (if dot-pos (- p-pos (1+ dot-pos)) 0))
+                        ;; 1. Parse significand as one large integer
+                        (significand-int 
+                         (if (null dot-pos)
+                             (parse-integer str :start sig-start :end p-pos :radix 16)
+                             (let ((leading (if (= sig-start dot-pos) 0 
+                                                (parse-integer str :start sig-start :end dot-pos :radix 16)))
+                                   (trailing (if (= (1+ dot-pos) p-pos) 0
+                                                 (parse-integer str :start (1+ dot-pos) :end p-pos :radix 16))))
+                               (+ (ash leading (* 4 frac-hex-len)) trailing))))
+                        ;; 2. Parse exponent
+                        (raw-exponent (parse-integer str :start exp-start :end len))
+                        ;; 3. Build exact rational: significand / 16^frac-len * 2^exponent
+                        (rational-val (* significand-int 
+                                         (expt 2 (- raw-exponent (* 4 frac-hex-len))))))
+                   ;; 4. Coerce to double-float
+                   (* sign (float rational-val 1.0d0)))
+               (error (c) (error 'hex-parse-error :text str :message (format nil "~A" c)))))))))))
+
+#+nil
+(defun parse-hex-float (str)
   "Parses C-style hex strings into double-floats using robust integer scaling."
   (let* ((str (string-trim '(#\Space #\Tab #\Newline #\Return) (string-downcase str)))
          (len (length str)))
