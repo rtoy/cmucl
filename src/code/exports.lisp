@@ -1368,7 +1368,12 @@
   (:export "PACKAGE-LOCAL-NICKNAMES"
 	   "ADD-PACKAGE-LOCAL-NICKNAME"
 	   "REMOVE-PACKAGE-LOCAL-NICKNAME"
-	   "PACKAGE-LOCALLY-NICKNAMED-BY-LIST"))
+	   "PACKAGE-LOCALLY-NICKNAMED-BY-LIST")
+  ;; Printing and parsing of C-style hex floats
+  (:export "PRINT-HEX-FLOAT"
+	   "FORMAT-HEX-FLOAT"
+	   "HEX-PARSE-ERROR"
+	   "PARSE-HEX-FLOAT"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
