@@ -37,6 +37,19 @@
   (assert-equal #x80000000         (get-single-bits (ext:parse-hex-float "-0x0.0p+0f")))
   (assert-true (typep (ext:parse-hex-float "-0x0.0p+0f") 'single-float)))
 
+(define-test test-subnormal-boundaries
+  (:tag :edge)
+  ;; Test smallest single-float subnormal
+  (let* ((val (kernel:make-single-float 1))
+         (str (ext::print-hex-single-float val))
+         (parsed (ext:parse-hex-float str)))
+    (assert-equal (get-single-bits val) (get-single-bits parsed)))
+  ;; Test smallest double-float subnormal
+  (let* ((val (kernel:make-double-float 0 1))
+         (str (ext::print-hex-double-float val))
+         (parsed (ext:parse-hex-float str)))
+    (assert-equal (get-double-bits val) (get-double-bits parsed))))
+
 (define-test test-double-roundtrip
   (:tag :stress)
   (loop repeat 10000 do
