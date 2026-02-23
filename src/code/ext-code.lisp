@@ -23,39 +23,53 @@
 
 ;;; C-style hex float printer and parser
 (defun print-hex-single-float (val)
-  "Prints a single-float in bit-perfect C-style hex using raw bits."
-  (cond ((float-nan-p val) "nan")
-        ((float-infinity-p val) (if (plusp val) "inf" "-inf"))
-        ((zerop val) (if (eql val -0.0f0) "-0x0.0p+0" "0x0.0p+0"))
+  "Prints a single-float in C-style hex format."
+  (cond ((float-nan-p val)
+	 "nan")
+        ((float-infinity-p val)
+	 (if (plusp val) "inf" "-inf"))
+        ((zerop val)
+	 (if (eql val -0.0f0)
+	     "-0x0.0p+0f" "0x0.0p+0f"))
         (t
          (let* ((bits (ldb (byte 32 0) (kernel:single-float-bits val)))
                 (sign (ldb (byte 1 31) bits))
                 (exp-bits (ldb (byte 8 23) bits))
-                (mantissa (ldb (byte 23 0) bits)))
+                (mantissa (ldb (byte 23 0) bits))
+		;; Print lower-case hex digits.
+		(*print-case* :downcase))
            (if (zerop exp-bits)
                ;; Subnormal: Leading digit 0, exponent fixed at -126
-               (format nil "~A0x0.~6,'0Xp-126"
+               (format nil "~A0x0.~6,'0Xp-126f"
                        (if (= sign 1) "-" "")
                        (ash mantissa 1)) ; Align 23 bits to 24 bits (6 hex digits)
                ;; Normalized: Leading digit 1, exponent bias 127
-               (format nil "~A0x1.~6,'0Xp~A"
+               (format nil "~A0x1.~6,'0Xp~Af"
                        (if (= sign 1) "-" "")
                        (ash mantissa 1) ; Align 23 bits to 24 bits (6 hex digits)
                        (- exp-bits 127)))))))
 
 (defun print-hex-double-float (val)
-  "Prints a double-float in bit-perfect C-style hex using raw bits."
-  (cond ((float-nan-p val) "nan")
-        ((float-infinity-p val) (if (plusp val) "inf" "-inf"))
-        ((zerop val) (if (eql val -0.0d0) "-0x0.0p+0" "0x0.0p+0"))
+  "Prints a double-float in C-style hex format."
+  (cond ((float-nan-p val)
+	 "nan")
+        ((float-infinity-p val)
+	 (if (plusp val) "inf" "-inf"))
+        ((zerop val)
+	 (if (eql val -0.0d0)
+	     "-0x0.0p+0" "0x0.0p+0"))
         (t
-         (multiple-value-bind (hi-bits lo-bits) (kernel:double-float-bits val)
+         (multiple-value-bind (hi-bits lo-bits)
+	     (kernel:double-float-bits val)
            (let* ((hi (ldb (byte 32 0) hi-bits))
                   (lo (ldb (byte 32 0) lo-bits))
                   (sign (ldb (byte 1 31) hi))
                   (exp-bits (ldb (byte 11 20) hi))
                   ;; Combine 20 bits from high word and 32 bits from low word
-                  (mantissa (logior (ash (ldb (byte 20 0) hi) 32) lo)))
+                  (mantissa (logior (ash (ldb (byte 20 0) hi) 32)
+				    lo))
+		  ;; Print lower-case hex digits.
+		  (*print-case* :downcase))
              (if (zerop exp-bits)
                  ;; Subnormal: Leading digit 0, exponent fixed at -1022
                  (format nil "~A0x0.~13,'0Xp-1022"
@@ -96,7 +110,7 @@
 ;;;
 ;;; Parse a C-style float hex strings.  Always returns a double-float.
 ;;; Error-checking is enabled for malformed strings.
-(define-condition hex-parse-error (error)
+(define-condition hex-parse-error (parse-error)
   ((text :initarg :text :reader hex-parse-error-text)
    (message :initarg :message :reader hex-parse-error-message))
   (:report (lambda (c s)
@@ -105,15 +119,23 @@
 
 (defun parse-hex-float (str)
   "Parses hex floats using scale-float for the exponent. Strictly hex-literal only."
-  (let* ((str (string-trim '(#\Space #\Tab #\Newline #\Return) (string-downcase str)))
+  (let* ((str (string-trim '(#\Space #\Tab #\Newline #\Return)
+			   (string-downcase str)))
          (len (length str)))
-    (when (zerop len) (error 'hex-parse-error :text str :message "Empty string"))
+    (when (zerop len)
+      (error 'hex-parse-error :text str :message "Empty string"))
     
-    (let* ((ends-with-f (and (> len 1) (char= (char str (1- len)) #\f)))
-           (effective-len (if ends-with-f (1- len) len))
-           (prototype (if ends-with-f 1.0f0 1.0d0))
-           (has-sign (or (char= (char str 0) #\-) (char= (char str 0) #\+)))
-           (sign (if (and has-sign (char= (char str 0) #\-)) -1 1))
+    (let* ((ends-with-f (and (> len 1)
+			     (char= (char str (1- len)) #\f)))
+           (effective-len (if ends-with-f
+			      (1- len) len))
+           (prototype (if ends-with-f
+			  1.0f0 1.0d0))
+           (has-sign (or (char= (char str 0) #\-)
+			 (char= (char str 0) #\+)))
+           (sign (if (and has-sign
+			  (char= (char str 0) #\-))
+		     -1 1))
            (start (if has-sign 1 0)))
       
       (unless (and (<= (+ start 2) effective-len) 
@@ -121,7 +143,8 @@
         (error 'hex-parse-error :text str :message "Missing '0x' prefix"))
       
       (let ((p-pos (position #\p str :start start :end effective-len)))
-        (unless p-pos (error 'hex-parse-error :text str :message "Missing exponent 'p'"))
+        (unless p-pos
+	  (error 'hex-parse-error :text str :message "Missing exponent 'p'"))
 
         (let* ((sig-start (+ start 2))
                (dot-pos (position #\. str :start sig-start :end p-pos))
@@ -130,7 +153,8 @@
                (leading-str (subseq str sig-start (or dot-pos p-pos)))
                ;; Trailing hex: digits after the dot
                (trailing-str (if dot-pos (subseq str (1+ dot-pos) p-pos) ""))
-               (has-digits (or (plusp (length leading-str)) (plusp (length trailing-str)))))
+               (has-digits (or (plusp (length leading-str))
+			       (plusp (length trailing-str)))))
           
           (unless has-digits
             (error 'hex-parse-error :text str :message "No hex digits in significand"))
@@ -149,4 +173,7 @@
                      (raw-exponent (parse-integer str :start exp-start :end effective-len)))
                 ;; Use scale-float to apply the binary exponent efficiently
                 (* sign (scale-float significand raw-exponent)))
-            (error (c) (error 'hex-parse-error :text str :message (format nil "~A" c)))))))))
+            (error (c)
+	      (error 'hex-parse-error :text str :message (format nil "~A" c)))))))))
+
+
