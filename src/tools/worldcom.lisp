@@ -221,6 +221,7 @@
 (comf "target:code/misc")
 (comf "target:code/misc-doc")
 (comf "target:code/extensions" :byte-compile t)
+(comf "target:code/ext-code")
 (comf "target:code/commandline")
 (comf "target:code/env-access")
 
