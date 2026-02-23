@@ -4,153 +4,58 @@
 
 (in-package "EXTENSIONS-TESTS")
 
-#+nil
-(defun test-invalid-strings ()
-  (format t "Testing invalid strings...~%")
-  (let ((invalid-cases '("" "1.0" "0x1.0" "0x1.0p" "0x1.zp+0" "0x.p+0" "0x1 .0p+0")))
-    (dolist (case invalid-cases)
-      (handler-case
-          (progn (parse-hex-float case) (error "Failed to trap ~S" case))
-        (hex-parse-error () (format t "  Caught expected error for: ~S~%" case)))))
-  (format t "Invalid string tests passed.~%"))
+(defun get-double-bits (val)
+  (multiple-value-bind (hi lo) (kernel:double-float-bits val)
+    (logior (ash (ldb (byte 32 0) hi) 32) (ldb (byte 32 0) lo))))
 
-(define-test parse-hex.invalid-strings
-  (dolist (case '("" "1.0" "0x1.0" "0x1.0p" "0x1.zp+0" "0x.p+0" "0x1 .0p+0"))
-    (assert-error 'ext:hex-parse-error
-		  (ext:parse-hex-float case)
-		  case)))
+(defun get-single-bits (val)
+  (ldb (byte 32 0) (kernel:single-float-bits val)))
 
-#+nil
-(defun run-hex-float-tests (&key (iterations 20000))
-  "Validates bit-consistency for double floats."
-  (format t "Testing ~D random bit patterns (Double Precision)...~%" iterations)
-  (loop repeat iterations do
-    (let* ((hi-bits (random (expt 2 32)))
-           (hi (if (logbitp 31 hi-bits)
-                   (- hi-bits (expt 2 32))
-                   hi-bits))
-           (lo (random (expt 2 32)))
-           (d-float (kernel:make-double-float hi lo))
-           (d-str (print-hex-double-float d-float))
-           (d-parsed (parse-hex-float d-str)))
-      (cond
-        ((eq d-parsed :nan)
-         (assert (float-nan-p d-float)))
-        (t
-         (multiple-value-bind (n-hi n-lo)
-             (kernel:double-float-bits d-parsed)
-           (assert (and (= (ldb (byte 32 0) hi)
-                           (ldb (byte 32 0) n-hi)) 
-                        (= lo n-lo))))))))
-  (format t "Bit verification passed.~%"))
+(define-test test-hex-syntax
+  (:tag :validation)
+  (assert-error 'ext:hex-parse-error (ext:parse-hex-float "inf"))
+  (assert-error 'ext:hex-parse-error (ext:parse-hex-float "0x.p+0"))
+  (assert-error 'ext:hex-parse-error (ext:parse-hex-float "0x1.0p")))
 
-(define-test hex-parse-print-consistency
-  (loop repeat 20000 do
-        (let* ((hi-bits (random (expt 2 32)))
-           (hi (if (logbitp 31 hi-bits)
-                   (- hi-bits (expt 2 32))
-                   hi-bits))
-           (lo (random (expt 2 32)))
-           (d-float (kernel:make-double-float hi lo))
-           (d-str (ext:print-hex-float d-float))
-           (d-parsed (ext:parse-hex-float d-str)))
-      (cond
-        ((eq d-parsed :nan)
-         (assert-true (ext:float-nan-p d-float)
-		      d-float d-parsed))
-        (t
-         (multiple-value-bind (n-hi n-lo)
-             (kernel:double-float-bits d-parsed)
-           (assert-true (= (ldb (byte 32 0) hi)
-                           (ldb (byte 32 0) n-hi))
-			hi n-hi)
-	   (assert-true (= lo n-lo)
-			lo n-lo)))))))
-	
-
-#+nil
-(defun run-subnormal-stress-test ()
-  (format t "Running subnormal stress tests...~%")
-  (let* ((s-str "0x0.10534ec00dae8p-1022")
-         (parsed (parse-hex-float s-str)))
-    ;; Using assumed builtin float-denormalized-p
-    (assert (float-denormalized-p parsed))
-    (multiple-value-bind (hi lo) (kernel:double-float-bits parsed)
-      (assert (= (logior (ash (ldb (byte 20 0) hi) 32) lo) #x10534ec00dae8))))
-  (loop repeat 5000 do
-    (let* ((lo (random (expt 2 32)))
-           (hi (random (expt 2 20))) ; biased exponent is 0
-           (val (kernel:make-double-float hi lo))
-           (str (ext::print-hex-double-float val))
-           (parsed (parse-hex-float str)))
-      (unless (zerop val)
-        (multiple-value-bind (new-hi new-lo) (kernel:double-float-bits parsed)
-          (assert (and (= hi new-hi) (= lo new-lo)))))))
-  (format t "Subnormal stress test passed.~%"))
-
-(define-test hex-parse-denormals.1
-  (let* ((s-str "0x0.10534ec00dae8p-1022")
-         (parsed (ext:parse-hex-float s-str)))
-    (assert-true (ext:float-denormalized-p parsed))
-    (multiple-value-bind (hi lo)
-	(kernel:double-float-bits parsed)
-      (assert-true (= (logior (ash (ldb (byte 20 0) hi) 32) lo)
-		      #x10534ec00dae8)))))
+(define-test test-cliff-boundaries
+  (:tag :precision)
+  ;; Double Precision (-1022 Cliff)
   
-(define-test hex-parse-denormals.random
-  (loop repeat 5000 do
-    (let* ((lo (random (expt 2 32)))
-           (hi (random (expt 2 20))) ; biased exponent is 0
-           (val (kernel:make-double-float hi lo))
-           (str (ext::print-hex-double-float val))
-           (parsed (ext:parse-hex-float str)))
-      (unless (zerop val)
-        (multiple-value-bind (new-hi new-lo)
-	    (kernel:double-float-bits parsed)
-          (assert-true (and (= hi new-hi) (= lo new-lo))))))))
+  (assert-equal #x0010000000000000 (get-double-bits (ext:parse-hex-float "0x1.0000000000000p-1022")))
+  (assert-equal #x000fffffffffffff (get-double-bits (ext:parse-hex-float "0x0.fffffffffffffp-1022")))
+  (assert-equal #x001f0195cb356b8f (get-double-bits (ext:parse-hex-float "0x1.f0195cb356b8fp-1022")))
+  
+  ;; Single Precision (-126 Cliff)
+  
+  (assert-equal #x00800000 (get-single-bits (ext:parse-hex-float "0x1.000000p-126f")))
+  (assert-equal #x00400000 (get-single-bits (ext:parse-hex-float "0x0.800000p-126f")))
+  (assert-equal #x7f7fffff (get-single-bits (ext:parse-hex-float "0x1.fffffep+127f"))))
 
-#+nil
-(defun run-cliff-tests ()
-  "Tests precision around the smallest normalized and largest subnormal boundary."
-  (format t "Running boundary (cliff) tests...~%")
-  (let ((cases '(;; Smallest normalized number (2^-1022)
-                 ("0x1.0000000000000p-1022" #x0010000000000000)
-                 ;; Smallest normalized + 1 ULP
-                 ("0x1.0000000000001p-1022" #x0010000000000001)
-                 ;; Smallest normalized - 1 ULP (Largest subnormal)
-                 ("0x0.fffffffffffffp-1022" #x000fffffffffffff)
-                 ;; The user reported failing case
-                 ("0x1.f0195cb356b8fp-1022" #x001f0195cb356b8f))))
-    (dolist (test cases)
-      (destructuring-bind (str expected-bits) test
-        (let* ((parsed (parse-hex-float str))
-               (actual-bits (multiple-value-bind (hi lo) (kernel:double-float-bits parsed)
-                              (logior (ash (ldb (byte 32 0) hi) 32) lo))))
-          (format t "  Testing ~A...~%" str)
-          (unless (= actual-bits expected-bits)
-            (error "Cliff Mismatch!~%Str: ~A~%Expected: ~16,'0X~%Actual:   ~16,'0X" 
-                   str expected-bits actual-bits))))))
-  (format t "Cliff tests passed.~%"))
+(define-test test-negative-zero
+  (:tag :edge-cases)
+  (assert-equal #x8000000000000000 (get-double-bits (ext:parse-hex-float "-0x0.0p+0")))
+  (assert-equal #x80000000         (get-single-bits (ext:parse-hex-float "-0x0.0p+0f")))
+  (assert-true (typep (ext:parse-hex-float "-0x0.0p+0f") 'single-float)))
 
-;; Test precision around the smallest normalized and larges denormal boundary.
-(define-test hex-parse-denormal-boundary
-  (let ((cases '(;; Smallest normalized number (2^-1022)
-                 ("0x1.0000000000000p-1022" #x0010000000000000)
-                 ;; Smallest normalized + 1 ULP
-                 ("0x1.0000000000001p-1022" #x0010000000000001)
-                 ;; Smallest normalized - 1 ULP (Largest subnormal)
-                 ("0x0.fffffffffffffp-1022" #x000fffffffffffff)
-                 ;; The user reported failing case
-                 ("0x1.f0195cb356b8fp-1022" #x001f0195cb356b8f)
-		 ;; Failing case 1: 0x0.10534ec00dae8p-1022
-                 ("0x0.10534ec00dae8p-1022" #x00010534ec00dae8)
-                 ;; Failing case 2: 0x0.49df16729d954p-1022
-                 ("0x0.49df16729d954p-1022" #x00049df16729d954))))
-    (dolist (test cases)
-      (destructuring-bind (str expected-bits) test
-        (let* ((parsed (ext:parse-hex-float str))
-               (actual-bits (multiple-value-bind (hi lo)
-				(kernel:double-float-bits parsed)
-                              (logior (ash (ldb (byte 32 0) hi) 32) lo))))
-	  (assert-equal expected-bits actual-bits
-			str))))))
+(define-test test-double-roundtrip
+  (:tag :stress)
+  (loop repeat 10000 do
+    (let* ((hi-bits (random #x100000000))
+           (hi (if (logbitp 31 hi-bits) (- hi-bits #x100000000) hi-bits))
+           (lo (random #x100000000))
+           (val (kernel:make-double-float hi lo)))
+      (unless (or (ext:float-nan-p val) (ext:float-infinity-p val))
+        (let* ((str (ext::print-hex-double-float val))
+               (parsed (ext:parse-hex-float str)))
+          (assert-equal (get-double-bits val) (get-double-bits parsed)))))))
+
+(define-test test-single-roundtrip
+  (:tag :stress)
+  (loop repeat 10000 do
+    (let* ((bits-raw (random #x100000000))
+           (bits (if (logbitp 31 bits-raw) (- bits-raw #x100000000) bits-raw))
+           (val (kernel:make-single-float bits)))
+      (unless (or (ext:float-nan-p val) (ext:float-infinity-p val))
+        (let* ((str (concatenate 'string (ext::print-hex-single-float val) "f"))
+               (parsed (ext:parse-hex-float str)))
+          (assert-equal (get-single-bits val) (get-single-bits parsed)))))))

@@ -22,94 +22,50 @@
 
 
 ;;; C-style hex float printer and parser
-(defun print-hex-single-float (val &optional force-sign)
-  (let* ((bits (kernel:single-float-bits val))
-         (u-bits (ldb (byte 32 0) bits))
-         (sign-bit (ldb (byte 1 31) u-bits))
-         (biased-exp (ldb (byte 8 23) u-bits))
-         (fraction (ldb (byte 23 0) u-bits))
-         (sign-str (cond ((= sign-bit 1) "-") (force-sign "+") (t ""))))
-    (cond 
-      ((= biased-exp 255) (if (zerop fraction) (format nil "~Ainf" sign-str) "nan"))
-      ((and (zerop biased-exp) (zerop fraction)) (format nil "~A0x0.000000p+0" sign-str))
-      ((zerop biased-exp) (format nil "~A0x0.~6,'0xp-126" sign-str fraction))
-      (t (let ((exponent (- biased-exp 127)))
-           (format nil "~A0x1.~6,'0xp~:[~;+~]~D" sign-str fraction (not (minusp exponent)) exponent))))))
-
-(defun print-hex-double-float (val &optional force-sign)
-  (multiple-value-bind (hi lo) (kernel:double-float-bits val)
-    (let* ((u-hi (ldb (byte 32 0) hi))
-           (sign-bit (ldb (byte 1 31) u-hi))
-           (biased-exp (ldb (byte 11 20) u-hi))
-           (fraction (logior (ash (ldb (byte 20 0) u-hi) 32) lo))
-           (sign-str (cond ((= sign-bit 1) "-") (force-sign "+") (t ""))))
-      (cond 
-        ((= biased-exp #x7FF) (if (zerop fraction) (format nil "~Ainf" sign-str) "nan"))
-        ((and (zerop biased-exp) (zerop fraction)) (format nil "~A0x0.0000000000000p+0" sign-str))
-        ((zerop biased-exp) (format nil "~A0x0.~13,'0xp-1022" sign-str fraction))
-        (t (let ((exponent (- biased-exp 1023)))
-             (format nil "~A0x1.~13,'0xp~:[~;+~]~D" sign-str fraction (not (minusp exponent)) exponent)))))))
-
-#+nil
-(defun print-hex-single-float (val &optional force-sign)
-  "Converts a single-float to a C-style hex string (32-bit)."
-  (let* ((bits (kernel:single-float-bits val))
-         (u-bits (ldb (byte 32 0) bits))
-         (sign-bit (ldb (byte 1 31) u-bits))
-         (biased-exp (ldb (byte 8 23) u-bits))
-         (fraction (ldb (byte 23 0) u-bits))
-         (sign-str (cond ((= sign-bit 1)
-                          "-")
-                         (force-sign
-                          "+")
-                         (t
-                          ""))))
-    (cond 
-      ((= biased-exp 255)
-       (if (zerop fraction)
-           (format nil "~Ainf" sign-str)
-           "nan"))
-      ((and (zerop biased-exp)
-            (zerop fraction))
-       (format nil "~A0x0.000000p+0" sign-str))
-      ((zerop biased-exp)
-       (let ((*print-case* :downcase))
-	 (format nil "~A0x0.~6,'0xp-126" sign-str fraction)))
-      (t
-       (let ((*print-case* :downcase)
-	     (exponent (- biased-exp 127)))
-         (format nil "~A0x1.~6,'0xp~:[~;+~]~D"
-                 sign-str fraction (not (minusp exponent)) exponent))))))
-
-#+nil
-(defun print-hex-double-float (val &optional force-sign)
-  "Converts a double-float to a C-style hex string (64-bit)."
-  (multiple-value-bind (hi lo)
-      (kernel:double-float-bits val)
-    (let* ((u-hi (ldb (byte 32 0) hi))
-           (sign-bit (ldb (byte 1 31) u-hi))
-           (biased-exp (ldb (byte 11 20) u-hi))
-           (fraction (logior (ash (ldb (byte 20 0) u-hi) 32) lo))
-           (sign-str (cond ((= sign-bit 1)
-                            "-")
-                           (force-sign "+")
-                           (t ""))))
-      (cond 
-        ((= biased-exp #x7FF)
-         (if (zerop fraction)
-             (format nil "~Ainf" sign-str)
-             "nan"))
-        ((and (zerop biased-exp)
-              (zerop fraction))
-         (format nil "~A0x0.0000000000000p+0" sign-str))
-        ((zerop biased-exp)
-	 (let ((*print-case* :downcase))
-           (format nil "~A0x0.~13,'0xp-1022" sign-str fraction)))
+(defun print-hex-single-float (val)
+  "Prints a single-float in bit-perfect C-style hex using raw bits."
+  (cond ((float-nan-p val) "nan")
+        ((float-infinity-p val) (if (plusp val) "inf" "-inf"))
+        ((zerop val) (if (eql val -0.0f0) "-0x0.0p+0" "0x0.0p+0"))
         (t
-         (let ((*print-case* :downcase)
-	       (exponent (- biased-exp 1023)))
-           (format nil "~A0x1.~13,'0xp~:[~;+~]~D"
-                   sign-str fraction (not (minusp exponent)) exponent)))))))
+         (let* ((bits (ldb (byte 32 0) (kernel:single-float-bits val)))
+                (sign (ldb (byte 1 31) bits))
+                (exp-bits (ldb (byte 8 23) bits))
+                (mantissa (ldb (byte 23 0) bits)))
+           (if (zerop exp-bits)
+               ;; Subnormal: Leading digit 0, exponent fixed at -126
+               (format nil "~A0x0.~6,'0Xp-126"
+                       (if (= sign 1) "-" "")
+                       (ash mantissa 1)) ; Align 23 bits to 24 bits (6 hex digits)
+               ;; Normalized: Leading digit 1, exponent bias 127
+               (format nil "~A0x1.~6,'0Xp~A"
+                       (if (= sign 1) "-" "")
+                       (ash mantissa 1) ; Align 23 bits to 24 bits (6 hex digits)
+                       (- exp-bits 127)))))))
+
+(defun print-hex-double-float (val)
+  "Prints a double-float in bit-perfect C-style hex using raw bits."
+  (cond ((float-nan-p val) "nan")
+        ((float-infinity-p val) (if (plusp val) "inf" "-inf"))
+        ((zerop val) (if (eql val -0.0d0) "-0x0.0p+0" "0x0.0p+0"))
+        (t
+         (multiple-value-bind (hi-bits lo-bits) (kernel:double-float-bits val)
+           (let* ((hi (ldb (byte 32 0) hi-bits))
+                  (lo (ldb (byte 32 0) lo-bits))
+                  (sign (ldb (byte 1 31) hi))
+                  (exp-bits (ldb (byte 11 20) hi))
+                  ;; Combine 20 bits from high word and 32 bits from low word
+                  (mantissa (logior (ash (ldb (byte 20 0) hi) 32) lo)))
+             (if (zerop exp-bits)
+                 ;; Subnormal: Leading digit 0, exponent fixed at -1022
+                 (format nil "~A0x0.~13,'0Xp-1022"
+                         (if (= sign 1) "-" "")
+                         mantissa)
+                 ;; Normalized: Leading digit 1, exponent bias 1023
+                 (format nil "~A0x1.~13,'0Xp~A"
+                         (if (= sign 1) "-" "")
+                         mantissa ; 52 bits fits 13 hex digits perfectly
+                         (- exp-bits 1023))))))))
 
 ;;; PRINT-HEX-FLOAT  -- Public
 ;;;
@@ -147,104 +103,50 @@
              (format s "Hex float parse error in ~S: ~A" 
                      (hex-parse-error-text c) (hex-parse-error-message c)))))
 
-#+nil
 (defun parse-hex-float (str)
-  "Parses hex strings by converting the significand to a float, then scaling."
+  "Parses hex floats using scale-float for the exponent. Strictly hex-literal only."
   (let* ((str (string-trim '(#\Space #\Tab #\Newline #\Return) (string-downcase str)))
          (len (length str)))
     (when (zerop len) (error 'hex-parse-error :text str :message "Empty string"))
-    (let* ((has-sign (or (char= (char str 0) #\-) (char= (char str 0) #\+)))
+    
+    (let* ((ends-with-f (and (> len 1) (char= (char str (1- len)) #\f)))
+           (effective-len (if ends-with-f (1- len) len))
+           (prototype (if ends-with-f 1.0f0 1.0d0))
+           (has-sign (or (char= (char str 0) #\-) (char= (char str 0) #\+)))
            (sign (if (and has-sign (char= (char str 0) #\-)) -1 1))
            (start (if has-sign 1 0)))
-      (cond
-        ((string= str "inf" :start1 start) 
-         (if (= sign 1) double-float-positive-infinity double-float-negative-infinity))
-        ((string= str "nan" :start1 start) :nan)
-        (t
-         (unless (and (<= (+ start 2) len) (string= str "0x" :start1 start :end1 (+ start 2)))
-           (error 'hex-parse-error :text str :message "Missing '0x' prefix"))
-         (let ((p-pos (position #\p str :start start)))
-           (unless p-pos (error 'hex-parse-error :text str :message "Missing exponent 'p'"))
-           
-           ;; Check for internal whitespace
-           (loop for i from start below len
-                 when (member (char str i) '(#\Space #\Tab #\Newline #\Return))
-                 do (error 'hex-parse-error :text str :message "Internal whitespace detected"))
+      
+      (unless (and (<= (+ start 2) effective-len) 
+                   (string= str "0x" :start1 start :end1 (+ start 2)))
+        (error 'hex-parse-error :text str :message "Missing '0x' prefix"))
+      
+      (let ((p-pos (position #\p str :start start :end effective-len)))
+        (unless p-pos (error 'hex-parse-error :text str :message "Missing exponent 'p'"))
 
-           (let* ((sig-start (+ start 2))
-                  (dot-pos (position #\. str :start sig-start :end p-pos))
-                  (exp-start (1+ p-pos)))
-             
-             (handler-case
-                 (let* ((frac-hex-len (if dot-pos (- p-pos (1+ dot-pos)) 0))
-                        ;; 1. Combine leading and trailing into one large integer
-                        (significand-int 
-                         (if (null dot-pos)
-                             (parse-integer str :start sig-start :end p-pos :radix 16)
-                             (let ((leading (if (= sig-start dot-pos) 0 
-                                                (parse-integer str :start sig-start :end dot-pos :radix 16)))
-                                   (trailing (if (= (1+ dot-pos) p-pos) 0
-                                                 (parse-integer str :start (1+ dot-pos) :end p-pos :radix 16))))
-                               (+ (ash leading (* 4 frac-hex-len)) trailing))))
-                        ;; 2. Parse decimal exponent
-                        (raw-exponent (parse-integer str :start exp-start :end len))
-                        ;; 3. Handle the "cliff" logic for 0x0. vs 0x1.
-                        (starts-with-zero (char= (char str sig-start) #\0))
-                        (actual-exponent (if (and starts-with-zero (not (zerop significand-int)))
-                                             -1022
-                                             raw-exponent)))
-                   
-                   ;; 4. Convert integer to float and scale by (exponent - fractional bits)
-                   ;; scale-float is bit-exact for binary scaling.
-                   (* sign (scale-float (float significand-int 1.0d0) 
-                                        (- actual-exponent (* 4 frac-hex-len)))))
-               (error (c) (error 'hex-parse-error :text str :message (format nil "~A" c)))))))))))
+        (let* ((sig-start (+ start 2))
+               (dot-pos (position #\. str :start sig-start :end p-pos))
+               (exp-start (1+ p-pos))
+               ;; Leading hex: digits before the dot
+               (leading-str (subseq str sig-start (or dot-pos p-pos)))
+               ;; Trailing hex: digits after the dot
+               (trailing-str (if dot-pos (subseq str (1+ dot-pos) p-pos) ""))
+               (has-digits (or (plusp (length leading-str)) (plusp (length trailing-str)))))
+          
+          (unless has-digits
+            (error 'hex-parse-error :text str :message "No hex digits in significand"))
 
-(defun parse-hex-float (str)
-  "Parses C-style hex strings via an exact rational. Strictly validates digit presence."
-  (let* ((str (string-trim '(#\Space #\Tab #\Newline #\Return) (string-downcase str)))
-         (len (length str)))
-    (when (zerop len) (error 'hex-parse-error :text str :message "Empty string"))
-    (let* ((has-sign (or (char= (char str 0) #\-) (char= (char str 0) #\+)))
-           (sign (if (and has-sign (char= (char str 0) #\-)) -1 1))
-           (start (if has-sign 1 0)))
-      (cond
-        ((string= str "inf" :start1 start) 
-         (if (= sign 1) double-float-positive-infinity double-float-negative-infinity))
-        ((string= str "nan" :start1 start) :nan)
-        (t
-         (unless (and (<= (+ start 2) len) (string= str "0x" :start1 start :end1 (+ start 2)))
-           (error 'hex-parse-error :text str :message "Missing '0x' prefix"))
-         (let ((p-pos (position #\p str :start start)))
-           (unless p-pos (error 'hex-parse-error :text str :message "Missing exponent 'p'"))
-           
-           (loop for i from start below len
-                 when (member (char str i) '(#\Space #\Tab #\Newline #\Return))
-                 do (error 'hex-parse-error :text str :message "Internal whitespace detected"))
-
-           (let* ((sig-start (+ start 2))
-                  (dot-pos (position #\. str :start sig-start :end p-pos))
-                  (exp-start (1+ p-pos))
-                  ;; Strict Validation: Ensure there is at least one digit in the significand
-                  (has-leading (and (not (eql sig-start dot-pos)) (not (eql sig-start p-pos))))
-                  (has-trailing (and dot-pos (not (eql (1+ dot-pos) p-pos)))))
-             
-             (unless (or has-leading has-trailing)
-               (error 'hex-parse-error :text str :message "No hex digits in significand"))
-             
-             (handler-case
-                 (let* ((frac-hex-len (if dot-pos (- p-pos (1+ dot-pos)) 0))
-                        (significand-int 
-                         (if (null dot-pos)
-                             (parse-integer str :start sig-start :end p-pos :radix 16)
-                             (let ((leading (if (not has-leading) 0 
-                                                (parse-integer str :start sig-start :end dot-pos :radix 16)))
-                                   (trailing (if (not has-trailing) 0
-                                                 (parse-integer str :start (1+ dot-pos) :end p-pos :radix 16))))
-                               (+ (ash leading (* 4 frac-hex-len)) trailing))))
-                        (raw-exponent (parse-integer str :start exp-start :end len))
-                        ;; significand * 2^(exp - 4*frac_len)
-                        (rational-val (* significand-int 
-                                         (expt 2 (- raw-exponent (* 4 frac-hex-len))))))
-                   (* sign (float rational-val 1.0d0)))
-               (error (c) (error 'hex-parse-error :text str :message (format nil "~A" c)))))))))))
+          (handler-case
+              (let* ((leading-int (if (string= leading-str "") 0 
+                                      (parse-integer leading-str :radix 16)))
+                     (trailing-len (length trailing-str))
+                     (trailing-int (if (string= trailing-str "") 0 
+                                       (parse-integer trailing-str :radix 16)))
+                     ;; Calculate the significand as a float: leading + (trailing / 16^len)
+                     (significand (float (+ leading-int 
+                                            (/ trailing-int (expt 16 trailing-len)))
+                                         prototype))
+                     ;; The exponent after 'p'
+                     (raw-exponent (parse-integer str :start exp-start :end effective-len)))
+                ;; Use scale-float to apply the binary exponent efficiently
+                (* sign (scale-float significand raw-exponent)))
+            (error (c) (error 'hex-parse-error :text str :message (format nil "~A" c)))))))))
