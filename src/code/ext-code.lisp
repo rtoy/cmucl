@@ -96,15 +96,20 @@
 ;;; FORMAT-HEX-FLOAT -- Public
 ;;;
 ;;; Function that can be used in a FORMAT ~/
-(defun format-hex-float (stream val &optional colon-p at-p &rest params)
-  "Format ~/ directive supporting @ (sign) modifier for single/double floats."
-  (declare (ignore colon-p params))
-  (write-string
-   (typecase val
-     (single-float (print-hex-single-float val at-p))
-     (double-float (print-hex-double-float val at-p))
-     (t (format nil "~A" val)))
-   stream))
+(defun format-hex-float (stream arg colon-p at-sign-p &optional width)
+  "Formatter for ~/ext:format-hex-float/. 
+   @ forces sign (+/-). Colon modifier is ignored as per request."
+  (declare (ignore width colon-p))
+  (let ((str (if (typep arg 'single-float) 
+                 (print-hex-single-float arg)
+                 (print-hex-double-float arg))))
+    ;; Prepend '+' if @ is used and number isn't negative or special
+    (when (and at-sign-p 
+               (not (ext:float-nan-p arg))
+               (not (ext:float-infinity-p arg))
+               (not (char= (char str 0) #\-)))
+      (write-char #\+ stream))
+    (write-string str stream)))
 
 ;;; PARSE-HEX-FLOAT -- Public
 ;;;
