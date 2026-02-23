@@ -117,6 +117,7 @@
              (format s "Hex float parse error in ~S: ~A" 
                      (hex-parse-error-text c) (hex-parse-error-message c)))))
 
+#+nil
 (defun parse-hex-float (str)
   "Parses hex floats using scale-float for the exponent. Strictly hex-literal only."
   (let* ((str (string-trim '(#\Space #\Tab #\Newline #\Return)
@@ -176,4 +177,75 @@
             (error (c)
 	      (error 'hex-parse-error :text str :message (format nil "~A" c)))))))))
 
+(defun parse-hex-float-from-stream (stream)
+  "Reads hex float from stream using double-float accumulation and a 6-character exponent buffer."
+  (let* ((sign 1.0d0)
+         (char (peek-char t stream))) ; Skip whitespace
+    
+    ;; 1. Handle Sign
+    (when (member char '(#\+ #\-))
+      (when (char= (read-char stream) #\-) (setf sign -1.0d0))
+      (setf char (peek-char nil stream)))
 
+    ;; 2. Verify '0x' Prefix
+    (unless (and (char-equal (read-char stream) #\0)
+                 (char-equal (read-char stream) #\x))
+      (error 'hex-parse-error :text "Stream" :message "Missing '0x' prefix"))
+
+    ;; 3. Read Significand
+    (let ((val 0.0d0)
+          (digits-read 0))
+      ;; Integer part loop
+      (loop for c = (peek-char nil stream nil nil)
+            for digit = (and c (digit-char-p c 16))
+            while digit
+            do (read-char stream)
+               (setf val (+ (* val 16.0d0) digit))
+               (incf digits-read))
+      
+      ;; Fractional part loop
+      (when (eql (peek-char nil stream nil nil) #\.)
+        (read-char stream) ; Consume #\.
+        (loop with weight = (/ 1.0d0 16.0d0)
+              for c = (peek-char nil stream nil nil)
+              for digit = (and c (digit-char-p c 16))
+              while digit
+              do (read-char stream)
+                 (setf val (+ val (* digit weight)))
+                 (setf weight (/ weight 16.0d0))
+                 (incf digits-read)))
+
+      (unless (plusp digits-read)
+        (error 'hex-parse-error :text "Stream" :message "No hex digits in significand"))
+
+      ;; 4. Handle Exponent 'p'
+      (let ((p-char (read-char stream nil)))
+        (unless (and p-char (char-equal p-char #\p))
+          (error 'hex-parse-error :text "Stream" :message "Missing exponent 'p'"))
+        
+        ;; Size 6 handles sign + 3-4 digits + buffer
+        (let ((exp-str (make-array 6 :element-type 'character 
+                                     :fill-pointer 0 
+                                     :adjustable t)))
+          (loop for c = (peek-char nil stream nil nil)
+                while (and c (find c "+-0123456789"))
+                do (vector-push-extend (read-char stream) exp-str))
+          
+          (when (zerop (length exp-str))
+            (error 'hex-parse-error :text "Stream" :message "Invalid or missing exponent"))
+
+          (let* ((raw-exp (parse-integer exp-str))
+                 (suffix (peek-char nil stream nil #\Space))
+                 (is-single (char-equal suffix #\f))
+                 ;; Final Construction
+                 (result (* sign (scale-float val raw-exp))))
+            
+            (when is-single (read-char stream)) ; Consume 'f'
+            
+            (if is-single 
+                (float result 1.0f0) 
+                result)))))))
+
+(defun parse-hex-float (str)
+  (with-input-from-string (s str)
+    (parse-hex-float-from-stream s)))
