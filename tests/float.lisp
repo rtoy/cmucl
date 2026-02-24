@@ -579,27 +579,6 @@
   (assert-equal -2w300
 		(* -2w300 1w0)))
 
-
-
-;; Rudimentary code to read C %a formatted numbers that look like
-;; "-0x1.c4dba4ba1ee79p-620".  We assume STRING is exactly in this
-;; format.  No error-checking is done.
-#+nil
-(defun ext:parse-hex-float (string)
-  (let* ((sign (if (char= (aref string 0) #\-)
-		   -1
-		   1))
-	 (dot-posn (position #\. string))
-	 (p-posn (position #\p string))
-	 (lead (parse-integer string :start (1- dot-posn) :end dot-posn))
-	 (frac (parse-integer string :start (1+ dot-posn) :end p-posn :radix 16))
-	 (exp (parse-integer string :start (1+ p-posn))))
-    (* sign
-       (scale-float (float (+ (ash lead 52)
-			      frac)
-			   1d0)
-		    (- exp 52)))))
-
 ;; Relative error in terms of bits of accuracy.  This is the
 ;; definition used by Baudin and Smith.  A result of 53 means the two
 ;; numbers have identical bits.  For complex numbers, we use the min
