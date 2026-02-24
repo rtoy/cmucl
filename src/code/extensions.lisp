@@ -724,7 +724,3 @@
 	 ;; contents.  Is there a better way?
 	 (when ,dirname
 	   (delete-directory ,dirname :recursive t))))))
-
-
-
-
