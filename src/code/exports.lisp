@@ -1370,7 +1370,8 @@
 	   "REMOVE-PACKAGE-LOCAL-NICKNAME"
 	   "PACKAGE-LOCALLY-NICKNAMED-BY-LIST")
   ;; Printing and parsing of C-style hex floats
-  (:export "PRINT-HEX-FLOAT"
+  (:export "FLOAT-TO-HEX-STRING"
+	   "WRITE-HEX-FLOAT"
 	   "FORMAT-HEX-FLOAT"
 	   "HEX-PARSE-ERROR"
 	   "PARSE-HEX-FLOAT"))
