@@ -2221,7 +2221,30 @@
 	   "DD-PI"
 	   "INVALID-CASE")
   #+random-xoroshiro
-  (:export "RANDOM-STATE-JUMP"))
+  (:export "RANDOM-STATE-JUMP")
+  ;; Single-float functions
+  (:export "%ACOSF"
+	   "%ACOSHF"
+	   "%ASINF"
+	   "%ASINHF"
+	   "%ATAN2F"
+	   "%ATANF"
+	   "%ATANHF"
+	   "%COSF"
+	   "%COSHF"
+	   "%EXPF"
+	   "%EXPM1F"
+	   "%HYPOTF"
+	   "%LOG10F"
+	   "%LOG1PF"
+	   "%LOG2F"
+	   "%LOGF"
+	   "%POWF"
+	   "%SINF"
+	   "%SINHF"
+	   "%TANF"
+	   "%TANHF"
+	   ))
 
 (dolist
     (name
