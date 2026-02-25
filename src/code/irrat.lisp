@@ -225,21 +225,34 @@
   (y0 double-float :out)
   (y1 double-float :out))
 
-(declaim (inline %%sincos))
+(declaim (inline %%sincos %%sincosf))
 (alien:def-alien-routine ("lisp_sincos" %%sincos)
   c-call:void
   (x double-float)
   (s double-float :out)
   (c double-float :out))
 
+(alien:def-alien-routine ("lisp_sincosf" %%sincosf)
+  c-call:void
+  (x single-float)
+  (s single-float :out)
+  (c single-float :out))
+
 (declaim (inline %sincos))
 (export '%sincos)
 (defun %sincos (x)
-  (declare (double-float x))
-  (multiple-value-bind (ign s c)
-      (%%sincos x)
-    (declare (ignore ign))
-    (values s c)))
+  (declare (float x))
+  (etypecase x
+    (single-float
+     (multiple-value-bind (ign s c)
+	 (%%sincosf x)
+       (declare (ignore ign))
+       (values s c)))
+    (double-float
+     (multiple-value-bind (ign s c)
+	 (%%sincos x)
+       (declare (ignore ign))
+       (values s c)))))
 
 
 ;;;; Power functions.
@@ -1005,17 +1018,17 @@
   (if (complexp theta)
       (error (intl:gettext "Argument to CIS is complex: ~S") theta)
       (number-dispatch ((theta real))
-	((rational)
-	 (let ((arg (coerce theta 'double-float)))
-	   (multiple-value-bind (s c)
-	       (%sincos arg)
-	     (complex (coerce c 'single-float)
-		      (coerce s 'single-float)))))
-	(((foreach single-float double-float))
-	 (multiple-value-bind (s c)
-	     (%sincos (coerce theta 'double-float))
-	   (complex (coerce c '(dispatch-type theta))
-		    (coerce s '(dispatch-type theta)))))
+	(((foreach rational single-float))
+	 (let ((arg (coerce theta 'single-float)))
+	   (multiple-value-bind (ign s c)
+	       (%%sincosf arg)
+	     (declare (ignore ign))
+	     (complex c s))))
+	((double-float)
+	 (multiple-value-bind (ign s c)
+	     (%%sincos theta)
+	     (declare (ignore ign))
+	   (complex c s)))
 	#+double-double
 	((double-double-float)
 	 (multiple-value-bind (s c)
