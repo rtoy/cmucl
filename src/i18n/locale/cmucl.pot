@@ -6060,6 +6060,38 @@ msgid ""
 " afterward."
 msgstr ""
 
+#: src/code/ext-code.lisp
+msgid ""
+"Prints a single or double float in bit-perfect C-style hex.\n"
+"   If AT-P is true, prepends '+' for non-negative finite values."
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
+"Convert FLOAT to C-style hex string and write it to STREAM.\n"
+"  Infinities are printed as \"-inf\" and \"inf\".  NaN is printed as\n"
+"  \"nan\"."
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
+"Formatter for ~/ext:format-hex-float/. \n"
+"   Uses AT-SIGN-P (@) to force the sign. COLON-P (:) is currently ignored."
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
+"Reads a C-style hex float number from STREAM.  A single-float or\n"
+"  double-float number is returned.  A HEX-PARSE-ERROR is signaled for\n"
+"  an invalid format."
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
+"Parse a C-style hex float number from OBJ which is either a string or a "
+"stream."
+msgstr ""
+
 #: src/code/commandline.lisp
 msgid "A list of all the command line arguments after --"
 msgstr ""
