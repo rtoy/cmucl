@@ -683,19 +683,33 @@
 		 (asinh %asinh *)
 		 (acosh %acosh float)
 		 (atanh %atanh float)))
+  (destructuring-bind (name prim rtype)
+      stuff
+    (let ((primf (intern (string (symbolicate prim "F"))
+			 "KERNEL")))
+    (deftransform name ((x) '(single-float) rtype :eval-name t)
+      #-core-math
+      `(coerce (,prim (coerce x 'double-float)) 'single-float)
+      #+core-math
+      `(,primf x))
+    (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
+		  `(,prim x)))))
+
+#-core-math
+(dolist (stuff '((sqrt %sqrt float)))
   (destructuring-bind (name prim rtype) stuff
     (deftransform name ((x) '(single-float) rtype :eval-name t)
       `(coerce (,prim (coerce x 'double-float)) 'single-float))
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
-      `(,prim x))))
+		  `(,prim x))))
 
-(defknown (%sincos)
+(defknown (%%sincos)
     (double-float) (values double-float double-float)
     (movable foldable flushable))
 
 (deftransform cis ((x) (single-float) * :when :both)
   `(multiple-value-bind (s c)
-       (%sincos (coerce x 'double-float))
+       (%%sincosf x)
      (complex (coerce c 'single-float)
 	      (coerce s 'single-float))))
 
