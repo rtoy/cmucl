@@ -703,19 +703,24 @@
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
 		  `(,prim x))))
 
-(defknown (%%sincos)
-    (double-float) (values double-float double-float)
+(defknown (kernel::%%sincos)
+    (double-float) (values null double-float double-float)
+    (movable foldable flushable))
+
+(defknown (kernel::%%sincosf)
+    (single-float) (values null single-float single-float)
     (movable foldable flushable))
 
 (deftransform cis ((x) (single-float) * :when :both)
-  `(multiple-value-bind (s c)
-       (%%sincosf x)
-     (complex (coerce c 'single-float)
-	      (coerce s 'single-float))))
+  `(multiple-value-bind (ign s c)
+       (kernel::%%sincosf x)
+     (declare (ignore ign))
+     (complex c s)))
 
 (deftransform cis ((x) (double-float) * :when :both)
-  `(multiple-value-bind (s c)
-       (%sincos x)
+  `(multiple-value-bind (ign s c)
+       (kernel::%%sincos x)
+     (declare (ignore ign))
      (complex c s)))
 
 ;;; The argument range is limited on the x86 FP trig. functions. A
