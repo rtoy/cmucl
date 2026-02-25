@@ -65,6 +65,34 @@ CORE64_SRCS=\
 	$(CORE_MATH_64)/log1p/log1p.c \
 	$(CORE_MATH_64)/expm1/expm1.c \
 	$(CORE_MATH_64)/sincos/sincos.c
+
+CORE_MATH_32=core-math/src/binary32
+CORE32_SRCS=\
+	$(CORE_MATH_32)/sin/sinf.c \
+	$(CORE_MATH_32)/cos/cosf.c \
+	$(CORE_MATH_32)/tan/tanf.c \
+	$(CORE_MATH_32)/atan2/atan2f.c \
+	$(CORE_MATH_32)/asin/asinf.c \
+	$(CORE_MATH_32)/acos/acosf.c \
+	$(CORE_MATH_32)/atan/atanf.c \
+	$(CORE_MATH_32)/sinh/sinhf.c \
+	$(CORE_MATH_32)/cosh/coshf.c \
+	$(CORE_MATH_32)/tanh/tanhf.c \
+	$(CORE_MATH_32)/asinh/asinhf.c \
+	$(CORE_MATH_32)/acosh/acoshf.c \
+	$(CORE_MATH_32)/atanh/atanhf.c \
+	$(CORE_MATH_32)/exp/expf.c \
+	$(CORE_MATH_32)/log/logf.c \
+	$(CORE_MATH_32)/log10/log10f.c \
+	$(CORE_MATH_32)/log2/log2f.c \
+	$(CORE_MATH_32)/pow/powf.c \
+	$(CORE_MATH_32)/hypot/hypotf.c \
+	$(CORE_MATH_32)/log1p/log1pf.c \
+	$(CORE_MATH_32)/expm1/expm1f.c \
+	$(CORE_MATH_32)/sincos/sincosf.c
+
+CORE_MATH_SRCS = $(CORE64_SRCS) $(CORE32_SRCS)
+
 endif
 
 ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)

@@ -32,6 +32,28 @@ extern double cr_hypot(double, double);
 extern double cr_log1p(double);
 extern double cr_expm1(double);
 extern void cr_sincos(double, double *, double *);
+
+extern float cr_sinf(float);
+extern float cr_cosf(float);
+extern float cr_tanf(float);
+extern float cr_atanf(float);
+extern float cr_atan2f(float, float);
+extern float cr_asinf(float);
+extern float cr_acosf(float);
+extern float cr_sinhf(float);
+extern float cr_coshf(float);
+extern float cr_tanhf(float);
+extern float cr_asinhf(float);
+extern float cr_acoshf(float);
+extern float cr_atanhf(float);
+extern float cr_expf(float);
+extern float cr_logf(float);
+extern float cr_log10f(float);
+extern float cr_powf(float, float);
+extern float cr_hypotf(float, float);
+extern float cr_log1pf(float);
+extern float cr_expm1f(float);
+extern void cr_sincosf(float, float *, float *);
 #endif
 
 
@@ -141,6 +163,8 @@ double
 lisp_cosh(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_OVERFLOW(fabs(x))
+
     return cr_cosh(x);
 #else    
     return __ieee754_cosh(x);
@@ -284,6 +308,10 @@ double
 lisp_expm1(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    if (isinf(x) == 1) {
+	return fdlibm_setexception(x, FDLIBM_OVERFLOW);
+    }
+
     return cr_expm1(x);
 #else    
     return fdlibm_expm1(x);
@@ -297,7 +325,7 @@ lisp_scalbn(double x, int n)
 }
 
 void
-lisp_sincos (double x, double *s, double *c)
+lisp_sincos(double x, double *s, double *c)
 {
 #ifdef FEATURE_CORE_MATH
     cr_sincos(x, s, c);
@@ -305,5 +333,238 @@ lisp_sincos (double x, double *s, double *c)
     extern void cmucl_sincos(double, double*, double*);
 
     cmucl_sincos(x, s, c);
+#endif
+}
+
+/*
+ * The single-float versions of the special functions.  When core-math
+ * is set, we use the single-float core-math functions.  Otherwise, we
+ * use the double-float versions from fdlibm, with appropriate
+ * coercions.
+ */
+float
+lisp_sinf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_sinf(x);
+#else    
+    return (float) fdlibm_sin((double) x);
+#endif    
+}
+
+float
+lisp_cosf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_cosf(x);
+#else    
+    return (float) fdlibm_cos((double) x);
+#endif
+}
+
+float
+lisp_tanf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_tanf(x);
+#else    
+    return (float) fdlibm_tan((double) x);
+#endif
+}
+
+float
+lisp_atanf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_atanf(x);
+#else    
+    return (float) fdlibm_atan((double) x);
+#endif
+}
+
+float
+lisp_atan2f(float y, float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_atan2f(y, x);
+#else    
+    return (float) __ieee754_atan2((double) y, (double) x);
+#endif
+}
+
+float
+lisp_asinf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_asinf(x);
+#else    
+    return (float) __ieee754_asin((double) x);
+#endif
+}
+
+float
+lisp_acosf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_acosf(x);
+#else    
+    return (float) __ieee754_acos((double) x);
+#endif
+}
+
+float
+lisp_sinhf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_sinhf(x);
+#else    
+    return (float) __ieee754_sinh((double) x);
+#endif
+}
+
+float
+lisp_coshf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_coshf(x);
+#else    
+    return (float) __ieee754_cosh((double) x);
+#endif
+}
+
+float
+lisp_tanhf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_tanhf(x);
+#else    
+    return (float) fdlibm_tanh((double) x);
+#endif
+}
+
+float
+lisp_asinhf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_asinhf(x);
+#else    
+    return (float) fdlibm_asinh((double) x);
+#endif
+}
+
+float
+lisp_acoshf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_acoshf(x);
+#else    
+    return (float) __ieee754_acosh((double) x);
+#endif
+}
+
+float
+lisp_atanhf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_atanhf(x);
+#else    
+    return (float) __ieee754_atanh((double) x);
+#endif
+}
+
+float
+lisp_expf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_expf(x);
+#else    
+    return (float) __ieee754_exp((double) x);
+#endif
+}
+
+float
+lisp_logf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_logf(x);
+#else    
+    return (float) __ieee754_log((double) x);
+#endif
+}
+
+float
+lisp_log10f(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_log10f(x);
+#else    
+    return (float) __ieee754_log10((double) x);
+#endif
+}
+
+float
+lisp_powf(float x, float y)
+{
+#ifdef FEATURE_CORE_MATH
+    /*
+     * cr_pow when compiled with older versions of gcc or clang can
+     * cause failures in the ansi-tests [#469].  Ubuntu 25.10 and Fedora 41
+     * (gcc only) are known to have compilers that work well enough
+     * that the ansi-tests pass.
+     */
+    return cr_powf(x, y);
+#else    
+    /*
+     * cr_pow seems causes ansi-tests to fail in test WRITE.1 among
+     * others.  Somewhere an invalid operation is occurring.  Thus
+     * just use fdlibm for now until we can figure out what's causing
+     * the failure.
+     */
+    return (float) __ieee754_pow((double) x, (double) y);
+#endif
+}
+
+float
+lisp_hypotf(float x, float y)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_hypotf(x, y);
+#else    
+    return (float) __ieee754_hypot((double) x, (double) y);
+#endif
+}
+
+float
+lisp_log1pf(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_log1pf(x);
+#else    
+    return (float) fdlibm_log1p((double) x);
+#endif
+}
+
+float
+lisp_expm1f(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_expm1f(x);
+#else    
+    return (float) fdlibm_expm1((double) x);
+#endif
+}
+
+void
+lisp_sincosf(float x, float *s, float *c)
+{
+#ifdef FEATURE_CORE_MATH
+    cr_sincosf(x, s, c);
+#else    
+    extern void cmucl_sincos(double, double*, double*);
+    double ds, dc;
+    
+    cmucl_sincos((double) x, &ds, &dc);
+    *s = (float) ds;
+    *c = (float) dc;
 #endif
 }
