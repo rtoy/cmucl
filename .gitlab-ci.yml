@@ -305,7 +305,7 @@ linux:static-analyzer:
   # make that happen, but when the pipeline is scheduled we do run the
   # analyzer. 
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
+    #- if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: manual
       allow_failure: true
@@ -382,7 +382,7 @@ markdown-link-check:
   # It's ok if this fails; we don't want to declare the entire
   # pipeline as having failed.
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
+    #- if: $CI_PIPELINE_SOURCE == "schedule"
       allow_failure: true
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: manual
