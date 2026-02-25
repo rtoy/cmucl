@@ -30,9 +30,13 @@
 (defun float-to-hex-string (val &optional at-p)
   "Prints a single or double float in bit-perfect C-style hex.
    If AT-P is true, prepends '+' for non-negative finite values."
-  (cond ((ext:float-nan-p val) "nan")
+  (cond ((ext:float-nan-p val)
+	 "0x0.0p+nan")
         ((ext:float-infinity-p val) 
-         (if (plusp val) (if at-p "+inf" "inf") "-inf"))
+         (if (plusp val)
+	     (if at-p
+		 "+0x1.0p+inf" "0x1.0p+inf")
+	     "-0x1.0p+inf"))
         (t
          (multiple-value-bind (sign exp-bits mantissa bias precision suffix)
              (typecase val
