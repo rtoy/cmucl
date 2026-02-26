@@ -67,6 +67,10 @@ else
 		# know this was done via CI.
 		DEFAULT_VERSION="ci-${GIT_HASH}"
 		;;
+	    *)
+		# Everything else is taken as is.
+		DEFAULT_VERSION="${GIT_HASH}"
+		;;
 	esac
     fi
 
