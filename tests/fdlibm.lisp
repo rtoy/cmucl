@@ -218,14 +218,9 @@
   (ext:with-float-traps-masked (:overflow)
     (assert-equal ext:double-float-positive-infinity
 		  (kernel:%exp 710d0)))
-  #-core-math
-  (let ((modes (ext:get-floating-point-modes)))
-    (unwind-protect
-	 (progn
-	   (ext:set-floating-point-modes :traps '(:underflow))
-	   (assert-error 'floating-point-underflow
-			 (kernel:%exp -1000d0)))
-      (apply #'ext:set-floating-point-modes modes)))
+  (ext:with-float-traps-enabled (:underflow)
+    (assert-error 'floating-point-underflow
+		  (kernel:%exp -1000d0)))
   (let ((x (scale-float 1d0 -29))
 	(x0 0d0))
     ;; exp(x) = x, |x| < 2^-28, with inexact exception unlees x = 0
@@ -675,6 +670,14 @@
 
 (define-test %cos.exceptions
     (:tag :fdlibm)
+  ;; cos(inf) signals invalid operation
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%cos ext:double-float-positive-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%cos ext:double-float-negative-infinity))
+  ;; cos(nan) is NaN
+  (assert-true (ext:float-nan-p (kernel:%cos *qnan*)))
+  
   ;; cos(x) = 1 for |x| < 2^-27.  Signal inexact unless x = 0
   (let ((x (scale-float 1d0 -28))
 	(x0 0d0))
@@ -690,6 +693,14 @@
 
 (define-test %sin.exceptions
     (:tag :fdlibm)
+  ;; sin(inf) signals invalid operation
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%sin ext:double-float-positive-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%sin ext:double-float-negative-infinity))
+  ;; sin(nan) is NaN
+  (assert-true (ext:float-nan-p (kernel:%sin *qnan*)))
+
   ;; sin(x) = x for |x| < 2^-27.  Signal inexact unless x = 0
   (let ((x (scale-float 1d0 -28))
 	(x0 0d0))
@@ -705,6 +716,14 @@
 
 (define-test %tan.exceptions
     (:tag :fdlibm)
+  ;; tan(inf) signals invalid operation
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%tan ext:double-float-positive-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%tan ext:double-float-negative-infinity))
+  ;; tan(nan) is NaN
+  (assert-true (ext:float-nan-p (kernel:%sin *qnan*)))
+
   ;; tan(x) = x for |x| < 2^-28.  Signal inexact unless x = 0
   (let ((x (scale-float 1d0 -29))
 	(x0 0d0))
@@ -717,3 +736,203 @@
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
 		      (kernel:%tan x)))))
+
+;; Test cases from e_pow.c for fdlibm.
+(define-test %pow.case.1
+    (:tag :fdlibm)
+  ;; anything ^ 0 is 1
+  (assert-equal 1d0
+		(kernel:%pow ext:double-float-positive-infinity 0d0))
+  (assert-equal 1d0
+		(kernel:%pow ext:double-float-negative-infinity 0d0)))
+
+(define-test %pow.case.2
+    (:tag :fdlibm)
+  ;; anything ^ 1 is itself
+  (assert-equal ext:double-float-positive-infinity
+		(kernel:%pow ext:double-float-positive-infinity 1d0))
+  (assert-equal ext:double-float-negative-infinity
+		(kernel:%pow ext:double-float-negative-infinity 1d0)))
+
+(define-test %pow.case.3
+    (:tag :fdlibm)
+  ;; anything ^ NaN is NaN
+  (assert-true (ext:float-nan-p
+		(kernel:%pow pi *qnan*)))
+  (assert-true (ext:float-nan-p
+		(kernel:%pow ext:double-float-positive-infinity *qnan*))))
+
+(define-test %pow.case.4
+    (:tag :fdlibm)
+  ;; NaN ^ non-zero is NaN
+  (assert-true (ext:float-nan-p
+		(kernel:%pow *qnan* pi)))
+  (assert-true (ext:float-nan-p
+		(kernel:%pow *qnan* ext:double-float-positive-infinity))))
+
+(define-test %pow.case.5
+    (:tag :fdlibm)
+  ;; (|x| > 1) ^ +inf is +inf
+  (assert-equal ext:double-float-positive-infinity
+		(kernel:%pow pi ext:double-float-positive-infinity))
+  (assert-equal ext:double-float-positive-infinity
+		(kernel:%pow (- pi) ext:double-float-positive-infinity)))
+
+(define-test %pow.case.6
+    (:tag :fdlibm)
+  ;; (|x| > 1) ^ -inf is +0
+  (assert-equal +0d0
+		(kernel:%pow pi ext:double-float-negative-infinity))
+  (assert-equal +0d0
+		(kernel:%pow (- pi) ext:double-float-negative-infinity)))
+
+(define-test %pow.case.7
+    (:tag :fdlibm)
+  ;; (|x| < 1) ^ +inf is +0
+  (assert-equal +0d0
+		(kernel:%pow 0.5d0 ext:double-float-positive-infinity))
+  (assert-equal +0d0
+		(kernel:%pow -0.5d0 ext:double-float-positive-infinity)))
+
+(define-test %pow.case.8
+    (:tag :fdlibm)
+  ;; (|x| < 1) ^ -inf is +inf
+  (assert-equal ext:double-float-positive-infinity
+		(kernel:%pow 0.5d0 ext:double-float-negative-infinity))
+  (assert-equal ext:double-float-positive-infinity
+		(kernel:%pow -0.5d0 ext:double-float-negative-infinity)))
+
+(define-test %pow.case.9
+    (:tag :fdlibm)
+  ;; std::pow says 1^exp is 1 for any exp, including NaN.  (-1)^(+/-inf)
+  ;; is 1.  No errors signaled.
+  #+core-math
+  (progn
+    (assert-equal 1d0
+		  (kernel:%pow 1d0 ext:double-float-positive-infinity))
+    (assert-equal 1d0
+		  (kernel:%pow 1d0 ext:double-float-negative-infinity))
+    (assert-equal 1d0
+		  (kernel:%pow 1d0 *qnan*))
+    (assert-equal 1d0
+		  (kernel:%pow -1d0 ext:double-float-positive-infinity))
+    (assert-equal 1d0
+		  (kernel:%pow -1d0 ext:double-float-negative-infinity)))
+  #-core-math
+  ;; +-1 ^ +-inf is NaN.
+  ;;
+  ;; But the implementation signals invalid operation, so we need to
+  ;; check for that.
+  ;;
+  (progn
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%pow 1d0 ext:double-float-positive-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%pow 1d0 ext:double-float-negative-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%pow -1d0 ext:double-float-positive-infinity))
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%pow -1d0 ext:double-float-negative-infinity))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p
+		  (kernel:%pow 1d0 ext:double-float-positive-infinity)))
+    (assert-true (ext:float-nan-p
+		  (kernel:%pow 1d0 ext:double-float-negative-infinity)))
+    (assert-true (ext:float-nan-p
+		  (kernel:%pow -1d0 ext:double-float-positive-infinity)))
+    (assert-true (ext:float-nan-p
+		  (kernel:%pow -1d0 ext:double-float-negative-infinity))))))
+
+(define-test %pow.case.10
+    (:tag :fdlibm)
+  ;; +0 ^ (+anything except 0, Nan) is +0
+  (assert-equal +0d0
+		(kernel:%pow +0d0 10d0))
+  (assert-equal +0d0
+		(kernel:%pow +0d0 ext:double-float-positive-infinity)))
+
+(define-test %pow.case.11
+    (:tag :fdlibm)
+  ;; +0 ^ (+anything except 0, Nan, odd integer) is +0
+  (assert-equal +0d0
+		(kernel:%pow -0d0 10d0))
+  (assert-equal +0d0
+		(kernel:%pow -0d0 ext:double-float-positive-infinity)))
+
+(define-test %pow.case.12
+    (:tag :fdlibm)
+  ;; +0 ^ (-anything except 0, Nan) is +inf
+  ;;
+  ;; But fdlibm signals error for (+0)^(-10) instead of returning inf.  Check this.
+  (assert-error 'division-by-zero
+		(kernel:%pow +0d0 -10d0))
+  (ext:with-float-traps-masked (:divide-by-zero)
+    (assert-equal ext:double-float-positive-infinity
+		  (kernel:%pow +0d0 -10d0)))
+  ;; No signals here.
+  (assert-equal ext:double-float-positive-infinity
+		(kernel:%pow +0d0 ext:double-float-negative-infinity)))
+
+(define-test %pow.case.13
+    (:tag :fdlibm)
+  ;; -0 ^ (-anything except 0, Nan, odd integer) is +inf
+  ;;
+  ;; But (-0)^(-10) signals division by zero
+  (assert-error 'division-by-zero
+		(kernel:%pow -0d0 -10d0))
+  (ext:with-float-traps-masked (:divide-by-zero)
+    (assert-equal ext:double-float-positive-infinity
+		  (kernel:%pow -0d0 -10d0)))
+  ;; But no error here.
+  (assert-equal ext:double-float-positive-infinity
+		(kernel:%pow +0d0 ext:double-float-negative-infinity)))
+
+(define-test %pow.case.14
+    (:tag :fdlibm)
+  ;; -0 ^ (odd integer) = -( +0 ^ (odd integer))
+  (assert-equal (- (kernel:%pow +0d0 5d0))
+		(kernel:%pow -0d0 5d0)))
+
+(define-test %pow.case.15
+    (:tag :fdlibm)
+  ;; +inf ^ (+anything except 0, NaN) is +inf
+  (assert-equal ext:double-float-positive-infinity
+		(kernel:%pow ext:double-float-positive-infinity pi)))
+
+(define-test %pow.case.16
+    (:tag :fdlibm)
+  ;; +inf ^ (-anything except 0, NaN) is +0
+  (assert-equal +0d0
+		(kernel:%pow ext:double-float-positive-infinity (- pi))))
+
+(define-test %pow.case.17
+    (:tag :fdlibm)
+  ;; -inf ^ (anything) = -0 ^ (-anything)
+  (assert-equal (ext:with-float-traps-masked (:divide-by-zero)
+		  ;; This produces a divide-by-zero error so mask it
+		  ;; to get a value.
+		  (kernel:%pow -0d0 (- pi)))
+		(kernel:%pow ext:double-float-negative-infinity pi))
+  (assert-equal (kernel:%pow -0d0 pi)
+		(kernel:%pow ext:double-float-negative-infinity (- pi))))
+
+(define-test %pow.case.18
+    (:tag :fdlibm)
+  ;; (-anything) ^ integer is (-1)^integer * (+anything ^ integer)
+  (dolist (base '(-2d0 -10d0))
+    (dolist (power '(5 -5))
+      (assert-equal (* (expt -1 power)
+		       (kernel:%pow (- base) (coerce power 'double-float)))
+		    (kernel:%pow base (coerce power 'double-float))
+		    base power))))
+
+(define-test %pow.case.19
+    (:tag :fdlibm)
+  ;; (-anything except 0 and inf) ^ non-integer is NaN
+  ;;
+  ;; But this signals invalid, so check for that too.
+  (assert-error 'floating-point-invalid-operation
+		(kernel:%pow -2d0 1.5d0))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p
+		  (kernel:%pow -2d0 1.5d0)))))

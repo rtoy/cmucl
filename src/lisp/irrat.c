@@ -39,10 +39,22 @@ extern void cr_sincos(double, double *, double *);
  * Wrappers for the special functions
  */
 
+#define MAYBE_SIGNAL_INVALID(test, val)		\
+    if ((test)) {				\
+        return fdlibm_setexception(val, FDLIBM_INVALID);	\
+    }
+
+#define MAYBE_SIGNAL_OVERFLOW(x)	\
+    if (isinf(x)) {	\
+	return fdlibm_setexception(x, FDLIBM_OVERFLOW); \
+    }
+
 double
 lisp_sin(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_INVALID(isinf(x), x)
+
     return cr_sin(x);
 #else    
     return fdlibm_sin(x);
@@ -53,6 +65,8 @@ double
 lisp_cos(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_INVALID(isinf(x), x)
+
     return cr_cos(x);
 #else    
     return fdlibm_cos(x);
@@ -63,6 +77,8 @@ double
 lisp_tan(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_INVALID(isinf(x), x)
+
     return cr_tan(x);
 #else    
     return fdlibm_tan(x);
@@ -113,6 +129,8 @@ double
 lisp_sinh(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_OVERFLOW(x)
+	
     return cr_sinh(x);
 #else    
     return __ieee754_sinh(x);
@@ -143,6 +161,8 @@ double
 lisp_asinh(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_OVERFLOW(x)
+
     return cr_asinh(x);
 #else    
     return fdlibm_asinh(x);
@@ -153,6 +173,10 @@ double
 lisp_acosh(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_INVALID(x < 1, x)
+
+    MAYBE_SIGNAL_OVERFLOW(x)
+    
     return cr_acosh(x);
 #else    
     return __ieee754_acosh(x);
@@ -173,6 +197,27 @@ double
 lisp_exp(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    /*
+     * For consistency, silently return NaN when x is NaN.  Do not
+     * signal an invalid operation, even if invalid operation trap is
+     *  enabled.  This is what fdlibm does, and also what many of the
+     *  other core-math routines do.
+     */
+
+    if (isnan(x)) {
+	return x;
+    }
+    
+    /*
+     * Can't depend on cr_exp to signal underflow.  It seems the
+     * underflow has been constant-folded to zero.  Hence, check for
+     * underflow here and explicitly signal an underflow.  The
+     * constant here is from core-math exp.c.
+     */
+    if (x <= -0x1.74910d52d3052p+9) {
+	return fdlibm_setexception(0.0, FDLIBM_UNDERFLOW);
+    }
+
     return cr_exp(x);
 #else    
     return __ieee754_exp(x);
