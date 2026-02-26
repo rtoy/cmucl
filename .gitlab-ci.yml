@@ -133,7 +133,7 @@ linux:install:
   # schedule because this is a prerequisite of the analyzer build.  A
   # regular push or merge request does the normal stuff.
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
+    #- if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "push"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_PIPELINE_SOURCE == "branch"
@@ -154,7 +154,7 @@ linux:build:
   # schedule because this is a prerequisite of the analyzer build.  A
   # regular push or merge request does the normal stuff.
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
+    #- if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "push"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_PIPELINE_SOURCE == "web"
