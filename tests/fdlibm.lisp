@@ -90,12 +90,8 @@
 
 (define-test %acosh.exceptions
   (:tag :fdlibm)
-  ;; Core-math returns infinity instead of signaling overflow.
-  #-core-math
   (assert-error 'floating-point-overflow
 		(kernel:%acosh ext:double-float-positive-infinity))
-  ;; Core-math currently returns QNaN
-  #-core-math
   (assert-error 'floating-point-invalid-operation
 		(kernel:%acosh 0d0))
   (ext:with-float-traps-masked (:overflow)
@@ -108,12 +104,8 @@
   (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
 		(kernel:%asinh *snan*))
-  ;; Core-math returns the signed infinity instead of signaling an
-  ;; overflow.
-  #-core-math
   (assert-error 'floating-point-overflow
 		(kernel:%asinh ext:double-float-positive-infinity))
-  #-core-math
   (assert-error 'floating-point-overflow
 		(kernel:%asinh ext:double-float-negative-infinity))
   (assert-true (ext:float-nan-p (kernel:%asinh *qnan*)))
