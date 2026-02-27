@@ -1197,7 +1197,7 @@
      ;; atanh is complex if |number| > 1
      (if (or (> number 1) (< number -1))
 	 (complex-atanh number)
-	 (%atanhf number)))
+	 (%atanhf (coerce number 'single-float))))
     ((single-float)
      (if (or (> number (coerce 1 '(dispatch-type number)))
 	     (< number (coerce -1 '(dispatch-type number))))
