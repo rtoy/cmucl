@@ -284,7 +284,6 @@ osx:benchmark:
 # the linux-4 directory built in the linux:build job.
 linux:static-analyzer:
   stage: analyze
-      when: manual
       
   tags:
     - linux
@@ -295,6 +294,7 @@ linux:static-analyzer:
   needs:
     - job: linux:build
       artifacts: true
+  when: manual
   script:
     # Analysis can generate huge amounts of output.  For now just save
     # the results to the log file instead of also having it go to the
@@ -350,11 +350,11 @@ ubuntu:ansi-test:
 # Checks links on the wiki pages whenever any wiki markdown pages change. 
 markdown-link-check:
   stage: markdown-link-check
-      when: manual
 
   # Only the linux runner has markdown-link-check installed
   tags:
     - linux
+  when: manual
   # It's ok if this fails; we don't want to declare the entire
   # pipeline as having failed.
   allow_failure: true
