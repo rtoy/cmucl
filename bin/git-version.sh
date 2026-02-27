@@ -71,6 +71,14 @@ else
 		# know this was done via CI.
 		DEFAULT_VERSION="ci-${GIT_HASH}"
 		;;
+	    *)
+		# Use whatever we have.  This handles the case where
+		# we're checked on some git hash.  In that we we have
+		# "head/closest-branch-nn-gxxxxxx" where nn is the
+		# number of commits after the closest branch and
+		# xxxxxx is the git hash.
+		DEFAULT_VERSION="${GIT_HASH}"
+		;;
 	esac
     fi
 
