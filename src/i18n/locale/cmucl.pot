@@ -5085,10 +5085,6 @@ msgid "Return the arc sine of NUMBER."
 msgstr ""
 
 #: src/code/irrat.lisp
-msgid "Execution of a form compiled with errors:~% ~S"
-msgstr ""
-
-#: src/code/irrat.lisp
 msgid "Return the arc cosine of NUMBER."
 msgstr ""
 
