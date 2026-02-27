@@ -32,6 +32,7 @@ extern double cr_hypot(double, double);
 extern double cr_log1p(double);
 extern double cr_expm1(double);
 extern void cr_sincos(double, double *, double *);
+extern double cr_log2(double);
 
 extern float cr_sinf(float);
 extern float cr_cosf(float);
@@ -54,6 +55,7 @@ extern float cr_hypotf(float, float);
 extern float cr_log1pf(float);
 extern float cr_expm1f(float);
 extern void cr_sincosf(float, float *, float *);
+extern float cr_log2f(float);
 #endif
 
 
@@ -330,6 +332,16 @@ lisp_sincos(double x, double *s, double *c)
 #endif
 }
 
+double
+lisp_log2(double x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_log2(x);
+#else
+    return fdlibm_log2(x);
+#endif
+}
+
 /*
  * The single-float versions of the special functions.  When core-math
  * is set, we use the single-float core-math functions.  Otherwise, we
@@ -560,5 +572,15 @@ lisp_sincosf(float x, float *s, float *c)
     cmucl_sincos((double) x, &ds, &dc);
     *s = (float) ds;
     *c = (float) dc;
+#endif
+}
+
+float
+lisp_log2f(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_log2f(x);
+#else
+    return (float) fdlibm_log2((double) x);
 #endif
 }

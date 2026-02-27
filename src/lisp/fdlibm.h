@@ -69,6 +69,7 @@ extern double __ieee754_log10(double x);
 extern double __ieee754_pow(double x, double y);
 extern double __ieee754_hypot(double x, double y);
 extern double fdlibm_scalbn(double x, int n);
+extern double fdlibm_log2(double x);
 
 enum FDLIBM_EXCEPTION {
   FDLIBM_DIVIDE_BY_ZERO,
