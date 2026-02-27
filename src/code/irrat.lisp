@@ -1053,7 +1053,7 @@
 	     (and (<= number (coerce 1 '(dispatch-type number)))
 		  (>= number (coerce -1 '(dispatch-type number)))))
 	 (%asin number))
-	 (complex-asin number)))
+     (complex-asin number))
     #+double-double
     ((double-double-float)
      (if (or (float-nan-p number)
