@@ -37,16 +37,20 @@ if [ -n "$VERSION" ]; then
     DEFAULT_VERSION="$VERSION"
 else
     # Get the current branch.
-    BRANCH="`git rev-parse --abbrev-ref HEAD`"
+    BRANCH="`git branch --show-current`"
     if [ "$BRANCH" = "master" ]; then
 	# On the master branch, use simple git describe --dirty for the version
 	DEFAULT_VERSION="`git describe --dirty || git describe 2>/dev/null`"
+    elif [ -n "$BRANCH" ]; then
+	# We're on some branch.  Just use the branch name.
+	DEFAULT_VERSION="$BRANCH"
     else
-	# We're not on the master branch.  Do something different.
-	# The option --all allows use to use the the branch name or tag
-	# name as appropriate.  This is much more informative.  However,
-	# we have to remove everything before the first slash which
-	# contains things like "tag/" or "head/".
+	# We're not on a branch.  We need to do something different.
+	# The option --all allows use to use the the branch name or
+	# tag name as appropriate.  This is much more informative.
+	# However, we have to remove everything before the first slash
+	# which contains things like "tags/", "head/", or "pipelines/"
+	# (from CI).
 	GIT_DESC="`git describe --all --dirty || git describe 2>/dev/null`"
 	GIT_HASH="`echo ${GIT_DESC} | sed 's;^[^/]*/;;' 2>/dev/null`"
 
@@ -66,10 +70,6 @@ else
 		# "pipeline/<digits>".  Make the version include "ci-" so we
 		# know this was done via CI.
 		DEFAULT_VERSION="ci-${GIT_HASH}"
-		;;
-	    *)
-		# Everything else is taken as is.
-		DEFAULT_VERSION="${GIT_HASH}"
 		;;
 	esac
     fi
