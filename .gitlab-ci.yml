@@ -129,15 +129,6 @@ linux:install:
   variables:
     osname: "linux"
     CURL: "curl"
-  # These rules are needed so that the static analyzer job can run on a
-  # schedule because this is a prerequisite of the analyzer build.  A
-  # regular push or merge request does the normal stuff.
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-    - if: $CI_PIPELINE_SOURCE == "push"
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_PIPELINE_SOURCE == "branch"
-    - if: $CI_PIPELINE_SOURCE == "web"
 
 linux:build:
   <<: *build_configuration
@@ -150,14 +141,6 @@ linux:build:
     # Fedora 41 must build with gcc because the clang build fails some
     # ansi-tests.  See [#469].
     CONFIG: "x86_linux"
-  # These rules is needed so that the static analyzer job can run on a
-  # schedule because this is a prerequisite of the analyzer build.  A
-  # regular push or merge request does the normal stuff.
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-    - if: $CI_PIPELINE_SOURCE == "push"
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_PIPELINE_SOURCE == "web"
 
 linux:cross-build:
   stage: build
@@ -301,18 +284,6 @@ osx:benchmark:
 # the linux-4 directory built in the linux:build job.
 linux:static-analyzer:
   stage: analyze
-  # The analyzer is a manual job that isn't normally run.  These rules
-  # make that happen, but when the pipeline is scheduled we do run the
-  # analyzer. 
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: manual
-      allow_failure: true
-    - if: $CI_PIPELINE_SOURCE == "push"
-      when: manual
-      allow_failure: true
-      
       
   tags:
     - linux
@@ -323,6 +294,7 @@ linux:static-analyzer:
   needs:
     - job: linux:build
       artifacts: true
+  when: manual
   script:
     # Analysis can generate huge amounts of output.  For now just save
     # the results to the log file instead of also having it go to the
@@ -378,22 +350,14 @@ ubuntu:ansi-test:
 # Checks links on the wiki pages whenever any wiki markdown pages change. 
 markdown-link-check:
   stage: markdown-link-check
-  # Run the checker when the pipeline is scheduled to run.
-  # It's ok if this fails; we don't want to declare the entire
-  # pipeline as having failed.
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      allow_failure: true
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: manual
-      allow_failure: true
-    - if: $CI_PIPELINE_SOURCE == "push"
-      when: manual
-      allow_failure: true
 
   # Only the linux runner has markdown-link-check installed
   tags:
     - linux
+  when: manual
+  # It's ok if this fails; we don't want to declare the entire
+  # pipeline as having failed.
+  allow_failure: true
   script:
     # Check links in the main repo
     - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
