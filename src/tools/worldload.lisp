@@ -44,6 +44,7 @@
 
 
 (maybe-byte-load "target:code/extensions")
+(maybe-byte-load "target:code/ext-code")
 (maybe-byte-load "target:code/defmacro")
 (maybe-byte-load "target:code/sysmacs")
 

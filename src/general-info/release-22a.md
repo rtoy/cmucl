@@ -57,6 +57,7 @@ public domain.
     * #460: Unit tests were not being recognized as failing on CI.
     * #463: `double-double-float` is missing comparison operations
             between `double-double-float` and `double-float`
+    * #474: Add functions to print and parse C-style hex floats.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
