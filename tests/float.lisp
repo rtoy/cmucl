@@ -346,20 +346,7 @@
 ;; Rudimentary code to read C %a formatted numbers that look like
 ;; "-0x1.c4dba4ba1ee79p-620".  We assume STRING is exactly in this
 ;; format.  No error-checking is done.
-(defun parse-hex-float (string)
-  (let* ((sign (if (char= (aref string 0) #\-)
-		   -1
-		   1))
-	 (dot-posn (position #\. string))
-	 (p-posn (position #\p string))
-	 (lead (parse-integer string :start (1- dot-posn) :end dot-posn))
-	 (frac (parse-integer string :start (1+ dot-posn) :end p-posn :radix 16))
-	 (exp (parse-integer string :start (1+ p-posn))))
-    (* sign
-       (scale-float (float (+ (ash lead 52)
-			      frac)
-			   1d0)
-		    (- exp 52)))))
+
 
 ;; Relative error in terms of bits of accuracy.  This is the
 ;; definition used by Baudin and Smith.  A result of 53 means the two
@@ -507,50 +494,50 @@
   ;; 13
   ;; Iteration 1.  Without this, we would instead return
   ;;
-  ;;   (complex (parse-hex-float "0x1.ba8df8075bceep+155")
-  ;;            (parse-hex-float "-0x1.a4ad6329485f0p-895"))
+  ;;   (complex (ext:parse-hex-float "0x1.ba8df8075bceep+155")
+  ;;            (ext:parse-hex-float "-0x1.a4ad6329485f0p-895"))
   ;;
   ;; whose imaginary part is quite a bit off.
   (frob cdiv.mcgehearty-iteration.1
-	(complex (parse-hex-float "0x1.73a3dac1d2f1fp+509")
-		 (parse-hex-float "-0x1.c4dba4ba1ee79p-620"))
-	(complex (parse-hex-float "0x1.adf526c249cf0p+353")
-		 (parse-hex-float "0x1.98b3fbc1677bbp-697"))
-	(complex (parse-hex-float "0x1.BA8DF8075BCEEp+155")
-		 (parse-hex-float "-0x1.A4AD628DA5B74p-895"))
+	(complex (ext:parse-hex-float "0x1.73a3dac1d2f1fp+509")
+		 (ext:parse-hex-float "-0x1.c4dba4ba1ee79p-620"))
+	(complex (ext:parse-hex-float "0x1.adf526c249cf0p+353")
+		 (ext:parse-hex-float "0x1.98b3fbc1677bbp-697"))
+	(complex (ext:parse-hex-float "0x1.BA8DF8075BCEEp+155")
+		 (ext:parse-hex-float "-0x1.A4AD628DA5B74p-895"))
 	53
 	106)
   ;; 14
   ;; Iteration 2.
   (frob cdiv.mcgehearty-iteration.2
-	(complex (parse-hex-float "-0x0.000000008e4f8p-1022")
-		 (parse-hex-float "0x0.0000060366ba7p-1022"))
-	(complex (parse-hex-float "-0x1.605b467369526p-245")
-		 (parse-hex-float "0x1.417bd33105808p-256"))
-	(complex (parse-hex-float "0x1.cde593daa4ffep-810")
-		 (parse-hex-float "-0x1.179b9a63df6d3p-799"))
+	(complex (ext:parse-hex-float "-0x0.000000008e4f8p-1022")
+		 (ext:parse-hex-float "0x0.0000060366ba7p-1022"))
+	(complex (ext:parse-hex-float "-0x1.605b467369526p-245")
+		 (ext:parse-hex-float "0x1.417bd33105808p-256"))
+	(complex (ext:parse-hex-float "0x1.cde593daa4ffep-810")
+		 (ext:parse-hex-float "-0x1.179b9a63df6d3p-799"))
 	52
 	106)
   ;; 15
   ;; Iteration 3
   (frob cdiv.mcgehearty-iteration.3
-	(complex (parse-hex-float "0x1.cb27eece7c585p-355 ")
-		 (parse-hex-float "0x0.000000223b8a8p-1022"))
-	(complex (parse-hex-float "-0x1.74e7ed2b9189fp-22")
-		 (parse-hex-float "0x1.3d80439e9a119p-731"))
-	(complex (parse-hex-float "-0x1.3b35ed806ae5ap-333")
-		 (parse-hex-float "-0x0.05e01bcbfd9f6p-1022"))
+	(complex (ext:parse-hex-float "0x1.cb27eece7c585p-355 ")
+		 (ext:parse-hex-float "0x0.000000223b8a8p-1022"))
+	(complex (ext:parse-hex-float "-0x1.74e7ed2b9189fp-22")
+		 (ext:parse-hex-float "0x1.3d80439e9a119p-731"))
+	(complex (ext:parse-hex-float "-0x1.3b35ed806ae5ap-333")
+		 (ext:parse-hex-float "-0x0.05e01bcbfd9f6p-1022"))
 	53
 	106)
   ;; 16
   ;; Iteration 4
   (frob cdiv.mcgehearty-iteration.4
-	(complex (parse-hex-float "-0x1.f5c75c69829f0p-530")
-		 (parse-hex-float "-0x1.e73b1fde6b909p+316"))
-	(complex (parse-hex-float "-0x1.ff96c3957742bp+1023")
-		 (parse-hex-float "0x1.5bd78c9335899p+1021"))
-	(complex (parse-hex-float "-0x1.423c6ce00c73bp-710")
-		 (parse-hex-float "0x1.d9edcf45bcb0ep-708"))
+	(complex (ext:parse-hex-float "-0x1.f5c75c69829f0p-530")
+		 (ext:parse-hex-float "-0x1.e73b1fde6b909p+316"))
+	(complex (ext:parse-hex-float "-0x1.ff96c3957742bp+1023")
+		 (ext:parse-hex-float "0x1.5bd78c9335899p+1021"))
+	(complex (ext:parse-hex-float "-0x1.423c6ce00c73bp-710")
+		 (ext:parse-hex-float "0x1.d9edcf45bcb0ep-708"))
 	52
 	106))
 
@@ -591,26 +578,6 @@
   (:tag :issues)
   (assert-equal -2w300
 		(* -2w300 1w0)))
-
-
-
-;; Rudimentary code to read C %a formatted numbers that look like
-;; "-0x1.c4dba4ba1ee79p-620".  We assume STRING is exactly in this
-;; format.  No error-checking is done.
-(defun parse-hex-float (string)
-  (let* ((sign (if (char= (aref string 0) #\-)
-		   -1
-		   1))
-	 (dot-posn (position #\. string))
-	 (p-posn (position #\p string))
-	 (lead (parse-integer string :start (1- dot-posn) :end dot-posn))
-	 (frac (parse-integer string :start (1+ dot-posn) :end p-posn :radix 16))
-	 (exp (parse-integer string :start (1+ p-posn))))
-    (* sign
-       (scale-float (float (+ (ash lead 52)
-			      frac)
-			   1d0)
-		    (- exp 52)))))
 
 ;; Relative error in terms of bits of accuracy.  This is the
 ;; definition used by Baudin and Smith.  A result of 53 means the two
@@ -725,47 +692,47 @@
   ;; 13
   ;; Iteration 1.  Without this, we would instead return
   ;;
-  ;;   (complex (parse-hex-float "0x1.ba8df8075bceep+155")
-  ;;            (parse-hex-float "-0x1.a4ad6329485f0p-895"))
+  ;;   (complex (ext:parse-hex-float "0x1.ba8df8075bceep+155")
+  ;;            (ext:parse-hex-float "-0x1.a4ad6329485f0p-895"))
   ;;
   ;; whose imaginary part is quite a bit off.
   (frob cdiv.mcgehearty-iteration.1
-	(complex (parse-hex-float "0x1.73a3dac1d2f1fp+509")
-		 (parse-hex-float "-0x1.c4dba4ba1ee79p-620"))
-	(complex (parse-hex-float "0x1.adf526c249cf0p+353")
-		 (parse-hex-float "0x1.98b3fbc1677bbp-697"))
-	(complex (parse-hex-float "0x1.BA8DF8075BCEEp+155")
-		 (parse-hex-float "-0x1.A4AD628DA5B74p-895"))
+	(complex (ext:parse-hex-float "0x1.73a3dac1d2f1fp+509")
+		 (ext:parse-hex-float "-0x1.c4dba4ba1ee79p-620"))
+	(complex (ext:parse-hex-float "0x1.adf526c249cf0p+353")
+		 (ext:parse-hex-float "0x1.98b3fbc1677bbp-697"))
+	(complex (ext:parse-hex-float "0x1.BA8DF8075BCEEp+155")
+		 (ext:parse-hex-float "-0x1.A4AD628DA5B74p-895"))
 	53)
   ;; 14
   ;; Iteration 2.
   (frob cdiv.mcgehearty-iteration.2
-	(complex (parse-hex-float "-0x0.000000008e4f8p-1022")
-		 (parse-hex-float "0x0.0000060366ba7p-1022"))
-	(complex (parse-hex-float "-0x1.605b467369526p-245")
-		 (parse-hex-float "0x1.417bd33105808p-256"))
-	(complex (parse-hex-float "0x1.cde593daa4ffep-810")
-		 (parse-hex-float "-0x1.179b9a63df6d3p-799"))
+	(complex (ext:parse-hex-float "-0x0.000000008e4f8p-1022")
+		 (ext:parse-hex-float "0x0.0000060366ba7p-1022"))
+	(complex (ext:parse-hex-float "-0x1.605b467369526p-245")
+		 (ext:parse-hex-float "0x1.417bd33105808p-256"))
+	(complex (ext:parse-hex-float "0x1.cde593daa4ffep-810")
+		 (ext:parse-hex-float "-0x1.179b9a63df6d3p-799"))
 	52)
   ;; 15
   ;; Iteration 3
   (frob cdiv.mcgehearty-iteration.3
-	(complex (parse-hex-float "0x1.cb27eece7c585p-355 ")
-		 (parse-hex-float "0x0.000000223b8a8p-1022"))
-	(complex (parse-hex-float "-0x1.74e7ed2b9189fp-22")
-		 (parse-hex-float "0x1.3d80439e9a119p-731"))
-	(complex (parse-hex-float "-0x1.3b35ed806ae5ap-333")
-		 (parse-hex-float "-0x0.05e01bcbfd9f6p-1022"))
+	(complex (ext:parse-hex-float "0x1.cb27eece7c585p-355 ")
+		 (ext:parse-hex-float "0x0.000000223b8a8p-1022"))
+	(complex (ext:parse-hex-float "-0x1.74e7ed2b9189fp-22")
+		 (ext:parse-hex-float "0x1.3d80439e9a119p-731"))
+	(complex (ext:parse-hex-float "-0x1.3b35ed806ae5ap-333")
+		 (ext:parse-hex-float "-0x0.05e01bcbfd9f6p-1022"))
 	53)
   ;; 16
   ;; Iteration 4
   (frob cdiv.mcgehearty-iteration.4
-	(complex (parse-hex-float "-0x1.f5c75c69829f0p-530")
-		 (parse-hex-float "-0x1.e73b1fde6b909p+316"))
-	(complex (parse-hex-float "-0x1.ff96c3957742bp+1023")
-		 (parse-hex-float "0x1.5bd78c9335899p+1021"))
-	(complex (parse-hex-float "-0x1.423c6ce00c73bp-710")
-		 (parse-hex-float "0x1.d9edcf45bcb0ep-708"))
+	(complex (ext:parse-hex-float "-0x1.f5c75c69829f0p-530")
+		 (ext:parse-hex-float "-0x1.e73b1fde6b909p+316"))
+	(complex (ext:parse-hex-float "-0x1.ff96c3957742bp+1023")
+		 (ext:parse-hex-float "0x1.5bd78c9335899p+1021"))
+	(complex (ext:parse-hex-float "-0x1.423c6ce00c73bp-710")
+		 (ext:parse-hex-float "0x1.d9edcf45bcb0ep-708"))
 	52))
 
 (define-test complex-division.misc
