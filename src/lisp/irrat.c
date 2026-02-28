@@ -74,7 +74,7 @@ extern void cr_sincosf(float, float *, float *);
         if (isinf(x)) {	\
             return fdlibm_setexception(x, FDLIBM_OVERFLOW); \
         }						    \
-    } while(0)
+    } while (0)
     
 
 double
