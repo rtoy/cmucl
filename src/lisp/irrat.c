@@ -73,6 +73,16 @@ extern float cr_log2f(float);
 	return fdlibm_setexception(x, FDLIBM_OVERFLOW); \
     }
 
+#ifdef DARWIN
+#define DARWIN_SINGLE_FLOAT_OVERFLOW(y) \
+    do {				\
+        if (fabs(y) >= 0x1.0p128) {				\
+	    return fdlibm_setexception(y, FDLIBM_OVERFLOW);	\
+	}							\
+    } while (0)
+    
+#endif
+    
 double
 lisp_sin(double x)
 {
@@ -483,8 +493,16 @@ lisp_expf(float x)
 {
 #ifdef FEATURE_CORE_MATH
     return cr_expf(x);
-#else    
+#else
+#if defined(DARWIN)
+    double y = __ieee754_exp((double) x);
+
+    DARWIN_SINGLE_FLOAT_OVERFLOW(y);
+
+    return (float) y;
+#else
     return (float) __ieee754_exp((double) x);
+#endif
 #endif
 }
 
