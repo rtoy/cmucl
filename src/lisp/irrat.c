@@ -62,20 +62,26 @@ extern void cr_sincosf(float, float *, float *);
  */
 
 #define MAYBE_SIGNAL_INVALID(test, val)		\
-    if ((test)) {				\
-        return fdlibm_setexception(val, FDLIBM_INVALID);	\
-    }
+    do {					\
+        if ((test)) {				\
+            return fdlibm_setexception(val, FDLIBM_INVALID);	\
+        }							\
+    } while (0)
+    
 
 #define MAYBE_SIGNAL_OVERFLOW(x)	\
-    if (isinf(x)) {	\
-	return fdlibm_setexception(x, FDLIBM_OVERFLOW); \
-    }
+    do {				\
+        if (isinf(x)) {	\
+            return fdlibm_setexception(x, FDLIBM_OVERFLOW); \
+        }						    \
+    } while (0)
+    
 
 double
 lisp_sin(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    MAYBE_SIGNAL_INVALID(isinf(x), x)
+    MAYBE_SIGNAL_INVALID(isinf(x), x);
 
     return cr_sin(x);
 #else    
@@ -87,7 +93,7 @@ double
 lisp_cos(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    MAYBE_SIGNAL_INVALID(isinf(x), x)
+    MAYBE_SIGNAL_INVALID(isinf(x), x);
 
     return cr_cos(x);
 #else    
@@ -99,7 +105,7 @@ double
 lisp_tan(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    MAYBE_SIGNAL_INVALID(isinf(x), x)
+    MAYBE_SIGNAL_INVALID(isinf(x), x);
 
     return cr_tan(x);
 #else    
@@ -151,7 +157,7 @@ double
 lisp_sinh(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    MAYBE_SIGNAL_OVERFLOW(x)
+    MAYBE_SIGNAL_OVERFLOW(x);
 	
     return cr_sinh(x);
 #else    
@@ -183,7 +189,7 @@ double
 lisp_asinh(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    MAYBE_SIGNAL_OVERFLOW(x)
+    MAYBE_SIGNAL_OVERFLOW(x);
 
     return cr_asinh(x);
 #else    
@@ -195,9 +201,9 @@ double
 lisp_acosh(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    MAYBE_SIGNAL_INVALID(x < 1, x)
+    MAYBE_SIGNAL_INVALID(x < 1, x);
 
-    MAYBE_SIGNAL_OVERFLOW(x)
+    MAYBE_SIGNAL_OVERFLOW(x);
     
     return cr_acosh(x);
 #else    
