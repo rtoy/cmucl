@@ -92,7 +92,7 @@
     (setf (x87-floating-point-modes) x87-modes)))
   )
 
-#+(and sse2)
+#+(and sse2 (not darwin))
 (progn
   (defun floating-point-modes ()
     ;; Combine the modes from the FPU and SSE2 units.  Since the sse
@@ -133,7 +133,7 @@
       (setf (vm::x87-floating-point-modes) (ldb (byte 30 0) x87-modes)))
     new-mode))
 
-#+(and nil sse2 darwin)
+#+(and sse2 darwin)
 (progn
   (defun floating-point-modes ()
     ;; Get just the SSE2 mode bits.
