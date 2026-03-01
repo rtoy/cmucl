@@ -141,6 +141,15 @@ linux:build:
     # Fedora 41 must build with gcc because the clang build fails some
     # ansi-tests.  See [#469].
     CONFIG: "x86_linux"
+  rules:
+    # 1. Ensure build runs for schedules so the analyzer can use its files
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: on_success
+    # 2. Ensure build runs if the analyzer variable is set
+    - if: $RUN_ANALYSIS
+      when: on_success
+    # 3. Default: run for standard pushes/MRs
+    - when: on_success    
 
 linux:cross-build:
   stage: build
