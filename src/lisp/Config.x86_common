@@ -95,10 +95,48 @@ CORE_MATH_SRCS = $(CORE64_SRCS) $(CORE32_SRCS)
 
 endif
 
+# If core-math is not defined such as on Darwin, we use the code from
+# openlibm to implement the special functions for single-floats.
+ifndef FEATURE_CORE_MATH
+OPENLIBM_DIR = openlibm
+OPENLIBM_SRCS = \
+	$(OPENLIBM_DIR)/e_acosf.c \
+	$(OPENLIBM_DIR)/e_acoshf.c \
+	$(OPENLIBM_DIR)/e_asinf.c \
+	$(OPENLIBM_DIR)/e_atan2f.c \
+	$(OPENLIBM_DIR)/e_atanhf.c \
+	$(OPENLIBM_DIR)/e_coshf.c \
+	$(OPENLIBM_DIR)/e_expf.c \
+	$(OPENLIBM_DIR)/e_hypotf.c \
+	$(OPENLIBM_DIR)/e_log10f.c \
+	$(OPENLIBM_DIR)/e_logf.c \
+	$(OPENLIBM_DIR)/e_powf.c \
+	$(OPENLIBM_DIR)/e_rem_pio2f.c \
+	$(OPENLIBM_DIR)/e_sinhf.c \
+	$(OPENLIBM_DIR)/k_cosf.c \
+	$(OPENLIBM_DIR)/k_sinf.c \
+	$(OPENLIBM_DIR)/k_tanf.c \
+	$(OPENLIBM_DIR)/k_expf.c \
+	$(OPENLIBM_DIR)/s_asinhf.c \
+	$(OPENLIBM_DIR)/s_atanf.c \
+	$(OPENLIBM_DIR)/s_cosf.c \
+	$(OPENLIBM_DIR)/s_expm1f.c \
+	$(OPENLIBM_DIR)/s_log1pf.c \
+	$(OPENLIBM_DIR)/s_sinf.c \
+	$(OPENLIBM_DIR)/s_tanf.c \
+	$(OPENLIBM_DIR)/s_tanhf.c
+endif
+
 ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
 CPP_INCLUDE_OPTIONS := -iquote . -iquote $(PATH1)
+ifndef FEATURE_CORE_MATH
+CPP_INCLUDE_OPTIONS += -isystem $(PATH1)/$(OPENLIBM_DIR) -DOPENLIBM_USE_HOST_MATH_H
+endif
 else
-CPP_INCLUDE_OPTIONS := -I. -I$(PATH1) -I-
+CPP_INCLUDE_OPTIONS := -I. -I$(PATH1) -I $(OPENLIBM_DIR) -I-
+ifndef FEATURE_CORE_MATH
+CPP_INCLUDE_OPTIONS += -I $(PATH1)/$(OPENLIBM_DIR)
+endif
 endif
 
 CPPFLAGS := $(CPP_DEFINE_OPTIONS) $(CPP_INCLUDE_OPTIONS) 
