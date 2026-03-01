@@ -287,9 +287,6 @@ linux:static-analyzer:
       
   tags:
     - linux
-  # Allows the pipeline to proceed and show a "passed with warnings" 
-  # status (orange) instead of "failed" (red) if this job exits with an error.
-  allow_failure: true
   artifacts:
     when: always
     paths:
@@ -306,7 +303,9 @@ linux:static-analyzer:
       when: on_success
     # 3. Otherwise, the job remains a manual button in the pipeline.
     - when: manual
-      allow_failure: true
+  # Allows the pipeline to proceed and show a "passed with warnings" 
+  # status (orange) instead of "failed" (red) if this job exits with an error.
+  allow_failure: true
   script:
     # Analysis can generate huge amounts of output.  For now just save
     # the results to the log file instead of also having it go to the
@@ -366,7 +365,15 @@ markdown-link-check:
   # Only the linux runner has markdown-link-check installed
   tags:
     - linux
-  when: manual
+  rules:
+    # 1. If the pipeline is a scheduled run, run this job automatically
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: on_success
+    # 2. If the variable is set (manually via UI/API), run automatically.
+    - if: $RUN_ANALYSIS
+      when: on_success
+    # 3. Otherwise, the job remains a manual button in the pipeline.
+    - when: manual
   # It's ok if this fails; we don't want to declare the entire
   # pipeline as having failed.
   allow_failure: true
