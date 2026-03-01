@@ -123,6 +123,7 @@ OPENLIBM_SRCS = \
 	$(OPENLIBM_DIR)/s_expm1f.c \
 	$(OPENLIBM_DIR)/s_log1pf.c \
 	$(OPENLIBM_DIR)/s_sinf.c \
+	$(OPENLIBM_DIR)/s_sincosf.c \
 	$(OPENLIBM_DIR)/s_tanf.c \
 	$(OPENLIBM_DIR)/s_tanhf.c
 endif
