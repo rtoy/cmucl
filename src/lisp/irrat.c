@@ -9,8 +9,8 @@
 #include "internals.h"
 #include "fdlibm.h"
 
-#include "openlibm_math.h"
 #ifdef FEATURE_CORE_MATH
+#include <math.h>
 extern double cr_sin(double);
 extern double cr_cos(double);
 extern double cr_tan(double);
@@ -55,18 +55,7 @@ extern float cr_log1pf(float);
 extern float cr_expm1f(float);
 extern void cr_sincosf(float, float *, float *);
 #else
-extern float __ieee754_atan2f(float y, float x);
-extern float __ieee754_asinf(float x);
-extern float __ieee754_acosf(float x);
-extern float __ieee754_acoshf(float x);
-extern float __ieee754_atanhf(float x);
-extern float __ieee754_sinhf(float x);
-extern float __ieee754_coshf(float x);
-extern float __ieee754_tanhf(float x);
-extern float __ieee754_expf(float x);
-extern float __ieee754_log10f(float x);
-extern float __ieee754_hypotf(float x, float y);
-extern float __ieee754_expf(float x);
+#include "openlibm_math.h"
 #endif
 
 
