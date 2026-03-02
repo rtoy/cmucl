@@ -54,6 +54,8 @@ extern float cr_hypotf(float, float);
 extern float cr_log1pf(float);
 extern float cr_expm1f(float);
 extern void cr_sincosf(float, float *, float *);
+#else
+#include "openlibm_math.h"
 #endif
 
 
@@ -348,7 +350,7 @@ lisp_sinf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_sinf(x);
 #else    
-    return (float) fdlibm_sin((double) x);
+    return sinf(x);
 #endif    
 }
 
@@ -358,7 +360,7 @@ lisp_cosf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_cosf(x);
 #else    
-    return (float) fdlibm_cos((double) x);
+    return cosf(x);
 #endif
 }
 
@@ -368,7 +370,7 @@ lisp_tanf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_tanf(x);
 #else    
-    return (float) fdlibm_tan((double) x);
+    return tanf(x);
 #endif
 }
 
@@ -378,7 +380,7 @@ lisp_atanf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_atanf(x);
 #else    
-    return (float) fdlibm_atan((double) x);
+    return atanf(x);
 #endif
 }
 
@@ -388,7 +390,7 @@ lisp_atan2f(float y, float x)
 #ifdef FEATURE_CORE_MATH
     return cr_atan2f(y, x);
 #else    
-    return (float) __ieee754_atan2((double) y, (double) x);
+    return atan2f(y, x);
 #endif
 }
 
@@ -398,7 +400,7 @@ lisp_asinf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_asinf(x);
 #else    
-    return (float) __ieee754_asin((double) x);
+    return asinf(x);
 #endif
 }
 
@@ -408,7 +410,7 @@ lisp_acosf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_acosf(x);
 #else    
-    return (float) __ieee754_acos((double) x);
+    return acosf(x);
 #endif
 }
 
@@ -418,7 +420,7 @@ lisp_sinhf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_sinhf(x);
 #else    
-    return (float) __ieee754_sinh((double) x);
+    return sinhf(x);
 #endif
 }
 
@@ -428,7 +430,7 @@ lisp_coshf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_coshf(x);
 #else    
-    return (float) __ieee754_cosh((double) x);
+    return coshf(x);
 #endif
 }
 
@@ -438,7 +440,7 @@ lisp_tanhf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_tanhf(x);
 #else    
-    return (float) fdlibm_tanh((double) x);
+    return tanhf(x);
 #endif
 }
 
@@ -448,7 +450,7 @@ lisp_asinhf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_asinhf(x);
 #else    
-    return (float) fdlibm_asinh((double) x);
+    return asinhf((double) x);
 #endif
 }
 
@@ -458,7 +460,7 @@ lisp_acoshf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_acoshf(x);
 #else    
-    return (float) __ieee754_acosh((double) x);
+    return acoshf(x);
 #endif
 }
 
@@ -468,7 +470,7 @@ lisp_atanhf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_atanhf(x);
 #else    
-    return (float) __ieee754_atanh((double) x);
+    return atanhf(x);
 #endif
 }
 
@@ -478,7 +480,7 @@ lisp_expf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_expf(x);
 #else    
-    return (float) __ieee754_exp((double) x);
+    return expf(x);
 #endif
 }
 
@@ -488,7 +490,7 @@ lisp_logf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_logf(x);
 #else    
-    return (float) __ieee754_log((double) x);
+    return log(x);
 #endif
 }
 
@@ -498,7 +500,7 @@ lisp_log10f(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_log10f(x);
 #else    
-    return (float) __ieee754_log10((double) x);
+    return log10f(x);
 #endif
 }
 
@@ -520,7 +522,7 @@ lisp_powf(float x, float y)
      * just use fdlibm for now until we can figure out what's causing
      * the failure.
      */
-    return (float) __ieee754_pow((double) x, (double) y);
+    return pow(x, y);
 #endif
 }
 
@@ -530,7 +532,7 @@ lisp_hypotf(float x, float y)
 #ifdef FEATURE_CORE_MATH
     return cr_hypotf(x, y);
 #else    
-    return (float) __ieee754_hypot((double) x, (double) y);
+    return hypotf(x, y);
 #endif
 }
 
@@ -540,7 +542,7 @@ lisp_log1pf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_log1pf(x);
 #else    
-    return (float) fdlibm_log1p((double) x);
+    return log1pf(x);
 #endif
 }
 
@@ -550,7 +552,7 @@ lisp_expm1f(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_expm1f(x);
 #else    
-    return (float) fdlibm_expm1((double) x);
+    return expm1f(x);
 #endif
 }
 
@@ -560,11 +562,8 @@ lisp_sincosf(float x, float *s, float *c)
 #ifdef FEATURE_CORE_MATH
     cr_sincosf(x, s, c);
 #else    
-    extern void cmucl_sincos(double, double*, double*);
-    double ds, dc;
-    
-    cmucl_sincos((double) x, &ds, &dc);
-    *s = (float) ds;
-    *c = (float) dc;
+    extern void sincosf(float x, float *s, float *c);
+
+    sincosf(x, s, c);
 #endif
 }
