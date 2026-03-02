@@ -131,7 +131,7 @@ endif
 ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
 CPP_INCLUDE_OPTIONS := -iquote . -iquote $(PATH1)
 ifndef FEATURE_CORE_MATH
-CPP_INCLUDE_OPTIONS += -isystem $(PATH1)/$(OPENLIBM_DIR) -DOPENLIBM_USE_HOST_MATH_H
+CPP_INCLUDE_OPTIONS += -I $(PATH1)/$(OPENLIBM_DIR) -DOPENLIBM_USE_HOST_MATH_H
 endif
 else
 CPP_INCLUDE_OPTIONS := -I. -I$(PATH1) -I $(OPENLIBM_DIR) -I-
