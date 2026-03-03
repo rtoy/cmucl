@@ -504,7 +504,6 @@ lisp_expf(float x)
 #else    
     return expf(x);
 #endif
-#endif
 }
 
 float
