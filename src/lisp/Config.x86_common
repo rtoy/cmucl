@@ -110,6 +110,7 @@ OPENLIBM_SRCS = \
 	$(OPENLIBM_DIR)/e_hypotf.c \
 	$(OPENLIBM_DIR)/e_log10f.c \
 	$(OPENLIBM_DIR)/e_logf.c \
+	$(OPENLIBM_DIR)/e_log2f.c \
 	$(OPENLIBM_DIR)/e_powf.c \
 	$(OPENLIBM_DIR)/e_rem_pio2f.c \
 	$(OPENLIBM_DIR)/e_sinhf.c \
