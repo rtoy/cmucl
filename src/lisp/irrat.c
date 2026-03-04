@@ -80,17 +80,6 @@ extern float cr_log2f(float);
         }						    \
     } while (0)
     
-
-#ifdef DARWIN
-#define DARWIN_SINGLE_FLOAT_OVERFLOW(y) \
-    do {				\
-        if (fabs(y) >= 0x1.0p128) {				\
-	    return fdlibm_setexception(y, FDLIBM_OVERFLOW);	\
-	}							\
-    } while (0)
-    
-#endif
-    
 double
 lisp_sin(double x)
 {
