@@ -58,7 +58,10 @@ __ieee754_expf(float x)
 		 return x+x;	 		/* NaN */
             if(hx==0x7f800000)
 		return (xsb==0)? x:0.0;		/* exp(+-inf)={inf,0} */
-	    if(x > o_threshold) return huge*huge; /* overflow */
+	    if(x > o_threshold) {
+		volatile float fhuge = huge;
+		return fhuge*fhuge; /* overflow */
+	    }
 	    if(x < u_threshold) return twom100*twom100; /* underflow */
 	}
 
