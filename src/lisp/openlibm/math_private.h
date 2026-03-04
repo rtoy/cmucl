@@ -309,6 +309,7 @@ irint(double x)
 #define	__ieee754_yn	yn
 #define	__ieee754_remainder remainder
 #define	__ieee754_sqrtf	sqrtf
+#if 0
 #define	__ieee754_acosf	acosf
 #define	__ieee754_acoshf acoshf
 #define	__ieee754_logf	logf
@@ -317,14 +318,33 @@ irint(double x)
 #define	__ieee754_atan2f atan2f
 #define	__ieee754_expf	expf
 #define	__ieee754_coshf	coshf
+#else
+extern float __ieee754_acosf(float);
+extern float __ieee754_acoshf(float);
+extern float __ieee754_logf(float);
+extern float __ieee754_atanhf(float);
+extern float __ieee754_asinf(float);
+extern float __ieee754_atan2f(float, float);
+extern float __ieee754_expf(float);
+extern float __ieee754_coshf(float);
+#endif
 #define	__ieee754_fmodf	fmodf
 #define	__ieee754_powf	powf
 #define	__ieee754_lgammaf lgammaf
 #define	__ieee754_lgammaf_r lgammaf_r
+#if 0
 #define	__ieee754_log10f log10f
+#else
+extern float __ieee754_log10f(float);
+#endif
 #define	__ieee754_log2f log2f
+#if 0
 #define	__ieee754_sinhf	sinhf
 #define	__ieee754_hypotf hypotf
+#else
+extern float __ieee754_sinhf(float);
+extern float __ieee754_hypotf(float, float);
+#endif
 #define	__ieee754_j0f	j0f
 #define	__ieee754_j1f	j1f
 #define	__ieee754_y0f	y0f
