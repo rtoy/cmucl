@@ -404,7 +404,7 @@ lisp_atanf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_atanf(x);
 #else    
-    return atanf(x);
+    return openlibm_atanf(x);
 #endif
 }
 
