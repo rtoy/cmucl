@@ -596,6 +596,6 @@ lisp_log2f(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_log2f(x);
 #else
-    return (float) fdlibm_log2((double) x);
+    return log2f(x);
 #endif
 }
