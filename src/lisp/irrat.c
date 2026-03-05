@@ -56,7 +56,10 @@ extern float cr_expm1f(float);
 extern void cr_sincosf(float, float *, float *);
 #else
 #include "openlibm_math.h"
-
+/*
+ * Declare the openlibm functions we use.  This is needed because we
+ * changed the names of the openlibm functions.
+ */
 extern float openlibm_asinhf(float);
 extern float openlibm_atanf(float);
 extern float openlibm_cosf(float);
@@ -77,8 +80,6 @@ extern float __ieee754_coshf(float);
 extern float __ieee754_log10f(float);
 extern float __ieee754_sinhf(float);
 extern float __ieee754_hypotf(float, float);
-
-
 
 #endif
 

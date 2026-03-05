@@ -334,14 +334,12 @@ extern float __ieee754_coshf(float);
 #define	__ieee754_lgammaf_r lgammaf_r
 #if 0
 #define	__ieee754_log10f log10f
-#else
-extern float __ieee754_log10f(float);
-#endif
 #define	__ieee754_log2f log2f
-#if 0
 #define	__ieee754_sinhf	sinhf
 #define	__ieee754_hypotf hypotf
 #else
+extern float __ieee754_log10f(float);
+extern float __ieee754_log2f(float);
 extern float __ieee754_sinhf(float);
 extern float __ieee754_hypotf(float, float);
 #endif
