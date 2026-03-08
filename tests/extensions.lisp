@@ -4,6 +4,90 @@
 
 (in-package "EXTENSIONS-TESTS")
 
+(define-test float-to-hex-string
+  (assert-equal "0x1.8p+1"   (ext:float-to-hex-string 3.0d0))
+  (assert-equal "0x1.8p+1f"  (ext:float-to-hex-string 3.0f0))
+  (assert-equal "0x1.8p+1w"  (ext:float-to-hex-string 3.0w0))
+  (assert-equal "-0x1.8p+1"  (ext:float-to-hex-string -3.0d0)))
+
+(define-test write-double-zero
+  (assert-equal "0x0p+0"  (ext:float-to-hex-string 0.0d0))
+  (assert-equal "-0x0p+0" (ext:float-to-hex-string -0.0d0)))
+
+(define-test write-double-one
+  (assert-equal "0x1p+0"  (ext:float-to-hex-string 1.0d0))
+  (assert-equal "-0x1p+0" (ext:float-to-hex-string -1.0d0)))
+
+(define-test write-double-powers-of-two
+  (assert-equal "0x1p+1"    (ext:float-to-hex-string 2.0d0))
+  (assert-equal "0x1p-1"    (ext:float-to-hex-string 0.5d0))
+  (assert-equal "0x1p+52"   (ext:float-to-hex-string (expt 2.0d0 52)))
+  (assert-equal "0x1p-52"   (ext:float-to-hex-string (expt 2.0d0 -52)))
+  (assert-equal "0x1p+1023" (ext:float-to-hex-string (expt 2.0d0 1023)))
+  (assert-equal "0x1p-1022" (ext:float-to-hex-string (expt 2.0d0 -1022))))
+
+(define-test write-double-fractions
+  (assert-equal "0x1.8p+1"             (ext:float-to-hex-string 3.0d0))
+  (assert-equal "-0x1.8p+1"            (ext:float-to-hex-string -3.0d0))
+  (assert-equal "0x1.5555555555555p-2" (ext:float-to-hex-string (/ 1.0d0 3.0d0)))
+  (assert-equal "0x1.921fb54442d18p+1" (ext:float-to-hex-string pi)))
+
+(define-test write-double-denormals
+  (assert-equal "0x0.8p-1022"             (ext:float-to-hex-string (expt 2.0d0 -1023)))
+  (assert-equal "0x0.0000000000001p-1022" (ext:float-to-hex-string (expt 2.0d0 -1074))))
+
+(define-test write-double-special
+  (assert-equal "0x1.0p+inf"
+                (ext:float-to-hex-string ext:double-float-positive-infinity))
+  (assert-equal "-0x1.0p+inf"
+                (ext:float-to-hex-string ext:double-float-negative-infinity))
+  (assert-equal "0x0.0p+nan"
+                (ext:float-to-hex-string
+                  (ext:with-float-traps-masked (:invalid)
+                    (- ext:double-float-positive-infinity
+                       ext:double-float-positive-infinity)))))
+
+(define-test write-single-zero
+  (assert-equal "0x0p+0f"  (ext:float-to-hex-string 0.0f0))
+  (assert-equal "-0x0p+0f" (ext:float-to-hex-string -0.0f0)))
+
+(define-test write-single-values
+  (assert-equal "0x1p+0f"          (ext:float-to-hex-string 1.0f0))
+  (assert-equal "-0x1p+0f"         (ext:float-to-hex-string -1.0f0))
+  (assert-equal "0x1p+1f"          (ext:float-to-hex-string 2.0f0))
+  (assert-equal "0x1.8p+1f"        (ext:float-to-hex-string 3.0f0))
+  (assert-equal "0x1.555556p-2f"   (ext:float-to-hex-string (/ 1.0f0 3.0f0)))
+  (assert-equal "0x1.fffffep+127f" (ext:float-to-hex-string most-positive-single-float))
+  (assert-equal "0x1p-126f"        (ext:float-to-hex-string (expt 2.0f0 -126))))
+
+(define-test write-single-denormals
+  (assert-equal "0x0.000002p-126f" (ext:float-to-hex-string (expt 2.0f0 -149))))
+
+(define-test write-single-special
+  (assert-equal "0x1.0p+inff"
+                (ext:float-to-hex-string ext:single-float-positive-infinity))
+  (assert-equal "-0x1.0p+inff"
+                (ext:float-to-hex-string ext:single-float-negative-infinity))
+  (assert-equal "0x0.0p+nanf"
+                (ext:float-to-hex-string
+                  (ext:with-float-traps-masked (:invalid)
+                    (- ext:single-float-positive-infinity
+                       ext:single-float-positive-infinity)))))
+
+(define-test write-double-double-zero
+  (assert-equal "0x0p+0w"  (ext:float-to-hex-string 0.0w0))
+  (assert-equal "-0x0p+0w" (ext:float-to-hex-string -0.0w0)))
+
+(define-test write-double-double-values
+  (assert-equal "0x1p+0w"                (ext:float-to-hex-string 1.0w0))
+  (assert-equal "-0x1p+0w"               (ext:float-to-hex-string -1.0w0))
+  (assert-equal "0x1.8p+1w"              (ext:float-to-hex-string 3.0w0))
+  (assert-equal "0x1p+64w"               (ext:float-to-hex-string (expt 2.0w0 64)))
+  (assert-equal "0x1.921fb54442d18p+1w"
+                (ext:float-to-hex-string (coerce pi 'ext:double-double-float)))
+  (assert-equal "0x1.fffffffffffff8p-1w"
+                (ext:float-to-hex-string (- 1.0w0 (expt 2.0w0 -54)))))
+
 (defun get-double-bits (val)
   (multiple-value-bind (hi lo) (kernel:double-float-bits val)
     (logior (ash (ldb (byte 32 0) hi) 32) (ldb (byte 32 0) lo))))
