@@ -6066,28 +6066,11 @@ msgid ""
 msgstr ""
 
 #: src/code/ext-code.lisp
-msgid ""
-"Print a single- or double-float in hex format onto STREAM.\n"
-"   MANTISSA-BITS is 23 for single, 52 for double (excluding implicit "
-"leading 1).\n"
-"   X must be the original float of the appropriate type; do not pre-coerce."
+msgid "Print a single-float or double-float in hex format onto STREAM."
 msgstr ""
 
 #: src/code/ext-code.lisp
-msgid ""
-"Print a double-double-float in hex format onto STREAM.\n"
-"   Reconstructs the full significand from hi and lo components\n"
-"   using exact integer arithmetic before formatting."
-msgstr ""
-
-#: src/code/ext-code.lisp
-msgid ""
-"Write float X to STREAM in C-style hex format.\n"
-"   STREAM defaults to *standard-output*.\n"
-"   single-float        => 0x<mantissa>p<exp>f\n"
-"   double-float        => 0x<mantissa>p<exp>\n"
-"   double-double-float => 0x<mantissa>p<exp>w\n"
-"   Negative zero is printed with a leading minus sign."
+msgid "Print a double-double-float in hex format onto STREAM."
 msgstr ""
 
 #: src/code/ext-code.lisp
@@ -6100,10 +6083,22 @@ msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
+"Write float X to STREAM in C-style hex format. STREAM defaults to *standard-"
+"output*.\n"
+"\n"
+"   single-float        => 0x<mantissa>p<exp>f\n"
+"   double-float        => 0x<mantissa>p<exp>\n"
+"   double-double-float => 0x<mantissa>p<exp>w\n"
+"\n"
+"  Negative zero is printed with a leading minus sign."
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
 "Format function for use with ~/package:format-hex-float/.\n"
 "   Ignores colon modifier.\n"
 "   At-sign modifier forces a leading + sign on non-negative values.\n"
-"   Example: (format t \"~@/format-hex-float/\" 3.0d0) => +0x1.8p+1"
+"   Example: (format t \"~@/ext:format-hex-float/\" 3.0d0) => +0x1.8p+1"
 msgstr ""
 
 #: src/code/ext-code.lisp
