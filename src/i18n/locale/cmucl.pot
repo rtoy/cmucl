@@ -6062,21 +6062,48 @@ msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Prints a single or double float in bit-perfect C-style hex.\n"
-"   If AT-P is true, prepends '+' for non-negative finite values."
+"Remove trailing zero characters from string S, preserving internal zeros."
 msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Convert FLOAT to C-style hex string and write it to STREAM.\n"
-"  Infinities are printed as \"-inf\" and \"inf\".  NaN is printed as\n"
-"  \"nan\"."
+"Print a single- or double-float in hex format onto STREAM.\n"
+"   MANTISSA-BITS is 23 for single, 52 for double (excluding implicit "
+"leading 1).\n"
+"   X must be the original float of the appropriate type; do not pre-coerce."
 msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Formatter for ~/ext:format-hex-float/. \n"
-"   Uses AT-SIGN-P (@) to force the sign. COLON-P (:) is currently ignored."
+"Print a double-double-float in hex format onto STREAM.\n"
+"   Reconstructs the full significand from hi and lo components\n"
+"   using exact integer arithmetic before formatting."
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
+"Write float X to STREAM in C-style hex format.\n"
+"   STREAM defaults to *standard-output*.\n"
+"   single-float        => 0x<mantissa>p<exp>f\n"
+"   double-float        => 0x<mantissa>p<exp>\n"
+"   double-double-float => 0x<mantissa>p<exp>w\n"
+"   Negative zero is printed with a leading minus sign."
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
+"Return a string containing the C-style hex float representation of X.\n"
+"   single-float        => \"0x<mantissa>p<exp>f\"\n"
+"   double-float        => \"0x<mantissa>p<exp>\"\n"
+"   double-double-float => \"0x<mantissa>p<exp>w\""
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
+"Format function for use with ~/package:format-hex-float/.\n"
+"   Ignores colon modifier.\n"
+"   At-sign modifier forces a leading + sign on non-negative values.\n"
+"   Example: (format t \"~@/format-hex-float/\" 3.0d0) => +0x1.8p+1"
 msgstr ""
 
 #: src/code/ext-code.lisp
