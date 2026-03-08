@@ -23,10 +23,6 @@
 
 ;;;; C-style hex float printer and parser
 
-;;; FLOAT-TO-HEX-STRING  -- Public
-;;;
-;;; Return a string representing a single and double-floats in C-style
-;;; hex format.
 (defun trim-trailing-zeros (s)
   "Remove trailing zero characters from string S, preserving internal zeros."
   (let ((last-nonzero (position #\0 s :test #'char/= :from-end t)))
@@ -35,70 +31,65 @@
         "")))
 
 
-(defun write-hex-float-double (x stream mantissa-bits type)
-  "Print a single- or double-float in hex format onto STREAM.
-   MANTISSA-BITS is 23 for single, 52 for double (excluding implicit leading 1).
-   X must be the original float of the appropriate type; do not pre-coerce."
-  (when (and (not (float-nan-p x)) (minusp (float-sign x)))
-    (write-char #\- stream))
-  (let ((x (abs x)))
-    (cond
-      ((float-nan-p x)
-       (write-string "0x0.0p+nan" stream)
-       (ecase type
-         (:single (write-char #\f stream))
-         (:double (values))))
+(defun write-hex-float-double (x stream)
+  "Print a single-float or double-float in hex format onto STREAM."
+  ;; Float type and mantissa width are derived from the type of X.
+  (multiple-value-bind (mantissa-bits suffix-char min-c-exp)
+      (etypecase x
+        (single-float (values 23 #\f -126))
+        (double-float (values 52 nil -1022)))
+    (when (and (not (float-nan-p x)) (minusp (float-sign x)))
+      (write-char #\- stream))
+    (let ((x (abs x)))
+      (cond
+        ((float-nan-p x)
+         (write-string "0x0.0p+nan" stream)
+         (when suffix-char (write-char suffix-char stream)))
 
-      ((float-infinity-p x)
-       (write-string "0x1.0p+inf" stream)
-       (ecase type
-         (:single (write-char #\f stream))
-         (:double (values))))
+        ((float-infinity-p x)
+         (write-string "0x1.0p+inf" stream)
+         (when suffix-char (write-char suffix-char stream)))
 
-      ((zerop x)
-       (write-string "0x0p+0" stream)
-       (ecase type
-         (:single (write-char #\f stream))
-         (:double (values))))
+        ((zerop x)
+         (write-string "0x0p+0" stream)
+         (when suffix-char (write-char suffix-char stream)))
 
-      (t
-       (multiple-value-bind (significand exponent sign)
-           (integer-decode-float x)
-         (declare (ignore sign))
-         (let* ((c-exp      (+ exponent mantissa-bits))
-                (min-c-exp  (ecase type
-                              (:double -1022)
-                              (:single  -126)))
-                (denormalp  (< c-exp min-c-exp))
-                (hex-digits (ceiling mantissa-bits 4))
-                (frac-shift (- (* 4 hex-digits) mantissa-bits))
-                (frac       (if denormalp
-                                (ash significand
-                                     (+ (- c-exp min-c-exp) frac-shift))
-                                (ash (logand significand
-                                             (1- (ash 1 mantissa-bits)))
-                                     frac-shift)))
-                (out-exp    (if denormalp min-c-exp c-exp))
-                (frac-str   (trim-trailing-zeros
-                              (format nil "~v,'0X" hex-digits frac))))
-           (write-string "0x" stream)
-           (write-char (if denormalp #\0 #\1) stream)
-           (unless (zerop (length frac-str))
-             (write-char #\. stream)
-             (write-string frac-str stream))
-           (write-char #\p stream)
-           (when (>= out-exp 0) (write-char #\+ stream))
-           (write-string (format nil "~D" out-exp) stream)
-           (ecase type
-             (:single (write-char #\f stream))
-             (:double (values))))))))
-  (values))
+        (t
+         (multiple-value-bind (significand exponent sign)
+             (integer-decode-float x)
+           (declare (ignore sign))
+           (let* ((c-exp      (+ exponent mantissa-bits))
+                  (denormalp  (< c-exp min-c-exp))
+                  (hex-digits (ceiling mantissa-bits 4))
+                  (frac-shift (- (* 4 hex-digits) mantissa-bits))
+                  (frac       (if denormalp
+                                  (ash significand
+                                       (+ (- c-exp min-c-exp) frac-shift))
+                                  (ash (logand significand
+                                               (1- (ash 1 mantissa-bits)))
+                                       frac-shift)))
+                  (out-exp    (if denormalp min-c-exp c-exp))
+                  (frac-str   (trim-trailing-zeros
+                               (format nil "~v,'0X" hex-digits frac))))
+             (write-string "0x" stream)
+             (write-char (if denormalp #\0 #\1) stream)
+             (unless (zerop (length frac-str))
+               (write-char #\. stream)
+               (write-string frac-str stream))
+             (write-char #\p stream)
+             (when (>= out-exp 0)
+	       (write-char #\+ stream))
+             (write-string (format nil "~D" out-exp) stream)
+             (when suffix-char
+	       (write-char suffix-char stream)))))))
+    (values)))
 
 
+#+double-double
 (defun write-hex-float-double-double (x stream)
-  "Print a double-double-float in hex format onto STREAM.
-   Reconstructs the full significand from hi and lo components
-   using exact integer arithmetic before formatting."
+  "Print a double-double-float in hex format onto STREAM."
+  ;; Reconstructs the full significand from hi and lo components using
+  ;; exact integer arithmetic before formatting."
   (let* ((hi  (kernel:double-double-hi x))
          (lo  (kernel:double-double-lo x))
          (hi  (abs hi)))
@@ -125,7 +116,8 @@
                   (denormalp      (< c-exp min-c-exp))
                   (raw-frac-bits  (if (zerop lo)
                                       52
-                                      (+ (- exp-hi exp-lo) 52)))
+                                      (+ (- exp-hi exp-lo)
+					 52)))
                   (frac-bits      (* 4 (ceiling raw-frac-bits 4)))
                   (hex-digits     (/ frac-bits 4))
                   (shift          (if denormalp
@@ -145,25 +137,16 @@
                (write-char #\. stream)
                (write-string frac-str stream))
              (write-char #\p stream)
-             (when (>= out-exp 0) (write-char #\+ stream))
+             (when (>= out-exp 0)
+	       (write-char #\+ stream))
              (write-string (format nil "~D" out-exp) stream)
              (write-char #\w stream))))))
   (values)))
 
-(defun write-hex-float (x &optional (stream *standard-output*))
-  "Write float X to STREAM in C-style hex format.
-   STREAM defaults to *standard-output*.
-   single-float        => 0x<mantissa>p<exp>f
-   double-float        => 0x<mantissa>p<exp>
-   double-double-float => 0x<mantissa>p<exp>w
-   Negative zero is printed with a leading minus sign."
-  (let ((*print-case* :downcase))
-    (etypecase x
-      (double-double-float (write-hex-float-double-double x stream))
-      (double-float        (write-hex-float-double x stream 52 :double))
-      (single-float        (write-hex-float-double x stream 23 :single))))
-  (values))
-
+;;; FLOAT-TO-HEX-STRING  -- Public
+;;;
+;;; Return a string representing a single and double-floats in C-style
+;;; hex format.
 (defun float-to-hex-string (x)
   "Return a string containing the C-style hex float representation of X.
    single-float        => \"0x<mantissa>p<exp>f\"
@@ -173,6 +156,30 @@
     (write-hex-float x s)))
 
 
+;;; WRITE-HEX-FLOAT  -- Public
+;;;
+;;; Writes a float value (single, double, or double-double) in hex
+;;; format to a stream, defaulting to *standard-output*.
+(defun write-hex-float (x &optional (stream *standard-output*))
+  "Write float X to STREAM in C-style hex format. STREAM defaults to *standard-output*.
+
+   single-float        => 0x<mantissa>p<exp>f
+   double-float        => 0x<mantissa>p<exp>
+   double-double-float => 0x<mantissa>p<exp>w
+
+  Negative zero is printed with a leading minus sign."
+  (let ((*print-case* :downcase))
+    (etypecase x
+      (single-float
+       (write-hex-float-double x stream))
+      (double-float
+       (write-hex-float-double x stream))
+      #+double-double
+      (double-double-float
+       (write-hex-float-double-double x stream))))
+  (values))
+
+
 ;;; FORMAT-HEX-FLOAT -- Public
 ;;;
 ;;; Function that can be used in a FORMAT ~/
@@ -180,17 +187,14 @@
   "Format function for use with ~/package:format-hex-float/.
    Ignores colon modifier.
    At-sign modifier forces a leading + sign on non-negative values.
-   Example: (format t \"~@/format-hex-float/\" 3.0d0) => +0x1.8p+1"
+   Example: (format t \"~@/ext:format-hex-float/\" 3.0d0) => +0x1.8p+1"
   (declare (ignore colonp args))
   (when (and atsignp
-             (not (float-nan-p (if (typep x 'ext:double-double-float)
-                                   (kernel:double-double-hi x)
-                                   x)))
-             (not (minusp (float-sign (if (typep x 'ext:double-double-float)
-                                          (kernel:double-double-hi x)
-                                          x)))))
+             (not (float-nan-p x))
+             (not (minusp (float-sign x))))
     (write-char #\+ stream))
   (write-hex-float x stream))
+
 
 (define-condition hex-parse-error (parse-error)
   ((text :initarg :text :reader hex-parse-error-text)
