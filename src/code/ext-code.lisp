@@ -291,8 +291,9 @@
           (unless exp-digits
             (parse-error exp-start "Expected decimal digits for exponent"))
           (setf exponent (* exp-sign
-                            (reduce (lambda (acc d) (+ (* acc 10) d))
-                                    (nreverse exp-digits))))))
+                            (let ((result 0))
+                              (dolist (d (nreverse exp-digits) result)
+                                (setf result (+ (* result 10) d))))))))
 
       ;; Optional suffix: 'f'/'F' => single, 'w'/'W' => double-double, none => double
       (when (peek-char nil stream nil nil)
@@ -307,10 +308,10 @@
       ;; Build exact integer significand, adjust exponent for fractional hex digits.
       ;; Convert significand to float before multiplying by sign so that
       ;; (* -1 0.0d0) = -0.0d0, preserving negative zero.
-      (let* ((n-frac       (length frac-digits))
-             (significand  (reduce (lambda (acc d) (+ (* acc 16) d))
-                                   frac-digits
-                                   :initial-value mantissa))
+      (let* ((significand  (let ((result mantissa))
+                             (dolist (d frac-digits result)
+                               (setf result (+ (* result 16) d)))))
+             (n-frac       (length frac-digits))
              (adjusted-exp (- exponent (* 4 n-frac))))
 
         (ecase suffix
