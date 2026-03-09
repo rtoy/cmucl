@@ -6096,35 +6096,42 @@ msgstr ""
 #: src/code/ext-code.lisp
 msgid ""
 "Format function for use with ~/package:format-hex-float/.\n"
-"   Ignores colon modifier.\n"
-"   At-sign modifier forces a leading + sign on non-negative values.\n"
-"   Example: (format t \"~@/ext:format-hex-float/\" 3.0d0) => +0x1.8p+1"
+"  Ignores colon modifier.  At-sign modifier forces a leading + sign on\n"
+"  non-negative values. Example: (format t \"~@/ext:format-hex-float/\"\n"
+"  3.0d0) => +0x1.8p+1"
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid "Execution of a form compiled with errors:~% ~S"
 msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
 "Read a C-style hex float from STREAM and return a float value.\n"
-"   Format: [sign] 0x <hex-mantissa> [. <hex-fraction>] p <exp> [f|w]\n"
+"  Format: [sign] 0x <hex-mantissa> [. <hex-fraction>] p <exp> [f|w]\n"
 "   'f' suffix => single-float\n"
-"   'w' suffix => double-double-float (CMUCL native)\n"
-"   no suffix   => double-float\n"
-"   The binary exponent (p or P) is required.\n"
-"   Signals HEX-FLOAT-PARSE-ERROR on malformed input."
+"   'w' suffix => double-double-float\n"
+"   no suffix  => double-float\n"
+"  The binary exponent (p or P) is required.\n"
+"  Signals HEX-FLOAT-PARSE-ERROR on malformed input."
 msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
 "Read a C-style hex float from string S.\n"
-"   START and END bound the region to read (default: entire string).\n"
-"   Returns two values: the float and the index of the first character\n"
-"   not consumed.\n"
-"   Signals HEX-FLOAT-PARSE-ERROR on malformed input."
+"  START and END bound the region to read (default: entire string).\n"
+"  Returns two values: the float and the index of the first character\n"
+"  not consumed.  Signals HEX-FLOAT-PARSE-ERROR on malformed input."
 msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Read a C-style hex float number from OBJ which is either a string or a "
-"stream."
+"Read a C-style hex float from STREAM-OR-STRING.\n"
+"  If a string, START and END bound the region to read.  When reading\n"
+"  from a string, returns two values: the float and the index of the\n"
+"  first character not consumed.  When reading from a stream, returns\n"
+"  one value: the float.  Signals HEX-FLOAT-PARSE-ERROR on malformed\n"
+"  input."
 msgstr ""
 
 #: src/code/commandline.lisp
