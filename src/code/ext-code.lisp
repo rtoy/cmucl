@@ -196,6 +196,17 @@
   (write-hex-float x stream))
 
 
+(define-condition hex-float-parse-error (parse-error)
+  ((input    :initarg :input    :reader hex-float-parse-error-input)
+   (position :initarg :position :reader hex-float-parse-error-position)
+   (message  :initarg :message  :reader hex-float-parse-error-message))
+  (:report (lambda (c s)
+             (format s "Hex float parse error~@[ at position ~D~]: ~A~@[ (input: ~S)~]"
+                     (hex-float-parse-error-position c)
+                     (hex-float-parse-error-message c)
+                     (hex-float-parse-error-input c)))))
+
+#+nil
 (define-condition hex-parse-error (parse-error)
   ((text :initarg :text :reader hex-parse-error-text)
    (message :initarg :message :reader hex-parse-error-message))
@@ -207,6 +218,151 @@
 ;;;
 ;;; Parse a C-style float hex string from a stream.  Invalid formats
 ;;; signal an error.  A single-float or double-float may be returned.
+(defun read-hex-float-from-stream (stream)
+  "Read a C-style hex float from STREAM and return a float value.
+   Format: [sign] 0x <hex-mantissa> [. <hex-fraction>] p <exp> [f|w]
+   'f' suffix => single-float
+   'w' suffix => double-double-float (CMUCL native)
+   no suffix   => double-float
+   The binary exponent (p or P) is required.
+   Signals HEX-FLOAT-PARSE-ERROR on malformed input."
+  (flet ((parse-error (pos msg &rest args)
+           (error 'ext:hex-float-parse-error
+                  :position pos
+                  :message  (apply #'format nil msg args)
+                  :input    nil))
+         (pos ()
+           (file-position stream)))
+
+    (let ((sign 1)
+          (mantissa 0)
+          (frac-digits '())
+          (exponent 0)
+          (suffix nil))
+
+      ;; Optional sign
+      (let ((c (peek-char nil stream nil nil)))
+        (cond ((null c)
+               (parse-error (pos) "Unexpected end of input, expected hex float"))
+              ((char= c #\-) (setf sign -1) (read-char stream))
+              ((char= c #\+) (read-char stream))))
+
+      ;; Expect "0"
+      (let ((c (read-char stream nil nil)))
+        (unless (and c (char= c #\0))
+          (parse-error (pos) "Expected '0' to begin hex float prefix '0x', got ~S" c)))
+
+      ;; Expect "x" or "X"
+      (let ((c (read-char stream nil nil)))
+        (unless (and c (member c '(#\x #\X)))
+          (parse-error (pos) "Expected 'x' or 'X' after '0', got ~S" c)))
+
+      ;; Hex digits before optional decimal point (mantissa)
+      (let ((mantissa-start (pos)))
+        (loop for c = (peek-char nil stream nil nil)
+              while (and c (digit-char-p c 16))
+              do (setf mantissa (+ (* mantissa 16)
+                                   (digit-char-p (read-char stream) 16))))
+        (let ((mantissa-digitsp (> (pos) mantissa-start)))
+
+          ;; Optional fractional part — collect raw hex digits
+          (when (and (peek-char nil stream nil nil)
+                     (char= (peek-char nil stream nil nil) #\.))
+            (read-char stream)
+            (let ((frac-start (pos)))
+              (loop for c = (peek-char nil stream nil nil)
+                    while (and c (digit-char-p c 16))
+                    do (push (digit-char-p (read-char stream) 16) frac-digits))
+              (when (and (peek-char nil stream nil nil)
+                         (not (digit-char-p (peek-char nil stream nil nil) 16))
+                         (not (member (peek-char nil stream nil nil) '(#\p #\P)))
+                         (zerop (length frac-digits)))
+                (parse-error frac-start "Expected hex digits after decimal point")))
+            (setf frac-digits (nreverse frac-digits)))
+
+          ;; Mantissa must have at least one hex digit total
+          (unless (or mantissa-digitsp frac-digits)
+            (parse-error (pos) "Expected at least one hex digit in mantissa"))))
+
+      ;; Required binary exponent (p or P)
+      (let ((c (read-char stream nil nil)))
+        (unless (and c (member c '(#\p #\P)))
+          (parse-error (pos) "Expected 'p' or 'P' exponent marker, got ~S" c)))
+
+      (let ((exp-sign 1))
+        (when (member (peek-char nil stream nil nil) '(#\+ #\-))
+          (when (char= (read-char stream) #\-) (setf exp-sign -1)))
+        (let ((exp-digits nil)
+              (exp-start (pos)))
+          (loop for c = (peek-char nil stream nil nil)
+                while (and c (digit-char-p c 10))
+                do (push (digit-char-p (read-char stream) 10) exp-digits))
+          (unless exp-digits
+            (parse-error exp-start "Expected decimal digits for exponent"))
+          (setf exponent (* exp-sign
+                            (reduce (lambda (acc d) (+ (* acc 10) d))
+                                    (nreverse exp-digits))))))
+
+      ;; Optional suffix: 'f'/'F' => single, 'w'/'W' => double-double, none => double
+      (when (peek-char nil stream nil nil)
+        (let ((c (peek-char nil stream nil nil)))
+          (cond ((member c '(#\f #\F)) (read-char stream) (setf suffix :single))
+                ((member c '(#\w #\W)) (read-char stream) (setf suffix :double-double))
+                ((not (or (member c '(#\space #\tab #\newline #\return
+                                     #\) #\] #\} #\,))
+                          (digit-char-p c 10)))
+                 (parse-error (pos) "Unexpected character ~S after exponent" c)))))
+
+      ;; Build exact integer significand, adjust exponent for fractional hex digits.
+      ;; Convert significand to float before multiplying by sign so that
+      ;; (* -1 0.0d0) = -0.0d0, preserving negative zero.
+      (let* ((n-frac       (length frac-digits))
+             (significand  (reduce (lambda (acc d) (+ (* acc 16) d))
+                                   frac-digits
+                                   :initial-value mantissa))
+             (adjusted-exp (- exponent (* 4 n-frac))))
+
+        (ecase suffix
+          ((nil)
+           (scale-float (* sign (float significand 1.0d0)) adjusted-exp))
+
+          (:single
+           (coerce (scale-float (* sign (float significand 1.0d0)) adjusted-exp)
+                   'single-float))
+
+          (:double-double
+           (let* ((sig-bits    (integer-length significand))
+                  (split-shift (max 0 (- sig-bits 53)))
+                  (sig-hi      (ash significand (- split-shift)))
+                  (sig-lo      (- significand (ash sig-hi split-shift)))
+                  (exp-hi      (+ adjusted-exp split-shift))
+                  (hi          (scale-float (* sign (float sig-hi 1.0d0)) exp-hi))
+                  (lo          (scale-float (* sign (float sig-lo 1.0d0)) adjusted-exp)))
+             (kernel:make-double-double-float hi lo))))))))
+
+
+
+(defun read-hex-float-from-string (s &key (start 0) end)
+  "Read a C-style hex float from string S.
+   START and END bound the region to read (default: entire string).
+   Returns two values: the float and the index of the first character
+   not consumed.
+   Signals HEX-FLOAT-PARSE-ERROR on malformed input."
+  (let ((end (or end (length s))))
+    (with-input-from-string (stream s :start start :end end)
+      (values (read-hex-float stream)
+              (file-position stream)))))
+
+(defun read-hex-float (obj)
+  "Parse a C-style hex float number from OBJ which is either a string or a stream."
+  (declare (type (or string stream) obj))
+  (etypecase obj
+    (string
+     (read-hex-float-from-string obj))
+    (stream
+     (read-hex-float-from-stream obj))))
+
+#+nil
 (defun parse-hex-float-from-stream (stream)
   "Reads a C-style hex float number from STREAM.  A single-float or
   double-float number is returned.  A HEX-PARSE-ERROR is signaled for
@@ -281,6 +437,7 @@
 ;;; PARSE-HEX-FLOAT -- Public
 ;;;
 ;;; Parse a C-style hex float number from either a string or a stream.
+#+nil
 (defun parse-hex-float (obj)
   "Parse a C-style hex float number from OBJ which is either a string or a stream."
   (declare (type (or string stream) obj))
