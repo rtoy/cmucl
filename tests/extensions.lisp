@@ -101,37 +101,37 @@
 
 (define-test test-hex-syntax
   (:tag :validation)
-  (assert-error 'ext:hex-parse-error (ext:parse-hex-float "inf"))
-  (assert-error 'ext:hex-parse-error (ext:parse-hex-float "0x.p+0"))
-  (assert-error 'ext:hex-parse-error (ext:parse-hex-float "0x1.0p")))
+  (assert-error 'ext:hex-float-parse-error (ext:read-hex-float "inf"))
+  (assert-error 'ext:hex-float-parse-error (ext:read-hex-float "0x.p+0"))
+  (assert-error 'ext:hex-float-parse-error (ext:read-hex-float "0x1.0p")))
 
 (define-test test-cliff-boundaries
   (:tag :precision)
   ;; Double Precision (-1022 Cliff)
   
   (assert-equal #x0010000000000000
-		(get-double-bits (ext:parse-hex-float "0x1.0000000000000p-1022")))
+		(get-double-bits (ext:read-hex-float "0x1.0000000000000p-1022")))
   (assert-equal #x000fffffffffffff
-		(get-double-bits (ext:parse-hex-float "0x0.fffffffffffffp-1022")))
+		(get-double-bits (ext:read-hex-float "0x0.fffffffffffffp-1022")))
   (assert-equal #x001f0195cb356b8f
-		(get-double-bits (ext:parse-hex-float "0x1.f0195cb356b8fp-1022")))
+		(get-double-bits (ext:read-hex-float "0x1.f0195cb356b8fp-1022")))
   
   ;; Single Precision (-126 Cliff)
   
   (assert-equal #x00800000
-		(get-single-bits (ext:parse-hex-float "0x1.000000p-126f")))
+		(get-single-bits (ext:read-hex-float "0x1.000000p-126f")))
   (assert-equal #x00400000
-		(get-single-bits (ext:parse-hex-float "0x0.800000p-126f")))
+		(get-single-bits (ext:read-hex-float "0x0.800000p-126f")))
   (assert-equal #x7f7fffff
-		(get-single-bits (ext:parse-hex-float "0x1.fffffep+127f"))))
+		(get-single-bits (ext:read-hex-float "0x1.fffffep+127f"))))
 
 (define-test test-negative-zero
   (:tag :edge-cases)
   (assert-equal #x8000000000000000
-		(get-double-bits (ext:parse-hex-float "-0x0.0p+0")))
+		(get-double-bits (ext:read-hex-float "-0x0.0p+0")))
   (assert-equal #x80000000
-		(get-single-bits (ext:parse-hex-float "-0x0.0p+0f")))
-  (assert-true (typep (ext:parse-hex-float "-0x0.0p+0f")
+		(get-single-bits (ext:read-hex-float "-0x0.0p+0f")))
+  (assert-true (typep (ext:read-hex-float "-0x0.0p+0f")
 		      'single-float)))
 
 (define-test test-subnormal-boundaries
@@ -139,13 +139,13 @@
   ;; Test smallest single-float subnormal
   (let* ((val (kernel:make-single-float 1))
          (str (ext:float-to-hex-string val))
-         (parsed (ext:parse-hex-float str)))
+         (parsed (ext:read-hex-float str)))
     (assert-equal (get-single-bits val) (get-single-bits parsed)
 		  val str parsed))
   ;; Test smallest double-float subnormal
   (let* ((val (kernel:make-double-float 0 1))
          (str (ext:float-to-hex-string val))
-         (parsed (ext:parse-hex-float str)))
+         (parsed (ext:read-hex-float str)))
     (assert-equal (get-double-bits val) (get-double-bits parsed)
 		  val str parsed)))
 
@@ -158,7 +158,7 @@
            (val (kernel:make-double-float hi lo)))
       (unless (or (ext:float-nan-p val) (ext:float-infinity-p val))
         (let* ((str (ext:float-to-hex-string val))
-               (parsed (ext:parse-hex-float str)))
+               (parsed (ext:read-hex-float str)))
           (assert-equal (get-double-bits val)
 			(get-double-bits parsed)
 			val str parsed))))))
@@ -171,7 +171,169 @@
            (val (kernel:make-single-float bits)))
       (unless (or (ext:float-nan-p val) (ext:float-infinity-p val))
         (let* ((str (concatenate 'string (ext:float-to-hex-string val) "f"))
-               (parsed (ext:parse-hex-float str)))
+               (parsed (ext:read-hex-float str)))
           (assert-equal (get-single-bits val)
 			(get-single-bits parsed)
 			val str parsed))))))
+
+;;; ---- read-hex-float tests ------------------------------------------------
+
+(define-test read-double-zero
+  (assert-true (eql 0.0d0  (ext:read-hex-float "0x0p+0")))
+  (assert-true (eql -0.0d0 (ext:read-hex-float "-0x0p+0"))))
+
+(define-test read-double-values
+  (assert-true (eql 1.0d0  (ext:read-hex-float "0x1p+0")))
+  (assert-true (eql -1.0d0 (ext:read-hex-float "-0x1p+0")))
+  (assert-true (eql 2.0d0  (ext:read-hex-float "0x1p+1")))
+  (assert-true (eql 0.5d0  (ext:read-hex-float "0x1p-1")))
+  (assert-true (eql 3.0d0  (ext:read-hex-float "0x1.8p+1")))
+  (assert-true (eql -3.0d0 (ext:read-hex-float "-0x1.8p+1")))
+  (assert-true (eql pi     (ext:read-hex-float "0x1.921fb54442d18p+1"))))
+
+(define-test read-double-denormals
+  (assert-true (eql (scale-float 1.0d0 -1023)
+                    (ext:read-hex-float "0x0.8p-1022")))
+  (assert-true (eql (scale-float 1.0d0 -1074)
+                    (ext:read-hex-float "0x0.0000000000001p-1022"))))
+
+(define-test read-double-case-insensitive
+  (assert-true (eql 3.0d0 (ext:read-hex-float "0X1.8P+1")))
+  (assert-true (eql 0.5d0 (ext:read-hex-float "0X1P-1"))))
+
+(define-test read-single-zero
+  (assert-true (eql 0.0f0  (ext:read-hex-float "0x0p+0f")))
+  (assert-true (eql -0.0f0 (ext:read-hex-float "-0x0p+0f"))))
+
+(define-test read-single-values
+  (assert-true (eql 1.0f0  (ext:read-hex-float "0x1p+0f")))
+  (assert-true (eql -1.0f0 (ext:read-hex-float "-0x1p+0f")))
+  (assert-true (eql 2.0f0  (ext:read-hex-float "0x1p+1f")))
+  (assert-true (eql 3.0f0  (ext:read-hex-float "0x1.8p+1f")))
+  (assert-true (eql (/ 1.0f0 3.0f0)
+                    (ext:read-hex-float "0x1.555556p-2f")))
+  (assert-true (eql most-positive-single-float
+                    (ext:read-hex-float "0x1.fffffep+127f")))
+  (assert-true (eql (scale-float 1.0f0 -149)
+                    (ext:read-hex-float "0x0.000002p-126f"))))
+
+(define-test read-single-case-insensitive
+  (assert-true (eql 3.0f0 (ext:read-hex-float "0x1.8p+1F"))))
+
+(define-test read-double-double-zero
+  (assert-true (eql 0.0w0  (ext:read-hex-float "0x0p+0w")))
+  (assert-true (eql -0.0w0 (ext:read-hex-float "-0x0p+0w"))))
+
+(define-test read-double-double-values
+  (assert-true (eql 1.0w0  (ext:read-hex-float "0x1p+0w")))
+  (assert-true (eql -1.0w0 (ext:read-hex-float "-0x1p+0w")))
+  (assert-true (eql 3.0w0  (ext:read-hex-float "0x1.8p+1w")))
+  (assert-true (eql (scale-float 1.0w0 64)
+                    (ext:read-hex-float "0x1p+64w")))
+  (assert-true (eql (coerce pi 'ext:double-double-float)
+                    (ext:read-hex-float "0x1.921fb54442d18p+1w"))))
+
+(define-test read-double-double-case-insensitive
+  (assert-true (eql 3.0w0 (ext:read-hex-float "0x1.8p+1W"))))
+
+
+;;; ---- round-trip tests ----------------------------------------------------
+
+(define-test round-trip-double
+  (dolist (x (list 0.0d0 -0.0d0 1.0d0 -1.0d0 pi
+                   most-positive-double-float
+                   least-positive-double-float
+                   (scale-float 1.0d0 -1022)
+                   (scale-float 1.0d0 -1074)
+                   (/ 1.0d0 3.0d0)))
+    (assert-true (eql x (ext:read-hex-float (ext:float-to-hex-string x))) x)))
+
+(define-test round-trip-single
+  (dolist (x (list 0.0f0 -0.0f0 1.0f0 -1.0f0
+                   most-positive-single-float
+                   least-positive-single-float
+                   (scale-float 1.0f0 -126)
+                   (scale-float 1.0f0 -149)
+                   (/ 1.0f0 3.0f0)))
+    (assert-true (eql x (ext:read-hex-float (ext:float-to-hex-string x)))
+		 x)))
+
+(define-test round-trip-double-double
+  (dolist (x (list 0.0w0 -0.0w0 1.0w0 -1.0w0
+                   (coerce pi 'ext:double-double-float)
+                   (scale-float 1.0w0 64)
+                   (+ 1.0w0 1.0w-100)
+                   (- 1.0w0 (scale-float 1.0w0 -54))
+                   ext:most-positive-double-double-float
+                   ext:least-positive-double-double-float))
+    (assert-true (eql x (ext:read-hex-float (ext:float-to-hex-string x))) x)))
+
+
+;;; ---- read-hex-float-from-string tests ------------------------------------
+
+(define-test read-from-string-positions
+  (multiple-value-bind (val pos)
+      (ext::read-hex-float-from-string "0x1.8p+1")
+    (assert-true (eql 3.0d0 val))
+    (assert-equal 8 pos))
+  (multiple-value-bind (val pos)
+      (ext::read-hex-float-from-string "0x1.8p+1f")
+    (assert-true (eql 3.0f0 val))
+    (assert-equal 9 pos))
+  (multiple-value-bind (val pos)
+      (ext::read-hex-float-from-string "xxx0x1.8p+1" :start 3)
+    (assert-true (eql 3.0d0 val))
+    (assert-equal 11 pos))
+  (multiple-value-bind (val pos)
+      (ext::read-hex-float-from-string "0x1.8p+1 etc")
+    (assert-true (eql 3.0d0 val))
+    (assert-equal 8 pos)))
+
+
+;;; ---- format-hex-float tests ----------------------------------------------
+
+(define-test format-hex-float-basic
+  (assert-equal "0x1.8p+1"
+                (format nil "~/ext:format-hex-float/" 3.0d0))
+  (assert-equal "0x1.8p+1f"
+                (format nil "~/ext:format-hex-float/" 3.0f0))
+  (assert-equal "0x1.8p+1w"
+                (format nil "~/ext:format-hex-float/" 3.0w0)))
+
+(define-test format-hex-float-atsign
+  (assert-equal "+0x1.8p+1"
+                (format nil "~@/ext:format-hex-float/" 3.0d0))
+  (assert-equal "+0x1p+0f"
+                (format nil "~@/ext:format-hex-float/" 1.0f0))
+  (assert-equal "-0x1.8p+1"
+                (format nil "~@/ext:format-hex-float/" -3.0d0))
+  (assert-equal "0x0.0p+nan"
+                (format nil "~@/ext:format-hex-float/"
+                        (ext:with-float-traps-masked (:invalid)
+                          (- ext:double-float-positive-infinity
+                             ext:double-float-positive-infinity)))))
+
+
+;;; ---- parse error tests ---------------------------------------------------
+
+(define-test read-hex-float-parse-errors
+  (assert-true (subtypep 'ext:hex-float-parse-error 'parse-error))
+  (assert-error 'ext:hex-float-parse-error
+                (ext:read-hex-float ""))
+  (assert-error 'ext:hex-float-parse-error
+                (ext:read-hex-float "1.0p+0"))
+  (assert-error 'ext:hex-float-parse-error
+                (ext:read-hex-float "00.0p+0"))
+  (assert-error 'ext:hex-float-parse-error
+                (ext:read-hex-float "0x1.0"))
+  (assert-error 'ext:hex-float-parse-error
+                (ext:read-hex-float "0x1.0p"))
+  (assert-error 'ext:hex-float-parse-error
+                (ext:read-hex-float "0x1.0p+"))
+  (assert-error 'ext:hex-float-parse-error
+                (ext:read-hex-float "0x.p+0"))
+  (assert-error 'ext:hex-float-parse-error
+                (ext:read-hex-float "0x1p+0q"))
+  (assert-error 'ext:hex-float-parse-error
+                (ext:read-hex-float "-")))
+
