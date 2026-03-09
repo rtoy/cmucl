@@ -58,6 +58,9 @@ public domain.
     * #463: `double-double-float` is missing comparison operations
             between `double-double-float` and `double-float`
     * #474: Add functions to print and parse C-style hex floats.
+    * #477: Support reading and writing double-double-float in hex
+	    format.  "w" is the suffix used to denote
+	    double-double-floats. 
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
