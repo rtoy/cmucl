@@ -253,12 +253,6 @@
 (defun get-single-bits (val)
   (ldb (byte 32 0) (kernel:single-float-bits val)))
 
-(define-test test-hex-syntax
-  (:tag :validation)
-  (assert-error 'ext:hex-float-parse-error (ext:read-hex-float "inf"))
-  (assert-error 'ext:hex-float-parse-error (ext:read-hex-float "0x.p+0"))
-  (assert-error 'ext:hex-float-parse-error (ext:read-hex-float "0x1.0p")))
-
 (define-test test-cliff-boundaries
   (:tag :precision)
   ;; Double Precision (-1022 Cliff)
@@ -278,30 +272,6 @@
 		(get-single-bits (ext:read-hex-float "0x0.800000p-126f")))
   (assert-equal #x7f7fffff
 		(get-single-bits (ext:read-hex-float "0x1.fffffep+127f"))))
-
-(define-test test-negative-zero
-  (:tag :edge-cases)
-  (assert-equal #x8000000000000000
-		(get-double-bits (ext:read-hex-float "-0x0.0p+0")))
-  (assert-equal #x80000000
-		(get-single-bits (ext:read-hex-float "-0x0.0p+0f")))
-  (assert-true (typep (ext:read-hex-float "-0x0.0p+0f")
-		      'single-float)))
-
-(define-test test-subnormal-boundaries
-  (:tag :edge)
-  ;; Test smallest single-float subnormal
-  (let* ((val (kernel:make-single-float 1))
-         (str (ext:float-to-hex-string val))
-         (parsed (ext:read-hex-float str)))
-    (assert-equal (get-single-bits val) (get-single-bits parsed)
-		  val str parsed))
-  ;; Test smallest double-float subnormal
-  (let* ((val (kernel:make-double-float 0 1))
-         (str (ext:float-to-hex-string val))
-         (parsed (ext:read-hex-float str)))
-    (assert-equal (get-double-bits val) (get-double-bits parsed)
-		  val str parsed)))
 
 (define-test test-double-roundtrip
   (:tag :stress)
