@@ -361,11 +361,15 @@
 ;;; READ-HEX-FLOAT -- Public
 ;;;
 ;;; Read a C-style hex float number from either a string or a stream.
-(defun read-hex-float (obj)
-  "Read a C-style hex float number from OBJ which is either a string or a stream."
-  (declare (type (or string stream) obj))
-  (etypecase obj
-    (string
-     (read-hex-float-from-string obj))
+(defun ext:read-hex-float (stream-or-string &key (start 0) end)
+  "Read a C-style hex float from STREAM-OR-STRING.
+  If a string, START and END bound the region to read.  When reading
+  from a string, returns two values: the float and the index of the
+  first character not consumed.  When reading from a stream, returns
+  one value: the float.  Signals HEX-FLOAT-PARSE-ERROR on malformed
+  input."
+  (etypecase stream-or-string
     (stream
-     (read-hex-float-from-stream obj))))
+     (read-hex-float-from-stream stream-or-string))
+    (string
+     (read-hex-float-from-string stream-or-string :start start :end end))))
