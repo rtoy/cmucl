@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/code/extensions.lisp $")
+  "$Header: src/code/ext-code.lisp $")
 ;;;
 ;;;
 ;;; **********************************************************************
@@ -21,7 +21,11 @@
 (intl:textdomain "cmucl")
 
 
+;;;; **********************************************************************
 ;;;; C-style hex float printer and parser
+
+;;; **********************************************************************
+;;; Write float in C-style hex float literal
 
 (defun trim-trailing-zeros (s)
   "Remove trailing zero characters from string S, preserving internal zeros."
@@ -29,7 +33,6 @@
     (if last-nonzero
         (subseq s 0 (1+ last-nonzero))
         "")))
-
 
 (defun write-hex-float-double (x stream)
   "Print a single-float or double-float in hex format onto STREAM."
@@ -83,7 +86,6 @@
              (when suffix-char
 	       (write-char suffix-char stream)))))))
     (values)))
-
 
 #+double-double
 (defun write-hex-float-double-double (x stream)
@@ -143,19 +145,6 @@
              (write-char #\w stream))))))
   (values)))
 
-;;; FLOAT-TO-HEX-STRING  -- Public
-;;;
-;;; Return a string representing a single and double-floats in C-style
-;;; hex format.
-(defun float-to-hex-string (x)
-  "Return a string containing the C-style hex float representation of X.
-   single-float        => \"0x<mantissa>p<exp>f\"
-   double-float        => \"0x<mantissa>p<exp>\"
-   double-double-float => \"0x<mantissa>p<exp>w\""
-  (with-output-to-string (s)
-    (write-hex-float x s)))
-
-
 ;;; WRITE-HEX-FLOAT  -- Public
 ;;;
 ;;; Writes a float value (single, double, or double-double) in hex
@@ -179,6 +168,17 @@
        (write-hex-float-double-double x stream))))
   (values))
 
+;;; FLOAT-TO-HEX-STRING  -- Public
+;;;
+;;; Return a string representing a single and double-floats in C-style
+;;; hex format.
+(defun float-to-hex-string (x)
+  "Return a string containing the C-style hex float representation of X.
+   single-float        => \"0x<mantissa>p<exp>f\"
+   double-float        => \"0x<mantissa>p<exp>\"
+   double-double-float => \"0x<mantissa>p<exp>w\""
+  (with-output-to-string (s)
+    (write-hex-float x s)))
 
 ;;; FORMAT-HEX-FLOAT -- Public
 ;;;
@@ -195,6 +195,9 @@
     (write-char #\+ stream))
   (write-hex-float x stream))
 
+;;; **********************************************************************
+;;; Read C-style hex float literal
+
 
 (define-condition hex-float-parse-error (parse-error)
   ((input    :initarg :input    :reader hex-float-parse-error-input)
@@ -206,18 +209,6 @@
                      (hex-float-parse-error-message c)
                      (hex-float-parse-error-input c)))))
 
-#+nil
-(define-condition hex-parse-error (parse-error)
-  ((text :initarg :text :reader hex-parse-error-text)
-   (message :initarg :message :reader hex-parse-error-message))
-  (:report (lambda (c s)
-             (format s "Hex float parse error in ~S: ~A" 
-                     (hex-parse-error-text c) (hex-parse-error-message c)))))
-
-;;; PARSE-HEX-FLOAT-FROM-STREAM -- Public
-;;;
-;;; Parse a C-style float hex string from a stream.  Invalid formats
-;;; signal an error.  A single-float or double-float may be returned.
 (defun read-hex-float-from-stream (stream)
   "Read a C-style hex float from STREAM and return a float value.
    Format: [sign] 0x <hex-mantissa> [. <hex-fraction>] p <exp> [f|w]
@@ -340,8 +331,6 @@
                   (lo          (scale-float (* sign (float sig-lo 1.0d0)) adjusted-exp)))
              (kernel:make-double-double-float hi lo))))))))
 
-
-
 (defun read-hex-float-from-string (s &key (start 0) end)
   "Read a C-style hex float from string S.
    START and END bound the region to read (default: entire string).
@@ -353,97 +342,14 @@
       (values (read-hex-float stream)
               (file-position stream)))))
 
+;;; READ-HEX-FLOAT -- Public
+;;;
+;;; Read a C-style hex float number from either a string or a stream.
 (defun read-hex-float (obj)
-  "Parse a C-style hex float number from OBJ which is either a string or a stream."
+  "Read a C-style hex float number from OBJ which is either a string or a stream."
   (declare (type (or string stream) obj))
   (etypecase obj
     (string
      (read-hex-float-from-string obj))
     (stream
      (read-hex-float-from-stream obj))))
-
-#+nil
-(defun parse-hex-float-from-stream (stream)
-  "Reads a C-style hex float number from STREAM.  A single-float or
-  double-float number is returned.  A HEX-PARSE-ERROR is signaled for
-  an invalid format."
-  (let* ((sign 1.0d0)
-         (char (peek-char t stream))) ; Skip whitespace
-    
-    ;; 1. Handle Sign
-    (when (member char '(#\+ #\-))
-      (when (char= (read-char stream) #\-) (setf sign -1.0d0))
-      (setf char (peek-char nil stream)))
-
-    ;; 2. Verify '0x' Prefix
-    (unless (and (char-equal (read-char stream) #\0)
-                 (char-equal (read-char stream) #\x))
-      (error 'hex-parse-error :text "Stream" :message "Missing '0x' prefix"))
-
-    ;; 3. Read Significand
-    (let ((val 0.0d0)
-          (digits-read 0))
-      ;; Integer part loop
-      (loop for c = (peek-char nil stream nil nil)
-            for digit = (and c (digit-char-p c 16))
-            while digit
-            do (read-char stream)
-               (setf val (+ (* val 16.0d0) digit))
-               (incf digits-read))
-      
-      ;; Fractional part loop
-      (when (eql (peek-char nil stream nil nil) #\.)
-        (read-char stream) ; Consume #\.
-        (loop with weight = (/ 1.0d0 16.0d0)
-              for c = (peek-char nil stream nil nil)
-              for digit = (and c (digit-char-p c 16))
-              while digit
-              do (read-char stream)
-                 (setf val (+ val (* digit weight)))
-                 (setf weight (/ weight 16.0d0))
-                 (incf digits-read)))
-
-      (unless (plusp digits-read)
-        (error 'hex-parse-error :text "Stream" :message "No hex digits in significand"))
-
-      ;; 4. Handle Exponent 'p'
-      (let ((p-char (read-char stream nil)))
-        (unless (and p-char (char-equal p-char #\p))
-          (error 'hex-parse-error :text "Stream" :message "Missing exponent 'p'"))
-        
-        ;; Size 6 handles sign + 3-4 digits + buffer
-        (let ((exp-str (make-array 6 :element-type 'character 
-                                     :fill-pointer 0 
-                                     :adjustable t)))
-          (loop for c = (peek-char nil stream nil nil)
-                while (and c (find c "+-0123456789"))
-                do (vector-push-extend (read-char stream) exp-str))
-          
-          (when (zerop (length exp-str))
-            (error 'hex-parse-error :text "Stream" :message "Invalid or missing exponent"))
-
-          (let* ((raw-exp (parse-integer exp-str))
-                 (suffix (peek-char nil stream nil #\Space))
-                 (is-single (char-equal suffix #\f))
-                 ;; Final Construction
-                 (result (* sign (scale-float val raw-exp))))
-            
-            (when is-single (read-char stream)) ; Consume 'f'
-            
-            (if is-single 
-                (float result 1.0f0) 
-                result)))))))
-
-;;; PARSE-HEX-FLOAT -- Public
-;;;
-;;; Parse a C-style hex float number from either a string or a stream.
-#+nil
-(defun parse-hex-float (obj)
-  "Parse a C-style hex float number from OBJ which is either a string or a stream."
-  (declare (type (or string stream) obj))
-  (etypecase obj
-    (string
-     (with-input-from-string (s obj)
-       (parse-hex-float-from-stream s)))
-    (stream
-     (parse-hex-float-from-stream obj))))
