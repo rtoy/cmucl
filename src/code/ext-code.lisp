@@ -223,11 +223,23 @@
                   :message  (apply #'format nil msg args)
                   :input    nil))
          (pos ()
-           (file-position stream)))
+           (file-position stream))
+         (accumulate-digits (radix &optional (initial 0))
+           ;; Read digits of RADIX from STREAM, accumulating into an
+           ;; integer starting from INITIAL.  Returns two values: the
+           ;; accumulated value and the number of digits read.
+           (let ((value initial)
+                 (count 0))
+             (loop for c = (peek-char nil stream nil nil)
+                   while (and c (digit-char-p c radix))
+                   do (setf value (+ (* value radix)
+                                     (digit-char-p (read-char stream) radix)))
+                      (incf count))
+             (values value count))))
 
     (let ((sign 1)
-          (mantissa 0)
-          (frac-digits '())
+          (significand 0)
+          (n-frac 0)
           (exponent 0)
           (suffix nil))
 
@@ -248,31 +260,28 @@
         (unless (and c (member c '(#\x #\X)))
           (parse-error (pos) "Expected 'x' or 'X' after '0', got ~S" c)))
 
-      ;; Hex digits before optional decimal point (mantissa)
-      (let ((mantissa-start (pos)))
-        (loop for c = (peek-char nil stream nil nil)
-              while (and c (digit-char-p c 16))
-              do (setf mantissa (+ (* mantissa 16)
-                                   (digit-char-p (read-char stream) 16))))
-        (let ((mantissa-digitsp (> (pos) mantissa-start)))
+      ;; Hex digits before optional decimal point
+      (multiple-value-bind (value count)
+          (accumulate-digits 16)
+        (setf significand value)
+        (let ((mantissa-digitsp (plusp count)))
 
-          ;; Optional fractional part — collect raw hex digits
+          ;; Optional fractional part — continue accumulating into significand
           (when (and (peek-char nil stream nil nil)
                      (char= (peek-char nil stream nil nil) #\.))
             (read-char stream)
             (let ((frac-start (pos)))
-              (loop for c = (peek-char nil stream nil nil)
-                    while (and c (digit-char-p c 16))
-                    do (push (digit-char-p (read-char stream) 16) frac-digits))
-              (when (and (peek-char nil stream nil nil)
-                         (not (digit-char-p (peek-char nil stream nil nil) 16))
-                         (not (member (peek-char nil stream nil nil) '(#\p #\P)))
-                         (zerop (length frac-digits)))
-                (parse-error frac-start "Expected hex digits after decimal point")))
-            (setf frac-digits (nreverse frac-digits)))
+              (multiple-value-bind (value count)
+                  (accumulate-digits 16 significand)
+                (setf significand value
+                      n-frac count)
+                (when (and (zerop count)
+                           (peek-char nil stream nil nil)
+                           (not (member (peek-char nil stream nil nil) '(#\p #\P))))
+                  (parse-error frac-start "Expected hex digits after decimal point")))))
 
           ;; Mantissa must have at least one hex digit total
-          (unless (or mantissa-digitsp frac-digits)
+          (unless (or mantissa-digitsp (plusp n-frac))
             (parse-error (pos) "Expected at least one hex digit in mantissa"))))
 
       ;; Required binary exponent (p or P)
@@ -280,20 +289,16 @@
         (unless (and c (member c '(#\p #\P)))
           (parse-error (pos) "Expected 'p' or 'P' exponent marker, got ~S" c)))
 
+      ;; Exponent sign and digits
       (let ((exp-sign 1))
         (when (member (peek-char nil stream nil nil) '(#\+ #\-))
           (when (char= (read-char stream) #\-) (setf exp-sign -1)))
-        (let ((exp-digits nil)
-              (exp-start (pos)))
-          (loop for c = (peek-char nil stream nil nil)
-                while (and c (digit-char-p c 10))
-                do (push (digit-char-p (read-char stream) 10) exp-digits))
-          (unless exp-digits
-            (parse-error exp-start "Expected decimal digits for exponent"))
-          (setf exponent (* exp-sign
-                            (let ((result 0))
-                              (dolist (d (nreverse exp-digits) result)
-                                (setf result (+ (* result 10) d))))))))
+        (let ((exp-start (pos)))
+          (multiple-value-bind (value count)
+              (accumulate-digits 10)
+            (when (zerop count)
+              (parse-error exp-start "Expected decimal digits for exponent"))
+            (setf exponent (* exp-sign value)))))
 
       ;; Optional suffix: 'f'/'F' => single, 'w'/'W' => double-double, none => double
       (when (peek-char nil stream nil nil)
@@ -305,15 +310,10 @@
                           (digit-char-p c 10)))
                  (parse-error (pos) "Unexpected character ~S after exponent" c)))))
 
-      ;; Build exact integer significand, adjust exponent for fractional hex digits.
+      ;; Adjust exponent for fractional hex digits.
       ;; Convert significand to float before multiplying by sign so that
       ;; (* -1 0.0d0) = -0.0d0, preserving negative zero.
-      (let* ((significand  (let ((result mantissa))
-                             (dolist (d frac-digits result)
-                               (setf result (+ (* result 16) d)))))
-             (n-frac       (length frac-digits))
-             (adjusted-exp (- exponent (* 4 n-frac))))
-
+      (let ((adjusted-exp (- exponent (* 4 n-frac))))
         (ecase suffix
           ((nil)
            (scale-float (* sign (float significand 1.0d0)) adjusted-exp))
@@ -332,16 +332,17 @@
                   (lo          (scale-float (* sign (float sig-lo 1.0d0)) adjusted-exp)))
              (kernel:make-double-double-float hi lo))))))))
 
+
 (defun read-hex-float-from-string (s &key (start 0) end)
   "Read a C-style hex float from string S.
    START and END bound the region to read (default: entire string).
    Returns two values: the float and the index of the first character
    not consumed.
    Signals HEX-FLOAT-PARSE-ERROR on malformed input."
-  (let ((end (or end (length s))))
-    (with-input-from-string (stream s :start start :end end)
-      (values (read-hex-float stream)
-              (file-position stream)))))
+  (with-input-from-string (stream s :start start :end end)
+    (values (read-hex-float-from-stream stream)
+            (file-position stream))))
+
 
 ;;; READ-HEX-FLOAT -- Public
 ;;;
