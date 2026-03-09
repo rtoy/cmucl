@@ -185,9 +185,9 @@ msgid ""
 "  setf."
 msgstr ""
 
-#: src/code/format.lisp src/code/print.lisp src/code/irrat-dd.lisp
-#: src/code/irrat.lisp src/code/float.lisp src/code/numbers.lisp
-#: src/code/kernel.lisp
+#: src/code/format.lisp src/code/print.lisp src/code/ext-code.lisp
+#: src/code/irrat-dd.lisp src/code/irrat.lisp src/code/float.lisp
+#: src/code/numbers.lisp src/code/kernel.lisp
 msgid "Argument ~A is not a ~S: ~S."
 msgstr ""
 
@@ -6075,14 +6075,6 @@ msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Return a string containing the C-style hex float representation of X.\n"
-"   single-float        => \"0x<mantissa>p<exp>f\"\n"
-"   double-float        => \"0x<mantissa>p<exp>\"\n"
-"   double-double-float => \"0x<mantissa>p<exp>w\""
-msgstr ""
-
-#: src/code/ext-code.lisp
-msgid ""
 "Write float X to STREAM in C-style hex format. STREAM defaults to *standard-"
 "output*.\n"
 "\n"
@@ -6095,6 +6087,14 @@ msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
+"Return a string containing the C-style hex float representation of X.\n"
+"   single-float        => \"0x<mantissa>p<exp>f\"\n"
+"   double-float        => \"0x<mantissa>p<exp>\"\n"
+"   double-double-float => \"0x<mantissa>p<exp>w\""
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
 "Format function for use with ~/package:format-hex-float/.\n"
 "   Ignores colon modifier.\n"
 "   At-sign modifier forces a leading + sign on non-negative values.\n"
@@ -6103,14 +6103,27 @@ msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Reads a C-style hex float number from STREAM.  A single-float or\n"
-"  double-float number is returned.  A HEX-PARSE-ERROR is signaled for\n"
-"  an invalid format."
+"Read a C-style hex float from STREAM and return a float value.\n"
+"   Format: [sign] 0x <hex-mantissa> [. <hex-fraction>] p <exp> [f|w]\n"
+"   'f' suffix => single-float\n"
+"   'w' suffix => double-double-float (CMUCL native)\n"
+"   no suffix   => double-float\n"
+"   The binary exponent (p or P) is required.\n"
+"   Signals HEX-FLOAT-PARSE-ERROR on malformed input."
 msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Parse a C-style hex float number from OBJ which is either a string or a "
+"Read a C-style hex float from string S.\n"
+"   START and END bound the region to read (default: entire string).\n"
+"   Returns two values: the float and the index of the first character\n"
+"   not consumed.\n"
+"   Signals HEX-FLOAT-PARSE-ERROR on malformed input."
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
+"Read a C-style hex float number from OBJ which is either a string or a "
 "stream."
 msgstr ""
 
