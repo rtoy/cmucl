@@ -84,6 +84,17 @@
   (assert-equal "0x1.fffffffffffff8p-1w"
                 (ext:float-to-hex-string (- 1.0w0 (scale-float 1.0w0 -54)))))
 
+(define-test write-double-double-special
+  (assert-equal "0x1.0p+infw"
+                (ext:float-to-hex-string (float ext:double-float-positive-infinity 1w0)))
+  (assert-equal "-0x1.0p+infw"
+                (ext:float-to-hex-string (float ext:double-float-negative-infinity 1w0)))
+  (assert-equal "0x0.0p+nanw"
+                (ext:float-to-hex-string
+                  (ext:with-float-traps-masked (:invalid)
+                    (- (float ext:double-float-positive-infinity 1w0)
+                       (float ext:double-float-positive-infinity 1w0))))))
+
 
 ;;; ---- read-hex-float tests ------------------------------------------------
 
