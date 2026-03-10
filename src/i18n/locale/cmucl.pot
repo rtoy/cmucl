@@ -6066,7 +6066,9 @@ msgid ""
 msgstr ""
 
 #: src/code/ext-code.lisp
-msgid "Print a single-float or double-float in hex format onto STREAM."
+msgid ""
+"Print a single- or double-float in hex format onto STREAM.\n"
+"  Float type and mantissa width are derived from the type of X."
 msgstr ""
 
 #: src/code/ext-code.lisp
@@ -6075,8 +6077,8 @@ msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Write float X to STREAM in C-style hex format. STREAM defaults to *standard-"
-"output*.\n"
+"Write float X to STREAM in C-style hex format. STREAM defaults to\n"
+"  *standard-output*.\n"
 "\n"
 "   single-float        => 0x<mantissa>p<exp>f\n"
 "   double-float        => 0x<mantissa>p<exp>\n"
@@ -6095,10 +6097,11 @@ msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Format function for use with ~/package:format-hex-float/.\n"
+"Format function for use with ~/ext:format-hex-float/.\n"
 "  Ignores colon modifier.  At-sign modifier forces a leading + sign on\n"
-"  non-negative values. Example: (format t \"~@/ext:format-hex-float/\"\n"
-"  3.0d0) => +0x1.8p+1"
+"  non-negative values.\n"
+"\n"
+"  Example: (format t \"~@/ext:format-hex-float/\" 3.0d0) => +0x1.8p+1"
 msgstr ""
 
 #: src/code/ext-code.lisp
@@ -6120,8 +6123,10 @@ msgstr ""
 msgid ""
 "Read a C-style hex float from string S.\n"
 "  START and END bound the region to read (default: entire string).\n"
+"  Signals HEX-FLOAT-PARSE-ERROR on malformed input.\n"
+"\n"
 "  Returns two values: the float and the index of the first character\n"
-"  not consumed.  Signals HEX-FLOAT-PARSE-ERROR on malformed input."
+" not consumed."
 msgstr ""
 
 #: src/code/ext-code.lisp

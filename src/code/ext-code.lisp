@@ -36,7 +36,7 @@
 
 (defun write-hex-float-double (x stream)
   "Print a single- or double-float in hex format onto STREAM.
-   Float type and mantissa width are derived from the type of X."
+  Float type and mantissa width are derived from the type of X."
   (multiple-value-bind (mantissa-bits suffix-char min-c-exp)
       (etypecase x
         (single-float (values (1- (float-digits 1f0)) #\f (- vm:single-float-bias)))
@@ -111,9 +111,7 @@
 
 #+double-double
 (defun write-hex-float-double-double (x stream)
-  "Print a double-double-float in hex format onto STREAM.
-   Reconstructs the full significand from hi and lo components
-   using exact integer arithmetic before formatting."
+  "Print a double-double-float in hex format onto STREAM."
   (let* ((hi  (kernel:double-double-hi x))
          (lo  (kernel:double-double-lo x)))
     ;; Print the sign, but not for NaN since float-sign is unreliable there.
@@ -196,7 +194,8 @@
 ;;; Writes a float value (single, double, or double-double) in hex
 ;;; format to a stream, defaulting to *standard-output*.
 (defun write-hex-float (x &optional (stream *standard-output*))
-  "Write float X to STREAM in C-style hex format. STREAM defaults to *standard-output*.
+  "Write float X to STREAM in C-style hex format. STREAM defaults to
+  *standard-output*.
 
    single-float        => 0x<mantissa>p<exp>f
    double-float        => 0x<mantissa>p<exp>
@@ -230,10 +229,11 @@
 ;;;
 ;;; Function that can be used in a FORMAT ~/
 (defun format-hex-float (stream x colonp atsignp &rest args)
-  "Format function for use with ~/package:format-hex-float/.
+  "Format function for use with ~/ext:format-hex-float/.
   Ignores colon modifier.  At-sign modifier forces a leading + sign on
-  non-negative values. Example: (format t \"~@/ext:format-hex-float/\"
-  3.0d0) => +0x1.8p+1"
+  non-negative values.
+
+  Example: (format t \"~@/ext:format-hex-float/\" 3.0d0) => +0x1.8p+1"
   (declare (ignore colonp args))
   (when (and atsignp
              (not (float-nan-p x))
@@ -393,8 +393,10 @@
 (defun read-hex-float-from-string (s &key (start 0) end)
   "Read a C-style hex float from string S.
   START and END bound the region to read (default: entire string).
+  Signals HEX-FLOAT-PARSE-ERROR on malformed input.
+
   Returns two values: the float and the index of the first character
-  not consumed.  Signals HEX-FLOAT-PARSE-ERROR on malformed input."
+ not consumed."
   (with-input-from-string (stream s :start start :end end)
     (values (read-hex-float-from-stream stream)
             (file-position stream))))
@@ -403,7 +405,7 @@
 ;;; READ-HEX-FLOAT -- Public
 ;;;
 ;;; Read a C-style hex float number from either a string or a stream.
-(defun ext:read-hex-float (stream-or-string &key (start 0) end)
+(defun read-hex-float (stream-or-string &key (start 0) end)
   "Read a C-style hex float from STREAM-OR-STRING.
   If a string, START and END bound the region to read.  When reading
   from a string, returns two values: the float and the index of the
