@@ -35,67 +35,83 @@
         "")))
 
 (defun write-hex-float-double (x stream)
-  "Print a single-float or double-float in hex format onto STREAM."
-  ;; Float type and mantissa width are derived from the type of X.
+  "Print a single- or double-float in hex format onto STREAM.
+   Float type and mantissa width are derived from the type of X."
   (multiple-value-bind (mantissa-bits suffix-char min-c-exp)
       (etypecase x
-        (single-float (values 23 #\f -126))
-        (double-float (values 52 nil -1022)))
+        (single-float (values (1- (float-digits 1f0)) #\f (- vm:single-float-bias)))
+        (double-float (values (1- (float-digits 1d0)) nil (- vm:double-float-bias))))
+    ;; Print the sign, but not for NaN since float-sign is unreliable there.
     (when (and (not (float-nan-p x)) (minusp (float-sign x)))
       (write-char #\- stream))
     (let ((x (abs x)))
       (cond
         ((float-nan-p x)
          (write-string "0x0.0p+nan" stream)
-         (when suffix-char
-	   (write-char suffix-char stream)))
+         (when suffix-char (write-char suffix-char stream)))
 
         ((float-infinity-p x)
          (write-string "0x1.0p+inf" stream)
-         (when suffix-char
-	   (write-char suffix-char stream)))
+         (when suffix-char (write-char suffix-char stream)))
 
         ((zerop x)
          (write-string "0x0p+0" stream)
-         (when suffix-char
-	   (write-char suffix-char stream)))
+         (when suffix-char (write-char suffix-char stream)))
 
         (t
+         ;; integer-decode-float returns (significand exponent sign) where
+         ;; x = significand * 2^exponent.  The significand has mantissa-bits+1
+         ;; bits for normal numbers (including the implicit leading 1 bit) and
+         ;; fewer for denormals, which CMUCL normalizes so that the significand
+         ;; always has exactly mantissa-bits+1 bits, adjusting the exponent
+         ;; accordingly.
          (multiple-value-bind (significand exponent sign)
              (integer-decode-float x)
            (declare (ignore sign))
+           ;; c-exp is the C-style binary exponent, i.e. the exponent of the
+           ;; leading 1 bit.  For a normal number with a (mantissa-bits+1)-bit
+           ;; significand, c-exp = exponent + mantissa-bits.
            (let* ((c-exp      (+ exponent mantissa-bits))
+                  ;; A number is denormal if its c-exp is below the minimum
+                  ;; normal exponent.  We cannot detect this by checking the
+                  ;; significand bit width because CMUCL normalizes denormals.
                   (denormalp  (< c-exp min-c-exp))
+                  ;; We print the fraction in hex, rounding up the number of
+                  ;; mantissa bits to a multiple of 4.
                   (hex-digits (ceiling mantissa-bits 4))
+                  ;; frac-shift aligns the mantissa-bits fraction bits to the
+                  ;; hex-digits*4 grid.
                   (frac-shift (- (* 4 hex-digits) mantissa-bits))
+                  ;; For a normal number, mask off the implicit leading 1 bit
+                  ;; to get just the fraction, then shift to align to hex grid.
+                  ;; For a denormal, the leading bit is 0 so there is nothing
+                  ;; to mask; instead shift right to account for the reduced
+                  ;; exponent.
                   (frac       (if denormalp
                                   (ash significand
                                        (+ (- c-exp min-c-exp) frac-shift))
                                   (ash (logand significand
                                                (1- (ash 1 mantissa-bits)))
                                        frac-shift)))
+                  ;; Denormals are printed with exponent min-c-exp and a
+                  ;; leading 0 digit rather than 1.
                   (out-exp    (if denormalp min-c-exp c-exp))
                   (frac-str   (trim-trailing-zeros
-                               (format nil "~v,'0X" hex-digits frac))))
+                                (format nil "~v,'0X" hex-digits frac))))
              (write-string "0x" stream)
-             (write-char (if denormalp #\0 #\1)
-			 stream)
+             (write-char (if denormalp #\0 #\1) stream)
              (unless (zerop (length frac-str))
                (write-char #\. stream)
                (write-string frac-str stream))
              (write-char #\p stream)
-             (when (>= out-exp 0)
-	       (write-char #\+ stream))
+             (when (>= out-exp 0) (write-char #\+ stream))
              (format stream "~D" out-exp)
-             (when suffix-char
-	       (write-char suffix-char stream)))))))
+             (when suffix-char (write-char suffix-char stream)))))))
     (values)))
 
 #+double-double
 (defun write-hex-float-double-double (x stream)
   "Print a double-double-float in hex format onto STREAM."
-  ;; Reconstructs the full significand from hi and lo components using
-  ;; exact integer arithmetic before formatting."
   (let* ((hi  (kernel:double-double-hi x))
          (lo  (kernel:double-double-lo x))
          (hi  (abs hi)))
@@ -110,41 +126,57 @@
          (declare (ignore sign-hi))
          (multiple-value-bind (sig-lo exp-lo sign-lo)
              (integer-decode-float lo)
-           (let* ((signed-sig-lo  (* sign-lo sig-lo))
-                  (combined-sig   (if (zerop lo)
-                                      sig-hi
-                                      (+ (ash sig-hi (- exp-hi exp-lo))
-                                         signed-sig-lo)))
-                  (combined-exp   (if (zerop lo) exp-hi exp-lo))
-                  (total-bits     (integer-length combined-sig))
-                  (c-exp          (+ combined-exp total-bits -1))
-                  (min-c-exp      -1022)
-                  (denormalp      (< c-exp min-c-exp))
-                  (raw-frac-bits  (if (zerop lo)
-                                      52
-                                      (+ (- exp-hi exp-lo)
-					 52)))
-                  (frac-bits      (* 4 (ceiling raw-frac-bits 4)))
-                  (hex-digits     (/ frac-bits 4))
-                  (shift          (if denormalp
-                                      (+ (- frac-bits (1- total-bits))
-                                         (- c-exp min-c-exp))
-                                      (- frac-bits (1- total-bits))))
-                  (frac           (if denormalp
-                                      (ash combined-sig shift)
-                                      (logand (ash combined-sig shift)
-                                              (1- (ash 1 frac-bits)))))
-                  (out-exp        (if denormalp min-c-exp c-exp))
-                  (frac-str       (trim-trailing-zeros
-                                    (format nil "~v,'0X" hex-digits frac))))
+           (let* ((double-mant-bits  (1- (float-digits 1d0)))
+                  (min-c-exp         (- vm:double-float-bias))
+                  ;; Preserve the sign of lo when combining with hi.
+                  (signed-sig-lo     (* sign-lo sig-lo))
+                  ;; Reconstruct the full integer significand by shifting
+                  ;; sig-hi up to align with sig-lo's exponent, then adding.
+                  ;; If lo is zero there is nothing to add.
+                  (combined-sig      (if (zerop lo)
+                                         sig-hi
+                                         (+ (ash sig-hi (- exp-hi exp-lo))
+                                            signed-sig-lo)))
+                  ;; The combined significand is at the scale of lo's exponent
+                  ;; (or hi's if lo is zero).
+                  (combined-exp      (if (zerop lo) exp-hi exp-lo))
+                  (total-bits        (integer-length combined-sig))
+                  ;; c-exp is the exponent of the leading 1 bit, i.e. the
+                  ;; C-style binary exponent.
+                  (c-exp             (+ combined-exp total-bits -1))
+                  (denormalp         (< c-exp min-c-exp))
+                  ;; The number of fraction bits we need to print spans from
+                  ;; the leading bit of hi down to the last bit of lo.  When
+                  ;; lo is zero we only need double-mant-bits fraction bits.
+                  ;; We round up to a multiple of 4 for clean hex output.
+                  (raw-frac-bits     (if (zerop lo)
+                                         double-mant-bits
+                                         (+ (- exp-hi exp-lo) double-mant-bits)))
+                  (frac-bits         (* 4 (ceiling raw-frac-bits 4)))
+                  (hex-digits        (/ frac-bits 4))
+                  ;; Shift the combined significand so the fraction bits are
+                  ;; left-aligned in a frac-bits-wide field.  For denormals,
+                  ;; adjust the shift to account for the reduced exponent.
+                  (shift             (if denormalp
+                                         (+ (- frac-bits (1- total-bits))
+                                            (- c-exp min-c-exp))
+                                         (- frac-bits (1- total-bits))))
+                  ;; For normal numbers mask off the leading 1 bit; for
+                  ;; denormals the leading bit is already 0 so no mask needed.
+                  (frac              (if denormalp
+                                         (ash combined-sig shift)
+                                         (logand (ash combined-sig shift)
+                                                 (1- (ash 1 frac-bits)))))
+                  (out-exp           (if denormalp min-c-exp c-exp))
+                  (frac-str          (trim-trailing-zeros
+                                       (format nil "~v,'0X" hex-digits frac))))
              (write-string "0x" stream)
              (write-char (if denormalp #\0 #\1) stream)
              (unless (zerop (length frac-str))
                (write-char #\. stream)
                (write-string frac-str stream))
              (write-char #\p stream)
-             (when (>= out-exp 0)
-	       (write-char #\+ stream))
+             (when (>= out-exp 0) (write-char #\+ stream))
              (format stream "~D" out-exp)
              (write-char #\w stream))))))
   (values)))
