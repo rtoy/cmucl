@@ -51,7 +51,7 @@ else
 	# However, we have to remove everything before the first slash
 	# which contains things like "tags/", "head/", or "pipelines/"
 	# (from CI).
-	GIT_DESC="`git describe --all --dirty || git describe 2>/dev/null`"
+	GIT_DESC="`git describe --dirty || git describe 2>/dev/null`"
 	GIT_HASH="`echo ${GIT_DESC} | sed 's;^[^/]*/;;' 2>/dev/null`"
 
 	case "$GIT_HASH" in
@@ -65,7 +65,7 @@ else
 		# Use it as is.
 		DEFAULT_VERSION="${GIT_HASH}"
 		;;
-	    [0-9]*)
+	    [0-9][0-9][0-9][0-9][0-9]*)
 		# Assuming this is CI which seems to produce a githash like
 		# "pipeline/<digits>".  Make the version include "ci-" so we
 		# know this was done via CI.
