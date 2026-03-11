@@ -122,6 +122,67 @@ workflow:
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
     - ../../snapshot/bin/lisp -load report
 
+# Rules shared by optional/manual jobs (static analyzer, markdown-link-check).
+.optional-rules:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $RUN_CHECKS
+    - when: manual
+      allow_failure: true
+
+# Per-platform base jobs: capture tags and the needs chain so individual
+# jobs don't have to repeat them.
+.linux:
+  tags:
+    - linux
+
+.linux-needs-install:
+  extends: .linux
+  needs:
+    - job: linux:install
+      artifacts: true
+
+.linux-needs-build:
+  extends: .linux
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: linux:build
+      artifacts: true
+
+.osx:
+  tags:
+    - macos-virtualbox
+
+.osx-needs-install:
+  extends: .osx
+  needs:
+    - job: osx:install
+      artifacts: true
+
+.osx-needs-build:
+  extends: .osx
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: osx:build
+      artifacts: true
+
+.ubuntu:
+  tags:
+    - ubuntu
+
+.ubuntu-needs-install:
+  extends: .ubuntu
+  needs:
+    - job: ubuntu:install
+      artifacts: true
+
+.ubuntu-needs-build:
+  extends: .ubuntu
+  needs:
+    # Needs artifacts from build (dist/)
+    - job: ubuntu:build
+      artifacts: true
+
 stages:
   - install
   - build
@@ -135,29 +196,21 @@ cache:
 
 #### Linux jobs ####
 linux:install:
-  extends: .install
-  tags:
-    - linux
+  extends: [.install, .linux]
   variables:
     osname: "linux"
     CURL: "curl"
 
 linux:build:
-  extends: .build
-  tags:
-    - linux
-  needs:
-    - job: linux:install
-      artifacts: true
+  extends: [.build, .linux-needs-install]
   variables:
     # Fedora 41 must build with gcc because the clang build fails some
     # ansi-tests.  See [#469].
     CONFIG: "x86_linux"
 
 linux:cross-build:
+  extends: .linux-needs-install
   stage: build
-  tags:
-    - linux
   artifacts:
     paths:
       - xdist/
@@ -169,9 +222,6 @@ linux:cross-build:
   variables:
     # This must match the config used for the linux build!
     CONFIG: "x86_linux"
-  needs:
-    - job: linux:install
-      artifacts: true
   script:
     - bin/create-target.sh xtarget $CONFIG
     - bin/create-target.sh xcross $CONFIG
@@ -180,26 +230,14 @@ linux:cross-build:
     - bin/make-dist.sh -I xdist xlinux-4
 
 linux:test:
-  extends: .unit-test
-  tags:
-    - linux
-  needs:
-    # Needs artifacts from build (dist/)
-    - job: linux:build
-      artifacts: true
+  extends: [.unit-test, .linux-needs-build]
 
 linux:exec-test:
-  extends: .exec-test
-  tags:
-    - linux
-  needs:
-    - job: linux:build
-      artifacts: true
+  extends: [.exec-test, .linux-needs-build]
 
 linux:cross-test:
+  extends: .linux
   stage: test
-  tags:
-    - linux
   artifacts:
     paths:
       - ansi-test/test.out
@@ -212,18 +250,10 @@ linux:cross-test:
     - bin/run-unit-tests.sh -l xdist/bin/lisp 2>&1 | tee cross-test.log
 
 linux:ansi-test:
-  extends: .ansi-test
-  tags:
-    - linux
-  needs:
-    # Needs artifacts from build (dist/)
-    - job: linux:build
-      artifacts: true
+  extends: [.ansi-test, .linux-needs-build]
 
 linux:benchmark:
-  extends: .benchmark
-  tags:
-    - linux
+  extends: [.benchmark, .linux]
   needs:
     # Needs artifacts from install (snapshot/) and build (dist/)
     - job: linux:install
@@ -232,53 +262,27 @@ linux:benchmark:
 
 #### OSX (Mac) jobs ####
 osx:install:
-  extends: .install
-  tags:
-    - macos-virtualbox
+  extends: [.install, .osx]
   variables:
     osname: "darwin"
     CURL: "/opt/local/bin/curl"
 
 osx:build:
-  extends: .build
-  tags:
-    - macos-virtualbox
-  needs:
-    - job: osx:install
-      artifacts: true
+  extends: [.build, .osx-needs-install]
   variables:
     CONFIG: "x86_darwin"
 
 osx:test:
-  extends: .unit-test
-  tags:
-    - macos-virtualbox
-  needs:
-    # Needs artifacts from build (dist/)
-    - job: osx:build
-      artifacts: true
+  extends: [.unit-test, .osx-needs-build]
 
 osx:exec-test:
-  extends: .exec-test
-  tags:
-    - macos-virtualbox
-  needs:
-    - job: osx:build
-      artifacts: true
+  extends: [.exec-test, .osx-needs-build]
 
 osx:ansi-test:
-  extends: .ansi-test
-  tags:
-    - macos-virtualbox
-  needs:
-    # Needs artifacts from build (dist/)
-    - job: osx:build
-      artifacts: true
+  extends: [.ansi-test, .osx-needs-build]
 
 osx:benchmark:
-  extends: .benchmark
-  tags:
-    - macos-virtualbox
+  extends: [.benchmark, .osx]
   needs:
     # Needs artifacts from install (snapshot/) and build (dist/)
     - job: osx:install
@@ -288,21 +292,12 @@ osx:benchmark:
 # Optional job that runs the static analyzer.  It needs the files from
 # the linux-4 directory built in the linux:build job.
 linux:static-analyzer:
+  extends: [.optional-rules, .linux-needs-build]
   stage: analyze
-  tags:
-    - linux
   artifacts:
     when: always
     paths:
       - analyzer.log
-  needs:
-    - job: linux:build
-      artifacts: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-    - if: $RUN_CHECKS
-    - when: manual
-      allow_failure: true
   script:
     # Analysis can generate huge amounts of output.  For now just save
     # the results to the log file instead of also having it go to the
@@ -313,20 +308,13 @@ linux:static-analyzer:
 
 #### OpenSUSE jobs ####
 ubuntu:install:
-  extends: .install
-  tags:
-    - ubuntu
+  extends: [.install, .ubuntu]
   variables:
     osname: "linux"
     CURL: "curl"
 
 ubuntu:build:
-  extends: .build
-  tags:
-    - ubuntu
-  needs:
-    - job: ubuntu:install
-      artifacts: true
+  extends: [.build, .ubuntu-needs-install]
   variables:
     # Build with gcc on Ubuntu 25.10.  It produces a lisp than passes
     # the ansi-tests.  Clang seems to fail the ansi-tests WRITE.1,
@@ -334,22 +322,10 @@ ubuntu:build:
     CONFIG: "x86_linux"
 
 ubuntu:test:
-  extends: .unit-test
-  tags:
-    - ubuntu
-  needs:
-    # Needs artifacts from build (dist/)
-    - job: ubuntu:build
-      artifacts: true
+  extends: [.unit-test, .ubuntu-needs-build]
 
 ubuntu:ansi-test:
-  extends: .ansi-test
-  tags:
-    - ubuntu
-  needs:
-    # Needs artifacts from build (dist/)
-    - job: ubuntu:build
-      artifacts: true
+  extends: [.ansi-test, .ubuntu-needs-build]
 
 # Optional job that runs the markdown link checker.  This is optional
 # because it's very slow, of course; you have to run it manually.
@@ -357,21 +333,14 @@ ubuntu:ansi-test:
 # From https://github.com/tcort/markdown-link-check
 # Checks links on the wiki pages whenever any wiki markdown pages change. 
 markdown-link-check:
+  extends: [.optional-rules, .linux]
   stage: markdown-link-check
 
-  # Only the linux runner has markdown-link-check installed
-  tags:
-    - linux
   # It's ok if this fails; we don't want to declare the entire
   # pipeline as having failed.
   allow_failure: true
   # This job doesn't depend on any others.
   needs: []
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-    - if: $RUN_CHECKS
-    - when: manual
-      allow_failure: true
   script:
     # Check links in the main repo
     - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
@@ -380,3 +349,5 @@ markdown-link-check:
     # https://gitlab.com/gitlab-org/gitlab/-/issues/17845.
     - git clone https://gitlab.common-lisp.net/cmucl/cmucl.wiki.git
     - find cmucl.wiki -name \*.md -print0 | xargs -0 -n1 markdown-link-check
+
+
