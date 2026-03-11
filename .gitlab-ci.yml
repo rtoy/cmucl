@@ -9,9 +9,21 @@ variables:
   tar_ext: "xz"
   bootstrap: ""
 
+workflow:
+  rules:
+    # Always run on schedules (for analyze and markdown-link-check stages)
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    # Run on merge requests
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # Don't create a branch pipeline when an MR pipeline already exists
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
 # Default install configuration to download the cmucl tarballs to use
 # for building.
-.install_template: &install_configuration
+.install:
   stage: install
   artifacts:
     paths:
@@ -33,7 +45,7 @@ variables:
 # the option '-C ""' is good enough.  We also override the default
 # build dirs by using the -b option so that we know where the results
 # are, independent of OS.
-.build_template: &build_configuration
+.build:
   stage: build
   artifacts:
     paths:
@@ -66,7 +78,7 @@ variables:
     - bin/make-dist.sh -S build-4
 
 # Default configuration for running the ansi-tests.
-.ansi_test_template: &ansi_test_configuration
+.ansi-test:
   stage: ansi-test
   artifacts:
     paths:
@@ -76,7 +88,7 @@ variables:
     - cp ../ansi-test/test.out ansi-test.out
 
 # Default configuration for running unit tests.
-.unit_test_template: &unit_test_configuration
+.unit-test:
   stage: test
   artifacts:
     paths:
@@ -87,7 +99,7 @@ variables:
 
 # Default configuration to test creation of lisp executable and
 # testing the exectuable works.
-.exec_test_template: &exec_test_configuration
+.exec-test:
   stage: test
   script:
     # Create an executable and test it by printing the version.
@@ -98,7 +110,7 @@ variables:
     - bin/run-unit-tests.sh -l ./saved-lisp-executable
 
 # Default configuration for running the benchmarks.
-.benchmark_template: &benchmark_configuration
+.benchmark:
   stage: benchmark
   artifacts:
     paths:
@@ -109,7 +121,7 @@ variables:
     - CMUCL=../../snapshot/bin/lisp ./run-cmucl.sh
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
     - ../../snapshot/bin/lisp -load report
-    
+
 stages:
   - install
   - build
@@ -123,7 +135,7 @@ cache:
 
 #### Linux jobs ####
 linux:install:
-  <<: *install_configuration
+  extends: .install
   tags:
     - linux
   variables:
@@ -131,7 +143,7 @@ linux:install:
     CURL: "curl"
 
 linux:build:
-  <<: *build_configuration
+  extends: .build
   tags:
     - linux
   needs:
@@ -157,15 +169,8 @@ linux:cross-build:
   variables:
     # This must match the config used for the linux build!
     CONFIG: "x86_linux"
-
   needs:
-
-    # Normally need the linux:install stage to get the compiler to
-    # use.  But for #337, we need the normal build from linux:build to
-    # do the cross-compile.  Once the snapshot is made, we can use
-    # linux:install instead.
-    - job: linux:build
-    #- job: linux:install
+    - job: linux:install
       artifacts: true
   script:
     - bin/create-target.sh xtarget $CONFIG
@@ -175,7 +180,7 @@ linux:cross-build:
     - bin/make-dist.sh -I xdist xlinux-4
 
 linux:test:
-  <<: *unit_test_configuration
+  extends: .unit-test
   tags:
     - linux
   needs:
@@ -184,7 +189,7 @@ linux:test:
       artifacts: true
 
 linux:exec-test:
-  <<: *exec_test_configuration
+  extends: .exec-test
   tags:
     - linux
   needs:
@@ -207,16 +212,16 @@ linux:cross-test:
     - bin/run-unit-tests.sh -l xdist/bin/lisp 2>&1 | tee cross-test.log
 
 linux:ansi-test:
-  <<: *ansi_test_configuration
+  extends: .ansi-test
   tags:
     - linux
   needs:
     # Needs artifacts from build (dist/)
     - job: linux:build
       artifacts: true
-    
+
 linux:benchmark:
-  <<: *benchmark_configuration
+  extends: .benchmark
   tags:
     - linux
   needs:
@@ -227,7 +232,7 @@ linux:benchmark:
 
 #### OSX (Mac) jobs ####
 osx:install:
-  <<: *install_configuration
+  extends: .install
   tags:
     - macos-virtualbox
   variables:
@@ -235,7 +240,7 @@ osx:install:
     CURL: "/opt/local/bin/curl"
 
 osx:build:
-  <<: *build_configuration
+  extends: .build
   tags:
     - macos-virtualbox
   needs:
@@ -245,7 +250,7 @@ osx:build:
     CONFIG: "x86_darwin"
 
 osx:test:
-  <<: *unit_test_configuration
+  extends: .unit-test
   tags:
     - macos-virtualbox
   needs:
@@ -254,37 +259,36 @@ osx:test:
       artifacts: true
 
 osx:exec-test:
-  <<: *exec_test_configuration
+  extends: .exec-test
   tags:
     - macos-virtualbox
   needs:
     - job: osx:build
       artifacts: true
-  
+
 osx:ansi-test:
-  <<: *ansi_test_configuration
+  extends: .ansi-test
   tags:
     - macos-virtualbox
   needs:
     # Needs artifacts from build (dist/)
     - job: osx:build
       artifacts: true
-  
+
 osx:benchmark:
-  <<: *benchmark_configuration
+  extends: .benchmark
   tags:
     - macos-virtualbox
   needs:
     # Needs artifacts from install (snapshot/) and build (dist/)
     - job: osx:install
       artifacts: true
-    - job:  osx:build
+    - job: osx:build
 
 # Optional job that runs the static analyzer.  It needs the files from
 # the linux-4 directory built in the linux:build job.
 linux:static-analyzer:
   stage: analyze
-      
   tags:
     - linux
   artifacts:
@@ -294,7 +298,11 @@ linux:static-analyzer:
   needs:
     - job: linux:build
       artifacts: true
-  when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $RUN_CHECKS
+    - when: manual
+      allow_failure: true
   script:
     # Analysis can generate huge amounts of output.  For now just save
     # the results to the log file instead of also having it go to the
@@ -305,7 +313,7 @@ linux:static-analyzer:
 
 #### OpenSUSE jobs ####
 ubuntu:install:
-  <<: *install_configuration
+  extends: .install
   tags:
     - ubuntu
   variables:
@@ -313,7 +321,7 @@ ubuntu:install:
     CURL: "curl"
 
 ubuntu:build:
-  <<: *build_configuration
+  extends: .build
   tags:
     - ubuntu
   needs:
@@ -326,7 +334,7 @@ ubuntu:build:
     CONFIG: "x86_linux"
 
 ubuntu:test:
-  <<: *unit_test_configuration
+  extends: .unit-test
   tags:
     - ubuntu
   needs:
@@ -335,7 +343,7 @@ ubuntu:test:
       artifacts: true
 
 ubuntu:ansi-test:
-  <<: *ansi_test_configuration
+  extends: .ansi-test
   tags:
     - ubuntu
   needs:
@@ -354,10 +362,16 @@ markdown-link-check:
   # Only the linux runner has markdown-link-check installed
   tags:
     - linux
-  when: manual
   # It's ok if this fails; we don't want to declare the entire
   # pipeline as having failed.
   allow_failure: true
+  # This job doesn't depend on any others.
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $RUN_CHECKS
+    - when: manual
+      allow_failure: true
   script:
     # Check links in the main repo
     - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
