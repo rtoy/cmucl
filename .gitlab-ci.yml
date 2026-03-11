@@ -302,6 +302,7 @@ linux:static-analyzer:
       artifacts: true
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $RUN_CHECKS
     - when: manual
       allow_failure: true
   script:
@@ -370,6 +371,7 @@ markdown-link-check:
   needs: []
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $RUN_CHECKS
     - when: manual
       allow_failure: true
   script:
@@ -380,3 +382,4 @@ markdown-link-check:
     # https://gitlab.com/gitlab-org/gitlab/-/issues/17845.
     - git clone https://gitlab.common-lisp.net/cmucl/cmucl.wiki.git
     - find cmucl.wiki -name \*.md -print0 | xargs -0 -n1 markdown-link-check
+
