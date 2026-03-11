@@ -110,6 +110,18 @@ variables:
     - CMUCL=../../dist/bin/lisp ./run-cmucl.sh
     - ../../snapshot/bin/lisp -load report
     
+# Default rules to run things on a schedule
+.rules_sched_template: &rules_schedule
+  rules:
+    # 1. Ensure build runs for schedules so the analyzer can use its files
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: on_success
+    # 2. Ensure build runs if the analyzer variable is set
+    - if: $RUN_ANALYSIS
+      when: on_success
+    # 3. Default: run for standard pushes/MRs
+    - when: on_success    
+
 stages:
   - install
   - build
@@ -124,23 +136,16 @@ cache:
 #### Linux jobs ####
 linux:install:
   <<: *install_configuration
+  <<: *rules_schedule
   tags:
     - linux
   variables:
     osname: "linux"
     CURL: "curl"
-  rules:
-    # 1. Ensure build runs for schedules so the analyzer can use its files
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: on_success
-    # 2. Ensure build runs if the analyzer variable is set
-    - if: $RUN_ANALYSIS
-      when: on_success
-    # 3. Default: run for standard pushes/MRs
-    - when: on_success    
 
 linux:build:
   <<: *build_configuration
+  <<: *rules_schedule
   tags:
     - linux
   needs:
@@ -150,15 +155,6 @@ linux:build:
     # Fedora 41 must build with gcc because the clang build fails some
     # ansi-tests.  See [#469].
     CONFIG: "x86_linux"
-  rules:
-    # 1. Ensure build runs for schedules so the analyzer can use its files
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: on_success
-    # 2. Ensure build runs if the analyzer variable is set
-    - if: $RUN_ANALYSIS
-      when: on_success
-    # 3. Default: run for standard pushes/MRs
-    - when: on_success    
 
 linux:cross-build:
   stage: build
@@ -194,6 +190,7 @@ linux:cross-build:
 
 linux:test:
   <<: *unit_test_configuration
+  <<: *rules_schedule
   tags:
     - linux
   needs:
@@ -203,6 +200,7 @@ linux:test:
 
 linux:exec-test:
   <<: *exec_test_configuration
+  <<: *rules_schedule
   tags:
     - linux
   needs:
@@ -226,6 +224,7 @@ linux:cross-test:
 
 linux:ansi-test:
   <<: *ansi_test_configuration
+  <<: *rules_schedule
   tags:
     - linux
   needs:
@@ -235,6 +234,7 @@ linux:ansi-test:
     
 linux:benchmark:
   <<: *benchmark_configuration
+  <<: *rules_schedule
   tags:
     - linux
   needs:
@@ -246,6 +246,7 @@ linux:benchmark:
 #### OSX (Mac) jobs ####
 osx:install:
   <<: *install_configuration
+  <<: *rules_schedule
   tags:
     - macos-virtualbox
   variables:
@@ -254,6 +255,7 @@ osx:install:
 
 osx:build:
   <<: *build_configuration
+  <<: *rules_schedule
   tags:
     - macos-virtualbox
   needs:
@@ -264,6 +266,7 @@ osx:build:
 
 osx:test:
   <<: *unit_test_configuration
+  <<: *rules_schedule
   tags:
     - macos-virtualbox
   needs:
@@ -273,6 +276,7 @@ osx:test:
 
 osx:exec-test:
   <<: *exec_test_configuration
+  <<: *rules_schedule
   tags:
     - macos-virtualbox
   needs:
@@ -281,6 +285,7 @@ osx:exec-test:
   
 osx:ansi-test:
   <<: *ansi_test_configuration
+  <<: *rules_schedule
   tags:
     - macos-virtualbox
   needs:
@@ -290,6 +295,7 @@ osx:ansi-test:
   
 osx:benchmark:
   <<: *benchmark_configuration
+  <<: *rules_schedule
   tags:
     - macos-virtualbox
   needs:
@@ -301,6 +307,7 @@ osx:benchmark:
 # Optional job that runs the static analyzer.  It needs the files from
 # the linux-4 directory built in the linux:build job.
 linux:static-analyzer:
+  <<: *rules_schedule
   stage: analyze
       
   tags:
@@ -312,15 +319,6 @@ linux:static-analyzer:
   needs:
     - job: linux:build
       artifacts: true
-  rules:
-    # 1. If the pipeline is a scheduled run, run this job automatically
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: on_success
-    # 2. If the variable is set (manually via UI/API), run automatically.
-    - if: $RUN_ANALYSIS
-      when: on_success
-    # 3. Otherwise, the job remains a manual button in the pipeline.
-    - when: manual
   # Allows the pipeline to proceed and show a "passed with warnings" 
   # status (orange) instead of "failed" (red) if this job exits with an error.
   allow_failure: true
@@ -335,6 +333,7 @@ linux:static-analyzer:
 #### OpenSUSE jobs ####
 ubuntu:install:
   <<: *install_configuration
+  <<: *rules_schedule
   tags:
     - ubuntu
   variables:
@@ -343,6 +342,7 @@ ubuntu:install:
 
 ubuntu:build:
   <<: *build_configuration
+  <<: *rules_schedule
   tags:
     - ubuntu
   needs:
@@ -356,6 +356,7 @@ ubuntu:build:
 
 ubuntu:test:
   <<: *unit_test_configuration
+  <<: *rules_schedule
   tags:
     - ubuntu
   needs:
@@ -365,6 +366,7 @@ ubuntu:test:
 
 ubuntu:ansi-test:
   <<: *ansi_test_configuration
+  <<: *rules_schedule
   tags:
     - ubuntu
   needs:
@@ -378,20 +380,12 @@ ubuntu:ansi-test:
 # From https://github.com/tcort/markdown-link-check
 # Checks links on the wiki pages whenever any wiki markdown pages change. 
 markdown-link-check:
+  <<: *rules_schedule
   stage: markdown-link-check
 
   # Only the linux runner has markdown-link-check installed
   tags:
     - linux
-  rules:
-    # 1. If the pipeline is a scheduled run, run this job automatically
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: on_success
-    # 2. If the variable is set (manually via UI/API), run automatically.
-    - if: $RUN_ANALYSIS
-      when: on_success
-    # 3. Otherwise, the job remains a manual button in the pipeline.
-    - when: manual
   # It's ok if this fails; we don't want to declare the entire
   # pipeline as having failed.
   allow_failure: true
