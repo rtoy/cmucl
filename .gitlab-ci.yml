@@ -9,6 +9,18 @@ variables:
   tar_ext: "xz"
   bootstrap: ""
 
+workflow:
+  rules:
+    # Always run on schedules (for analyze and markdown-link-check stages)
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    # Run on merge requests
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # Don't create a branch pipeline when an MR pipeline already exists
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
 # Default install configuration to download the cmucl tarballs to use
 # for building.
 .install_template: &install_configuration
@@ -159,18 +171,12 @@ linux:cross-build:
     CONFIG: "x86_linux"
 
   needs:
-
-    # Normally need the linux:install stage to get the compiler to
-    # use.  But for #337, we need the normal build from linux:build to
-    # do the cross-compile.  Once the snapshot is made, we can use
-    # linux:install instead.
-    - job: linux:build
-    #- job: linux:install
+    - job: linux:install
       artifacts: true
   script:
     - bin/create-target.sh xtarget $CONFIG
     - bin/create-target.sh xcross $CONFIG
-    - bin/cross-build-world.sh -crl xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp dist/bin/lisp
+    - bin/cross-build-world.sh -crl xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
     - bin/build.sh -b xlinux $bootstrap -R -C $CONFIG -o "xtarget/lisp/lisp -lib xtarget/lisp"
     - bin/make-dist.sh -I xdist xlinux-4
 
@@ -294,7 +300,11 @@ linux:static-analyzer:
   needs:
     - job: linux:build
       artifacts: true
-  when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $RUN_CHECKS
+    - when: manual
+      allow_failure: true
   script:
     # Analysis can generate huge amounts of output.  For now just save
     # the results to the log file instead of also having it go to the
@@ -354,10 +364,16 @@ markdown-link-check:
   # Only the linux runner has markdown-link-check installed
   tags:
     - linux
-  when: manual
   # It's ok if this fails; we don't want to declare the entire
   # pipeline as having failed.
   allow_failure: true
+  # This job doesn't depend on any others.
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $RUN_CHECKS
+    - when: manual
+      allow_failure: true
   script:
     # Check links in the main repo
     - find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
@@ -366,3 +382,4 @@ markdown-link-check:
     # https://gitlab.com/gitlab-org/gitlab/-/issues/17845.
     - git clone https://gitlab.common-lisp.net/cmucl/cmucl.wiki.git
     - find cmucl.wiki -name \*.md -print0 | xargs -0 -n1 markdown-link-check
+
