@@ -15,10 +15,14 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     # Run on merge requests
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    # Don't create a branch pipeline when an MR pipeline already exists
+    # Run on the default branch (where there's no MR)
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    # Run on feature branches, but only if there's no open MR (to avoid
+    # duplicate pipelines).
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH
+    # Run on tags
     - if: $CI_COMMIT_TAG
 
 # Default install configuration to download the cmucl tarballs to use
