@@ -56,10 +56,9 @@
 	       (push (list (intern (format nil "ARG-~D" i))
 			   'double-float)
 		     results))))
-       ;; We assume the single-float version has the same C name as
-       ;; the double-float version except an "f" is appended.  The
-       ;; lisp name is the same as the double-float name except "F" is
-       ;; appended.
+       ;; The C99 convention is for the float version to have the same
+       ;; name as the double version but with an "f" appended.  We do
+       ;; the same here and append an "F" to the lisp name too.
        (alien:def-alien-routine (,(concatenate 'string c-name "f")
 				 ,(symbolicate lisp-name "F"))
 	 single-float
