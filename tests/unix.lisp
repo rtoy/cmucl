@@ -16,7 +16,9 @@
 	     (assert-true fd)
 	     (assert-true (equalp (length filename) (length template)))
 	     (assert-false (equalp filename template))
-	     (assert-true (>= 5 (mismatch filename template))))))
+	     (assert-true (>= 5 (mismatch filename template))
+			  filename
+			  template))))
       (when fd
 	(unix:unix-unlink filename)))))
 
