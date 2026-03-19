@@ -44,6 +44,10 @@
 #include "arm-lispregs.h"
 #endif
 
+#ifdef __aarch64__
+#include "arm64-lispregs.h"
+#endif
+
 /* This matches the definition of sc-offset in code/debug-info.lisp */
 #define SC_OFFSET(sc,offset) (((offset) << 5) | (sc))
 
