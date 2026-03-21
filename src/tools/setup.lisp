@@ -306,6 +306,7 @@
 	  ((c:target-featurep :amd64) "amd64/")
 	  ((c:target-featurep :arm) "arm/")
 	  ((c:target-featurep :sparc64) "sparc64/")
+	  ((c:target-featurep :arm64) "arm64/")
 	  (t
 	   (error "What machine is this?")))
     (make-pathname :directory (pathname-directory f)))))
