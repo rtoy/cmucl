@@ -684,9 +684,9 @@
     (format-ldst-uoffset 32
      :default-printer '(:name :tab rt ", [" rn ", #" imm12 "]"))
   (size  :field (byte 2 30))
-  (op1   :field (byte 3 27) :value #b111)
+  (op1   :field (byte 3 27))
   (v     :field (byte 1 26))
-  (op2   :field (byte 2 24) :value #b01)
+  (op2   :field (byte 2 24))
   (opc   :field (byte 2 22))
   (imm12 :field (byte 12 10))
   (rn    :field (byte 5 5)  :type 'reg)
@@ -721,11 +721,11 @@
                                (t
                                 ", [" rn ", #" imm9 "]"))))
   (size  :field (byte 2 30))
-  (op1   :field (byte 3 27) :value #b111)
+  (op1   :field (byte 3 27))
   (v     :field (byte 1 26))
-  (op2   :field (byte 2 24) :value #b00)
+  (op2   :field (byte 2 24))
   (opc   :field (byte 2 22))
-  (z     :field (byte 1 21) :value 0)
+  (z     :field (byte 1 21))
   (imm9  :field (byte 9 12) :sign-extend t)
   (type  :field (byte 2 10))
   (rn    :field (byte 5 5)  :type 'reg)
@@ -761,9 +761,9 @@
                           " lsl")
                         "]"))
   (size   :field (byte 2 30))
-  (op1    :field (byte 3 27) :value #b111)
+  (op1    :field (byte 3 27))
   (v      :field (byte 1 26))
-  (op2    :field (byte 2 24) :value #b00)
+  (op2    :field (byte 2 24))
   (opc    :field (byte 2 22))
   (one    :field (byte 1 21) :value 1)
   (rm     :field (byte 5 16)
@@ -929,37 +929,94 @@
   (immr 0 :type (unsigned-byte 6))
   (imms 0 :type (unsigned-byte 6)))
 
+;; Bitmask immediate encoding algorithm.
+;; References:
+;;   https://kddnewton.com/2022/08/11/aarch64-bitmask-immediates.html
+;;   https://github.com/llvm/llvm-project/blob/main/llvm/lib/Target/AArch64/MCTargetDesc/AArch64AddressingModes.h
+;;
+;; Examples (64-bit):
+;;   (encode-bit-mask #x00000000000000ff 1) => N=1, immr=56, imms=7
+;;     -- low 8 bits set
+;;   (encode-bit-mask #x0101010101010101 1) => N=0, immr=0,  imms=0
+;;     -- every 8th bit (esize=8, 1 one)
+;;   (encode-bit-mask #xaaaaaaaaaaaaaaaa 1) => N=0, immr=1,  imms=0
+;;     -- alternating bits (esize=2, rotated by 1)
+;;   (encode-bit-mask -1 1) => NIL
+;;     -- all-ones not encodable
+;;   (encode-bit-mask -256 1) => N=1, immr=8, imms=55
+;;     -- #xffffffffffffff00: 56 ones rotated by 8
 (defun encode-bit-mask (value sf)
   "Attempt to encode VALUE as an AArch64 bitmask immediate for a
   register of size 2^(SF+5) bits (SF=0 => 32-bit, SF=1 => 64-bit).
-  Returns (values N IMMR IMMS) on success, or NIL on failure."
+  Returns (values N IMMR IMMS) on success, or NIL on failure.
+  Negative values are treated as their two's complement bit pattern."
+  (declare (type (or (unsigned-byte 64) (signed-byte 64)) value)
+           (type bit sf))
   (let* ((reg-size (if (zerop sf) 32 64))
-         (value (ldb (byte reg-size 0) value)))
-    (when (or (zerop value)
-              (= value (1- (ash 1 reg-size))))
+         (imm      (ldb (byte reg-size 0) value))   ; normalize to unsigned
+         (all-ones (ldb (byte reg-size 0) -1)))
+    ;; All-zeros and all-ones cannot be encoded.
+    (when (or (zerop imm) (= imm all-ones))
       (return-from encode-bit-mask nil))
-    ;; Try each element size from 2 to reg-size.
-    (loop for len from 1 to 6
-          for esize = (ash 1 len)
-          while (<= esize reg-size)
-          do (let ((pattern (ldb (byte esize 0) value)))
-               ;; pattern must be a contiguous run of 1s (possibly rotated).
-               (when (= (ldb (byte esize 0) value)
-                        pattern)
-                 (let* ((ones (logcount pattern))
-                        ;; Find rotation: count trailing zeros of ~pattern & mask
-                        (inv (ldb (byte esize 0) (lognot pattern)))
-                        (tz (if (zerop inv) 0
-                                (loop for i from 0
-                                      while (zerop (ldb (byte 1 i) inv))
-                                      finally (return i))))
-                        (immr (mod (- esize tz) esize))
-                        (imms (logior (ash (lognot (1- esize)) 1)
-                                      (1- ones)))
-                        (n    (if (= esize 64) 1 0)))
-                   (when (and (<= 0 immr 63) (<= 0 (ldb (byte 6 0) imms) 63))
-                     (return (values n immr (ldb (byte 6 0) imms))))))))
-    nil))
+    (labels (;; Count trailing zeros -- undefined for n=0.
+             (ctz (n)
+               (1- (integer-length (logand n (- n)))))
+             ;; Count trailing ones.
+             (cto (n)
+               (1- (integer-length (logand (lognot n) (- (lognot n))))))
+             ;; Count leading ones in a w-bit value.
+             (clo (n w)
+               (- w (integer-length (logand (lognot n) (1- (ash 1 w))))))
+             ;; True if n is a contiguous run of 1s at bit 0, e.g. #b0001111.
+             (is-mask (n)
+               (and (not (zerop n))
+                    (zerop (logand n (1+ n)))))
+             ;; True if n is a contiguous run of 1s anywhere, e.g. #b0111100.
+             ;; Fills trailing zeros to get a mask, then checks it's a pure mask.
+             (is-shifted-mask (n)
+               (and (not (zerop n))
+                    (is-mask (logior n (1- n))))))
+      ;; Find element size by halving: if upper and lower halves match,
+      ;; the pattern tiles and we can use a smaller element size.
+      (let ((size reg-size))
+        (loop
+          (let* ((half (ash size -1))
+                 (mask (1- (ash 1 half))))
+            (when (/= (logand imm mask)
+                      (logand (ash imm (- half)) mask))
+              (return))
+            (setf size half))
+          (when (<= size 2) (return)))
+        ;; Isolate the pattern to SIZE bits.
+        (let* ((mask (ldb (byte size 0) -1))
+               (imm  (logand imm mask))
+               left-rotations trailing-ones)
+          (if (is-shifted-mask imm)
+            ;; Unrotated or simple left-shift case.
+            (let ((tz (ctz imm)))
+              (setf left-rotations tz
+                    trailing-ones  (cto (ash imm (- tz)))))
+            ;; Split pattern wrapping around (e.g. #b1001): invert within
+            ;; size bits and verify that gives a valid shifted mask.
+            (let ((inv (logand (lognot imm) mask)))
+              (unless (is-shifted-mask inv)
+                (return-from encode-bit-mask nil))
+              (let ((leading-ones (clo imm size)))
+                (setf left-rotations (- size leading-ones)
+                      trailing-ones  (+ leading-ones (cto imm))))))
+          ;; immr = right rotations = (size - left-rotations) mod size
+          (let* ((immr (logand (- size left-rotations) (1- size)))
+                 ;; imms = NOT(size-1) shifted left 1, OR ones-1.
+                 ;; The left shift places size-encoding bits correctly
+                 ;; within the 6-bit imms field.
+                 (imms (logior (logand (ash (lognot (1- size)) 1) #x3f)
+                               (1- trailing-ones)))
+                 ;; N = 1 iff size = 64 (bit 6 of pre-masked imms is 0).
+                 (n    (logxor (logand (ash imms -6) 1) 1)))
+            (values n
+                    (logand immr #x3f)
+                    (logand imms #x3f))))))))
+
 
 (defun mask (value &optional (sf 1))
   "Construct a bitmask immediate operand for logical instructions.
@@ -2531,9 +2588,48 @@
 ;;   (inst ldr  x0 (reg-offset x1 x2 :uxtx 3))     ; LDR X0, [X1, X2, LSL #3]
 ;;   (inst ldr  x0 (reg-offset x1 x2 :uxtw))       ; LDR X0, [X1, W2, UXTW]
 ;;   (inst ldr  x0 (reg-offset x1 x2 :sxtw 2))     ; LDR X0, [X1, W2, SXTW #2]
-;;   (inst ldrh w0 (mem x1 6))            ; LDRH W0, [X1, #6]
+;;   (inst ldr  x0 label)                          ; LDR X0, label  (literal)
+;;   (inst ldr.w x0 label)                         ; LDR W0, label  (literal)
 ;;   (inst ldrb w0 (mem x1 3))            ; LDRB W0, [X1, #3]
 ;;   (inst str  x0 (mem x1 16))           ; STR X0, [X1, #16]
+
+;;; Byte, halfword and sign-extending load/store.
+
+(defun emit-ldst-modes (segment mem size v opc access-size rt-enc)
+  "Emit a load/store instruction dispatching on MEM's addressing mode.
+  SIZE, V, OPC are the encoding fields; ACCESS-SIZE is the byte width
+  for scaling the unsigned offset; RT-ENC is the already-encoded
+  destination/source register number."
+  (let ((rn     (memory-ref-base mem))
+        (offset (memory-ref-offset mem)))
+    (ecase (memory-ref-mode mem)
+      (:offset
+       (assert (zerop (mod offset access-size))
+               (offset)
+               "Byte offset ~D is not a multiple of access size ~D."
+               offset access-size)
+       (emit-format-ldst-uoffset segment size #b111 v #b01 opc
+                                  (/ offset access-size)
+                                  (reg-tn-encoding rn) rt-enc))
+      (:pre
+       (emit-format-ldst-imm9 segment size #b111 v #b00 opc
+                               0 (ldb (byte 9 0) offset) #b11
+                               (reg-tn-encoding rn) rt-enc))
+      (:post
+       (emit-format-ldst-imm9 segment size #b111 v #b00 opc
+                               0 (ldb (byte 9 0) offset) #b01
+                               (reg-tn-encoding rn) rt-enc))
+      (:reg-offset
+       (let* ((ext (memory-ref-rm mem))
+              (rm  (extended-reg-reg ext))
+              (s   (if (zerop (extended-reg-shift ext)) 0 1)))
+         (emit-format-ldst-reg segment size #b111 v #b00 opc
+                                1
+                                (reg-tn-encoding rm)
+                                (extend-type-encoding
+                                 (extended-reg-extend-type ext))
+                                s #b10
+                                (reg-tn-encoding rn) rt-enc))))))
 
 (macrolet
     ((def (name size opc access-size)
@@ -2543,51 +2639,15 @@
           (:printer format-ldst-uoffset
                     ((size ,size) (op1 #b111) (v 0) (op2 #b01) (opc ,opc)))
           (:printer format-ldst-imm9
-                    ((size ,size) (op1 #b111) (v 0) (op2 #b00) (opc ,opc)
-                     (type #b11)))
+                                      ())
           (:printer format-ldst-imm9
-                    ((size ,size) (op1 #b111) (v 0) (op2 #b00) (opc ,opc)
-                     (type #b01)))
+                                      ())
           (:printer format-ldst-reg
                     ((size ,size) (op1 #b111) (v 0) (op2 #b00) (opc ,opc)
                      (one 1) (op3 #b10)))
           (:emitter
-           (let ((rn     (memory-ref-base mem))
-                 (offset (memory-ref-offset mem)))
-             (ecase (memory-ref-mode mem)
-               (:offset
-                ;; Unsigned byte offset: must be a non-negative multiple of
-                ;; the access size.  Divide to produce the scaled imm12.
-                (assert (zerop (mod offset ,access-size))
-                        (offset)
-                        "Byte offset ~D is not a multiple of the access size ~D."
-                        offset ,access-size)
-                (emit-format-ldst-uoffset segment ,size #b111 0 #b01 ,opc
-                                           (/ offset ,access-size)
-                                           (reg-tn-encoding rn)
-                                           (reg-tn-encoding rt)))
-               (:pre
-                (emit-format-ldst-imm9 segment ,size #b111 0 #b00 ,opc
-                                        0 (ldb (byte 9 0) offset) #b11
-                                        (reg-tn-encoding rn)
-                                        (reg-tn-encoding rt)))
-               (:post
-                (emit-format-ldst-imm9 segment ,size #b111 0 #b00 ,opc
-                                        0 (ldb (byte 9 0) offset) #b01
-                                        (reg-tn-encoding rn)
-                                        (reg-tn-encoding rt)))
-               (:reg-offset
-                (let* ((ext (memory-ref-rm mem))
-                       (rm  (extended-reg-reg ext))
-                       (s   (if (zerop (extended-reg-shift ext)) 0 1)))
-                  (emit-format-ldst-reg segment ,size #b111 0 #b00 ,opc
-                                         1
-                                         (reg-tn-encoding rm)
-                                         (extend-type-encoding
-                                          (extended-reg-extend-type ext))
-                                         s #b10
-                                         (reg-tn-encoding rn)
-                                         (reg-tn-encoding rt))))))))))
+           (emit-ldst-modes segment mem ,size 0 ,opc ,access-size
+                             (reg-tn-encoding rt))))))
   ;;          name      size    opc    access-size
   (def strb    #b00 #b00 1)
   (def ldrb    #b00 #b01 1)
@@ -2597,11 +2657,109 @@
   (def ldrh    #b01 #b01 2)
   (def ldrsh   #b01 #b10 2)   ; sign-extend halfword -> X
   (def ldrsh.w #b01 #b11 2)   ; sign-extend halfword -> W
-  (def str.w   #b10 #b00 4)   ; 32-bit
-  (def ldr.w   #b10 #b01 4)   ; 32-bit
-  (def ldrsw   #b10 #b10 4)   ; sign-extend word -> X
-  (def str     #b11 #b00 8)   ; 64-bit
-  (def ldr     #b11 #b01 8))  ; 64-bit
+  (def ldrsw   #b10 #b10 4))  ; sign-extend word -> X
+
+;;; 32-bit and 64-bit load/store -- integer and FP registers.
+;;
+;; Dispatches on sc-case rt:
+;;   single-reg -> FP single (S register, size=#b10, v=1)
+;;   double-reg -> FP double (D register, size=#b11, v=1)
+;;   otherwise  -> integer register (v=0)
+
+(macrolet
+    ((def (name int-size int-opc int-access-size lit-opc wreg-p)
+       `(define-instruction ,name (segment rt mem)
+          (:declare (type tn rt)
+                    (type (or memory-ref ,@(when lit-opc '(label))) mem))
+          ;; Integer register printers (v=0)
+          (:printer format-ldst-uoffset
+                    ((size ,int-size) (op1 #b111) (v 0) (op2 #b01) (opc ,int-opc)
+                     ,@(when wreg-p '((rt nil :type 'wreg)))))
+          (:printer format-ldst-imm9
+                    ((z 0) (size ,int-size) (op1 #b111) (v 0) (op2 #b00) (opc ,int-opc)
+                     (type #b11) ,@(when wreg-p '((rt nil :type 'wreg)))))
+          (:printer format-ldst-imm9
+                    ((z 0) (size ,int-size) (op1 #b111) (v 0) (op2 #b00) (opc ,int-opc)
+                     (type #b01) ,@(when wreg-p '((rt nil :type 'wreg)))))
+          (:printer format-ldst-reg
+                    ((size ,int-size) (op1 #b111) (v 0) (op2 #b00) (opc ,int-opc)
+                     (one 1) (op3 #b10) ,@(when wreg-p '((rt nil :type 'wreg)))))
+          ,@(when lit-opc
+              `((:printer format-ldr-literal
+                          ((opc ,lit-opc) (op1 #b011) (v 0) (op2 #b00)
+                           ,@(when wreg-p '((rt nil :type 'wreg)))))))
+          ;; FP single-precision printers (v=1, size=#b10)
+          ,@(unless wreg-p
+              `((:printer format-ldst-uoffset
+                          ((size #b10) (op1 #b111) (v 1) (op2 #b01) (opc ,int-opc)
+                           (rt nil :type 'fp-reg-single)))
+                (:printer format-ldst-imm9
+                                            ())
+                (:printer format-ldst-imm9
+                                            ())
+                (:printer format-ldst-reg
+                          ((size #b10) (op1 #b111) (v 1) (op2 #b00) (opc ,int-opc)
+                           (one 1) (op3 #b10) (rt nil :type 'fp-reg-single)))
+                ;; FP double-precision printers (v=1, size=#b11)
+                (:printer format-ldst-uoffset
+                          ((size #b11) (op1 #b111) (v 1) (op2 #b01) (opc ,int-opc)
+                           (rt nil :type 'fp-reg-double)))
+                (:printer format-ldst-imm9
+                                            ())
+                (:printer format-ldst-imm9
+                                            ())
+                (:printer format-ldst-reg
+                          ((size #b11) (op1 #b111) (v 1) (op2 #b00) (opc ,int-opc)
+                           (one 1) (op3 #b10) (rt nil :type 'fp-reg-double)))
+                ;; Literal loads for FP (only for ldr, not str)
+                ,@(when lit-opc
+                    `((:printer format-ldr-literal
+                                ((opc #b01) (op1 #b011) (v 1) (op2 #b00)
+                                 (rt nil :type 'fp-reg-single)))
+                      (:printer format-ldr-literal
+                                ((opc #b11) (op1 #b011) (v 1) (op2 #b00)
+                                 (rt nil :type 'fp-reg-double)))))
+          (:emitter
+           ,@(if wreg-p
+               ;; .w variant: integer only -- reject FP registers
+               `((assert (not (or (sc-is rt single-reg) (sc-is rt double-reg)))
+                         (rt) "~A does not accept FP registers." ',name)
+                 (etypecase mem
+                   (label
+                    (emit-ldr-literal segment (reg-tn-encoding rt) ,lit-opc 0 mem))
+                   (memory-ref
+                    (emit-ldst-modes segment mem ,int-size 0 ,int-opc ,int-access-size
+                                     (reg-tn-encoding rt)))))
+               ;; Full variant: dispatch on register type
+               `((etypecase mem
+                   ,@(when lit-opc
+                       `((label
+                          (sc-case rt
+                            (single-reg
+                             (emit-ldr-literal segment (fp-reg-tn-encoding rt)
+                                               #b01 1 mem))
+                            (double-reg
+                             (emit-ldr-literal segment (fp-reg-tn-encoding rt)
+                                               #b11 1 mem))
+                            (t
+                             (emit-ldr-literal segment (reg-tn-encoding rt)
+                                               ,lit-opc 0 mem))))))
+                   (memory-ref
+                    (sc-case rt
+                      (single-reg
+                       (emit-ldst-modes segment mem #b10 1 ,int-opc 4
+                                        (fp-reg-tn-encoding rt)))
+                      (double-reg
+                       (emit-ldst-modes segment mem #b11 1 ,int-opc 8
+                                        (fp-reg-tn-encoding rt)))
+                      (t
+                       (emit-ldst-modes segment mem ,int-size 0 ,int-opc ,int-access-size
+                                        (reg-tn-encoding rt))))))))))))))
+  ;;         name   int-size  int-opc  int-access  lit-opc  wreg-p
+  (def str.w #b10   #b00      4        nil          nil)  ; 32-bit integer store
+  (def ldr.w #b10   #b01      4        #b01         t)    ; 32-bit integer load
+  (def str   #b11   #b00      8        nil          nil)  ; 64-bit / FP store
+  (def ldr   #b11   #b01      8        #b10         nil)) ; 64-bit / FP load
 
 ;; Unscaled offset (LDUR/STUR): type field = #b00, imm9 is unscaled and signed.
 ;; Use these when the byte offset is not a multiple of the access size,
@@ -2615,14 +2773,15 @@
 ;;   (inst ldurh   w0 x1 -2)   ; LDURH W0, [X1, #-2]  -- halfword, negative
 ;;   (inst ldursw  x0 x1 -4)   ; LDURSW X0, [X1, #-4] -- sign-extend word -> X
 ;;   (inst stur    x0 x1 -8)   ; STUR X0, [X1, #-8]   -- 64-bit store
+;;; Byte, halfword and sign-extending unscaled load/store.
+
 (macrolet
     ((def (name size opc)
        `(define-instruction ,name (segment rt rn imm9)
           (:declare (type tn rt rn)
                     (type (signed-byte 9) imm9))
           (:printer format-ldst-imm9
-                    ((size ,size) (op1 #b111) (v 0) (op2 #b00) (opc ,opc)
-                     (type #b00)))
+                                      ())
           (:emitter
            (emit-format-ldst-imm9 segment ,size #b111 0 #b00 ,opc
                                    0 (ldb (byte 9 0) imm9)
@@ -2637,11 +2796,60 @@
   (def ldurh    #b01 #b01)
   (def ldursh   #b01 #b10)   ; sign-extend halfword -> X
   (def ldursh.w #b01 #b11)   ; sign-extend halfword -> W
-  (def stur.w    #b10 #b00)   ; 32-bit
-  (def ldur.w    #b10 #b01)   ; 32-bit
-  (def ldursw   #b10 #b10)   ; sign-extend word -> X
-  (def stur     #b11 #b00)   ; 64-bit
-  (def ldur     #b11 #b01))  ; 64-bit
+  (def ldursw   #b10 #b10))  ; sign-extend word -> X
+
+;;; 32-bit and 64-bit unscaled load/store -- integer only (.w) and
+;;; integer+FP (full).
+
+(macrolet
+    ((def (name int-size int-opc wreg-p)
+       `(define-instruction ,name (segment rt rn imm9)
+          (:declare (type tn rt rn)
+                    (type (signed-byte 9) imm9))
+          ;; Integer register printer (v=0)
+          (:printer format-ldst-imm9
+                    ((z 0) (size ,int-size) (op1 #b111) (v 0) (op2 #b00) (opc ,int-opc)
+                     (type #b00) ,@(when wreg-p '((rt nil :type 'wreg)))))
+          ;; FP single-precision printer (v=1, size=#b10)
+          ,@(unless wreg-p
+              `((:printer format-ldst-imm9
+                          ((z 0) (size #b10) (op1 #b111) (v 1) (op2 #b00) (opc ,int-opc)
+                           (type #b00) (rt nil :type 'fp-reg-single)))
+                ;; FP double-precision printer (v=1, size=#b11)
+                (:printer format-ldst-imm9
+                          ((size #b11) (op1 #b111) (v 1) (op2 #b00) (opc ,int-opc)
+                           (type #b00) (rt nil :type 'fp-reg-double)))))
+          (:emitter
+           ,@(if wreg-p
+               ;; .w variant: integer only
+               `((assert (not (or (sc-is rt single-reg) (sc-is rt double-reg)))
+                         (rt) "~A does not accept FP registers." ',name)
+                 (emit-format-ldst-imm9 segment ,int-size #b111 0 #b00 ,int-opc
+                                         0 (ldb (byte 9 0) imm9) #b00
+                                         (reg-tn-encoding rn)
+                                         (reg-tn-encoding rt)))
+               ;; Full variant: dispatch on register type
+               `((sc-case rt
+                   (single-reg
+                    (emit-format-ldst-imm9 segment #b10 #b111 1 #b00 ,int-opc
+                                            0 (ldb (byte 9 0) imm9) #b00
+                                            (reg-tn-encoding rn)
+                                            (fp-reg-tn-encoding rt)))
+                   (double-reg
+                    (emit-format-ldst-imm9 segment #b11 #b111 1 #b00 ,int-opc
+                                            0 (ldb (byte 9 0) imm9) #b00
+                                            (reg-tn-encoding rn)
+                                            (fp-reg-tn-encoding rt)))
+                   (t
+                    (emit-format-ldst-imm9 segment ,int-size #b111 0 #b00 ,int-opc
+                                            0 (ldb (byte 9 0) imm9) #b00
+                                            (reg-tn-encoding rn)
+                                            (reg-tn-encoding rt))))))))))
+  ;;         name     int-size  int-opc  wreg-p
+  (def stur.w  #b10   #b00      t)    ; 32-bit integer store
+  (def ldur.w  #b10   #b01      t)    ; 32-bit integer load
+  (def stur    #b11   #b00      nil)  ; 64-bit / FP store
+  (def ldur    #b11   #b01      nil)) ; 64-bit / FP load
 
 
 ;;;; Load/Store pair.
@@ -2661,31 +2869,70 @@
 ;;   (inst ldp.w w0 w1 (mem x2 8))         ; LDP W0, W1, [X2, #8]
 ;;   (inst stp   x0 x1 (mem sp 0))         ; STP X0, X1, [SP]
 
-;; opc: 00=32-bit, 10=64-bit  (01 is unused for integer; used for FP)
+;; opc: 00=32-bit int / FP single (vr=1), 01=FP double (vr=1), 10=64-bit int
 ;; index: #b01=post-index, #b11=pre-index, #b10=offset
 (macrolet
-    ((def (name opc l)
+    ((def (name int-opc l wreg-p)
        `(define-instruction ,name (segment rt rt2 rn imm7
                                    &optional (idx-type :offset))
           (:declare (type tn rt rt2 rn)
                     (type (signed-byte 7) imm7)
                     (type (member :pre :post :offset) idx-type))
+          ;; Integer register printer
           (:printer format-ldst-pair
-                    ((opc ,opc) (op1 #b101) (vr 0) (op2 0) (l ,l)))
+                    ((opc ,int-opc) (op1 #b101) (vr 0) (op2 0) (l ,l)
+                     ,@(when wreg-p '((rt  nil :type 'wreg)
+                                      (rt2 nil :type 'wreg)))))
+          ;; FP single-precision printer (vr=1, opc=#b00)
+          ,@(unless wreg-p
+              `((:printer format-ldst-pair
+                          ((opc #b00) (op1 #b101) (vr 1) (op2 0) (l ,l)
+                           (rt  nil :type 'fp-reg-single)
+                           (rt2 nil :type 'fp-reg-single)))
+                ;; FP double-precision printer (vr=1, opc=#b01)
+                (:printer format-ldst-pair
+                          ((opc #b01) (op1 #b101) (vr 1) (op2 0) (l ,l)
+                           (rt  nil :type 'fp-reg-double)
+                           (rt2 nil :type 'fp-reg-double)))))
           (:emitter
            (let ((index (ecase idx-type
                           (:post   #b01)
                           (:pre    #b11)
                           (:offset #b10))))
-             (emit-format-ldst-pair segment ,opc #b101 0 0 index ,l
-                                    (ldb (byte 7 0) imm7)
-                                    (reg-tn-encoding rt2)
-                                    (reg-tn-encoding rn)
-                                    (reg-tn-encoding rt)))))))
-  (def stp.w  #b00 0)   ; store pair 32-bit
-  (def ldp.w  #b00 1)   ; load  pair 32-bit
-  (def stp    #b10 0)   ; store pair 64-bit
-  (def ldp    #b10 1))  ; load  pair 64-bit
+             ,@(if wreg-p
+                 ;; .w variant: integer only
+                 `((assert (not (or (sc-is rt single-reg) (sc-is rt double-reg)))
+                           (rt) "~A does not accept FP registers." ',name)
+                   (emit-format-ldst-pair segment ,int-opc #b101 0 0 index ,l
+                                          (ldb (byte 7 0) imm7)
+                                          (reg-tn-encoding rt2)
+                                          (reg-tn-encoding rn)
+                                          (reg-tn-encoding rt)))
+                 ;; Full variant: dispatch on register type
+                 `((sc-case rt
+                     (single-reg
+                      (emit-format-ldst-pair segment #b00 #b101 1 0 index ,l
+                                             (ldb (byte 7 0) imm7)
+                                             (fp-reg-tn-encoding rt2)
+                                             (reg-tn-encoding rn)
+                                             (fp-reg-tn-encoding rt)))
+                     (double-reg
+                      (emit-format-ldst-pair segment #b01 #b101 1 0 index ,l
+                                             (ldb (byte 7 0) imm7)
+                                             (fp-reg-tn-encoding rt2)
+                                             (reg-tn-encoding rn)
+                                             (fp-reg-tn-encoding rt)))
+                     (t
+                      (emit-format-ldst-pair segment ,int-opc #b101 0 0 index ,l
+                                             (ldb (byte 7 0) imm7)
+                                             (reg-tn-encoding rt2)
+                                             (reg-tn-encoding rn)
+                                             (reg-tn-encoding rt)))))))))))
+  ;;         name    int-opc  l   wreg-p
+  (def stp.w  #b00   0   t)    ; store pair 32-bit integer only
+  (def ldp.w  #b00   1   t)    ; load  pair 32-bit integer only
+  (def stp    #b10   0   nil)  ; store pair 64-bit int / FP single / FP double
+  (def ldp    #b10   1   nil)) ; load  pair 64-bit int / FP single / FP double
 
 
 ;;;; Load register (literal).
@@ -2699,22 +2946,6 @@
                                    (ldb (byte 19 0) (ash delta -2))
                                    rt)))))
 
-(define-instruction ldr.w-lit (segment rt label)
-  (:declare (type tn rt) (type label label))
-  (:printer format-ldr-literal ((opc #b01) (op1 #b011) (v 0) (op2 #b00)
-                                 (rt nil :type 'wreg))
-            '(:name :tab rt ", " imm19))
-  (:attributes branch)
-  (:emitter
-   (emit-ldr-literal segment (reg-tn-encoding rt) #b01 0 label)))
-
-(define-instruction ldr-lit (segment rt label)
-  (:declare (type tn rt) (type label label))
-  (:printer format-ldr-literal ((opc #b10) (op1 #b011) (v 0) (op2 #b00))
-            '(:name :tab rt ", " imm19))
-  (:attributes branch)
-  (:emitter
-   (emit-ldr-literal segment (reg-tn-encoding rt) #b10 0 label)))
 
 
 ;;;; Data Processing -- Register.
