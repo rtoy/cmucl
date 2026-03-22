@@ -2246,12 +2246,43 @@
           (emit-branch-imm segment op #b00101
                            (ldb (byte 26 0) (ash delta -2)))))))
 
-(define-instruction b (segment target)
-  (:declare (type label target))
+(define-instruction b (segment cond-or-target &optional (target nil targetp))
+  (:declare (type (or condition-code label) cond-or-target)
+            (type (or null label) target))
+  ;; Conditional form printer
+  (:printer format-cond-branch ((op1 #b0101010) (o1 0) (o0 0)))
+  ;; Unconditional form printer
   (:printer branch-imm ((op 0) (op1 #b00101)))
   (:attributes branch)
   (:emitter
-   (emit-relative-branch segment 0 target)))
+   (if targetp
+     ;; (inst b :eq label) -- conditional branch
+     (emit-cond-branch segment
+                       (condition-code-encoding cond-or-target)
+                       target)
+     ;; (inst b label) -- unconditional branch
+     (emit-relative-branch segment 0 cond-or-target))))
+
+;; B.cond aliases -- (inst b.eq label) expands to (inst b :eq label)
+(macrolet
+    ((def (name cond)
+       `(define-instruction-macro ,name (target)
+          `(inst b ,,cond ,target))))
+  (def b.eq :eq)
+  (def b.ne :ne)
+  (def b.cs :cs)
+  (def b.cc :cc)
+  (def b.mi :mi)
+  (def b.pl :pl)
+  (def b.vs :vs)
+  (def b.vc :vc)
+  (def b.hi :hi)
+  (def b.ls :ls)
+  (def b.ge :ge)
+  (def b.lt :lt)
+  (def b.gt :gt)
+  (def b.le :le)
+  (def b.al :al))
 
 (define-instruction bl (segment target)
   (:declare (type label target))
@@ -2297,41 +2328,6 @@
           (emit-format-cond-branch segment #b0101010 0
                                    (ldb (byte 19 0) (ash delta -2))
                                    0 cond-code)))))
-
-;; B.cond -- one instruction per condition code.
-(macrolet
-    ((def (name code)
-       `(define-instruction ,name (segment target)
-          (:declare (type label target))
-          (:printer format-cond-branch
-                    ((op1 #b0101010) (o1 0) (o0 0) (cond ,code))
-                    '(:name :tab imm19))
-          (:attributes branch)
-          (:emitter
-           (emit-cond-branch segment ,code target)))))
-  (def b.eq  0)
-  (def b.ne  1)
-  (def b.cs  2)   ; also B.HS
-  (def b.cc  3)   ; also B.LO
-  (def b.mi  4)
-  (def b.pl  5)
-  (def b.vs  6)
-  (def b.vc  7)
-  (def b.hi  8)
-  (def b.ls  9)
-  (def b.ge  10)
-  (def b.lt  11)
-  (def b.gt  12)
-  (def b.le  13)
-  (def b.al  14))
-
-;; Generic conditional branch using a condition-code keyword.
-(define-instruction bcond (segment cond target)
-  (:declare (type condition-code cond) (type label target))
-  (:printer format-cond-branch ((op1 #b0101010) (o1 0) (o0 0)))
-  (:attributes branch)
-  (:emitter
-   (emit-cond-branch segment (condition-code-encoding cond) target)))
 
 
 ;;; Compare and branch.
