@@ -303,8 +303,12 @@
   (imm   :fields (list (byte 19 5) (byte 2 29))
          :printer #'(lambda (vlist stream dstate)
                       (declare (ignore dstate))
-                      (let ((imm (logior (ash (first vlist) 2)
-                                         (second vlist))))
+                      (let* ((raw (logior (ash (first vlist) 2)
+                                          (second vlist)))
+                             ;; sign-extend from bit 20 (21-bit signed value)
+                             (imm (if (logbitp 20 raw)
+                                      (- raw (ash 1 21))
+                                      raw)))
                         (print-immed imm stream))))
   (rd    :field (byte 5 0) :type 'reg))
 
@@ -320,6 +324,8 @@
 ;;;   [29]    S          (0=no flags, 1=set flags)
 ;;;   [28:24] 10001
 ;;;   [23:22] shift      (00=LSL#0, 01=LSL#12)
+;;;   [23]    0      (reserved)
+;;;   [22]    shift  (0=LSL#0, 1=LSL#12)
 ;;;   [21:10] imm12
 ;;;   [9:5]   Rn
 ;;;   [4:0]   Rd
@@ -333,14 +339,15 @@
   (op    :field (byte 1 30))
   (s     :field (byte 1 29))
   (op1   :field (byte 5 24))
-  (shift :field (byte 2 22))
+  (res0  :field (byte 1 23) :value 0)
+  (shift :field (byte 1 22))
   (imm12 :field (byte 12 10))
   (rn    :field (byte 5 5)  :type 'reg)
   (rd    :field (byte 5 0)  :type 'reg))
 
 (define-emitter emit-format-add-sub-imm 32
-  (byte 1 31) (byte 1 30) (byte 1 29) (byte 5 24) (byte 2 22)
-  (byte 12 10) (byte 5 5) (byte 5 0))
+  (byte 1 31) (byte 1 30) (byte 1 29) (byte 5 24) (byte 1 23)
+  (byte 1 22) (byte 12 10) (byte 5 5) (byte 5 0))
 
 
 ;;; Logical (immediate)
@@ -719,7 +726,7 @@
   (op2   :field (byte 2 24) :value #b00)
   (opc   :field (byte 2 22))
   (z     :field (byte 1 21) :value 0)
-  (imm9  :field (byte 9 12))
+  (imm9  :field (byte 9 12) :sign-extend t)
   (type  :field (byte 2 10))
   (rn    :field (byte 5 5)  :type 'reg)
   (rt    :field (byte 5 0)  :type 'reg))
@@ -759,7 +766,15 @@
   (op2    :field (byte 2 24) :value #b00)
   (opc    :field (byte 2 22))
   (one    :field (byte 1 21) :value 1)
-  (rm     :field (byte 5 16) :type 'reg)
+  (rm     :field (byte 5 16)
+          :printer #'(lambda (value stream dstate)
+                       (let* ((word   (disassem::sap-ref-int
+                                       (disassem:dstate-segment-sap dstate)
+                                       (disassem:dstate-cur-offs dstate)
+                                       4 :little-endian))
+                              (option (ldb (byte 3 13) word)))
+                         (princ (get-reg-name value (if (< option 6) 0 1))
+                                stream))))
   (option :field (byte 3 13) :type 'extend-type)
   (s      :field (byte 1 12))
   (op3    :field (byte 2 10) :value #b10)
@@ -801,7 +816,7 @@
   (op2   :field (byte 1 25) :value 0)
   (index :field (byte 2 23))
   (l     :field (byte 1 22))
-  (imm7  :field (byte 7 15))
+  (imm7  :field (byte 7 15) :sign-extend t)
   (rt2   :field (byte 5 10) :type 'reg)
   (rn    :field (byte 5 5)  :type 'reg)
   (rt    :field (byte 5 0)  :type 'reg))
@@ -986,14 +1001,17 @@
 
 (defstruct memory-ref
   ;; Base register.
-  (base nil :type tn)
+  (base (required-argument) :type tn)
   ;; Byte offset -- semantics depend on mode:
-  ;;   :offset  unsigned, scaled by access size at emit time
-  ;;   :pre     signed 9-bit, stored unscaled in imm9
-  ;;   :post    signed 9-bit, stored unscaled in imm9
+  ;;   :offset     unsigned, scaled by access size at emit time
+  ;;   :pre        signed 9-bit, stored unscaled in imm9
+  ;;   :post       signed 9-bit, stored unscaled in imm9
+  ;;   :reg-offset register offset via extended-reg
   (offset 0 :type integer)
+  ;; Register offset operand (only for :reg-offset mode).
+  (rm nil :type (or null extended-reg))
   ;; Addressing mode.
-  (mode :offset :type (member :offset :pre :post)))
+  (mode :offset :type (member :offset :pre :post :reg-offset)))
 
 (defun mem (base &optional (offset 0))
   "Unsigned-offset memory reference: [base, #offset].
@@ -1013,6 +1031,18 @@
   Offset is a signed byte offset in the range -256..255."
   (declare (type tn base) (type (signed-byte 9) offset))
   (make-memory-ref :base base :offset offset :mode :post))
+
+(defun reg-offset (base rm &optional (extend-type :uxtx) (shift 0))
+  "Register-offset memory reference: [base, rm, extend #shift]
+  Rm is the offset register, extended and optionally shifted.
+  Extend-type defaults to :uxtx (no extension, X register).
+  Use :uxtw or :sxtw to treat rm as a W register.
+  Shift is 0 or the log2 of the access size."
+  (declare (type tn base rm)
+           (type (member :uxtb :uxth :uxtw :uxtx :sxtb :sxth :sxtw :sxtx) extend-type)
+           (type (integer 0 4) shift))
+  (make-memory-ref :base base :mode :reg-offset
+                   :rm (extend rm extend-type shift)))
 
 (defun nzcv (&rest flags)
   "Return a 4-bit integer encoding the NZCV flags, suitable for use as
@@ -1785,12 +1815,12 @@
            (etypecase src
              ((unsigned-byte 12)
               (emit-format-add-sub-imm segment ,sf ,op ,s #b10001
-                                        0 src
+                                        0 0 src
                                         (reg-tn-encoding rn)
                                         (reg-tn-encoding rd)))
              (shifted-imm
               (emit-format-add-sub-imm segment ,sf ,op ,s #b10001
-                                        (shifted-imm-shift src)
+                                        0 (shifted-imm-shift src)
                                         (shifted-imm-value src)
                                         (reg-tn-encoding rn)
                                         (reg-tn-encoding rd)))
@@ -1856,10 +1886,10 @@
            (etypecase src
              ((unsigned-byte 12)
               (emit-format-add-sub-imm segment ,sf ,op 1 #b10001
-                                        0 src (reg-tn-encoding rn) 31))
+                                        0 0 src (reg-tn-encoding rn) 31))
              (shifted-imm
               (emit-format-add-sub-imm segment ,sf ,op 1 #b10001
-                                        (shifted-imm-shift src)
+                                        0 (shifted-imm-shift src)
                                         (shifted-imm-value src)
                                         (reg-tn-encoding rn) 31))
              (tn
@@ -2022,7 +2052,7 @@
 (define-instruction-macro mov (rd src)
   `(inst orr ,rd null-tn ,src))
 
-;; MVN Xd, src  =  ORN Xd, XZR, src
+;; MVN Xd, src  =  ORN Xd, XZR, src  -- bitwise NOT.
 (define-instruction-macro mvn (rd src)
   `(inst orn ,rd null-tn ,src))
 
@@ -2311,7 +2341,8 @@
        `(define-instruction ,name (segment rt target)
           (:declare (type tn rt) (type label target))
           (:printer format-compare-branch
-                    ((sf ,sf) (op1 #b011010) (op ,op)))
+                    ((sf ,sf) (op1 #b011010) (op ,op)
+                     ,@(when (zerop sf) '((rt nil :type 'wreg)))))
           (:attributes branch)
           (:emitter
            (emit-back-patch segment 4
@@ -2337,7 +2368,8 @@
                     (type (unsigned-byte ,(if (zerop sf) 5 6)) bit-num)
                     (type label target))
           (:printer format-test-branch
-                    ((op1 #b011011) (op ,op) (b5 ,sf)))
+                    ((op1 #b011011) (op ,op) (b5 ,sf)
+                     ,@(when (zerop sf) '((rt nil :type 'wreg)))))
           (:attributes branch)
           (:emitter
            (emit-back-patch segment 4
@@ -2499,6 +2531,10 @@
 ;;   (inst ldr  x0 (mem x1 16))           ; LDR X0, [X1, #16]
 ;;   (inst ldr  x0 (pre-index x1 16))     ; LDR X0, [X1, #16]!
 ;;   (inst ldr  x0 (post-index x1 -8))    ; LDR X0, [X1], #-8
+;;   (inst ldr  x0 (reg-offset x1 x2))             ; LDR X0, [X1, X2]
+;;   (inst ldr  x0 (reg-offset x1 x2 :uxtx 3))     ; LDR X0, [X1, X2, LSL #3]
+;;   (inst ldr  x0 (reg-offset x1 x2 :uxtw))       ; LDR X0, [X1, W2, UXTW]
+;;   (inst ldr  x0 (reg-offset x1 x2 :sxtw 2))     ; LDR X0, [X1, W2, SXTW #2]
 ;;   (inst ldrh w0 (mem x1 6))            ; LDRH W0, [X1, #6]
 ;;   (inst ldrb w0 (mem x1 3))            ; LDRB W0, [X1, #3]
 ;;   (inst str  x0 (mem x1 16))           ; STR X0, [X1, #16]
@@ -2516,6 +2552,9 @@
           (:printer format-ldst-imm9
                     ((size ,size) (op1 #b111) (v 0) (op2 #b00) (opc ,opc)
                      (type #b01)))
+          (:printer format-ldst-reg
+                    ((size ,size) (op1 #b111) (v 0) (op2 #b00) (opc ,opc)
+                     (one 1) (op3 #b10)))
           (:emitter
            (let ((rn     (memory-ref-base mem))
                  (offset (memory-ref-offset mem)))
@@ -2540,7 +2579,19 @@
                 (emit-format-ldst-imm9 segment ,size #b111 0 #b00 ,opc
                                         0 (ldb (byte 9 0) offset) #b01
                                         (reg-tn-encoding rn)
-                                        (reg-tn-encoding rt)))))))))
+                                        (reg-tn-encoding rt)))
+               (:reg-offset
+                (let* ((ext (memory-ref-rm mem))
+                       (rm  (extended-reg-reg ext))
+                       (s   (if (zerop (extended-reg-shift ext)) 0 1)))
+                  (emit-format-ldst-reg segment ,size #b111 0 #b00 ,opc
+                                         1
+                                         (reg-tn-encoding rm)
+                                         (extend-type-encoding
+                                          (extended-reg-extend-type ext))
+                                         s #b10
+                                         (reg-tn-encoding rn)
+                                         (reg-tn-encoding rt))))))))))
   ;;          name      size    opc    access-size
   (def strb    #b00 #b00 1)
   (def ldrb    #b00 #b01 1)
@@ -3448,5 +3499,3 @@
 
 (define-instruction-macro li (reg value)
   `(%li ,reg ,value))
-
-;; NOT Xd, Xm  =  ORN Xd, XZR, Xm  (already covered by MVN macro).
