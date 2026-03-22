@@ -301,7 +301,7 @@
        ,@forms
        (let ((,label (gen-label)))
 	 (without-scheduling ()
-	   (inst and alloc-tn alloc-tn (lognot pseudo-atomic-value))
+	   (inst sub alloc-tn alloc-tn pseudo-atomic-value)
 	   (inst ands zero-tn alloc-tn pseudo-atomic-interrupted-value)
 	   (inst b.eq ,label)
 	   (inst udf pseudo-atomic-trap))
@@ -315,11 +315,6 @@
 ;;; Generate code that branches to TARGET iff REG contains one of VALUES.
 ;;; If NOT-P is true, invert the test.  Jumping to NOT-TARGET is the same
 ;;; as falling out the bottom.
-;;;
-;;; On AArch64, CMP sets the condition flags; conditional branches use the
-;;; standard Bcc mnemonic with a keyword condition code (e.g. :eq, :le).
-;;; The argument ordering for (inst b target cond) follows the ARM port
-;;; convention: condition comes second.
 (defun gen-range-test (reg target not-target not-p min seperation max values)
   (let ((tests nil)
 	(start nil)
@@ -360,8 +355,8 @@
 		(progn
 		  (inst cmp reg test)
 		  (if last
-		      (inst b target equal)
-		      (inst b label :eq)))
+		      (inst b equal target)
+		      (inst b :eq label)))
 		(let ((start (car test))
 		      (end (cdr test)))
 		  (cond ((and (= start min) (= end max))
@@ -372,21 +367,21 @@
 			((= start min)
 			 (inst cmp reg end)
 			 (if last
-			     (inst b target less-or-equal)
-			     (inst b label :le)))
+			     (inst b less-or-equal target)
+			     (inst b :le label)))
 			((= end max)
 			 (inst cmp reg start)
 			 (if last
-			     (inst b target greater-or-equal)
-			     (inst b label :ge)))
+			     (inst b greater-or-equal target)
+			     (inst b :ge label)))
 			(t
 			 (inst cmp reg start)
-			 (inst b (if not-p target not-target) :lt)
+			 (inst b :lt (if not-p target not-target))
 			 (inst cmp reg end)
 			 (if last
-			     (inst b target less-or-equal)
-			     (inst b label :le))))))))))
-    (nreverse insts)))
+			     (inst b less-or-equal target)
+			     (inst b :le label))))))))))
+      (nreverse insts)))
 
 (defun gen-other-immediate-test (reg target not-target not-p values)
   (gen-range-test reg target not-target not-p
@@ -428,8 +423,8 @@
        ;; without storing the result.
        `((inst tst ,reg fixnum-tag-mask)
 	 ,(if (or lowtags hdrs)
-	      `(inst b ,(if not-p not-target target) :eq)
-	      `(inst b ,target ,(if not-p :ne :eq)))))
+	      `(inst b :eq ,(if not-p not-target target))
+	      `(inst b ,(if not-p :ne :eq) ,target))))
      (when (or lowtags hdrs)
        `((inst and ,temp ,reg lowtag-mask)))
      (when lowtags
@@ -444,7 +439,7 @@
 			   (1- lowtag-limit) lowtags)))
      (when hdrs
        `((inst cmp ,temp ,lowtag)
-	 (inst b ,(if not-p target not-target) :ne)
+	 (inst b :ne ,(if not-p target not-target))
 	 (load-type ,temp ,reg (- ,lowtag))
 	 ,@(gen-other-immediate-test temp target not-target not-p hdrs))))))
 
