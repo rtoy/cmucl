@@ -2189,22 +2189,22 @@
   ;;           name   sf   opc    fixed-aliases           imms-only-aliases
   (def sbfm    1 #b00
                ((sxtb 0  7) (sxth 0 15) (sxtw 0 31))
-               ((asr   63)))
+               ())
   (def bfm     1 #b01
                ()
                ())
   (def ubfm    1 #b10
                ((uxtb 0  7) (uxth 0 15))
-               ((lsr   63)))
+               ())
   (def sbfm.w  0 #b00
                ((sxtb.w 0  7) (sxth.w 0 15))
-               ((asr.w 31)))
+               ())
   (def bfm.w   0 #b01
                ()
                ())
   (def ubfm.w  0 #b10
                ((uxtb.w 0  7) (uxth.w 0 15))
-               ((lsr.w 31))))
+               ()))
 
 ;; Convenient aliases.
 (define-instruction-macro sxtb (rd rn)
@@ -2251,45 +2251,135 @@
 ;;   lsl / lsl.w  -> ubfm / ubfm.w  (imm)  or  lslv / lslv.w  (reg)
 ;;   ror / ror.w  -> extr            (imm)  or  rorv / rorv.w  (reg)
 
-(define-instruction-macro asr (rd rn shift)
-  (if (integerp shift)
-    `(inst sbfm ,rd ,rn ,shift 63)
-    `(inst asrv ,rd ,rn ,shift)))
+;;; Shift instructions as real instructions dispatching on shift type.
+;;
+;; Immediate shift -> bitfield/extract instruction
+;; Register shift  -> variable-shift instruction (asrv/lsrv/lslv/rorv)
+;;
+;; asr  imm: SBFM Rd, Rn, shift, {63|31}
+;; lsr  imm: UBFM Rd, Rn, shift, {63|31}
+;; lsl  imm: UBFM Rd, Rn, {64|32}-shift, {63|31}-shift
+;; ror  imm: EXTR Rd, Rn, Rn, shift
 
-(define-instruction-macro asr.w (rd rn shift)
-  (if (integerp shift)
-    `(inst sbfm.w ,rd ,rn ,shift 31)
-    `(inst asrv.w ,rd ,rn ,shift)))
+(defun emit-shift-reg (segment sf opc rd rn rm)
+  "Emit a variable-shift instruction (ASRV/LSRV/LSLV/RORV)."
+  (emit-format-dp-2src segment sf 0 0 #b11010110
+                        (reg-tn-encoding rm) opc
+                        (reg-tn-encoding rn)
+                        (reg-tn-encoding rd)))
 
-(define-instruction-macro lsr (rd rn shift)
-  (if (integerp shift)
-    `(inst ubfm ,rd ,rn ,shift 63)
-    `(inst lsrv ,rd ,rn ,shift)))
+(defun emit-shift-imm (segment sf bf-opc rd rn immr imms)
+  "Emit a bitfield-based immediate shift (ASR/LSR/LSL)."
+  (emit-format-bitfield segment sf bf-opc #b100110
+                         sf immr imms
+                         (reg-tn-encoding rn)
+                         (reg-tn-encoding rd)))
 
-(define-instruction-macro lsr.w (rd rn shift)
-  (if (integerp shift)
-    `(inst ubfm.w ,rd ,rn ,shift 31)
-    `(inst lsrv.w ,rd ,rn ,shift)))
+;;; ASR -- Arithmetic Shift Right
+;;; Immediate: SBFM Rd, Rn, shift, {63|31}
+;;; Register:  ASRV Rd, Rn, Rm
 
-(define-instruction-macro lsl (rd rn shift)
-  (if (integerp shift)
-    `(inst ubfm ,rd ,rn ,(- 64 shift) ,(- 63 shift))
-    `(inst lslv ,rd ,rn ,shift)))
+(macrolet
+    ((def (name sf imms-fixed)
+       `(define-instruction ,name (segment rd rn shift)
+          (:declare (type tn rd rn)
+                    (type (or tn (integer 0 63)) shift))
+          (:printer format-bitfield
+                    ((sf ,sf) (opc #b00) (op1 #b100110) (n ,sf) (imms ,imms-fixed))
+                    '(:name :tab rd ", " rn ", " immr)
+                    :print-name ',name)
+          (:printer format-dp-2src
+                    ((sf ,sf) (zero 0) (s 0) (op1 #b11010110) (opc #b001010))
+                    '(:name :tab rd ", " rn ", " rm)
+                    :print-name ',name)
+          (:emitter
+           (etypecase shift
+             (integer (emit-shift-imm segment ,sf #b00 rd rn shift ,imms-fixed))
+             (tn      (emit-shift-reg segment ,sf #b001010 rd rn shift)))))))
+  (def asr   1 63)
+  (def asr.w 0 31))
 
-(define-instruction-macro lsl.w (rd rn shift)
-  (if (integerp shift)
-    `(inst ubfm.w ,rd ,rn ,(- 32 shift) ,(- 31 shift))
-    `(inst lslv.w ,rd ,rn ,shift)))
+;;; LSR -- Logical Shift Right
+;;; Immediate: UBFM Rd, Rn, shift, {63|31}
+;;; Register:  LSRV Rd, Rn, Rm
 
-(define-instruction-macro ror (rd rn shift)
-  (if (integerp shift)
-    `(inst extr ,rd ,rn ,rn ,shift)
-    `(inst rorv ,rd ,rn ,shift)))
+(macrolet
+    ((def (name sf imms-fixed)
+       `(define-instruction ,name (segment rd rn shift)
+          (:declare (type tn rd rn)
+                    (type (or tn (integer 0 63)) shift))
+          (:printer format-bitfield
+                    ((sf ,sf) (opc #b10) (op1 #b100110) (n ,sf) (imms ,imms-fixed))
+                    '(:name :tab rd ", " rn ", " immr)
+                    :print-name ',name)
+          (:printer format-dp-2src
+                    ((sf ,sf) (zero 0) (s 0) (op1 #b11010110) (opc #b001001))
+                    '(:name :tab rd ", " rn ", " rm)
+                    :print-name ',name)
+          (:emitter
+           (etypecase shift
+             (integer (emit-shift-imm segment ,sf #b10 rd rn shift ,imms-fixed))
+             (tn      (emit-shift-reg segment ,sf #b001001 rd rn shift)))))))
+  (def lsr   1 63)
+  (def lsr.w 0 31))
 
-(define-instruction-macro ror.w (rd rn shift)
-  (if (integerp shift)
-    `(inst extr.w ,rd ,rn ,rn ,shift)
-    `(inst rorv.w ,rd ,rn ,shift)))
+;;; LSL -- Logical Shift Left
+;;; Immediate: UBFM Rd, Rn, {64|32}-shift, {63|31}-shift
+;;; Register:  LSLV Rd, Rn, Rm
+
+(macrolet
+    ((def (name sf reg-size)
+       `(define-instruction ,name (segment rd rn shift)
+          (:declare (type tn rd rn)
+                    (type (or tn (integer 0 63)) shift))
+          (:printer format-bitfield
+                    ((sf ,sf) (opc #b10) (op1 #b100110) (n ,sf))
+                    '(:name :tab rd ", " rn ", " immr)
+                    :print-name ',name)
+          (:printer format-dp-2src
+                    ((sf ,sf) (zero 0) (s 0) (op1 #b11010110) (opc #b001000))
+                    '(:name :tab rd ", " rn ", " rm)
+                    :print-name ',name)
+          (:emitter
+           (etypecase shift
+             (integer (emit-shift-imm segment ,sf #b10 rd rn
+                                       (- ,reg-size shift)
+                                       (- ,(1- reg-size) shift)))
+             (tn      (emit-shift-reg segment ,sf #b001000 rd rn shift)))))))
+  (def lsl   1 64)
+  (def lsl.w 0 32))
+
+;;; ROR -- Rotate Right
+;;; Immediate: EXTR Rd, Rn, Rn, shift  (disassembles as EXTR -- same encoding)
+;;; Register:  RORV Rd, Rn, Rm
+;;;
+;;; The immediate form has no format-extract printer because ROR is
+;;; indistinguishable from EXTR without a rm=rn specializer constraint,
+;;; which the CMUCL disassembler DSL does not support.
+;;; Future improvement: add a note printer (as Sparc does) so that
+;;; "EXTR Rd, Rn, Rn, #shift" also prints "; ROR Rd, Rn, #shift".
+
+(macrolet
+    ((def (name sf)
+       `(define-instruction ,name (segment rd rn shift)
+          (:declare (type tn rd rn)
+                    (type (or tn (integer 0 63)) shift))
+          ;; No format-extract printer -- see comment above.
+          (:printer format-dp-2src
+                    ((sf ,sf) (zero 0) (s 0) (op1 #b11010110) (opc #b001011))
+                    '(:name :tab rd ", " rn ", " rm)
+                    :print-name ',name)
+          (:emitter
+           (etypecase shift
+             (integer
+              (emit-format-extract segment ,sf 0 #b100111 ,sf 0
+                                    (reg-tn-encoding rn) shift
+                                    (reg-tn-encoding rn)
+                                    (reg-tn-encoding rd)))
+             (tn
+              (emit-shift-reg segment ,sf #b001011 rd rn shift)))))))
+  (def ror   1)
+  (def ror.w 0))
 
 
 ;;;; Branches.
@@ -2639,9 +2729,11 @@
           (:printer format-ldst-uoffset
                     ((size ,size) (op1 #b111) (v 0) (op2 #b01) (opc ,opc)))
           (:printer format-ldst-imm9
-                                      ())
+                    ((z 0) (size ,size) (op1 #b111) (v 0) (op2 #b00) (opc ,opc)
+                     (type #b11)))
           (:printer format-ldst-imm9
-                                      ())
+                    ((z 0) (size ,size) (op1 #b111) (v 0) (op2 #b00) (opc ,opc)
+                     (type #b01)))
           (:printer format-ldst-reg
                     ((size ,size) (op1 #b111) (v 0) (op2 #b00) (opc ,opc)
                      (one 1) (op3 #b10)))
@@ -2694,9 +2786,11 @@
                           ((size #b10) (op1 #b111) (v 1) (op2 #b01) (opc ,int-opc)
                            (rt nil :type 'fp-reg-single)))
                 (:printer format-ldst-imm9
-                                            ())
+                          ((z 0) (size #b10) (op1 #b111) (v 1) (op2 #b00) (opc ,int-opc)
+                           (type #b11) (rt nil :type 'fp-reg-single)))
                 (:printer format-ldst-imm9
-                                            ())
+                          ((z 0) (size #b10) (op1 #b111) (v 1) (op2 #b00) (opc ,int-opc)
+                           (type #b01) (rt nil :type 'fp-reg-single)))
                 (:printer format-ldst-reg
                           ((size #b10) (op1 #b111) (v 1) (op2 #b00) (opc ,int-opc)
                            (one 1) (op3 #b10) (rt nil :type 'fp-reg-single)))
@@ -2705,9 +2799,11 @@
                           ((size #b11) (op1 #b111) (v 1) (op2 #b01) (opc ,int-opc)
                            (rt nil :type 'fp-reg-double)))
                 (:printer format-ldst-imm9
-                                            ())
+                          ((z 0) (size #b11) (op1 #b111) (v 1) (op2 #b00) (opc ,int-opc)
+                           (type #b11) (rt nil :type 'fp-reg-double)))
                 (:printer format-ldst-imm9
-                                            ())
+                          ((z 0) (size #b11) (op1 #b111) (v 1) (op2 #b00) (opc ,int-opc)
+                           (type #b01) (rt nil :type 'fp-reg-double)))
                 (:printer format-ldst-reg
                           ((size #b11) (op1 #b111) (v 1) (op2 #b00) (opc ,int-opc)
                            (one 1) (op3 #b10) (rt nil :type 'fp-reg-double)))
@@ -2756,7 +2852,7 @@
                        (emit-ldst-modes segment mem ,int-size 0 ,int-opc ,int-access-size
                                         (reg-tn-encoding rt))))))))))))))
   ;;         name   int-size  int-opc  int-access  lit-opc  wreg-p
-  (def str.w #b10   #b00      4        nil          nil)  ; 32-bit integer store
+  (def str.w #b10   #b00      4        nil          t)    ; 32-bit integer store only
   (def ldr.w #b10   #b01      4        #b01         t)    ; 32-bit integer load
   (def str   #b11   #b00      8        nil          nil)  ; 64-bit / FP store
   (def ldr   #b11   #b01      8        #b10         nil)) ; 64-bit / FP load
@@ -2781,7 +2877,8 @@
           (:declare (type tn rt rn)
                     (type (signed-byte 9) imm9))
           (:printer format-ldst-imm9
-                                      ())
+                    ((z 0) (size ,size) (op1 #b111) (v 0) (op2 #b00) (opc ,opc)
+                     (type #b00)))
           (:emitter
            (emit-format-ldst-imm9 segment ,size #b111 0 #b00 ,opc
                                    0 (ldb (byte 9 0) imm9)
@@ -2958,32 +3055,42 @@
 ;;; Data Processing (2 sources): UDIV, SDIV, LSL/LSR/ASR/ROR (variable).
 
 (macrolet
-    ((def (name sf opc alias)
+    ((def (name sf opc)
        `(define-instruction ,name (segment rd rn rm)
           (:declare (type tn rd rn rm))
           (:printer format-dp-2src
-                    ((sf ,sf) (zero 0) (s 0) (op1 #b11010110)
-                     (opc ,opc))
-                    '(:name :tab rd ", " rn ", " rm)
-                    ,@(when alias `(:print-name ',alias)))
+                    ((sf ,sf) (zero 0) (s 0) (op1 #b11010110) (opc ,opc))
+                    '(:name :tab rd ", " rn ", " rm))
           (:emitter
            (emit-format-dp-2src segment ,sf 0 0 #b11010110
                                  (reg-tn-encoding rm)
                                  ,opc
                                  (reg-tn-encoding rn)
                                  (reg-tn-encoding rd))))))
-  (def udiv   1 #b000010 nil)
-  (def sdiv   1 #b000011 nil)
-  (def asrv   1 #b001010 asr)
-  (def lsrv   1 #b001001 lsr)
-  (def lslv   1 #b001000 lsl)
-  (def rorv   1 #b001011 ror)
-  (def udiv.w  0 #b000010 nil)
-  (def sdiv.w  0 #b000011 nil)
-  (def asrv.w  0 #b001010 asr.w)
-  (def lsrv.w  0 #b001001 lsr.w)
-  (def lslv.w  0 #b001000 lsl.w)
-  (def rorv.w  0 #b001011 ror.w))
+  (def udiv   1 #b000010)
+  (def sdiv   1 #b000011)
+  (def udiv.w  0 #b000010)
+  (def sdiv.w  0 #b000011))
+
+;; asrv/lsrv/lslv/rorv have no printer -- asr/lsr/lsl/ror own those bit patterns.
+(macrolet
+    ((def (name sf opc)
+       `(define-instruction ,name (segment rd rn rm)
+          (:declare (type tn rd rn rm))
+          (:emitter
+           (emit-format-dp-2src segment ,sf 0 0 #b11010110
+                                 (reg-tn-encoding rm)
+                                 ,opc
+                                 (reg-tn-encoding rn)
+                                 (reg-tn-encoding rd))))))
+  (def asrv   1 #b001010)
+  (def lsrv   1 #b001001)
+  (def lslv   1 #b001000)
+  (def rorv   1 #b001011)
+  (def asrv.w  0 #b001010)
+  (def lsrv.w  0 #b001001)
+  (def lslv.w  0 #b001000)
+  (def rorv.w  0 #b001011))
 
 
 ;;; Data Processing (1 source): RBIT, REV, CLZ, CLS.
