@@ -923,11 +923,6 @@
            (type (member 0 12) shift))
   (make-shifted-imm :value value :shift (/ shift 12)))
 
-(defstruct bitmask-imm
-  ;; The three encoding fields for an AArch64 logical immediate.
-  (n    0 :type (unsigned-byte 1))
-  (immr 0 :type (unsigned-byte 6))
-  (imms 0 :type (unsigned-byte 6)))
 
 ;; Bitmask immediate encoding algorithm.
 ;; References:
@@ -1018,17 +1013,6 @@
                     (logand imms #x3f))))))))
 
 
-(defun mask (value &optional (sf 1))
-  "Construct a bitmask immediate operand for logical instructions.
-  Value is the integer to encode; SF selects 64-bit (1, default) or 32-bit (0).
-  Signals an error if value cannot be encoded as an AArch64 bitmask immediate."
-  (declare (type (or (signed-byte 64) (unsigned-byte 64)) value)
-           (type bit sf))
-  (multiple-value-bind (n immr imms)
-      (encode-bit-mask value sf)
-    (unless n
-      (error "Cannot encode ~S as an AArch64 bitmask immediate." value))
-    (make-bitmask-imm :n n :immr immr :imms imms)))
 
 (defstruct extended-reg
   ;; The register to be extended.
@@ -2018,18 +2002,20 @@
 ;;   shifted-reg  -- register with explicit shift type and amount
 ;;
 ;; Examples:
-;;   (inst and  x0 x1 (mask #xff))          ; AND X0, X1, #0xFF
-;;   (inst and  x0 x1 x2)                   ; AND X0, X1, X2
-;;   (inst and  x0 x1 (shift x2 :lsl 3))   ; AND X0, X1, X2, LSL #3
-;;   (inst ands x0 x1 (mask #xff))          ; ANDS X0, X1, #0xFF  (sets flags)
-;;   (inst tst  x0 (mask #xff))             ; TST X0, #0xFF        (= ANDS XZR, X0, #0xFF)
-;;   (inst tst  x0 x1)                      ; TST X0, X1
+;;   (inst and  x0 x1 #xff)                        ; AND X0, X1, #0xFF
+;;   (inst and  x0 x1 x2)                          ; AND X0, X1, X2
+;;   (inst and  x0 x1 (shift x2 :lsl 3))           ; AND X0, X1, X2, LSL #3
+;;   (inst ands x0 x1 #xff)                        ; ANDS X0, X1, #0xFF  (sets flags)
+;;   (inst tst  x0 #xff)                           ; TST X0, #0xFF
+;;   (inst tst  x0 x1)                             ; TST X0, X1
 
 (macrolet
     ((def (name sf opc invertp tst-name mov-name)
        `(define-instruction ,name (segment rd rn src)
           (:declare (type tn rd rn)
-                    (type (or ,@(unless invertp '(bitmask-imm)) tn shifted-reg) src))
+                    (type (or ,@(unless invertp
+                                  '((unsigned-byte 64) (signed-byte 64)))
+                              tn shifted-reg) src))
           ,@(unless invertp
               `((:printer format-logic-imm
                           ((sf ,sf) (opc ,opc) (op1 #b100100)))))
@@ -2054,13 +2040,15 @@
           (:emitter
            (etypecase src
              ,@(unless invertp
-                 `((bitmask-imm
-                    (emit-format-logic-imm segment ,sf ,opc #b100100
-                                            (bitmask-imm-n src)
-                                            (bitmask-imm-immr src)
-                                            (bitmask-imm-imms src)
-                                            (reg-tn-encoding rn)
-                                            (reg-tn-encoding rd)))))
+                 `(((or (unsigned-byte 64) (signed-byte 64))
+                    (multiple-value-bind (n immr imms)
+                        (encode-bit-mask src ,sf)
+                      (unless n
+                        (error "Cannot encode ~S as a bitmask immediate." src))
+                      (emit-format-logic-imm segment ,sf ,opc #b100100
+                                              n immr imms
+                                              (reg-tn-encoding rn)
+                                              (reg-tn-encoding rd))))))
              (tn
               (emit-format-logic-reg segment ,sf ,opc #b01010
                                       0 ,(if invertp 1 0)
