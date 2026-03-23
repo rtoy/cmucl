@@ -241,6 +241,7 @@
                                :load-if (not (location= x y))))
                   (:note _N"float move")
                   (:generator 0
+                    (emit-not-implemented)
                     (,move-fn y x)))
                 (define-move-vop ,vop :move (,sc) (,sc)))))
   (frob single-move single-reg move-single-reg)
@@ -261,6 +262,7 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:variant-vars format size type data)
   (:generator 13
+    (emit-not-implemented)
     (with-fixed-allocation (y ndescr type size))
     (ecase format
       (:single
@@ -288,6 +290,7 @@
                   (:results (y :scs (,sc)))
                   (:note _N"pointer to float coercion")
                   (:generator 2
+                    (emit-not-implemented)
                     (inst ldur y x
                           (- (* ,value vm:word-bytes) vm:other-pointer-type))))
                 (define-move-vop ,name :move (descriptor-reg) (,sc)))))
@@ -311,6 +314,7 @@
                   (:results (y))
                   (:note _N"float argument move")
                   (:generator 1
+                    (emit-not-implemented)
                     (sc-case y
                       (,sc
                        (unless (location= x y)
@@ -335,6 +339,7 @@
                :load-if (not (location= x y))))
   (:note _N"complex single float move")
   (:generator 0
+    (emit-not-implemented)
     (unless (location= x y)
       (let ((x-real (complex-single-reg-real-tn x))
             (y-real (complex-single-reg-real-tn y)))
@@ -353,6 +358,7 @@
                :load-if (not (location= x y))))
   (:note _N"complex double float move")
   (:generator 0
+    (emit-not-implemented)
     (unless (location= x y)
       (move-double-reg (complex-double-reg-real-tn y)
                        (complex-double-reg-real-tn x))
@@ -372,6 +378,7 @@
   (:note _N"complex single float to pointer coercion")
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 13
+    (emit-not-implemented)
     (with-fixed-allocation (y ndescr vm:complex-single-float-type
                               vm:complex-single-float-size))
     (let ((real-tn (complex-single-reg-real-tn x)))
@@ -391,6 +398,7 @@
   (:note _N"complex double float to pointer coercion")
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 13
+    (emit-not-implemented)
     (with-fixed-allocation (y ndescr vm:complex-double-float-type
                               vm:complex-double-float-size))
     (let ((real-tn (complex-double-reg-real-tn x)))
@@ -410,6 +418,7 @@
   (:results (y :scs (complex-single-reg)))
   (:note _N"pointer to complex float coercion")
   (:generator 2
+    (emit-not-implemented)
     (let ((real-tn (complex-single-reg-real-tn y)))
       (inst ldur real-tn x
             (- (* complex-single-float-real-slot word-bytes)
@@ -426,6 +435,7 @@
   (:results (y :scs (complex-double-reg)))
   (:note _N"pointer to complex float coercion")
   (:generator 2
+    (emit-not-implemented)
     (let ((real-tn (complex-double-reg-real-tn y)))
       (inst ldur real-tn x
             (- (* complex-double-float-real-slot word-bytes)
@@ -448,6 +458,7 @@
   (:results (y))
   (:note _N"complex single-float argument move")
   (:generator 1
+    (emit-not-implemented)
     (sc-case y
       (complex-single-reg
        (unless (location= x y)
@@ -469,6 +480,7 @@
   (:results (y))
   (:note _N"complex double-float argument move")
   (:generator 2
+    (emit-not-implemented)
     (sc-case y
       (complex-double-reg
        (unless (location= x y)
@@ -527,11 +539,13 @@
                 (define-vop (,sname single-float-op)
                   (:translate ,op)
                   (:generator ,scost
+                    (emit-not-implemented)
                     (note-this-location vop :internal-error)
                     (inst ,inst r x y)))
                 (define-vop (,dname double-float-op)
                   (:translate ,op)
                   (:generator ,dcost
+                    (emit-not-implemented)
                     (note-this-location vop :internal-error)
                     (inst ,inst r x y))))))
   ;;                 SPARC cost  ARM64 single/double instruction
@@ -561,6 +575,7 @@
                 (:vop-var vop)
                 (:save-p :compute-only)
                 (:generator 1
+                  (emit-not-implemented)
                   (note-this-location vop :internal-error)
                   (inst ,inst y x)))))
   (frob abs/single-float    fabs  abs      single-reg single-float)
@@ -584,6 +599,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 1
+    (emit-not-implemented)
     (note-this-location vop :internal-error)
     (inst fsqrt y x)))
 
@@ -598,6 +614,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 1
+    (emit-not-implemented)
     (note-this-location vop :internal-error)
     (inst fsqrt y x)))
 
@@ -621,6 +638,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 3
+    (emit-not-implemented)
     (note-this-location vop :internal-error)
     ;; FCMP sets PSTATE flags; SC dispatch is automatic from arg types.
     (ecase format
@@ -695,6 +713,7 @@
                 (:vop-var vop)
                 (:save-p :compute-only)
                 (:generator 3
+                  (emit-not-implemented)
                   (note-this-location vop :internal-error)
                   (inst scvtf.w y x)))))
   (frob %single-float/signed %%single-float single-reg single-float)
@@ -713,6 +732,7 @@
                 (:vop-var vop)
                 (:save-p :compute-only)
                 (:generator 3
+                  (emit-not-implemented)
                   (note-this-location vop :internal-error)
                   (inst ucvtf.w y x)))))
   (frob %single-float/unsigned %single-float single-reg single-float)
@@ -731,6 +751,7 @@
                 (:vop-var vop)
                 (:save-p :compute-only)
                 (:generator 3
+                  (emit-not-implemented)
                   (note-this-location vop :internal-error)
                   (inst scvtf y x)))))
   (frob %single-float/signed64 %single-float single-reg single-float)
@@ -750,6 +771,7 @@
                 (:vop-var vop)
                 (:save-p :compute-only)
                 (:generator 2
+                  (emit-not-implemented)
                   (note-this-location vop :internal-error)
                   (inst fcvt y x)))))
   (frob %single-float/double-float %single-float
@@ -772,6 +794,7 @@
                 (:vop-var vop)
                 (:save-p :compute-only)
                 (:generator 5
+                  (emit-not-implemented)
                   (note-this-location vop :internal-error)
                   (inst fcvtzs.w y x)))))
   (frob %unary-truncate single-reg single-float)
@@ -790,6 +813,7 @@
                 (:vop-var vop)
                 (:save-p :compute-only)
                 (:generator 5
+                  (emit-not-implemented)
                   (note-this-location vop :internal-error)
                   (inst fcvtzs y x)))))
   (frob %unary-truncate single-reg single-float)
@@ -807,6 +831,7 @@
   (:translate c::fast-unary-ftruncate)
   (:note _N"inline ftruncate")
   (:generator 1
+    (emit-not-implemented)
     (inst frintz r x)))
 
 (define-vop (fast-unary-ftruncate/double-float)
@@ -818,6 +843,7 @@
   (:translate c::fast-unary-ftruncate)
   (:note _N"inline ftruncate")
   (:generator 1
+    (emit-not-implemented)
     (inst frintz r x)))
 
 
@@ -842,6 +868,7 @@
   (:translate make-single-float)
   (:policy :fast-safe)
   (:generator 2
+    (emit-not-implemented)
     ;; FMOV Sd, Wn -- move 32-bit integer bits into Sn view of Vd.
     (inst fmov res bits)))
 
@@ -855,6 +882,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 2
+    (emit-not-implemented)
     (sc-case float
       (single-reg
        ;; FMOV Wn, Sd -- move Sn bits into W register.
@@ -879,6 +907,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 4
+    (emit-not-implemented)
     ;; Combine hi-bits (upper 32) and lo-bits (lower 32) into a 64-bit Xn,
     ;; then FMOV Dd, Xn.
     (inst lsl tmp hi-bits 32)           ; shift hi into upper word
@@ -896,6 +925,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
+    (emit-not-implemented)
     (sc-case float
       (double-reg
        (inst fmov tmp float)            ; FMOV Xn, Dd
@@ -922,6 +952,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
+    (emit-not-implemented)
     (sc-case float
       (double-reg
        (inst fmov tmp float)            ; FMOV Xn, Dd
@@ -946,6 +977,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
+    (emit-not-implemented)
     (sc-case float
       (double-reg
        (inst fmov tmp float)
@@ -987,6 +1019,7 @@
   (:translate floating-point-modes)
   (:policy :fast-safe)
   (:generator 3
+    (emit-not-implemented)
     ;; Read FPSR into res.
     (inst mrs res :fpsr)))
 
@@ -998,6 +1031,7 @@
   (:translate (setf floating-point-modes))
   (:policy :fast-safe)
   (:generator 3
+    (emit-not-implemented)
     (inst msr :fpsr new)
     (move res new)))
 
@@ -1022,6 +1056,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
+    (emit-not-implemented)
     (sc-case r
       (complex-single-reg
        (let ((r-real (complex-single-reg-real-tn r)))
@@ -1050,6 +1085,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
+    (emit-not-implemented)
     (sc-case r
       (complex-double-reg
        (let ((r-real (complex-double-reg-real-tn r)))
@@ -1076,6 +1112,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
+    (emit-not-implemented)
     (sc-case x
       (complex-single-reg
        (let ((value-tn (ecase slot
@@ -1116,6 +1153,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
+    (emit-not-implemented)
     (sc-case x
       (complex-double-reg
        (let ((value-tn (ecase slot
@@ -1177,6 +1215,7 @@
   (:results (y :scs (double-double-reg) :load-if (not (location= x y))))
   (:note _N"double-double float move")
   (:generator 0
+    (emit-not-implemented)
     (unless (location= x y)
       (move-double-reg (double-double-reg-hi-tn y) (double-double-reg-hi-tn x))
       (move-double-reg (double-double-reg-lo-tn y) (double-double-reg-lo-tn x)))))
@@ -1189,6 +1228,7 @@
   (:note _N"double-double float to pointer coercion")
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 13
+    (emit-not-implemented)
     (with-fixed-allocation (y ndescr vm::double-double-float-type
                               vm::double-double-float-size))
     (inst stur (double-double-reg-hi-tn x) y
@@ -1205,6 +1245,7 @@
   (:results (y :scs (double-double-reg)))
   (:note _N"pointer to double-double float coercion")
   (:generator 2
+    (emit-not-implemented)
     (inst ldur (double-double-reg-hi-tn y) x
           (- (* double-double-float-hi-slot word-bytes)
              other-pointer-type))
@@ -1220,6 +1261,7 @@
   (:results (y))
   (:note _N"double-double float argument move")
   (:generator 2
+    (emit-not-implemented)
     (sc-case y
       (double-double-reg
        (unless (location= x y)
@@ -1245,6 +1287,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
+    (emit-not-implemented)
     (sc-case res
       (double-double-reg
        (let ((res-hi (double-double-reg-hi-tn res)))
@@ -1270,6 +1313,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
+    (emit-not-implemented)
     (sc-case x
       (double-double-reg
        (let ((value-tn (ecase slot
@@ -1313,6 +1357,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 5
+    (emit-not-implemented)
     (sc-case r
       (complex-double-double-reg
        (move-double-reg (complex-double-double-reg-real-hi-tn r)
@@ -1341,6 +1386,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
+    (emit-not-implemented)
     (sc-case x
       (complex-double-double-reg
        (move-double-reg
