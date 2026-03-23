@@ -615,11 +615,15 @@
 ;;; These all share op1[31:22] = 1101010100.
 
 (defconstant +sysreg-keyword-map+
-  '((:fpcr      . #b1101101000100000)   ; op0=3 op1=3 CRn=4 CRm=4 op2=0
-    (:fpsr      . #b1101101000100001)   ; op0=3 op1=3 CRn=4 CRm=4 op2=1
-    (:nzcv      . #b1101101000010000)   ; op0=3 op1=3 CRn=4 CRm=2 op2=0
-    (:tpidr-el0 . #b1101111010000010)   ; op0=3 op1=3 CRn=13 CRm=0 op2=2
-    (:ctr-el0   . #b1100000000000001))) ; op0=3 op1=0 CRn=0 CRm=0 op2=1
+  '((:fpcr        . #b1101101000100000)   ; op0=3 op1=3 CRn=4  CRm=4 op2=0  FP control
+    (:fpsr        . #b1101101000100001)   ; op0=3 op1=3 CRn=4  CRm=4 op2=1  FP status
+    (:nzcv        . #b1101101000010000)   ; op0=3 op1=3 CRn=4  CRm=2 op2=0  condition flags
+    (:tpidr-el0   . #b1101111010000010)   ; op0=3 op1=3 CRn=13 CRm=0 op2=2  thread pointer
+    (:ctr-el0     . #b1100000000000001)   ; op0=3 op1=0 CRn=0  CRm=0 op2=1  cache type
+    ;; System counter registers (read-only from EL0 when CNTKCTL_EL1 permits)
+    (:cntfrq-el0  . #b1101111100000000)   ; op0=3 op1=3 CRn=14 CRm=0 op2=0  counter frequency (Hz)
+    (:cntvct-el0  . #b1101111100000010)   ; op0=3 op1=3 CRn=14 CRm=0 op2=2  virtual counter value
+    (:cntvctss-el0 . #b1101111100000110)))
 
 (defun encode-sysreg (sysreg)
   "Return the 16-bit op0:op1f:CRn:CRm:op2 encoding for SYSREG.
