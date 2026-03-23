@@ -1183,7 +1183,7 @@
 ;;; More args are stored consecutively on the stack, starting immediately at
 ;;; the context pointer.  The context pointer is not typed, so the lowtag is 0.
 ;;;
-(define-vop (more-arg word-index-ref)
+(define-vop (more-arg word64-index-ref)
   (:variant 0 0)
   (:translate %more-arg))
 
