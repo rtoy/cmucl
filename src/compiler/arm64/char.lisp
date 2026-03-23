@@ -28,7 +28,8 @@
   (:results (y :scs (base-char-reg)))
   (:note _N"character untagging")
   (:generator 1
-    (emit-not-implemented)))
+    (emit-not-implemented)
+    (inst lsr y x vm:type-bits)))
 ;;;
 (define-move-vop move-to-base-char :move
   (any-reg descriptor-reg) (base-char-reg))
@@ -41,7 +42,9 @@
   (:results (y :scs (any-reg descriptor-reg)))
   (:note _N"character tagging")
   (:generator 1
-    (emit-not-implemented)))
+    (emit-not-implemented)
+    (inst lsl y x vm:type-bits)
+    (inst orr y y vm:base-char-type)))
 ;;;
 (define-move-vop move-from-base-char :move
   (base-char-reg) (any-reg descriptor-reg))
@@ -58,7 +61,8 @@
   (:effects)
   (:affected)
   (:generator 0
-    (emit-not-implemented)))
+    (emit-not-implemented)
+    (move y x)))
 ;;;
 (define-move-vop base-char-move :move
   (base-char-reg) (base-char-reg))
@@ -75,7 +79,12 @@
   (:temporary (:sc non-descriptor-reg) temp)
   (:note _N"character arg move")
   (:generator 0
-    (emit-not-implemented)))
+    (emit-not-implemented)
+    (sc-case y
+      (base-char-reg
+       (move y x))
+      (base-char-stack
+       (storew x fp (tn-offset y) 0 temp)))))
 ;;;
 (define-move-vop move-base-char-argument :move-argument
   (any-reg base-char-reg) (base-char-reg))
@@ -99,7 +108,8 @@
   (:results (res :scs (any-reg)))
   (:result-types positive-fixnum)
   (:generator 1
-    (emit-not-implemented)))
+    (emit-not-implemented)
+    (inst lsl res ch fixnum-tag-bits)))
 
 (define-vop (code-char)
   (:translate code-char)
@@ -109,7 +119,8 @@
   (:results (res :scs (base-char-reg)))
   (:result-types base-char)
   (:generator 1
-    (emit-not-implemented)))
+    (emit-not-implemented)
+    (inst lsr res code fixnum-tag-bits)))
 
 
 ;;; Comparison of base-chars.
@@ -135,7 +146,9 @@
   (:note _N"inline comparison")
   (:variant-vars condition not-condition)
   (:generator 3
-    (emit-not-implemented)))
+    (emit-not-implemented)
+    (inst cmp x y)
+    (inst b (if not-p not-condition condition) target)))
 
 (define-vop (fast-char=/base-char base-char-compare)
   (:translate char=)
@@ -165,7 +178,10 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:variant-vars condition not-condition)
   (:generator 2
-    (emit-not-implemented)))
+    (emit-not-implemented)
+    (inst movz temp (char-code y))
+    (inst cmp x temp)
+    (inst b (if not-p not-condition condition) target)))
 
 (define-vop (fast-char=-c/base-char base-char-compare-c)
   (:translate char=)
