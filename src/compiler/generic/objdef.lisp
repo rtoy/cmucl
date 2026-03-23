@@ -478,15 +478,15 @@
 
 ;;;; Symbols
 
-#+(or gengc sparc x86 amd64 ppc)
+#+(or gengc sparc x86 amd64 ppc arm64)
 (defknown %make-symbol (fixnum simple-string) symbol
   (flushable movable))
 
-#+(or gengc sparc x86 amd64 ppc)
+#+(or gengc sparc x86 amd64 ppc arm64)
 (defknown symbol-hash (symbol) fixnum
   (flushable movable))
 
-#+(or gencgc sparc x86 amd64 ppc)
+#+(or gencgc sparc x86 amd64 ppc arm64)
 (defknown %set-symbol-hash  (symbol index)
   t (unsafe))
 
@@ -500,12 +500,12 @@
 (define-primitive-object (symbol :lowtag other-pointer-type
 				 :header symbol-header-type
 				 :alloc-trans
-				 #-(or gengc x86 amd64 sparc ppc) make-symbol
-				 #+(or gengc x86 amd64 sparc ppc) %make-symbol)
+				 #-(or gengc x86 amd64 sparc ppc arm64) make-symbol
+				 #+(or gengc x86 amd64 sparc ppc arm64) %make-symbol)
   (value :set-trans %set-symbol-value
 	 :init :unbound)
-  #-(or gengc x86 amd64 sparc ppc) unused
-  #+(or gengc x86 amd64 sparc ppc)
+  #-(or gengc x86 amd64 sparc ppc arm64) unused
+  #+(or gengc x86 amd64 sparc ppc arm64)
   (hash :init :arg)
   (plist :ref-trans symbol-plist
 	 :set-trans %set-symbol-plist
@@ -518,7 +518,7 @@
 ;; We couldn't use the nil/symbol trick in 32-bit, because the difference
 ;; between the low tags of nil and symbol is 4 but the word-size is 8. This is
 ;; a slow workaround.
-#+amd64
+#+(and amd64 arm64)
 (deftransform symbol-name ((symbol) (*))
 	      '(if (eq symbol nil)
 		"NIL"
