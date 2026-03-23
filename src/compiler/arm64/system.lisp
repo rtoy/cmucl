@@ -29,6 +29,7 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 1
+    (emit-not-implemented)
     (inst and result object vm:lowtag-mask)))
 
 (define-vop (get-type)
@@ -38,6 +39,7 @@
   (:results (result :scs (unsigned-reg) :from (:eval 0)))
   (:result-types positive-fixnum)
   (:generator 6
+    (emit-not-implemented)
     ;; Grab the lowtag.
     (inst and result object lowtag-mask)
     ;; Check for various pointer types.
@@ -79,6 +81,7 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
+    (emit-not-implemented)
     (load-type result function (- vm:function-pointer-type))))
 
 (define-vop (set-function-subtype)
@@ -90,6 +93,7 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
+    (emit-not-implemented)
     ;; AArch64 is little-endian: the type byte is at byte offset 0 of
     ;; the header word (i.e. the lowest-address byte), adjusted for the
     ;; function-pointer tag.  We use STURB (unscaled store byte).
@@ -103,6 +107,7 @@
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
+    (emit-not-implemented)
     (loadw res x 0 vm:other-pointer-type)
     (inst lsr res res vm:type-bits)))
 
@@ -113,6 +118,7 @@
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
+    (emit-not-implemented)
     (loadw res x 0 vm:function-pointer-type)
     (inst lsr res res vm:type-bits)))
 
@@ -125,6 +131,7 @@
   (:results (res :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) t1 t2)
   (:generator 6
+    (emit-not-implemented)
     (loadw t1 x 0 vm:other-pointer-type)
     (inst and t1 t1 vm:type-mask)
     ;; Load DATA into t2 (untagging fixnums from any-reg/immediate, or
@@ -149,6 +156,7 @@
   (:args (ptr :scs (any-reg descriptor-reg)))
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 1
+    (emit-not-implemented)
     ;;
     ;; Some code (the hash table code) depends on this returning a
     ;; positive number so make sure it does.
@@ -168,6 +176,7 @@
   (:results (res :scs (any-reg descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
+    (emit-not-implemented)
     (sc-case type
       (immediate
        (inst lsl temp val vm:type-bits)
@@ -188,6 +197,7 @@
   (:translate dynamic-space-free-pointer)
   (:policy :fast-safe)
   (:generator 1
+    (emit-not-implemented)
     (move int alloc-tn)))
 
 (define-vop (binding-stack-pointer-sap)
@@ -196,6 +206,7 @@
   (:translate binding-stack-pointer-sap)
   (:policy :fast-safe)
   (:generator 1
+    (emit-not-implemented)
     (move int bsp-tn)))
 
 (define-vop (control-stack-pointer-sap)
@@ -204,6 +215,7 @@
   (:translate control-stack-pointer-sap)
   (:policy :fast-safe)
   (:generator 1
+    (emit-not-implemented)
     (move int csp-tn)))
 
 
@@ -217,6 +229,7 @@
   (:results (sap :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 10
+    (emit-not-implemented)
     ;; Read the header word, extract the word count (top bits above
     ;; type-bits), scale to bytes, then subtract the other-pointer tag
     ;; to get the byte displacement from CODE to the first instruction.
@@ -234,6 +247,7 @@
   (:results (func :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 10
+    (emit-not-implemented)
     ;; Compute the byte offset from CODE to the start of the code vector,
     ;; add the caller-supplied byte OFFSET, adjust for the tag difference
     ;; between other-pointer and function-pointer, then add to CODE.
@@ -253,6 +267,7 @@
   (:policy :fast-safe)
   (:translate unix::do-pending-interrupt)
   (:generator 1
+    (emit-not-implemented)
     ;; AArch64 uses UDF (permanently-undefined instruction) as the trap
     ;; mechanism; the signal handler decodes the immediate from the
     ;; instruction word.  This replaces SPARC's UNIMP instruction.
@@ -261,6 +276,7 @@
 
 (define-vop (halt)
   (:generator 1
+    (emit-not-implemented)
     (inst udf halt-trap)))
 
 
@@ -271,6 +287,7 @@
   (:info index)
   (:temporary (:scs (non-descriptor-reg)) count)
   (:generator 1
+    (emit-not-implemented)
     ;; Compute the byte offset of element INDEX in the vector's data
     ;; area, accounting for the other-pointer tag.
     (let ((offset
@@ -310,6 +327,7 @@
   (:result-types unsigned-num unsigned-num)
   (:temporary (:sc unsigned-reg) tick)
   (:generator 3
+    (emit-not-implemented)
     ;; Read the virtual count register into a 64-bit temp.
     (inst mrs tick :cntvct-el0)
     ;; High 32 bits.
