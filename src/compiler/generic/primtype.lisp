@@ -31,24 +31,24 @@
 ;;;
 (def-primitive-type positive-fixnum (any-reg signed-reg unsigned-reg)
   :type (unsigned-byte #-amd64 29 #+amd64 61))
-#-(or alpha amd64)
+#-(or alpha amd64 arm64)
 (def-primitive-type unsigned-byte-31 (signed-reg unsigned-reg descriptor-reg)
   :type (unsigned-byte 31))
-#-(or alpha amd64)
+#-(or alpha amd64 arm64)
 (def-primitive-type unsigned-byte-32 (unsigned-reg descriptor-reg)
   :type (unsigned-byte 32))
-#+(or alpha amd64)
+#+(or alpha amd64 arm64)
 (def-primitive-type unsigned-byte-63 (signed-reg unsigned-reg descriptor-reg)
   :type (unsigned-byte 63))
-#+(or alpha amd64)
+#+(or alpha amd64 arm64)
 (def-primitive-type unsigned-byte-64 (unsigned-reg descriptor-reg)
   :type (unsigned-byte 64))
 (def-primitive-type fixnum (any-reg signed-reg)
   :type (signed-byte #-amd64 30 #+amd64 62))
-#-(or alpha amd64)
+#-(or alpha amd64 arm64)
 (def-primitive-type signed-byte-32 (signed-reg descriptor-reg)
   :type (signed-byte 32))
-#+(or alpha amd64)
+#+(or alpha amd64 arm64)
 (def-primitive-type signed-byte-64 (signed-reg descriptor-reg)
   :type (signed-byte 64))
 
@@ -56,16 +56,16 @@
 (defvar *fixnum-primitive-type* (primitive-type-or-lose 'fixnum))
 
 (def-primitive-type-alias tagged-num (:or positive-fixnum fixnum))
-(def-primitive-type-alias unsigned-num (:or #-(or alpha amd64) unsigned-byte-32
-					    #-(or alpha amd64) unsigned-byte-31
-					    #+(or alpha amd64) unsigned-byte-64
-					    #+(or alpha amd64) unsigned-byte-63
+(def-primitive-type-alias unsigned-num (:or #-(or alpha amd64 arm64) unsigned-byte-32
+					    #-(or alpha amd64 arm64) unsigned-byte-31
+					    #+(or alpha amd64 arm64) unsigned-byte-64
+					    #+(or alpha amd64 arm64) unsigned-byte-63
 					    positive-fixnum))
-(def-primitive-type-alias signed-num (:or #-(or alpha amd64) signed-byte-32
-					  #+(or alpha amd64) signed-byte-64
+(def-primitive-type-alias signed-num (:or #-(or alpha amd64 arm64) signed-byte-32
+					  #+(or alpha amd64 arm64) signed-byte-64
 					  fixnum
-					  #-(or alpha amd64) unsigned-byte-31
-					  #+(or alpha amd64) unsigned-byte-63
+					  #-(or alpha amd64 arm64) unsigned-byte-31
+					  #+(or alpha amd64 arm64) unsigned-byte-63
 					  positive-fixnum))
 #+(and sparc-v9 sparc-v8plus)
 (progn
@@ -256,12 +256,12 @@
 	       (case t1-name
 		 (positive-fixnum
 		  (if (or (eq t2-name 'fixnum)
-			  (eq t2-name #-(or alpha amd64) 'signed-byte-32
-				      #+(or alpha amd64) 'signed-byte-64)
-			  (eq t2-name #-(or alpha amd64) 'unsigned-byte-31
-				      #+(or alpha amd64) 'unsigned-byte-63)
-			  (eq t2-name #-(or alpha amd64) 'unsigned-byte-32
-				      #+(or alpha amd64) 'unsigned-byte-64)
+			  (eq t2-name #-(or alpha amd64 arm64) 'signed-byte-32
+				      #+(or alpha amd64 arm64) 'signed-byte-64)
+			  (eq t2-name #-(or alpha amd64 arm64) 'unsigned-byte-31
+				      #+(or alpha amd64 arm64) 'unsigned-byte-63)
+			  (eq t2-name #-(or alpha amd64 arm64) 'unsigned-byte-32
+				      #+(or alpha amd64 arm64) 'unsigned-byte-64)
 			  #+(and sparc-v9 sparc-v8plus)
 			  (eq t2-name 'signed-byte-64)
 			  #+(and sparc-v9 sparc-v8plus)

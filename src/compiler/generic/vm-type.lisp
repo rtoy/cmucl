@@ -181,10 +181,18 @@
     (numeric-type
      (cond ((type= type (specifier-type 'fixnum))
 	    'c:check-fixnum)
+	   #-arm64
 	   ((type= type (specifier-type '(signed-byte 32)))
 	    'c:check-signed-byte-32)
+	   #-arm64
 	   ((type= type (specifier-type '(unsigned-byte 32)))
 	    'c:check-unsigned-byte-32)
+	   #+arm64
+	   ((type= type (specifier-type '(signed-byte 64)))
+	    'c:check-signed-byte-64)
+	   #+arm64
+	   ((type= type (specifier-type '(unsigned-byte 64)))
+	    'c:check-unsigned-byte-64)
 	   (t nil)))
     (union-type
      (if (type= type (specifier-type 'bignum))
