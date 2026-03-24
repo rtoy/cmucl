@@ -365,6 +365,7 @@
 ;;;   (inst cmp temp ...)                         -> (inst cmp temp ...)
 ;;;   (inst b (if not-p :ne :eq) target)          -> (unchanged)
 
+#+nil
 (define-vop (signed-byte-64-p type-predicate)
   (:translate signed-byte-64-p)
   (:generator 45
@@ -387,6 +388,7 @@
         (inst b (if not-p :ne :eq) target)
         (emit-label not-target)))))
 
+#+nil
 (define-vop (check-signed-byte-64 check-type)
   (:generator 45
     (emit-not-implemented)
