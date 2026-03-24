@@ -772,6 +772,14 @@
   (:affected)
   (:policy :fast-safe))
 
+;;; INTEGER-WITH-A-BITE-OUT -- the full signed S-bit range with the top BITE
+;;; values removed from the upper end.  That is:
+;;;   (integer -(2^(s-1))  (2^(s-1) - bite - 1))
+;;;
+;;; Useful for immediate constants where the maximum positive value must be
+;;; avoided to prevent overflow in subsequent arithmetic.  Examples:
+;;;   (integer-with-a-bite-out 14 4) => (integer -8192 8187)  ; 14-bit signed, top 4 missing
+;;;   (integer-with-a-bite-out  8 1) => (integer -128   126)  ; 8-bit signed, top 1 missing
 (deftype integer-with-a-bite-out (s bite)
   (cond ((eq s '*) 'integer)
         ((and (integerp s) (> s 1))
