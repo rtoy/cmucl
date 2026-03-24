@@ -80,30 +80,30 @@
      (if (> (apply #'max type-codes) vm:lowtag-limit) 7 2)))
 
 (defmacro def-type-vops (pred-name check-name ptype error-code
-				   &rest type-codes)
+                                   &rest type-codes)
   (let ((cost (cost-to-test-types (mapcar #'eval type-codes))))
     `(progn
        ,@(when pred-name
-	   `((define-vop (,pred-name type-predicate)
-	       (:translate ,pred-name)
-	       (:generator ,cost
-		 (emit-not-implemented)
-		 (test-type value temp target not-p ,@type-codes)))))
+           `((define-vop (,pred-name type-predicate)
+               (:translate ,pred-name)
+               (:generator ,cost
+                 (emit-not-implemented)
+                 (test-type value temp target not-p ,@type-codes)))))
        ,@(when check-name
-	   `((define-vop (,check-name check-type)
-	       (:generator ,cost
-		 (emit-not-implemented)
-		 (let ((err-lab
-			(generate-error-code vop ,error-code value)))
-		   (test-type value temp err-lab t ,@type-codes)
-		   (move result value))))))
+           `((define-vop (,check-name check-type)
+               (:generator ,cost
+                 (emit-not-implemented)
+                 (let ((err-lab
+                        (generate-error-code vop ,error-code value)))
+                   (test-type value temp err-lab t ,@type-codes)
+                   (move result value))))))
        ,@(when ptype
-	   `((primitive-type-vop ,check-name (:check) ,ptype))))))
+           `((primitive-type-vop ,check-name (:check) ,ptype))))))
 
 ); eval-when (compile eval)
 
 (def-type-vops fixnump check-fixnum fixnum object-not-fixnum-error
-	       vm:even-fixnum-type vm:odd-fixnum-type)
+               vm:even-fixnum-type vm:odd-fixnum-type)
 
 (def-type-vops functionp check-function function
   object-not-function-error vm:function-pointer-type)
@@ -371,27 +371,27 @@
     (emit-not-implemented)
     (let ((not-target (gen-label)))
       (multiple-value-bind
-	  (yep nope)
-	  (if not-p
-	      (values not-target target)
-	      (values target not-target))
-	;; Is it a fixnum?  TST sets Z if (value & fixnum-tag-mask) == 0.
-	(inst tst value fixnum-tag-mask)
-	(inst b :eq yep)
-	;; Not a fixnum -- must be an other-pointer to a bignum.
-	(test-type value temp nope t vm:other-pointer-type)
-	;; Load the bignum header word.
-	(loadw temp value 0 vm:other-pointer-type)
-	;; A (signed-byte 64) bignum has exactly one digit.
-	(inst cmp temp (+ (ash 1 vm:type-bits) vm:bignum-type))
-	(inst b (if not-p :ne :eq) target)
-	(emit-label not-target)))))
+          (yep nope)
+          (if not-p
+              (values not-target target)
+              (values target not-target))
+        ;; Is it a fixnum?  TST sets Z if (value & fixnum-tag-mask) == 0.
+        (inst tst value fixnum-tag-mask)
+        (inst b :eq yep)
+        ;; Not a fixnum -- must be an other-pointer to a bignum.
+        (test-type value temp nope t vm:other-pointer-type)
+        ;; Load the bignum header word.
+        (loadw temp value 0 vm:other-pointer-type)
+        ;; A (signed-byte 64) bignum has exactly one digit.
+        (inst cmp temp (+ (ash 1 vm:type-bits) vm:bignum-type))
+        (inst b (if not-p :ne :eq) target)
+        (emit-label not-target)))))
 
 (define-vop (check-signed-byte-64 check-type)
   (:generator 45
     (emit-not-implemented)
     (let ((nope (generate-error-code vop object-not-signed-byte-64-error value))
-	  (yep (gen-label)))
+          (yep (gen-label)))
       ;; Is it a fixnum?
       (inst tst value fixnum-tag-mask)
       (inst b :eq yep)
@@ -419,62 +419,64 @@
 ;;;      (inst cmp value) which sets N from the sign bit.]
 ;;;   All (inst nop) dropped -- no delay slots on ARM64.
 
+#+nil
 (define-vop (unsigned-byte-64-p type-predicate)
   (:translate unsigned-byte-64-p)
   (:generator 45
     (emit-not-implemented)
     (let ((not-target (gen-label))
-	  (single-word (gen-label))
-	  (fixnum (gen-label)))
+          (single-word (gen-label))
+          (fixnum (gen-label)))
       (multiple-value-bind
-	  (yep nope)
-	  (if not-p
-	      (values not-target target)
-	      (values target not-target))
-	;; Is it a fixnum?
-	(inst tst value fixnum-tag-mask)
-	(inst b :eq fixnum)
+          (yep nope)
+          (if not-p
+              (values not-target target)
+              (values target not-target))
+        ;; Is it a fixnum?
+        (inst tst value fixnum-tag-mask)
+        (inst b :eq fixnum)
 
-	;; If not, is it an other pointer?
-	(test-type value temp nope t vm:other-pointer-type)
-	;; Get the header.
-	(loadw temp value 0 vm:other-pointer-type)
-	;; Is it a one-digit bignum?
-	(inst cmp temp (+ (ash 1 vm:type-bits) vm:bignum-type))
-	(inst b :eq single-word)
-	;; If it's other than two digits, we can't be an (unsigned-byte 64).
-	(inst cmp temp (+ (ash 2 vm:type-bits) vm:bignum-type))
-	(inst b :ne nope)
-	;; Get the second digit.
-	(loadw temp value (1+ vm:bignum-digits-offset) vm:other-pointer-type)
-	;; All zeros means it's an (unsigned-byte 64).
-	(inst cmp temp 0)
-	(inst b :eq yep)
-	;; Otherwise it isn't.
-	(inst b nope)
+        ;; If not, is it an other pointer?
+        (test-type value temp nope t vm:other-pointer-type)
+        ;; Get the header.
+        (loadw temp value 0 vm:other-pointer-type)
+        ;; Is it a one-digit bignum?
+        (inst cmp temp (+ (ash 1 vm:type-bits) vm:bignum-type))
+        (inst b :eq single-word)
+        ;; If it's other than two digits, we can't be an (unsigned-byte 64).
+        (inst cmp temp (+ (ash 2 vm:type-bits) vm:bignum-type))
+        (inst b :ne nope)
+        ;; Get the second digit.
+        (loadw temp value (1+ vm:bignum-digits-offset) vm:other-pointer-type)
+        ;; All zeros means it's an (unsigned-byte 64).
+        (inst cmp temp 0)
+        (inst b :eq yep)
+        ;; Otherwise it isn't.
+        (inst b nope)
 
-	(emit-label single-word)
-	;; Get the single digit.
-	(loadw temp value vm:bignum-digits-offset vm:other-pointer-type)
-	;; A non-negative digit means (unsigned-byte 64).
-	;; CMP temp, #0 then :pl (N=0) mirrors SPARC's (inst b :ge target).
-	(inst cmp temp 0)
+        (emit-label single-word)
+        ;; Get the single digit.
+        (loadw temp value vm:bignum-digits-offset vm:other-pointer-type)
+        ;; A non-negative digit means (unsigned-byte 64).
+        ;; CMP temp, #0 then :pl (N=0) mirrors SPARC's (inst b :ge target).
+        (inst cmp temp 0)
 
-	(emit-label fixnum)
-	;; For the fixnum path, VALUE itself must be non-negative (>= 0).
-	;; We reuse the CMP result: :pl means N=0, i.e. non-negative.
-	(inst b (if not-p :mi :pl) target)
+        (emit-label fixnum)
+        ;; For the fixnum path, VALUE itself must be non-negative (>= 0).
+        ;; We reuse the CMP result: :pl means N=0, i.e. non-negative.
+        (inst b (if not-p :mi :pl) target)
 
-	(emit-label not-target)))))
+        (emit-label not-target)))))
 
+#+nil
 (define-vop (check-unsigned-byte-64 check-type)
   (:generator 45
     (emit-not-implemented)
     (let ((nope
-	   (generate-error-code vop object-not-unsigned-byte-64-error value))
-	  (yep (gen-label))
-	  (fixnum (gen-label))
-	  (single-word (gen-label)))
+           (generate-error-code vop object-not-unsigned-byte-64-error value))
+          (yep (gen-label))
+          (fixnum (gen-label))
+          (single-word (gen-label)))
       ;; Is it a fixnum?
       (inst tst value fixnum-tag-mask)
       (inst b :eq fixnum)
@@ -515,6 +517,100 @@
       (move result value))))
 
 
+;;; An (unsigned-byte 32) can be represented with either a positive fixnum
+;;; whose value fits in 32 bits, or a bignum with exactly one digit whose
+;;; upper 32 bits are all zero.  Because each bignum digit is 64 bits wide
+;;; on ARM64, the two-digit path used in the 32-bit port is not needed here.
+
+(define-vop (unsigned-byte-32-p type-predicate)
+  (:translate unsigned-byte-32-p)
+  (:generator 45
+    (emit-not-implemented)
+    (let ((not-target (gen-label))
+          (single-word (gen-label))
+          (fixnum (gen-label)))
+      (multiple-value-bind
+          (yep nope)
+          (if not-p
+              (values not-target target)
+              (values target not-target))
+        ;; Is it a fixnum?
+        (inst tst value fixnum-tag-mask)
+        (inst b :eq fixnum)
+
+        ;; If not, is it an other pointer?
+        (test-type value temp nope t vm:other-pointer-type)
+        ;; Get the header.
+        (loadw temp value 0 vm:other-pointer-type)
+        ;; Must be a one-digit bignum.
+        (inst cmp temp (+ (ash 1 vm:type-bits) vm:bignum-type))
+        (inst b :ne nope)
+
+        (emit-label single-word)
+        ;; Load the single 64-bit digit.
+        (loadw temp value vm:bignum-digits-offset vm:other-pointer-type)
+        ;; The digit must fit in 32 bits: upper 32 bits must be zero.
+        (inst tst temp #xffffffff00000000)
+        (inst b :eq yep)
+        (inst b nope)
+
+        (emit-label fixnum)
+        ;; Fixnum: must be non-negative and fit in 32 bits.
+        ;; Shift out the tag bits and check the upper bits are zero.
+        (inst asr temp value fixnum-tag-bits)
+        (inst tst temp #xffffffff00000000)
+        (inst b (if not-p :ne :eq) target)
+
+        (emit-label not-target)))))
+
+(define-vop (check-unsigned-byte-32 check-type)
+  (:generator 45
+    (emit-not-implemented)
+    (let ((nope (generate-error-code vop object-not-unsigned-byte-32-error value))
+          (yep (gen-label))
+          (fixnum (gen-label)))
+      ;; Is it a fixnum?
+      (inst tst value fixnum-tag-mask)
+      (inst b :eq fixnum)
+
+      ;; If not, is it an other pointer?
+      (test-type value temp nope t vm:other-pointer-type)
+      ;; Must be a one-digit bignum.
+      (loadw temp value 0 vm:other-pointer-type)
+      (inst cmp temp (+ (ash 1 vm:type-bits) vm:bignum-type))
+      (inst b :ne nope)
+      ;; Load the single 64-bit digit; upper 32 bits must be zero.
+      (loadw temp value vm:bignum-digits-offset vm:other-pointer-type)
+      (inst tst temp #xffffffff00000000)
+      (inst b :ne nope)
+      (inst b yep)
+
+      (emit-label fixnum)
+      ;; Fixnum: shift out tag bits and verify upper bits are zero.
+      (inst asr temp value fixnum-tag-bits)
+      (inst tst temp #xffffffff00000000)
+      (inst b :ne nope)
+
+      (emit-label yep)
+      (move result value))))
+
+(define-vop (check-signed-byte-32 check-type)
+  (:generator 45
+    (emit-not-implemented)
+    (let ((nope (generate-error-code vop object-not-signed-byte-32-error value))
+          (yep (gen-label)))
+      ;; Is it a fixnum?
+      (inst tst value fixnum-tag-mask)
+      (inst b :eq yep)
+      ;; Not a fixnum -- check for other-pointer.
+      (test-type value temp nope t vm:other-pointer-type)
+      ;; Load header and check for exactly one bignum digit.
+      (loadw temp value 0 vm:other-pointer-type)
+      (inst cmp temp (+ (ash 1 vm:type-bits) vm:bignum-type))
+      (inst b :ne nope)
+      (emit-label yep)
+      (move result value))))
+
 
 ;;;; List/symbol types:
 ;;;
@@ -531,7 +627,7 @@
   (:generator 12
     (emit-not-implemented)
     (let* ((drop-thru (gen-label))
-	   (is-symbol-label (if not-p drop-thru target)))
+           (is-symbol-label (if not-p drop-thru target)))
       ;; NIL is a symbol.
       (inst cmp value null-tn)
       (inst b :eq is-symbol-label)
@@ -542,7 +638,7 @@
   (:generator 12
     (emit-not-implemented)
     (let ((drop-thru (gen-label))
-	  (error (generate-error-code vop object-not-symbol-error value)))
+          (error (generate-error-code vop object-not-symbol-error value)))
       ;; NIL passes.
       (inst cmp value null-tn)
       (inst b :eq drop-thru)
@@ -555,7 +651,7 @@
   (:generator 8
     (emit-not-implemented)
     (let* ((drop-thru (gen-label))
-	   (is-not-cons-label (if not-p target drop-thru)))
+           (is-not-cons-label (if not-p target drop-thru)))
       ;; NIL is not a cons.
       (inst cmp value null-tn)
       (inst b :eq is-not-cons-label)
