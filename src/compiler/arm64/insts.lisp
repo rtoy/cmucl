@@ -151,7 +151,9 @@
   '(:eq :ne :cs :cc :mi :pl :vs :vc :hi :ls :ge :lt :gt :le :al :nv))
 
 (deftype condition-code ()
-  `(member ,@condition-codes))
+  ;; :hs (higher or same) and :lo (lower) are aliases for :cs and :cc.
+  ;; They encode identically and disassemble as CS/CC.
+  `(member ,@condition-codes :hs :lo))
 
 (defconstant condition-code-name-vec
   (coerce condition-codes 'vector))
@@ -165,9 +167,14 @@
                  (princ (aref condition-code-name-vec value) stream))))
 
 (defun condition-code-encoding (c)
-  (let ((position (position c condition-codes)))
-    (or position
-        (error "Unknown condition code ~S" c))))
+  (case c
+    ;; :hs (unsigned higher or same) is an alias for :cs (carry set) -- encoding 2.
+    (:hs 2)
+    ;; :lo (unsigned lower) is an alias for :cc (carry clear) -- encoding 3.
+    (:lo 3)
+    (t
+     (or (position c condition-codes)
+         (error "Unknown condition code ~S" c)))))
 
 
 ;;; Shift types used in Data Processing -- Register and Load/Store.
