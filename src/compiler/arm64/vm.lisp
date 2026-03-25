@@ -45,7 +45,7 @@
 ;;;   X25      a3        Argument 3.
 ;;;   X26      l0        Local 0.
 ;;;   X27      l1        Local 1.
-;;;   X28      l2        Local 2.
+;;;   X28      gtemp     Global temporary (reserved, not available to Lisp).
 ;;;   X29      lip       Lisp interior pointer (C ABI FP; reclaimed for Lisp use).
 ;;;   X30      lr        Hardware link register.
 ;;;   X31/XZR  zero      Zero register (data-processing context).
@@ -121,7 +121,14 @@
 ;;; Local (descriptor) registers.
 (defreg l0 26)                          ; X26 - local 0
 (defreg l1 27)                          ; X27 - local 1
-(defreg l2 28)                          ; X28 - local 2
+
+;;; NOTE: We need an otherwise unused register for the define-move-function
+;;; functions so we can access things where the offset of the object is too
+;;; large to fit in the offset part of an instruction.  It needs to be fixed
+;;; because these move functions don't have any other args to use.  And since
+;;; the register allocator doesn't know about such uses, we can't use it for
+;;; anything else.
+(defreg gtemp 28)                       ; X28 - global temp (reserved, not for Lisp use)
 
 ;;; Interior pointer and ABI registers.
 (defreg lip 29)                         ; X29 - lisp interior pointer (C ABI FP, reclaimed)
@@ -145,7 +152,7 @@
   nl0 nl1 nl2 nl3 nl4 nl5 nl6 nl7 cfunc nargs nfp)
 
 (defregset descriptor-regs
-  fdefn a0 a1 a2 a3 ocfp lra cname lexenv l0 l1 l2)
+  fdefn a0 a1 a2 a3 ocfp lra cname lexenv l0 l1)
 
 (defregset register-arg-offsets
   a0 a1 a2 a3)
@@ -350,6 +357,7 @@
 (defregtn null descriptor-reg)
 (defregtn code descriptor-reg)
 (defregtn alloc any-reg)
+(defregtn gtemp any-reg)
 
 (defregtn nargs any-reg)
 (defregtn bsp any-reg)
