@@ -263,41 +263,36 @@
 ;;;; Other random constants.
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-(export '(halt-trap pending-interrupt-trap error-trap cerror-trap
-	  breakpoint-trap function-end-breakpoint-trap
-	  after-breakpoint-trap allocation-trap
-	  pseudo-atomic-trap
+(export '(error-trap cerror-trap break-trap
+	  pending-interrupt-trap halt-trap
+	  function-end-trap after-breakpoint-trap
+	  allocation-trap pseudo-atomic-trap not-implemented-trap
 	  object-not-list-trap object-not-instance-trap
 	  trace-table-normal trace-table-call-site
 	  trace-table-function-prologue trace-table-function-epilogue))
-
-#+heap-overflow-check
-(export '(dynamic-space-overflow-error-trap
-	  dynamic-space-overflow-warning-trap))
 )
 
 ;;; Trap codes are encoded as the immediate operand of the UDF (Undefined
 ;;; instruction) used to signal synchronous traps to the runtime.  The
 ;;; encoding must match arm64-arch.c.
 ;;;
-;;; We start at 8 (same as SPARC) to leave room for low values that may
-;;; be used by the OS or debugger.
+;;; We start at 8 to leave room for low values that may be used by the
+;;; OS or debugger.
 (defenum (:suffix -trap :start 8)
-  halt
-  pending-interrupt
   error
   cerror
-  breakpoint
-  function-end-breakpoint
+  break
+  pending-interrupt
+  halt
+  function-end
   after-breakpoint
-  #+heap-overflow-check
-  dynamic-space-overflow-warning
-  #+heap-overflow-check
-  dynamic-space-overflow-error
-  )
+  allocation
+  pseudo-atomic
+  not-implemented)
 
 ;; Make sure this starts AFTER the last element of the above enum!
-(defenum (:prefix object-not- :suffix -trap :start 16)
+;; not-implemented-trap = 17, so start at 18.
+(defenum (:prefix object-not- :suffix -trap :start 18)
   list
   instance)
 
@@ -425,28 +420,6 @@
 (export '(pseudo-atomic-trap allocation-trap
 	  pseudo-atomic-value pseudo-atomic-interrupted-value))
 )
-
-;;;; Pseudo-atomic trap number.
-;;;;
-;;;; On AArch64 we encode synchronous traps with UDF (permanently
-;;;; undefined instruction), whose 16-bit immediate is the trap code.
-;;;; There is no software-trap instruction analogous to SPARC's TRAP,
-;;;; so pseudo-atomic-trap is an alias for the pending-interrupt-trap
-;;;; UDF code.  The value must match arm64-arch.c.
-(defconstant pseudo-atomic-trap pending-interrupt-trap)
-
-;;;; Allocation trap number.
-;;;;
-;;;; This is the UDF immediate used when inline allocation overflows
-;;;; the current region.  Must match arm64-arch.c.
-(defconstant allocation-trap
-  ;; allocation-trap is encoded as the UDF immediate in macros.lisp.
-  ;; Re-export the value used there so C code and Lisp agree.
-  ;;
-  ;; The numeric value 31 (same as SPARC) is chosen to be distinct from
-  ;; all values in the halt..after-breakpoint range (8..14) and the
-  ;; object-not-*-trap range (16..17).
-  31)
 
 ;;;; Pseudo-atomic flag
 ;;;;

@@ -2549,9 +2549,65 @@
   (def hlt 2 #b00))  ; Halt (debug)
 
 ;; UDF -- permanently undefined.
+
+;;;; Not-implemented trap support.
+;;
+;; Adapted from arm/insts.lisp.  The ARM64 differences from ARM32:
+;;   - Unconditional branch: bits 31:26 = #b000101, 26-bit signed word offset
+;;   - UDF imm16 is in bits 20:5 of the instruction word
+;;
+;; Usage:
+;;   (not-implemented foo)
+;;
+;; Emits:
+;;   UDF  #not-implemented-trap
+;;   B    length-label        ; branch past the name string
+;;   <name bytes, zero-padded to word boundary>
+;;   length-label:
+
+(defun snarf-not-implemented-name (stream dstate)
+  (declare (ignore stream))
+  (let* ((sap    (disassem:dstate-segment-sap dstate))
+         (offset (disassem:dstate-next-offs dstate))
+         (branch-inst (sys:sap-ref-32 sap offset)))
+    ;; The word at offset should be an unconditional B instruction.
+    ;; ARM64 B encoding: bits 31:26 = #b000101.
+    (unless (= (ldb (byte 6 26) branch-inst) #b000101)
+      (return-from snarf-not-implemented-name ""))
+    ;; The 26-bit signed word offset gives the byte distance to the
+    ;; label past the string.  max-length = offset_bytes - 4 (skip B itself).
+    (let* ((imm26      (ldb (byte 26 0) branch-inst))
+           (byte-delta (ash imm26 2))
+           ;; byte-delta is relative to the B instruction; the string
+           ;; starts 4 bytes after the B, so max-length = byte-delta - 4.
+           (max-length (- byte-delta 4)))
+      (when (<= max-length 0)
+        (return-from snarf-not-implemented-name ""))
+      ;; Skip the branch instruction.
+      (incf offset 4)
+      (with-output-to-string (s)
+        (do* ((k 0 (1+ k))
+              (octet (sys:sap-ref-8 sap (+ offset k))
+                     (sys:sap-ref-8 sap (+ offset k))))
+             ((or (>= k max-length) (zerop octet)))
+          (write-char (code-char octet) s))))))
+
+(defun udf-control (chunk inst stream dstate)
+  (declare (ignore inst))
+  (flet ((nt (x)
+           (when stream
+             (disassem:note x dstate))))
+    ;; Extract imm16 from bits 20:5 of the UDF instruction word.
+    (let ((udf-value (ldb (byte 16 5) chunk)))
+      (case udf-value
+        (#.not-implemented-trap
+         (nt (concatenate 'string
+                          "Not-implemented trap: "
+                          (snarf-not-implemented-name stream dstate))))))))
+
 (define-instruction udf (segment imm16)
   (:declare (type (unsigned-byte 16) imm16))
-  (:printer format-udf ((op0 0)))
+  (:printer format-udf ((op0 0)) :default :control #'udf-control)
   (:emitter
    (emit-format-udf segment 0 imm16)))
 
@@ -3832,3 +3888,26 @@
 
 (define-instruction-macro li (reg value)
   `(%li ,reg ,value))
+
+(defmacro not-implemented (&optional name)
+  "Emit a not-implemented trap sequence:
+     UDF  #not-implemented-trap
+     B    length-label           ; branch past the name string
+     <name bytes, NUL-padded to word boundary>
+   length-label:
+  The branch offset encodes the string length so the disassembler
+  can recover the name.  The name symbol is assumed to contain only
+  ASCII (7-bit) characters."
+  (let ((string (string name)))
+    `(let ((length-label (gen-label)))
+       (inst udf not-implemented-trap)
+       ;; Branch past the name string; the offset encodes the string length.
+       (inst b length-label)
+       ,@(map 'list #'(lambda (c)
+                        `(inst byte ,(char-code c)))
+              string)
+       ;; Zero-pad to word boundary.
+       ,@(make-list (mod (- (length string)) 4)
+                    :initial-element '(inst byte 0))
+       (emit-label length-label))))
+
