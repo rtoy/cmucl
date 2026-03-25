@@ -3804,19 +3804,18 @@
 
 (defun emit-compute-inst (segment vop dst src label temp calc)
   (emit-chooser
-   segment 12 3
+   segment 20 3                          ; 20 bytes: 4 x MOVZ/MOVK + 1 x ADD
    #'(lambda (segment posn delta-if-after)
        (declare (ignore segment posn delta-if-after))
        nil)
    #'(lambda (segment posn)
        (let ((delta (funcall calc label posn 0)))
          (assemble (segment vop)
-           ;; Load the 64-bit delta using MOVZ + MOVK sequence.
            (inst movz temp (ldb (byte 16  0) delta))
            (inst movk temp (ldb (byte 16 16) delta) :lsl 16)
            (inst movk temp (ldb (byte 16 32) delta) :lsl 32)
            (inst movk temp (ldb (byte 16 48) delta) :lsl 48)
-           (inst add dst src temp))))))
+           (inst add dst src temp)))))))
 
 ;; code = fn - fn-ptr-type - header - label-offset + other-pointer-tag
 (define-instruction compute-code-from-fn (segment dst src label temp)
