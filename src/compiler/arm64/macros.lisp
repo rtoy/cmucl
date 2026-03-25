@@ -39,10 +39,11 @@
 ;;
 ;; On AArch64 we use LDUR/STUR which take an exact unscaled signed-byte 9
 ;; byte offset (-256..255).  When the offset does not fit, TEMP is loaded
-;; with the full offset and the register-offset form of LDR/STR is used.
+;; with the full byte offset, added to BASE to form the effective address,
+;; and LDUR/STUR is used with offset 0.
 ;; If TEMP is not supplied the offset is assumed to fit in a signed-byte 9.
 (macrolet
-    ((def-load/store-word (op inst reg-inst shift)
+    ((def-load/store-word (op inst shift)
        `(defmacro ,op (object base &optional (offset 0) (lowtag 0) temp)
 	  (if temp
 	      (let ((offs (gensym)))
@@ -51,10 +52,11 @@
 		       (inst ,',inst ,object ,base ,offs)
 		       (progn
 			 (inst li ,temp ,offs)
-			 (inst ,',reg-inst ,object (reg-offset ,base ,temp))))))
+			 (inst add ,temp ,base ,temp)
+			 (inst ,',inst ,object ,temp 0)))))
 	      `(inst ,',inst ,object ,base (- (ash ,offset ,',shift) ,lowtag))))))
-  (def-load/store-word loadw ldur ldr word-shift)
-  (def-load/store-word storew stur str word-shift))
+  (def-load/store-word loadw ldur word-shift)
+  (def-load/store-word storew stur word-shift))
 
 (defmacro load-symbol (reg symbol)
   `(inst add ,reg null-tn (static-symbol-offset ,symbol)))
@@ -73,16 +75,30 @@
 					  "-SLOT")
 			     (find-package "VM"))))
 	 `(progn
-	    (defmacro ,loader (reg symbol)
-	      `(inst ldur ,reg null-tn
-		     (+ (static-symbol-offset ',symbol)
-			(ash ,',offset word-shift)
-			(- other-pointer-type))))
-	    (defmacro ,storer (reg symbol)
-	      `(inst stur ,reg null-tn
-		     (+ (static-symbol-offset ',symbol)
-			(ash ,',offset word-shift)
-			(- other-pointer-type))))))))
+	    (defmacro ,loader (reg symbol &optional temp)
+	      (if temp
+		  `(progn
+		     (inst li ,temp (+ (static-symbol-offset ',symbol)
+				       (ash ,',offset word-shift)
+				       (- other-pointer-type)))
+		     (inst add ,temp null-tn ,temp)
+		     (inst ldur ,reg ,temp 0))
+		  `(inst ldur ,reg null-tn
+			 (+ (static-symbol-offset ',symbol)
+			    (ash ,',offset word-shift)
+			    (- other-pointer-type)))))
+	    (defmacro ,storer (reg symbol &optional temp)
+	      (if temp
+		  `(progn
+		     (inst li ,temp (+ (static-symbol-offset ',symbol)
+				       (ash ,',offset word-shift)
+				       (- other-pointer-type)))
+		     (inst add ,temp null-tn ,temp)
+		     (inst stur ,reg ,temp 0))
+		  `(inst stur ,reg null-tn
+			 (+ (static-symbol-offset ',symbol)
+			    (ash ,',offset word-shift)
+			    (- other-pointer-type)))))))))
   (frob value)
   (frob function))
 
@@ -172,7 +188,7 @@
 	  ((any-reg descriptor-reg)
 	   (move ,n-reg ,n-stack))
 	  ((control-stack)
-	   (loadw ,n-reg cfp-tn (- (tn-offset ,n-stack)) 0 ,temp))))))))
+	   (loadw ,n-reg cfp-tn (- (tn-offset ,n-stack)) 0 ,temp)))))))
 
 
 ;;;; Storage allocation:
@@ -209,9 +225,9 @@
 	  (assert (and ,temp-tn (sc-is ,temp-tn non-descriptor-reg)))
 
 	  ;; temp-tn is csp-tn rounded down to a multiple of the lispobj size.
-	  (inst and ,temp-tn csp-tn (mask (lognot vm:lowtag-mask)))
+	  (inst and ,temp-tn csp-tn (lognot vm:lowtag-mask))
 	  ;; Set the result to temp-tn, with appropriate lowtag.
-	  (inst orr ,result-tn ,temp-tn (mask ,lowtag))
+	  (inst add ,result-tn ,temp-tn ,lowtag)
 
 	  ;; Allocate the desired space on the stack.
 	  (inst sub csp-tn ,temp-tn ,size))
@@ -220,7 +236,7 @@
 	    ;; See if we can do an inline allocation.  The updated free
 	    ;; pointer should not point past the end of the current region.
 	    ;; If it does, a full alloc needs to be done.
-	    (load-symbol-value ,result-tn *current-region-end-addr*)
+	    (load-symbol-value ,result-tn *current-region-end-addr* ,temp-tn)
 
 	    ;; Sometimes the size is a known constant but won't fit in the
 	    ;; 12-bit immediate field of an ADD instruction.  Materialise it
@@ -233,7 +249,7 @@
 		  (t
 		   (inst add alloc-tn alloc-tn ,size)))
 
-	    (inst and ,temp-tn alloc-tn (mask (lognot lowtag-mask))) ; Zap PA bits
+	    (inst and ,temp-tn alloc-tn (lognot lowtag-mask)) ; Zap PA bits
 
 	    ;; temp-tn points to the new end of region.  Did we go past the
 	    ;; actual end of the region?  If so, we need a full alloc.
@@ -258,17 +274,19 @@
 	      (inst udf allocation-trap))
 	    (emit-label not-overflow)
 	    ;; Set lowtag appropriately.
-	    (inst orr ,result-tn ,result-tn (mask ,lowtag)))))
+	    (inst add ,result-tn ,result-tn ,lowtag)))))
 
 (defmacro with-fixed-allocation ((result-tn temp-tn type-code size
 					    &key (lowtag other-pointer-type)
-					    stack-p)
+					    stack-p
+					    store-temp-tn)
 				 &body body)
   "Do stuff to allocate an other-pointer object of fixed Size with a single
   word header having the specified Type-Code.  The result is placed in
   Result-TN, and Temp-TN is a non-descriptor temp (which may be randomly used
   by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably
-  initializes the object."
+  initializes the object.  Store-Temp-TN, if supplied, is a second
+  non-descriptor temp used to materialise large offsets in the header STOREW."
   (once-only ((result-tn result-tn) (temp-tn temp-tn)
 	      (type-code type-code) (size size)
 	      (lowtag lowtag))
@@ -278,7 +296,7 @@
 		   :stack-p ,stack-p)
        (when ,type-code
 	 (inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
-	 (storew ,temp-tn ,result-tn 0 ,lowtag))
+	 (storew ,temp-tn ,result-tn 0 ,lowtag ,store-temp-tn))
        ,@body)))
 
 
@@ -297,12 +315,12 @@
   (let ((label (gensym "PA-NOT-INTERRUPTED-")))
     `(progn
        (without-scheduling ()
-	 (inst orr alloc-tn alloc-tn (mask pseudo-atomic-value)))
+	 (inst orr alloc-tn alloc-tn pseudo-atomic-value))
        ,@forms
        (let ((,label (gen-label)))
 	 (without-scheduling ()
 	   (inst sub alloc-tn alloc-tn pseudo-atomic-value)
-	   (inst ands zero-tn alloc-tn (mask pseudo-atomic-interrupted-value))
+	   (inst ands zero-tn alloc-tn pseudo-atomic-interrupted-value)
 	   (inst b.eq ,label)
 	   (inst udf pseudo-atomic-trap))
 	 (emit-label ,label)))))
@@ -384,7 +402,8 @@
 			 (inst cmp reg end)
 			 (if last
 			     (inst b less-or-equal target)
-			     (inst b :le label))))))))))))
+			     (inst b :le label))))))))
+      ))
     (nreverse insts)))
 
 (defun gen-other-immediate-test (reg target not-target not-p values)
@@ -413,7 +432,7 @@
 	 (immed (sort (copy-list immed) #'<)))
     (append
      (when immed
-       `((inst and ,temp ,reg (mask type-mask))
+       `((inst and ,temp ,reg type-mask)
 	 ,@(if (or fixnump lowtags hdrs)
 	       (let ((fall-through (gensym)))
 		 `((let (,fall-through (gen-label))
@@ -425,12 +444,12 @@
      (when fixnump
        ;; On AArch64, TST is ANDS with Rd = XZR; it sets condition flags
        ;; without storing the result.
-       `((inst tst ,reg (mask fixnum-tag-mask))
+       `((inst tst ,reg fixnum-tag-mask)
 	 ,(if (or lowtags hdrs)
 	      `(inst b :eq ,(if not-p not-target target))
 	      `(inst b ,(if not-p :ne :eq) ,target))))
      (when (or lowtags hdrs)
-       `((inst and ,temp ,reg (mask lowtag-mask))))
+       `((inst and ,temp ,reg lowtag-mask)))
      (when lowtags
        (if hdrs
 	   (let ((fall-through (gensym)))
