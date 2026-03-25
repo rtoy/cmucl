@@ -497,6 +497,88 @@
   (complex-double-reg descriptor-reg) (complex-double-reg))
 
 
+#+double-double
+(define-vop (move-from-complex-double-double)
+  (:args (x :scs (complex-double-double-reg) :to :save))
+  (:results (y :scs (descriptor-reg)))
+  (:note _N"complex double-double float to pointer coercion")
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:generator 13
+    (emit-not-implemented)
+    (with-fixed-allocation (y ndescr vm::complex-double-double-float-type
+                              vm::complex-double-double-float-size))
+    (inst stur (complex-double-double-reg-real-hi-tn x) y
+          (- (* vm::complex-double-double-float-real-hi-slot vm:word-bytes)
+             vm:other-pointer-type))
+    (inst stur (complex-double-double-reg-real-lo-tn x) y
+          (- (* vm::complex-double-double-float-real-lo-slot vm:word-bytes)
+             vm:other-pointer-type))
+    (inst stur (complex-double-double-reg-imag-hi-tn x) y
+          (- (* vm::complex-double-double-float-imag-hi-slot vm:word-bytes)
+             vm:other-pointer-type))
+    (inst stur (complex-double-double-reg-imag-lo-tn x) y
+          (- (* vm::complex-double-double-float-imag-lo-slot vm:word-bytes)
+             vm:other-pointer-type))))
+#+double-double
+(define-move-vop move-from-complex-double-double :move
+  (complex-double-double-reg) (descriptor-reg))
+
+#+double-double
+(define-vop (move-to-complex-double-double)
+  (:args (x :scs (descriptor-reg)))
+  (:results (y :scs (complex-double-double-reg)))
+  (:note _N"pointer to complex double-double float coercion")
+  (:generator 2
+    (emit-not-implemented)
+    (inst ldur (complex-double-double-reg-real-hi-tn y) x
+          (- (* vm::complex-double-double-float-real-hi-slot vm:word-bytes)
+             vm:other-pointer-type))
+    (inst ldur (complex-double-double-reg-real-lo-tn y) x
+          (- (* vm::complex-double-double-float-real-lo-slot vm:word-bytes)
+             vm:other-pointer-type))
+    (inst ldur (complex-double-double-reg-imag-hi-tn y) x
+          (- (* vm::complex-double-double-float-imag-hi-slot vm:word-bytes)
+             vm:other-pointer-type))
+    (inst ldur (complex-double-double-reg-imag-lo-tn y) x
+          (- (* vm::complex-double-double-float-imag-lo-slot vm:word-bytes)
+             vm:other-pointer-type))))
+#+double-double
+(define-move-vop move-to-complex-double-double :move
+  (descriptor-reg) (complex-double-double-reg))
+
+#+double-double
+(define-vop (move-complex-double-double-float-argument)
+  (:args (x :scs (complex-double-double-reg) :target y)
+         (nfp :scs (any-reg) :load-if (not (sc-is y complex-double-double-reg))))
+  (:results (y))
+  (:note _N"complex double-double float argument move")
+  (:generator 2
+    (emit-not-implemented)
+    (sc-case y
+      (complex-double-double-reg
+       (unless (location= x y)
+         (move-double-reg (complex-double-double-reg-real-hi-tn y)
+                          (complex-double-double-reg-real-hi-tn x))
+         (move-double-reg (complex-double-double-reg-real-lo-tn y)
+                          (complex-double-double-reg-real-lo-tn x))
+         (move-double-reg (complex-double-double-reg-imag-hi-tn y)
+                          (complex-double-double-reg-imag-hi-tn x))
+         (move-double-reg (complex-double-double-reg-imag-lo-tn y)
+                          (complex-double-double-reg-imag-lo-tn x))))
+      (complex-double-double-stack
+       (let ((offset (* (tn-offset y) word-bytes)))
+         (inst stur (complex-double-double-reg-real-hi-tn x) nfp offset)
+         (inst stur (complex-double-double-reg-real-lo-tn x) nfp
+               (+ offset word-bytes))
+         (inst stur (complex-double-double-reg-imag-hi-tn x) nfp
+               (+ offset (* 2 word-bytes)))
+         (inst stur (complex-double-double-reg-imag-lo-tn x) nfp
+               (+ offset (* 3 word-bytes))))))))
+#+double-double
+(define-move-vop move-complex-double-double-float-argument :move-argument
+  (complex-double-double-reg descriptor-reg) (complex-double-double-reg))
+
+
 (define-move-vop move-argument :move-argument
   (single-reg double-reg
    #+double-double double-double-reg
