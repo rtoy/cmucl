@@ -148,7 +148,7 @@
   "Return a descriptor for a block of LENGTH bytes out of SPACE.  The free
   pointer is boosted as necessary.  If any additional memory is needed, we
   vm_allocate it.  The descriptor returned is a pointer of type LOWTAG."
-  (let* ((bytes (round-up length #+amd64 16 #-amd64 (ash 1 vm:lowtag-bits)))
+  (let* ((bytes (round-up length #+(or amd64 arm64) 16 #-(or amd64 arm64) (ash 1 vm:lowtag-bits)))
 	 (offset (space-free-pointer space))
 	 (new-free-ptr (+ offset (ash bytes (- vm:word-shift)))))
     (when (> new-free-ptr (space-words-allocated space))
@@ -699,9 +699,10 @@
     (when (or (c:backend-featurep :x86)
 	      (c:backend-featurep :amd64)
 	      (c:backend-featurep :sparc)
-	      (c:backend-featurep :ppc))
-      (let ((offset #+(or x86 amd64 sparc ppc) vm:symbol-hash-slot
-		    #-(or x86 amd64 sparc ppc) vm:symbol-unused-slot)
+	      (c:backend-featurep :ppc)
+	      (c:backend-featurep :arm64))
+      (let ((offset #+(or x86 amd64 sparc ppc arm64) vm:symbol-hash-slot
+		    #-(or x86 amd64 sparc ppc arm64) vm:symbol-unused-slot)
 	    (value (sxhash name)))
 	
       (write-indexed symbol offset (make-fixnum-descriptor value))))
@@ -797,7 +798,8 @@
   (let ((*cold-symbol-allocation-space* *static*))
     ;; Special case NIL.
     (let ((des (allocate-unboxed-object *static* vm:word-bits
-					#+amd64 (1+ vm:symbol-size) #-amd64 vm:symbol-size
+					#+(or amd64 arm64) (1+ vm:symbol-size)
+					#-(or amd64 arm64) vm:symbol-size
 					0)))
       (setf *nil-descriptor*
 	    (make-descriptor (descriptor-high des)

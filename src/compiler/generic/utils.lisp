@@ -49,8 +49,8 @@
       (let ((posn (position symbol static-symbols)))
 	(unless posn (error (intl:gettext "~S is not a static symbol.") symbol))
 	(+ (* posn (pad-data-block symbol-size))
-	   (pad-data-block #+amd64 symbol-size
-			   #-amd64 (1- symbol-size))
+	   (pad-data-block #+(or amd64 arm64) symbol-size
+			   #-(or amd64 arm64) (1- symbol-size))
 	   other-pointer-type
 	   (- list-pointer-type)))
       0))
@@ -62,8 +62,8 @@
       (multiple-value-bind
 	  (n rem)
 	  (truncate (+ offset list-pointer-type (- other-pointer-type)
-		       (- (pad-data-block #+amd64 symbol-size
-					  #-amd64 (1- symbol-size))))
+		       (- (pad-data-block #+(or amd64 arm64) symbol-size
+					  #-(or amd64 arm64) (1- symbol-size))))
 		    (pad-data-block symbol-size))
 	(unless (and (zerop rem) (<= 0 n (1- (length static-symbols))))
 	  (error (intl:gettext "Byte offset, ~D, is not correct.") offset))
@@ -77,8 +77,8 @@
     (unless static-function-index
       (error (intl:gettext "~S isn't a static function.") name))
     (+ (* static-syms (pad-data-block symbol-size))
-       (pad-data-block #+amd64 symbol-size
-		       #-amd64 (1- symbol-size))
+       (pad-data-block #+(or amd64 arm64) symbol-size
+		       #-(or amd64 arm64) (1- symbol-size))
        (- list-pointer-type)
        (* static-function-index (pad-data-block fdefn-size))
        (* fdefn-raw-addr-slot word-bytes))))
@@ -88,8 +88,8 @@
    symbol."
   (let* ((static-syms (length static-symbols))
 	 (offsets (+ (* static-syms (pad-data-block symbol-size))
-		     (pad-data-block #+amd64 symbol-size
-				     #-amd64 (1- symbol-size))
+		     (pad-data-block #+(or amd64 arm64) symbol-size
+				     #-(or amd64 arm64) (1- symbol-size))
 		     (- list-pointer-type)
 		     (* fdefn-raw-addr-slot word-bytes))))
     (multiple-value-bind (index rmdr)
