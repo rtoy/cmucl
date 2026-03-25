@@ -42,6 +42,7 @@
 ;;;
 (define-vop (%dynamic-extent-start)
   (:args (saved-stack-pointer :scs (any-reg control-stack)))
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results)
   (:policy :safe)
   (:generator 0
@@ -49,12 +50,13 @@
     (sc-case saved-stack-pointer
       (control-stack
        (let ((offset (tn-offset saved-stack-pointer)))
-	 (storew csp-tn cfp-tn offset)))
+	 (storew csp-tn cfp-tn offset 0 temp)))
       (any-reg
        (move saved-stack-pointer csp-tn)))))
 
 (define-vop (%dynamic-extent-end)
   (:args (saved-stack-pointer :scs (any-reg control-stack)))
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results)
   (:policy :safe)
   (:generator 0
@@ -62,7 +64,7 @@
     (sc-case saved-stack-pointer
       (control-stack
        (let ((offset (tn-offset saved-stack-pointer)))
-	 (loadw csp-tn cfp-tn offset)))
+	 (loadw csp-tn cfp-tn offset 0 temp)))
       (any-reg
        (move csp-tn saved-stack-pointer)))))
 
@@ -105,18 +107,18 @@
 		 (move ptr res)
 		 (dotimes (i (1- cons-cells))
 		   (storew (maybe-load (tn-ref-tn things)) ptr
-			   cons-car-slot list-pointer-type)
+			   cons-car-slot list-pointer-type alloc-temp)
 		   (setf things (tn-ref-across things))
 		   (inst add ptr ptr (pad-data-block cons-size))
 		   (storew ptr ptr
 			   (- cons-cdr-slot cons-size)
-			   list-pointer-type))
+			   list-pointer-type alloc-temp))
 		 (storew (maybe-load (tn-ref-tn things)) ptr
-			 cons-car-slot list-pointer-type)
+			 cons-car-slot list-pointer-type alloc-temp)
 		 (storew (if star
 			     (maybe-load (tn-ref-tn (tn-ref-across things)))
 			     null-tn)
-			 ptr cons-cdr-slot list-pointer-type))
+			 ptr cons-cdr-slot list-pointer-type alloc-temp)))
 	       (move result res)))))))
 
 (define-vop (list list-or-list*)
@@ -156,7 +158,7 @@
       ;; Build the code-header word:
       ;;   header = (boxed << (type-bits - word-shift)) | code-header-type
       ;; SPARC used SLLN (logical-shift-left); ARM64 uses LSL.
-      ;; boxed is an aligned byte count (tag bits cleared by bic above),
+      ;; boxed is an aligned byte count (tag bits cleared by and above),
       ;; so shift by (- type-bits word-shift) to place the word count in
       ;; the header type field.
       (inst lsl ndescr boxed (- type-bits word-shift))
@@ -174,12 +176,14 @@
 (define-vop (make-fdefn)
   (:args (name :scs (descriptor-reg) :to :eval))
   (:temporary (:scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)) store-temp)
   (:results (result :scs (descriptor-reg) :from :argument))
   (:policy :fast-safe)
   (:translate make-fdefn)
   (:generator 37
     (emit-not-implemented)
-    (with-fixed-allocation (result temp fdefn-type fdefn-size)
+    (with-fixed-allocation (result temp fdefn-type fdefn-size
+				   :store-temp-tn store-temp)
       ;; For the linkage-table stuff, we need to look up the address
       ;; of undefined_tramp from the linkage table instead of using
       ;; the address directly.
@@ -194,13 +198,15 @@
   (:args (function :to :save :scs (descriptor-reg)))
   (:info length dynamic-extent)
   (:temporary (:scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)) store-temp)
   (:results (result :scs (descriptor-reg)))
   (:generator 10
     (emit-not-implemented)
     (let ((size (+ length closure-info-offset)))
       (with-fixed-allocation (result temp closure-header-type size
 				     :lowtag function-pointer-type
-				     :stack-p dynamic-extent)
+				     :stack-p dynamic-extent
+				     :store-temp-tn store-temp)
 	(storew function result closure-function-slot function-pointer-type)))))
 
 ;;; The compiler likes to be able to directly make value cells.
@@ -208,11 +214,13 @@
 (define-vop (make-value-cell)
   (:args (value :to :save :scs (descriptor-reg any-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)) store-temp)
   (:results (result :scs (descriptor-reg)))
   (:generator 10
     (emit-not-implemented)
     (with-fixed-allocation
-	(result temp value-cell-header-type value-cell-size)
+	(result temp value-cell-header-type value-cell-size
+		:store-temp-tn store-temp)
       (storew value result value-cell-value-slot other-pointer-type))))
 
 
@@ -231,9 +239,11 @@
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)) store-temp)
   (:generator 4
     (emit-not-implemented)
-    (with-fixed-allocation (result temp type words :lowtag lowtag :stack-p dynamic-extent)
+    (with-fixed-allocation (result temp type words :lowtag lowtag :stack-p dynamic-extent
+				   :store-temp-tn store-temp)
       )))
 
 (define-vop (var-alloc)
@@ -261,4 +271,4 @@
     (inst and bytes bytes (lognot lowtag-mask))
     (pseudo-atomic ()
       (allocation result bytes lowtag :temp-tn temp)
-      (storew header result 0 lowtag))))
+      (storew header result 0 lowtag temp))))
