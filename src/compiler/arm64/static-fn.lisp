@@ -92,13 +92,17 @@
 		 (cur-nfp (current-nfp-tn vop)))
 	     ,@(moves (temp-names) (arg-names))
 	     ;; Load the function object from the symbol's static-function slot.
-	     ;; (mem ...) uses the unsigned imm12 encoding: offset must be a
-	     ;; non-negative multiple of 8 (the 64-bit access size).
-	     ;; static-function-offset returns a byte offset into the nil vector;
-	     ;; static function slots are word-aligned, so this is always satisfied.
-	     ;; Max encodable byte offset is 4095*8 = 32760, well above any
-	     ;; realistic static-function table size.
-	     (inst ldr func (mem null-tn (static-function-offset symbol)))
+	     ;; static-function-offset returns an arbitrary byte offset.  LDUR
+	     ;; handles unaligned offsets but is limited to signed-byte-9 (-256..255).
+	     ;; For larger offsets materialise the full address into TEMP with ADD
+	     ;; and then LDUR with offset 0, avoiding any alignment requirement.
+	     (let ((sfoff (static-function-offset symbol)))
+	       (if (typep sfoff '(signed-byte 9))
+		   (inst ldur func null-tn sfoff)
+		   (progn
+		     (inst li temp sfoff)
+		     (inst add temp null-tn temp)
+		     (inst ldur func temp 0))))
 	     ;; Set nargs to the fixnumized argument count.
 	     (inst mov nargs (fixnumize ,num-args))
 	     ;; Save the non-descriptor frame pointer if present.
@@ -117,12 +121,14 @@
 	     (inst compute-lra-from-code lra code-tn lra-label temp)
 	     (note-this-location vop :call-site)
 	     ;; Jump to the function entry point.
-	     ;; On ARM64 the raw entry point is at:
-	     ;;   func + (function-code-offset * word-size) - function-pointer-tag
+	     ;; The raw entry point is at byte offset:
+	     ;;   (function-code-offset << word-shift) - function-pointer-type
+	     ;; = (6 << 3) - 3 = 45, which is not a multiple of 8, so we must
+	     ;; use LDUR (unscaled signed-byte-9 offset) rather than LDR.
 	     ;; We use BR (branch-to-register, no link) because the return
 	     ;; address is already stashed in lra above.
-	     (inst ldr temp (mem func (- (ash function-code-offset word-shift)
-				       function-pointer-type)))
+	     (inst ldur temp func (- (ash function-code-offset word-shift)
+				     function-pointer-type))
 	     (inst br temp)
 	     ;; Move the called function into the code register for GC
 	     ;; (ARM64 equivalent of SPARC's "move code-tn func" in delay slot).
