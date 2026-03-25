@@ -2145,10 +2145,10 @@
 
 (defun lookup-special-symbol (name)
   (cond
-    #+(or sparc x86 amd64)
+    #+(or sparc x86 amd64 arm64)
     ((string= name "closure_tramp")
      (lookup-assembler-reference 'vm::closure-tramp))
-    #+(or sparc x86 amd64)
+    #+(or sparc x86 amd64 arm64)
     ((string= name "undefined_tramp")
      (lookup-assembler-reference 'vm::undefined-tramp))
     (t
