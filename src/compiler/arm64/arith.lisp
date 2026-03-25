@@ -294,14 +294,14 @@
 
 (define-binop + 4 add)
 (define-binop - 4 sub)
-(define-binop logand 2 and)
-(define-binop logandc1 2 bic t nil nil)     ; no immediate form for BIC
-(define-binop logandc2 2 bic nil nil nil)   ; no immediate form for BIC
-(define-binop logior 2 orr)
-(define-binop logorc1 2 orn t t nil)        ; no immediate form for ORN
-(define-binop logorc2 2 orn nil t nil)      ; no immediate form for ORN
-(define-binop logxor 2 eor)
-(define-binop logeqv 2 eon nil t nil)       ; no immediate form for EON
+(define-binop logand 2 and nil nil nil)   ; bitmask immediate not expressible as a type
+(define-binop logandc1 2 bic t nil nil)   ; no immediate form for BIC
+(define-binop logandc2 2 bic nil nil nil) ; no immediate form for BIC
+(define-binop logior 2 orr nil nil nil)   ; bitmask immediate not expressible as a type
+(define-binop logorc1 2 orn t t nil)      ; no immediate form for ORN
+(define-binop logorc2 2 orn nil t nil)    ; no immediate form for ORN
+(define-binop logxor 2 eor nil nil nil)   ; bitmask immediate not expressible as a type
+(define-binop logeqv 2 eon nil t nil)     ; no immediate form for EON
 
 ;;; Special logand cases: (logand signed unsigned) => unsigned.
 ;;; ARM64 AND works uniformly on 64-bit registers.
@@ -317,17 +317,6 @@
     (:args (x :target r :scs (unsigned-reg))
            (y :scs (signed-reg)))
   (:arg-types unsigned-num signed-num))
-
-;;; (logand signed constant) -- use the standard (signed-byte 13) constraint.
-;;; All values 1..4095 are valid bitmask immediates, so AND works directly.
-(define-vop (fast-logand-c/signed-unsigned=>unsigned fast-unsigned-binop-c)
-  (:args (x :scs (signed-reg)))
-  (:translate logand)
-  (:arg-types signed-num
-              (:constant (and (signed-byte 13) (not (integer 0 0)))))
-  (:generator 2
-      (emit-not-implemented)
-    (inst and r x y)))
 
 ;;; abs for signed integers using Hacker's Delight:
 ;;;   y = x >> 63  (arithmetic shift, gives 0 or -1)
@@ -796,7 +785,8 @@
 
 (define-vop (fast-conditional-c/fixnum fast-conditional/fixnum)
   (:args (x :scs (any-reg)))
-  (:arg-types tagged-num (:constant (and (signed-byte #.(- 13 vm:fixnum-tag-bits))
+  (:arg-types tagged-num (:constant (and (integer #.(- (1- (ash 1 (- 12 vm:fixnum-tag-bits))))
+                                          #.(1- (ash 1 (- 12 vm:fixnum-tag-bits))))
                                          (not (integer 0 0)))))
   (:info target not-p y))
 
@@ -889,7 +879,8 @@
 
 (define-vop (fast-eql-c/fixnum fast-conditional/fixnum)
   (:args (x :scs (any-reg descriptor-reg)))
-  (:arg-types tagged-num (:constant (and (signed-byte #.(- 13 vm:fixnum-tag-bits))
+  (:arg-types tagged-num (:constant (and (integer #.(- (1- (ash 1 (- 12 vm:fixnum-tag-bits))))
+                                          #.(1- (ash 1 (- 12 vm:fixnum-tag-bits))))
                                          (not (integer 0 0)))))
   (:info target not-p y)
   (:translate eql)
@@ -903,7 +894,8 @@
 
 (define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)
   (:args (x :scs (any-reg descriptor-reg)))
-  (:arg-types * (:constant (and (signed-byte #.(- 13 vm:fixnum-tag-bits))
+  (:arg-types * (:constant (and (integer #.(- (1- (ash 1 (- 12 vm:fixnum-tag-bits))))
+                                              #.(1- (ash 1 (- 12 vm:fixnum-tag-bits))))
                                 (not (integer 0 0)))))
   (:generator 6
       (emit-not-implemented)
@@ -1480,13 +1472,13 @@
 
 (define-modular-backend + t)
 (define-modular-backend - t)
-(define-modular-backend logxor t)
-(define-modular-backend logeqv)       ; eon has no immediate form
+(define-modular-backend logxor)        ; bitmask immediate not expressible as a type
+(define-modular-backend logeqv)        ; eon has no immediate form
 (define-modular-backend logandc1)
-(define-modular-backend logandc2)     ; bic has no immediate form
+(define-modular-backend logandc2)      ; bic has no immediate form
 (define-modular-backend logorc1)
-(define-modular-backend logorc2)      ; orn has no immediate form
-(define-modular-backend * nil)
+(define-modular-backend logorc2)       ; orn has no immediate form
+(define-modular-backend *)              ; mul has no immediate form
 
 (def-source-transform lognand (x y)
   `(lognot (logand ,x ,y)))
