@@ -84,16 +84,8 @@
 		       (simple-array (complex double-double-float) (*)))
 (define-type-predicate system-area-pointer-p system-area-pointer)
 
-#-arm64
-(progn
 (define-type-predicate unsigned-byte-32-p (unsigned-byte 32))
 (define-type-predicate signed-byte-32-p (signed-byte 32))
-)
-#+arm64
-(progn
-(define-type-predicate unsigned-byte-64-p (unsigned-byte 64))
-(define-type-predicate signed-byte-64-p (signed-byte 64))
-)
 
 (define-type-predicate weak-pointer-p weak-pointer)
 (define-type-predicate scavenger-hook-p scavenger-hook)
