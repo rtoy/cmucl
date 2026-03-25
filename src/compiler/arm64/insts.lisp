@@ -44,6 +44,7 @@
 (defun reg-tn-encoding (tn)
   (declare (type tn tn))
   (sc-case tn
+    (zero zero-offset)
     (null null-offset)
     (t
      (if (eq (sb-name (sc-sb (tn-sc tn))) 'registers)
