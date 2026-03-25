@@ -44,7 +44,7 @@
   (:generator 1
     (emit-not-implemented)
     (inst lsl y x vm:type-bits)
-    (inst orr y y vm:base-char-type)))
+    (inst add y y vm:base-char-type)))
 ;;;
 (define-move-vop move-from-base-char :move
   (base-char-reg) (any-reg descriptor-reg))
