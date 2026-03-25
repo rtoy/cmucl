@@ -24,6 +24,8 @@
      :linux
      :glibc2
      :unix
+     :gencgc
+     :linkage-table
      )
    ;; Features to remove from current *features* here
    '(
@@ -44,7 +46,6 @@
 
      ;; Other features not yet supported by the ARM port.
      :mp
-     :gencgc
      :heap-overflow-check
      :stack-checking
 
