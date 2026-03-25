@@ -518,7 +518,7 @@
 ;; We couldn't use the nil/symbol trick in 32-bit, because the difference
 ;; between the low tags of nil and symbol is 4 but the word-size is 8. This is
 ;; a slow workaround.
-#+(and amd64 arm64)
+#+(or amd64 arm64)
 (deftransform symbol-name ((symbol) (*))
 	      '(if (eq symbol nil)
 		"NIL"
