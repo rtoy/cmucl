@@ -143,26 +143,26 @@
 ;;; Large offsets that do not fit in the LDR/STR immediate field require a
 ;;; temporary register; callers that care about very deep frames should use
 ;;; LOADW/STOREW with an explicit TEMP argument instead.
-(defmacro load-stack-tn (reg stack)
+(defmacro load-stack-tn (reg stack &optional temp)
   `(let ((reg ,reg)
 	 (stack ,stack))
      (sc-case stack
        ((control-stack)
 	;; Stack grows down, so negate the TN offset.
-	(loadw reg cfp-tn (- (tn-offset stack)) 0)))))
+	(loadw reg cfp-tn (- (tn-offset stack)) 0 ,temp)))))
 
-(defmacro store-stack-tn (stack reg)
+(defmacro store-stack-tn (stack reg &optional temp)
   `(let ((stack ,stack)
 	 (reg ,reg))
      (sc-case stack
        ((control-stack)
 	;; Stack grows down, so negate the TN offset.
-	(storew reg cfp-tn (- (tn-offset stack)) 0)))))
+	(storew reg cfp-tn (- (tn-offset stack)) 0 ,temp)))))
 
 
 ;;; MAYBE-LOAD-STACK-TN  --  Interface
 ;;;
-(defmacro maybe-load-stack-tn (reg reg-or-stack)
+(defmacro maybe-load-stack-tn (reg reg-or-stack &optional temp)
   "Move the TN Reg-Or-Stack into Reg if it isn't already there."
   (once-only ((n-reg reg)
 	      (n-stack reg-or-stack))
@@ -172,7 +172,7 @@
 	  ((any-reg descriptor-reg)
 	   (move ,n-reg ,n-stack))
 	  ((control-stack)
-	   (loadw ,n-reg cfp-tn (tn-offset ,n-stack))))))))
+	   (loadw ,n-reg cfp-tn (- (tn-offset ,n-stack)) 0 ,temp))))))))
 
 
 ;;;; Storage allocation:
@@ -209,9 +209,9 @@
 	  (assert (and ,temp-tn (sc-is ,temp-tn non-descriptor-reg)))
 
 	  ;; temp-tn is csp-tn rounded down to a multiple of the lispobj size.
-	  (inst and ,temp-tn csp-tn (lognot vm:lowtag-mask))
+	  (inst and ,temp-tn csp-tn (mask (lognot vm:lowtag-mask)))
 	  ;; Set the result to temp-tn, with appropriate lowtag.
-	  (inst orr ,result-tn ,temp-tn ,lowtag)
+	  (inst orr ,result-tn ,temp-tn (mask ,lowtag))
 
 	  ;; Allocate the desired space on the stack.
 	  (inst sub csp-tn ,temp-tn ,size))
@@ -233,7 +233,7 @@
 		  (t
 		   (inst add alloc-tn alloc-tn ,size)))
 
-	    (inst and ,temp-tn alloc-tn (lognot lowtag-mask)) ; Zap PA bits
+	    (inst and ,temp-tn alloc-tn (mask (lognot lowtag-mask))) ; Zap PA bits
 
 	    ;; temp-tn points to the new end of region.  Did we go past the
 	    ;; actual end of the region?  If so, we need a full alloc.
@@ -258,7 +258,7 @@
 	      (inst udf allocation-trap))
 	    (emit-label not-overflow)
 	    ;; Set lowtag appropriately.
-	    (inst orr ,result-tn ,result-tn ,lowtag)))))
+	    (inst orr ,result-tn ,result-tn (mask ,lowtag)))))
 
 (defmacro with-fixed-allocation ((result-tn temp-tn type-code size
 					    &key (lowtag other-pointer-type)
@@ -297,12 +297,12 @@
   (let ((label (gensym "PA-NOT-INTERRUPTED-")))
     `(progn
        (without-scheduling ()
-	 (inst orr alloc-tn alloc-tn pseudo-atomic-value))
+	 (inst orr alloc-tn alloc-tn (mask pseudo-atomic-value)))
        ,@forms
        (let ((,label (gen-label)))
 	 (without-scheduling ()
 	   (inst sub alloc-tn alloc-tn pseudo-atomic-value)
-	   (inst ands zero-tn alloc-tn pseudo-atomic-interrupted-value)
+	   (inst ands zero-tn alloc-tn (mask pseudo-atomic-interrupted-value))
 	   (inst b.eq ,label)
 	   (inst udf pseudo-atomic-trap))
 	 (emit-label ,label)))))
@@ -315,6 +315,10 @@
 ;;; Generate code that branches to TARGET iff REG contains one of VALUES.
 ;;; If NOT-P is true, invert the test.  Jumping to NOT-TARGET is the same
 ;;; as falling out the bottom.
+;;;
+;;; On AArch64, CMP sets the condition flags; conditional branches use
+;;; the unified B instruction: (inst b :cond label) for conditional,
+;;; (inst b label) for unconditional.
 (defun gen-range-test (reg target not-target not-p min seperation max values)
   (let ((tests nil)
 	(start nil)
@@ -380,8 +384,8 @@
 			 (inst cmp reg end)
 			 (if last
 			     (inst b less-or-equal target)
-			     (inst b :le label))))))))))
-      (nreverse insts)))
+			     (inst b :le label))))))))))))
+    (nreverse insts)))
 
 (defun gen-other-immediate-test (reg target not-target not-p values)
   (gen-range-test reg target not-target not-p
@@ -409,7 +413,7 @@
 	 (immed (sort (copy-list immed) #'<)))
     (append
      (when immed
-       `((inst and ,temp ,reg type-mask)
+       `((inst and ,temp ,reg (mask type-mask))
 	 ,@(if (or fixnump lowtags hdrs)
 	       (let ((fall-through (gensym)))
 		 `((let (,fall-through (gen-label))
@@ -421,12 +425,12 @@
      (when fixnump
        ;; On AArch64, TST is ANDS with Rd = XZR; it sets condition flags
        ;; without storing the result.
-       `((inst tst ,reg fixnum-tag-mask)
+       `((inst tst ,reg (mask fixnum-tag-mask))
 	 ,(if (or lowtags hdrs)
 	      `(inst b :eq ,(if not-p not-target target))
 	      `(inst b ,(if not-p :ne :eq) ,target))))
      (when (or lowtags hdrs)
-       `((inst and ,temp ,reg lowtag-mask)))
+       `((inst and ,temp ,reg (mask lowtag-mask))))
      (when lowtags
        (if hdrs
 	   (let ((fall-through (gensym)))
