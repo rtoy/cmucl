@@ -49,19 +49,21 @@
   (:args (object :scs (descriptor-reg)))
   (:results (value :scs (descriptor-reg any-reg)))
   (:variant-vars offset lowtag)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:policy :fast-safe)
   (:generator 4
     (emit-not-implemented)
-    (loadw value object offset lowtag)))
+    (loadw value object offset lowtag temp)))
 
 (define-vop (cell-set)
   (:args (object :scs (descriptor-reg))
          (value :scs (descriptor-reg any-reg)))
   (:variant-vars offset lowtag)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:policy :fast-safe)
   (:generator 4
     (emit-not-implemented)
-    (storew value object offset lowtag)))
+    (storew value object offset lowtag temp)))
 
 
 ;;; Slot-Ref and Slot-Set are used to define VOPs like Closure-Ref,
@@ -73,18 +75,20 @@
   (:results (value :scs (descriptor-reg any-reg)))
   (:variant-vars base lowtag)
   (:info offset)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (emit-not-implemented)
-    (loadw value object (+ base offset) lowtag)))
+    (loadw value object (+ base offset) lowtag temp)))
 
 (define-vop (slot-set)
   (:args (object :scs (descriptor-reg))
          (value :scs (descriptor-reg any-reg)))
   (:variant-vars base lowtag)
   (:info offset)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (emit-not-implemented)
-    (storew value object (+ base offset) lowtag)))
+    (storew value object (+ base offset) lowtag temp)))
 
 
 ;;;; Indexed references
@@ -110,11 +114,14 @@
 ;;;
 ;;; Other differences from the SPARC original:
 ;;;   - Immediate-offset guard: (signed-byte 13) -> (signed-byte 9)
-;;;     ARM64 unscaled (LDUR/STUR) takes a 9-bit signed offset as bare rn+imm9.
-;;;   - UOP is the unscaled variant (LDUR/STUR family) used for the signed-9
-;;;     immediate path; OP is the scaled/reg-offset variant used otherwise.
+;;;     ARM64 unscaled (LDUR/STUR family) takes a 9-bit signed offset as bare
+;;;     rn+imm9 with no alignment constraint.  Scaled forms (LDR/STR, LDRH/STRH
+;;;     etc.) require offsets to be multiples of the access size, which cannot
+;;;     be guaranteed for arbitrary slot offsets.  Therefore only the unscaled
+;;;     UOP form is used throughout: for signed-9 offsets directly, and for
+;;;     larger offsets via ADD to form the address followed by UOP at offset 0.
 
-(defmacro define-indexer (name write-p op uop shift)
+(defmacro define-indexer (name write-p uop shift)
   `(define-vop (,name)
      (:args (object :scs (descriptor-reg))
             (index :scs (any-reg zero immediate))
@@ -133,7 +140,7 @@
          ;; Constant (or zero) index: compute the full byte offset at
          ;; compile time.  If it fits in a signed-9, emit the unscaled
          ;; LDUR/STUR form (bare rn + imm9).  Otherwise materialise into
-         ;; TEMP and use the reg-offset form of the scaled instruction.
+         ;; TEMP, add to BASE, and use LDUR/STUR at offset 0.
          ((immediate zero)
           (let ((byte-offset (- (+ (if (sc-is index zero)
                                        0
@@ -146,12 +153,14 @@
               ;; Signed-9: use LDUR/STUR with bare rn + imm9 arguments.
               ((signed-byte 9)
                (inst ,uop value object byte-offset))
-              ;; Out of range: materialise into TEMP, then reg-offset.
+              ;; Out of range: materialise into TEMP, add to base,
+              ;; then use LDUR/STUR at offset 0.
               ((or (unsigned-byte 32) (signed-byte 32))
                (inst li temp byte-offset)
-               (inst ,op value (reg-offset object temp))))))
+               (inst add temp object temp)
+               (inst ,uop value temp 0)))))
          ;; Variable index: shift the tagged fixnum to a byte displacement,
-         ;; fold in the base offset, then issue a register-offset load/store.
+         ;; fold in the base offset, add to object, then issue LDUR/STUR at offset 0.
          (t
           ,@(cond
               ((plusp shift)
@@ -161,8 +170,9 @@
               (t nil))
           (inst add temp ,(if (zerop shift) 'index 'temp)
                 (- (ash offset vm:word-shift) lowtag))
-          ;; TEMP holds the scaled index + slot offset; object is the base.
-          (inst ,op value (reg-offset object temp))))
+          ;; TEMP holds the byte offset; add to object then load/store at 0.
+          (inst add temp object temp)
+          (inst ,uop value temp 0)))
        ,@(when write-p
            '((move result value))))))
 
@@ -170,19 +180,19 @@
 ;;; Instantiate the indexers.
 ;;;
 ;;; ARM64 mnemonics (all standard A64 ISA).
-;;; Each indexer has a scaled/reg-offset form (OP) and an unscaled form (UOP):
-;;;   OP       UOP       width / notes
-;;;   LDR      LDUR      64-bit unsigned/signed load  (word64 ref)
-;;;   STR      STUR      64-bit store                 (word64 set)
-;;;   LDR.W    LDUR.W    32-bit zero-extending load   (word32 unsigned ref)
-;;;   LDRSW    LDURSW    32-bit sign-extending load   (word32 signed ref)
-;;;   STR.W    STUR.W    32-bit store                 (word32 set)
-;;;   LDRH     LDURH     16-bit zero-extending load   (word16 unsigned ref)
-;;;   LDRSH    LDURSH    16-bit sign-extending load   (word16 signed ref)
-;;;   STRH     STURH     16-bit store                 (word16 set)
-;;;   LDRB     LDURB     8-bit zero-extending load
-;;;   LDRSB    LDURSB    8-bit sign-extending load
-;;;   STRB     STURB     8-bit store
+;;; Each indexer uses the unscaled form (UOP) for all accesses:
+;;;   UOP       width / notes
+;;;   LDUR      64-bit unsigned/signed load  (word64 ref)
+;;;   STUR      64-bit store                 (word64 set)
+;;;   LDUR.W    32-bit zero-extending load   (word32 unsigned ref)
+;;;   LDURSW    32-bit sign-extending load   (word32 signed ref)
+;;;   STUR.W    32-bit store                 (word32 set)
+;;;   LDURH     16-bit zero-extending load   (word16 unsigned ref)
+;;;   LDURSH    16-bit sign-extending load   (word16 signed ref)
+;;;   STURH     16-bit store                 (word16 set)
+;;;   LDURB     8-bit zero-extending load
+;;;   LDURSB    8-bit sign-extending load
+;;;   STURB     8-bit store
 ;;;
 ;;; Shift values expressed as (- vm:word-shift vm:fixnum-tag-bits n)
 ;;; where N = log2(word64-bytes / element-bytes):
@@ -194,38 +204,38 @@
 ;;; 64-bit word references (word64).
 ;;; ARM64 LDR/STR operate on full 64-bit registers; signed vs. unsigned is a
 ;;; Lisp type-system distinction only — both variants emit identical instructions.
-(define-indexer word64-index-ref        nil ldr  ldur
+(define-indexer word64-index-ref        nil ldur
   #.(- vm:word-shift vm:fixnum-tag-bits))
-(define-indexer signed-word64-index-ref nil ldr  ldur
+(define-indexer signed-word64-index-ref nil ldur
   #.(- vm:word-shift vm:fixnum-tag-bits))
-(define-indexer word64-index-set        t   str  stur
+(define-indexer word64-index-set        t   stur
   #.(- vm:word-shift vm:fixnum-tag-bits))
-(define-indexer signed-word64-index-set t   str  stur
+(define-indexer signed-word64-index-set t   stur
   #.(- vm:word-shift vm:fixnum-tag-bits))
 
 ;;; Unsigned 32-bit word references (word32).
 ;;; LDR.W loads 32 bits and zero-extends to 64; LDRSW sign-extends.
 ;;; Both stores use STR.W which writes exactly 32 bits.
 ;;; Shift 0: 4-byte elements with 2 fixnum tag bits cancel exactly.
-(define-indexer word32-index-ref        nil ldr.w  ldur.w
+(define-indexer word32-index-ref        nil ldur.w
   #.(- vm:word-shift vm:fixnum-tag-bits 1))
-(define-indexer signed-word32-index-ref nil ldrsw  ldursw
+(define-indexer signed-word32-index-ref nil ldursw
   #.(- vm:word-shift vm:fixnum-tag-bits 1))
-(define-indexer word32-index-set        t   str.w  stur.w
+(define-indexer word32-index-set        t   stur.w
   #.(- vm:word-shift vm:fixnum-tag-bits 1))
 
 ;;; 16-bit word16 references (renamed from halfword).
-(define-indexer word16-index-ref        nil ldrh  ldurh
+(define-indexer word16-index-ref        nil ldurh
   #.(- vm:word-shift vm:fixnum-tag-bits 2))
-(define-indexer signed-word16-index-ref nil ldrsh ldursh
+(define-indexer signed-word16-index-ref nil ldursh
   #.(- vm:word-shift vm:fixnum-tag-bits 2))
-(define-indexer word16-index-set        t   strh  sturh
+(define-indexer word16-index-set        t   sturh
   #.(- vm:word-shift vm:fixnum-tag-bits 2))
 
 ;;; 8-bit byte references.
-(define-indexer byte-index-ref        nil ldrb  ldurb
+(define-indexer byte-index-ref        nil ldurb
   #.(- vm:word-shift vm:fixnum-tag-bits 3))
-(define-indexer signed-byte-index-ref nil ldrsb ldursb
+(define-indexer signed-byte-index-ref nil ldursb
   #.(- vm:word-shift vm:fixnum-tag-bits 3))
-(define-indexer byte-index-set        t   strb  sturb
+(define-indexer byte-index-set        t   sturb
   #.(- vm:word-shift vm:fixnum-tag-bits 3))
