@@ -94,8 +94,8 @@
       system-area-pointer-p
       weak-pointer-p
       vectorp
-      #-arm64 unsigned-byte-32-p
-      #-arm64 signed-byte-32-p
+      unsigned-byte-32-p
+      signed-byte-32-p
       #+arm64 unsigned-byte-64-p
       #+arm64 signed-byte-64-p
       simple-array-unsigned-byte-2-p
