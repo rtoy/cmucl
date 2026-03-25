@@ -50,11 +50,11 @@
 
 (define-move-function (load-constant 5) (vop x y)
   ((constant) (descriptor-reg))
-  (loadw y code-tn (tn-offset x) other-pointer-type))
+  (loadw y code-tn (tn-offset x) other-pointer-type gtemp-tn))
 
 (define-move-function (load-stack 5) (vop x y)
   ((control-stack) (any-reg descriptor-reg))
-  (load-stack-tn y x))
+  (load-stack-tn y x gtemp-tn))
 
 (define-move-function (load-number-stack 5) (vop x y)
   ((base-char-stack) (base-char-reg)
@@ -62,11 +62,11 @@
    (signed-stack) (signed-reg)
    (unsigned-stack) (unsigned-reg))
   (let ((nfp (current-nfp-tn vop)))
-    (loadw y nfp (tn-offset x))))
+    (loadw y nfp (tn-offset x) 0 gtemp-tn)))
 
 (define-move-function (store-stack 5) (vop x y)
   ((any-reg descriptor-reg) (control-stack))
-  (store-stack-tn y x))
+  (store-stack-tn y x gtemp-tn))
 
 (define-move-function (store-number-stack 5) (vop x y)
   ((base-char-reg) (base-char-stack)
@@ -74,7 +74,7 @@
    (signed-reg) (signed-stack)
    (unsigned-reg) (unsigned-stack))
   (let ((nfp (current-nfp-tn vop)))
-    (storew x nfp (tn-offset y))))
+    (storew x nfp (tn-offset y) 0 gtemp-tn)))
 
 
    
