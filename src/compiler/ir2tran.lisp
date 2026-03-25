@@ -25,12 +25,12 @@
 			      funcallable-instance-lexenv))
 
 
-#+(or sparc ppc)
+#+(or sparc ppc arm64)
 (defvar *always-clear-stack* nil
   _N"Always perform stack clearing if non-NIL, independent of the
 compilation policy")
 
-#+(or sparc ppc)
+#+(or sparc ppc arm64)
 (defvar *enable-stack-clearing* t
   _N"If non-NIL and the compilation policy allows, stack clearing is enabled.")
 
@@ -1143,7 +1143,7 @@ compilation policy")
 	    (t
 	     ;; No more args, so normal entry.
 	     (vop xep-allocate-frame node block start-label nil
-		  #+(or sparc ppc)
+		  #+(or sparc ppc arm64)
 		  (or *always-clear-stack*
 		      (and *enable-stack-clearing*
 			   (policy node (>= space 2) (= speed 3)))))))
