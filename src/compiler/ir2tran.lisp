@@ -842,7 +842,7 @@ compilation policy")
       (vop current-fp node block old-fp)
       (vop allocate-frame node block
 	   (environment-info (lambda-environment fun))
-	   #+(or sparc ppc)
+	   #+(or sparc ppc arm64)
 	   (or *always-clear-stack*
 	       (and *enable-stack-clearing*
 		    (policy node (= speed 3) (>= space 2))))
@@ -1135,7 +1135,7 @@ compilation policy")
       (cond ((and (optional-dispatch-p ef) (optional-dispatch-more-entry ef))
 	     ;; Special case the xep-allocate-frame + copy-more-arg case.
 	     (vop xep-allocate-frame node block start-label t
-		  #+(or sparc ppc)
+		  #+(or sparc ppc arm64)
 		  (or *always-clear-stack*
 		      (and *enable-stack-clearing*
 			   (policy node (= speed 3) (>= space 2)))))
