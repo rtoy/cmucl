@@ -169,7 +169,8 @@
                `((inst lsr temp index ,(- shift))))
               (t nil))
           (inst add temp ,(if (zerop shift) 'index 'temp)
-                (- (ash offset vm:word-shift) lowtag))
+                (ash offset vm:word-shift))
+          (inst sub temp temp lowtag)
           ;; TEMP holds the byte offset; add to object then load/store at 0.
           (inst add temp object temp)
           (inst ,uop value temp 0)))
