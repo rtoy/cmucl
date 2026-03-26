@@ -45,7 +45,7 @@
 ;;; ADRP + ADD + BR sequence (3 instructions = 12 bytes), rounded up to
 ;;; 16 bytes for alignment.
 (setf (c::backend-foreign-linkage-space-start *target-backend*)
-      #x0f800000
+      #x600000000000
       (c::backend-foreign-linkage-entry-size *target-backend*)
       16)
 
@@ -245,14 +245,13 @@
 ;;; Where to put the different spaces.  Must match the C code (arm64-validate.h)!
 ;;;
 ;;; AArch64 virtual address space is 48 bits (256 TiB) with the low
-;;; half available to user-space processes.  We place the Lisp spaces
-;;; in the first gigabyte, mirroring the SPARC layout but noting that
-;;; on AArch64 the upper 16 bits of a 64-bit address must match bit 47
+;;; half available to user-space processes. Note that on AArch64 the
+;;; upper 16 bits of a 64-bit address must match bit 47
 ;;; (tagged-address extension); user-space addresses are therefore in
 ;;; the range 0x0000_0000_0000_0000 – 0x0000_7FFF_FFFF_FFFF.
-(defconstant target-read-only-space-start #x10000000)
-(defconstant target-static-space-start    #x28000000)
-(defconstant target-dynamic-space-start   #x40000000)
+(defconstant target-read-only-space-start #x610000000000)
+(defconstant target-static-space-start    #x620000000000)
+(defconstant target-dynamic-space-start   #x630000000000)
 
 (defconstant target-foreign-linkage-space-start
   (c:backend-foreign-linkage-space-start *target-backend*))
