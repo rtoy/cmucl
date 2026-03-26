@@ -1995,7 +1995,12 @@
                 (emit-format-move-wide segment ,sf ,opc #b100101 hw src
                                        (reg-tn-encoding rd)))
                (fixup
-                (note-fixup segment ,fixup-kind src)
+                (let ((fixup-name (intern
+                                   (symbolicate (symbol-name ,fixup-kind)
+                                                (format nil "-~D" lsl))
+                                   :keyword)))
+                  ;; Fixup names are like :movz-0, :movz-16, :movz-32, :movz-48.
+                  (note-fixup segment fixup-name src))
                 (emit-format-move-wide segment ,sf ,opc #b100101 hw 0
                                        (reg-tn-encoding rd)))))))))
   (def movn   0 1 :movn)   ; Move with NOT,  64-bit
@@ -3815,7 +3820,7 @@
            (inst movk temp (ldb (byte 16 16) delta) :lsl 16)
            (inst movk temp (ldb (byte 16 32) delta) :lsl 32)
            (inst movk temp (ldb (byte 16 48) delta) :lsl 48)
-           (inst add dst src temp)))))))
+           (inst add dst src temp))))))
 
 ;; code = fn - fn-ptr-type - header - label-offset + other-pointer-tag
 (define-instruction compute-code-from-fn (segment dst src label temp)
@@ -3883,8 +3888,12 @@
           (unless (zerop hw2) (inst movk reg hw2 :lsl 32))
           (unless (zerop hw3) (inst movk reg hw3 :lsl 48))))))
     (fixup
+     ;; Pass the fixup to each instruction -- movz/movk note the fixup
+     ;; internally with the appropriate LSL-encoded name.
      (inst movz reg value)
-     (inst movk reg value :lsl 16))))
+     (inst movk reg value :lsl 16)
+     (inst movk reg value :lsl 32)
+     (inst movk reg value :lsl 48))))
 
 (define-instruction-macro li (reg value)
   `(%li ,reg ,value))
