@@ -1995,10 +1995,8 @@
                 (emit-format-move-wide segment ,sf ,opc #b100101 hw src
                                        (reg-tn-encoding rd)))
                (fixup
-                (let ((fixup-name (intern
-                                   (symbolicate (symbol-name ,fixup-kind)
-                                                (format nil "-~D" lsl))
-                                   :keyword)))
+                (let ((fixup-name (intern (format nil "~A-~D" ,fixup-kind lsl)
+					  :keyword)))
                   ;; Fixup names are like :movz-0, :movz-16, :movz-32, :movz-48.
                   (note-fixup segment fixup-name src))
                 (emit-format-move-wide segment ,sf ,opc #b100101 hw 0
