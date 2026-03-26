@@ -180,7 +180,7 @@
     (sc-case type
       (immediate
        (inst lsl temp val vm:type-bits)
-       (inst orr res temp (tn-value type)))
+       (inst add res temp (tn-value type)))
       (t
        ;; TYPE is a fixnum-tagged integer; un-tag it with ASR, then
        ;; shift VAL up and OR the pieces together.
