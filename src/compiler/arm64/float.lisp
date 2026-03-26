@@ -367,6 +367,29 @@
 (define-move-vop complex-double-move :move
   (complex-double-reg) (complex-double-reg))
 
+#+double-double
+(define-vop (complex-double-double-move)
+  (:args (x :scs (complex-double-double-reg)
+            :target y
+            :load-if (not (location= x y))))
+  (:results (y :scs (complex-double-double-reg)
+               :load-if (not (location= x y))))
+  (:note _N"complex double-double float move")
+  (:generator 0
+    (emit-not-implemented)
+    (unless (location= x y)
+      (move-double-reg (complex-double-double-reg-real-hi-tn y)
+                       (complex-double-double-reg-real-hi-tn x))
+      (move-double-reg (complex-double-double-reg-real-lo-tn y)
+                       (complex-double-double-reg-real-lo-tn x))
+      (move-double-reg (complex-double-double-reg-imag-hi-tn y)
+                       (complex-double-double-reg-imag-hi-tn x))
+      (move-double-reg (complex-double-double-reg-imag-lo-tn y)
+                       (complex-double-double-reg-imag-lo-tn x)))))
+#+double-double
+(define-move-vop complex-double-double-move :move
+  (complex-double-double-reg) (complex-double-double-reg))
+
 
 ;;;; -----------------------------------------------------------------------
 ;;;; Complex float heap coercions
@@ -1353,7 +1376,7 @@
        (let ((offset (* (tn-offset y) word-bytes)))
          (inst stur (double-double-reg-hi-tn x) nfp offset)
          (inst stur (double-double-reg-lo-tn x) nfp (+ offset word-bytes)))))))
-(define-move-vop move-double-double-float-argument :move
+(define-move-vop move-double-double-float-argument :move-argument
   (double-double-reg descriptor-reg) (double-double-reg))
 
 (define-vop (make/double-double-float)
