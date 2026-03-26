@@ -266,7 +266,7 @@
     ;;   because bytes is still a tagged fixnum at this point.
     ;; ARM64: LSL is the equivalent.
     (inst lsl header bytes (- type-bits vm:fixnum-tag-bits))
-    (inst add header header (+ (ash -2 type-bits) type))
+    (inst sub header header (- (ash 2 type-bits) type))
     ;; Round bytes down to a lispobj-aligned boundary.
     (inst and bytes bytes (lognot lowtag-mask))
     (pseudo-atomic ()
