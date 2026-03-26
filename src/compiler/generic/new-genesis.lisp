@@ -148,7 +148,9 @@
   "Return a descriptor for a block of LENGTH bytes out of SPACE.  The free
   pointer is boosted as necessary.  If any additional memory is needed, we
   vm_allocate it.  The descriptor returned is a pointer of type LOWTAG."
-  (let* ((bytes (round-up length #+(or amd64 arm64) 16 #-(or amd64 arm64) (ash 1 vm:lowtag-bits)))
+  (let* ((bytes (round-up length
+			  #+(or amd64 arm64) 16
+			  #-(or amd64 arm64) (ash 1 vm:lowtag-bits)))
 	 (offset (space-free-pointer space))
 	 (new-free-ptr (+ offset (ash bytes (- vm:word-shift)))))
     (when (> new-free-ptr (space-words-allocated space))
@@ -443,9 +445,10 @@
     (copy-to-system-area bytes (* vm:vector-data-offset
 				   ;; the word size of the native backend which
 				   ;; may be different from the target backend
-				   (if (= (c:backend-fasl-file-implementation
-					   c::*native-backend*)
-					  #.c:amd64-fasl-file-implementation)
+				   (if (member (c:backend-fasl-file-implementation
+						c::*native-backend*)
+					       '(#.c:amd64-fasl-file-implementation
+						 #.c:arm64-fasl-file-implementation))
 				       64
 				       32))
 			 (descriptor-sap des)
@@ -1012,7 +1015,8 @@
 		     (#.vm:function-header-type
 		      (if (or (c:backend-featurep :sparc)
 			      (c:backend-featurep :ppc)
-			      (c:backend-featurep :arm))
+			      (c:backend-featurep :arm)
+			      (c:backend-featurep :arm64))
 			  defn
 			  (make-random-descriptor
 			   (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)
@@ -2174,7 +2178,7 @@
   (clrhash *cold-foreign-hash*)
   ;; This has gotta be the first entry.  This has to match what
   ;; os_foreign_linkage_init does!
-  #+(or x86 amd64)
+  #+(or x86 amd64 arm64)
   (cold-register-foreign-linkage (vm::extern-alien-name "resolve_linkage_tramp") :code)
   #+(or sparc ppc)
   (progn
@@ -2435,7 +2439,27 @@
 		(imm4 (ldb (byte 4 12) adjusted-value))
 		(imm12 (ldb (byte 12 0) adjusted-value)))
 	   (setf (sap-ref-32 sap 0)
-		 (maybe-byte-swap (logior inst (ash imm4 16) imm12))))))))
+		 (maybe-byte-swap (logior inst (ash imm4 16) imm12))))))
+      (#.c:arm64-fasl-file-implementation
+       (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
+	 ;; Grab either the low (:movw) or high (:movt) 16 bits of the
+	 ;; value. Then smash that value into the inst at the right
+	 ;; place.
+	 (let* ((adjusted-value
+		  (ecase kind
+		    ((:movz-0 :movk-0)
+		     (ldb (byte 16 0) value))
+		    ((:movz-16 :movk-16)
+		     (ldb (byte 16 16) value))
+		    ((:movz-32 :movk-32)
+		     (ldb (byte 16 32) value))
+		    ((:movz-48 :movk-48)
+		     (ldb (byte 16 48) value)))))
+	   (setf (sap-ref-32 0)
+		 (maybe-byte-swap
+		  (dpb adjusted-value
+		      (byte 16 5)
+		      inst))))))))
   (undefined-value))
 
 (defun linkage-info-to-core ()
