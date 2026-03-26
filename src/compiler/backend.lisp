@@ -237,7 +237,7 @@
   ;; The foreign linkage space start and size
 
   (foreign-linkage-space-start 0 :type (unsigned-byte #-arm64 32
-						      #+arm64 64)
+						      #+arm64 64))
   (foreign-linkage-entry-size 0 :type index))
 
 
