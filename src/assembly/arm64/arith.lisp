@@ -25,7 +25,7 @@
 ;;;   (inst b :lt/:le/:gt/:ge lbl)  (inst b :lt/:le/:gt/:ge lbl)
 ;;;   (inst addcc dst a b)          (inst adds dst a b)
 ;;;   (inst subcc dst a b)          (inst subs dst a b)
-;;;   (inst xorcc dst a b)          (inst eors dst a b)  ; sets flags
+;;;   (inst xorcc dst a b)          (inst eor dst a b)   ; then CBZ/CBNZ to branch on zero
 ;;;   (inst sra dst src n)          (inst asr dst src n)
 ;;;   (inst srl dst src n)          (inst lsr dst src n)
 ;;;   (inst sll dst src n)          (inst lsl dst src n)
@@ -172,10 +172,11 @@
 
   ;; Check whether the result fits in a fixnum.
   ;; It fits iff the high word is just the sign-extension of the low word,
-  ;; i.e. (ASR lo 63) == hi.  Use EORS to test and set flags.
+  ;; i.e. (ASR lo 63) == hi.  EOR leaves zero in temp iff equal; CBZ
+  ;; branches without disturbing the condition flags.
   (inst asr temp lo 63)
-  (inst eors temp temp hi)           ; temp = 0 iff hi == sign-ext(lo)
-  (inst b :eq LOW-FITS-IN-FIXNUM)
+  (inst eor temp temp hi)
+  (inst cbz temp LOW-FITS-IN-FIXNUM)
 
   ;; Result needs a bignum.  Shift the double-word hi:lo right by
   ;; fixnum-tag-bits to remove the fixnum tag contributed by y.
@@ -192,8 +193,8 @@
     (let ((one-word (gen-label)))
       ;; Re-check: does the result actually fit in one bignum digit?
       (inst asr temp lo 63)
-      (inst eors temp temp hi)
-      (inst b :eq one-word)
+      (inst eor temp temp hi)
+      (inst cbz temp one-word)
       ;; Need 2 digits: write the header for a 2-word bignum...
       (inst li temp (logior (ash 2 type-bits) bignum-type))
       (storew hi res (1+ bignum-digits-offset) other-pointer-type)
