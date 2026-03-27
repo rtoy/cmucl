@@ -58,6 +58,7 @@ if [ -n "$KEEP" ]; then
 fi
 	  
 find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" \
+	-o -name "*.arm64f" \
 	-o -name "*.armf" \
 	-o -name "*.axpf" \
 	-o -name "*.hpf" \
