@@ -201,14 +201,17 @@
                           (:temp lra descriptor-reg lra-offset)
                           (:temp cur-uwp any-reg nl0-offset)
                           (:temp next-uwp any-reg nl1-offset)
-                          (:temp target-uwp any-reg nl2-offset))
+                          (:temp target-uwp any-reg nl2-offset)
+                          ;; Scratch for load/store-symbol-value address materialisation.
+                          ;; Must be non-descriptor: LI writes a raw pointer into it.
+                          (:temp sym-temp non-descriptor-reg nl3-offset))
   (declare (ignore start count))
 
   (let ((error (generate-error-code nil invalid-unwind-error)))
     (inst cmp block 0)
     (inst b.eq error))
 
-  (load-symbol-value cur-uwp lisp::*current-unwind-protect-block*)
+  (load-symbol-value cur-uwp lisp::*current-unwind-protect-block* sym-temp)
   (loadw target-uwp block vm:unwind-block-current-uwp-slot)
   (inst cmp cur-uwp target-uwp)
   (inst b.ne do-uwp)
@@ -226,7 +229,7 @@
 
   (loadw next-uwp cur-uwp vm:unwind-block-current-uwp-slot)
   (inst b do-exit)
-  (store-symbol-value next-uwp lisp::*current-unwind-protect-block*))
+  (store-symbol-value next-uwp lisp::*current-unwind-protect-block* sym-temp))
 
 
 (define-assembly-routine (throw
@@ -240,7 +243,9 @@
 
   (declare (ignore start count))
 
-  (load-symbol-value catch lisp::*current-catch-block*)
+  ;; temp (nl0) is non-descriptor-reg — safe to pass as scratch to
+  ;; load-symbol-value for large static-symbol offset materialisation.
+  (load-symbol-value catch lisp::*current-catch-block* temp)
 
   LOOP
 
