@@ -364,6 +364,12 @@
 (defregtn csp any-reg)
 (defregtn cfp any-reg)
 (defregtn ocfp any-reg)
+(defregtn nfp any-reg)
+(defregtn cfunc any-reg)
+
+(defregtn lexenv descriptor-reg)
+(defregtn cname descriptor-reg)
+(defregtn lra descriptor-reg)
 
 
 
