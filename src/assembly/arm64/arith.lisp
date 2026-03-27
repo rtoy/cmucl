@@ -80,11 +80,13 @@
 
   DO-STATIC-FUN
   ;; At least one arg is not a fixnum.  Tail-call the generic function.
-  (loadw code-tn null-tn (static-function-offset 'two-arg-+))
+  ;; Pass TEMP so loadw can materialise the large static-function offset
+  ;; via LI + LDR rather than attempting a bare LDUR with imm9.
+  (loadw code-tn null-tn (static-function-offset 'two-arg-+) 0 temp)
   (inst li nargs (fixnumize 2))
   (move ocfp cfp-tn)
-  (lisp-jump code-tn)
   (move cfp-tn csp-tn)
+  (lisp-jump code-tn)
 
   DONE
   (move res temp))
@@ -124,11 +126,11 @@
   (lisp-return lra :offset 2)
 
   DO-STATIC-FUN
-  (loadw code-tn null-tn (static-function-offset 'two-arg--))
+  (loadw code-tn null-tn (static-function-offset 'two-arg--) 0 temp)
   (inst li nargs (fixnumize 2))
   (move ocfp cfp-tn)
-  (lisp-jump code-tn)
   (move cfp-tn csp-tn)
+  (lisp-jump code-tn)
 
   DONE
   (move res temp))
@@ -203,11 +205,11 @@
   (lisp-return lra :offset 2)
 
   DO-STATIC-FUN
-  (loadw code-tn null-tn (static-function-offset 'two-arg-*))
+  (loadw code-tn null-tn (static-function-offset 'two-arg-*) 0 temp)
   (inst li nargs (fixnumize 2))
   (move ocfp cfp-tn)
-  (lisp-jump code-tn)
   (move cfp-tn csp-tn)
+  (lisp-jump code-tn)
 
   LOW-FITS-IN-FIXNUM
   (move res lo))
@@ -228,6 +230,7 @@
 
 				  (:res res descriptor-reg a0-offset)
 
+				  (:temp temp non-descriptor-reg nl0-offset)
 				  (:temp nargs any-reg nargs-offset)
 				  (:temp ocfp any-reg ocfp-offset))
 	  ;; If x is not a fixnum, go straight to the static function.
@@ -240,11 +243,11 @@
 	  (inst cmp x y)                   ; (pre-load flags for DO-COMPARE)
 
 	  DO-STATIC-FN
-	  (loadw code-tn null-tn (static-function-offset ',static-fn))
+	  (loadw code-tn null-tn (static-function-offset ',static-fn) 0 temp)
 	  (inst li nargs (fixnumize 2))
 	  (move ocfp cfp-tn)
-	  (lisp-jump code-tn)
 	  (move cfp-tn csp-tn)
+	  (lisp-jump code-tn)
 
 	  DO-COMPARE
 	  ;; CMP has already been executed above (in the fall-through path
@@ -272,6 +275,7 @@
 
 			  (:res res descriptor-reg a0-offset)
 
+			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
@@ -290,11 +294,11 @@
   (lisp-return lra :offset 2)
 
   DO-STATIC-FN
-  (loadw code-tn null-tn (static-function-offset 'eql))
+  (loadw code-tn null-tn (static-function-offset 'eql) 0 temp)
   (inst li nargs (fixnumize 2))
   (move ocfp cfp-tn)
-  (lisp-jump code-tn)
   (move cfp-tn csp-tn)
+  (lisp-jump code-tn)
 
   RETURN-T
   (load-symbol res t))
@@ -311,6 +315,7 @@
 
 			  (:res res descriptor-reg a0-offset)
 
+			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
@@ -326,11 +331,11 @@
   (lisp-return lra :offset 2)
 
   DO-STATIC-FN
-  (loadw code-tn null-tn (static-function-offset 'two-arg-=))
+  (loadw code-tn null-tn (static-function-offset 'two-arg-=) 0 temp)
   (inst li nargs (fixnumize 2))
   (move ocfp cfp-tn)
-  (lisp-jump code-tn)
   (move cfp-tn csp-tn)
+  (lisp-jump code-tn)
 
   RETURN-T
   (load-symbol res t))
@@ -347,6 +352,7 @@
 
 			  (:res res descriptor-reg a0-offset)
 
+			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
@@ -365,11 +371,11 @@
 
   DO-STATIC-FN
   ;; Note: SPARC original calls 'two-arg-= here; preserved for fidelity.
-  (loadw code-tn null-tn (static-function-offset 'two-arg-=))
+  (loadw code-tn null-tn (static-function-offset 'two-arg-=) 0 temp)
   (inst li nargs (fixnumize 2))
   (move ocfp cfp-tn)
-  (lisp-jump code-tn)
   (move cfp-tn csp-tn)
+  (lisp-jump code-tn)
 
   RETURN-NIL
   (move res null-tn))
