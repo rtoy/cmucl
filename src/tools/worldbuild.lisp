@@ -72,7 +72,11 @@
 	  "target:assembly/arm/array.assem"
 	  "target:assembly/arm/arith.assem"
 	  "target:assembly/arm/alloc.assem"))    
-    
+    ,@(when (c:backend-featurep :arm64)
+	'("target:assembly/arm64/assem-rtns.assem"
+	  "target:assembly/arm64/array.assem"
+	  "target:assembly/arm64/arith.assem"
+	  "target:assembly/arm64/alloc.assem"))    
 
     "target:code/type-boot"
     "target:code/fdefinition"
@@ -184,6 +188,9 @@
 	'("target:code/sgi-vm"))
     ,@(when (c:backend-featurep :ppc)
 	'("target:code/ppc-vm"))
+;;    ,@(when (c:backend-featurep :arm64)
+;;	'("target:code/arm64-vm"))
+
 
     "target:code/signal"
     "target:code/interr"

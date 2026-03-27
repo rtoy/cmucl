@@ -112,6 +112,11 @@
   (comf "target:assembly/arm/arith" :assem t)
   (comf "target:assembly/arm/alloc" :assem t))
 
+(when (c:backend-featurep :arm64)
+  (comf "target:assembly/arm64/assem-rtns" :assem t)
+  (comf "target:assembly/arm64/array" :assem t)
+  (comf "target:assembly/arm64/arith" :assem t)
+  (comf "target:assembly/arm64/alloc" :assem t))
 
 ;;; these guys can supposedly come in any order, but not really.
 ;;; some are put at the end so macros don't run interpreted and stuff.
