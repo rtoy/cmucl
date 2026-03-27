@@ -52,7 +52,6 @@
      ;; Not implemented yet
      :complex-fp-vops
      :alien-callback
-     :linkage-table
      :random-mt19937
      ))
 
