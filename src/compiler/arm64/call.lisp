@@ -435,7 +435,7 @@
       (do ((arg register-arg-tns (rest arg))
 	   (i 0 (1+ i)))
 	  ((null arg))
-	(storew (first arg) args i temp))
+	(storew (first arg) args i 0 temp))
       (move start args)
       (move count nargs)
       (inst b done)
