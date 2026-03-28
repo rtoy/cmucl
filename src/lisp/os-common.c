@@ -5,7 +5,7 @@
 
 */
 
-#ifdef __linux__
+#if defined(__linux__)
 /* Want 64-bit time_t values for stat and friends */
 #define _TIME_BITS	64
 #endif
