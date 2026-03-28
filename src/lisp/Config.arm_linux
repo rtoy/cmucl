@@ -12,7 +12,112 @@ vpath %.mo  $(CMULOCALE)
 
 GC_SRC := gc.c
 
-CPPFLAGS := -DUNICODE -iquote . -iquote $(PATH1)
+# If core-math feature is set, we use core-math routines for the
+# special functions.
+
+ifdef FEATURE_CORE_MATH
+CORE_MATH_64=core-math/src/binary64
+
+CORE64_SRCS=\
+	$(CORE_MATH_64)/sin/sin.c \
+	$(CORE_MATH_64)/cos/cos.c \
+	$(CORE_MATH_64)/tan/tan.c \
+	$(CORE_MATH_64)/atan2/atan2.c \
+	$(CORE_MATH_64)/asin/asin.c \
+	$(CORE_MATH_64)/acos/acos.c \
+	$(CORE_MATH_64)/atan/atan.c \
+	$(CORE_MATH_64)/sinh/sinh.c \
+	$(CORE_MATH_64)/cosh/cosh.c \
+	$(CORE_MATH_64)/tanh/tanh.c \
+	$(CORE_MATH_64)/asinh/asinh.c \
+	$(CORE_MATH_64)/acosh/acosh.c \
+	$(CORE_MATH_64)/atanh/atanh.c \
+	$(CORE_MATH_64)/exp/exp.c \
+	$(CORE_MATH_64)/log/log.c \
+	$(CORE_MATH_64)/log10/log10.c \
+	$(CORE_MATH_64)/log2/log2.c \
+	$(CORE_MATH_64)/pow/pow.c \
+	$(CORE_MATH_64)/hypot/hypot.c \
+	$(CORE_MATH_64)/log1p/log1p.c \
+	$(CORE_MATH_64)/expm1/expm1.c \
+	$(CORE_MATH_64)/sincos/sincos.c
+
+CORE_MATH_32=core-math/src/binary32
+CORE32_SRCS=\
+	$(CORE_MATH_32)/sin/sinf.c \
+	$(CORE_MATH_32)/cos/cosf.c \
+	$(CORE_MATH_32)/tan/tanf.c \
+	$(CORE_MATH_32)/atan2/atan2f.c \
+	$(CORE_MATH_32)/asin/asinf.c \
+	$(CORE_MATH_32)/acos/acosf.c \
+	$(CORE_MATH_32)/atan/atanf.c \
+	$(CORE_MATH_32)/sinh/sinhf.c \
+	$(CORE_MATH_32)/cosh/coshf.c \
+	$(CORE_MATH_32)/tanh/tanhf.c \
+	$(CORE_MATH_32)/asinh/asinhf.c \
+	$(CORE_MATH_32)/acosh/acoshf.c \
+	$(CORE_MATH_32)/atanh/atanhf.c \
+	$(CORE_MATH_32)/exp/expf.c \
+	$(CORE_MATH_32)/log/logf.c \
+	$(CORE_MATH_32)/log10/log10f.c \
+	$(CORE_MATH_32)/log2/log2f.c \
+	$(CORE_MATH_32)/pow/powf.c \
+	$(CORE_MATH_32)/hypot/hypotf.c \
+	$(CORE_MATH_32)/log1p/log1pf.c \
+	$(CORE_MATH_32)/expm1/expm1f.c \
+	$(CORE_MATH_32)/sincos/sincosf.c
+
+CORE_MATH_SRCS = $(CORE64_SRCS) $(CORE32_SRCS)
+
+endif
+
+# If core-math is not defined such as on Darwin, we use the code from
+# openlibm to implement the special functions for single-floats.
+ifndef FEATURE_CORE_MATH
+OPENLIBM_DIR = openlibm
+OPENLIBM_SRCS = \
+	$(OPENLIBM_DIR)/e_acosf.c \
+	$(OPENLIBM_DIR)/e_acoshf.c \
+	$(OPENLIBM_DIR)/e_asinf.c \
+	$(OPENLIBM_DIR)/e_atan2f.c \
+	$(OPENLIBM_DIR)/e_atanhf.c \
+	$(OPENLIBM_DIR)/e_coshf.c \
+	$(OPENLIBM_DIR)/e_expf.c \
+	$(OPENLIBM_DIR)/e_hypotf.c \
+	$(OPENLIBM_DIR)/e_log10f.c \
+	$(OPENLIBM_DIR)/e_logf.c \
+	$(OPENLIBM_DIR)/e_log2f.c \
+	$(OPENLIBM_DIR)/e_powf.c \
+	$(OPENLIBM_DIR)/e_rem_pio2f.c \
+	$(OPENLIBM_DIR)/e_sinhf.c \
+	$(OPENLIBM_DIR)/k_cosf.c \
+	$(OPENLIBM_DIR)/k_sinf.c \
+	$(OPENLIBM_DIR)/k_tanf.c \
+	$(OPENLIBM_DIR)/k_expf.c \
+	$(OPENLIBM_DIR)/s_asinhf.c \
+	$(OPENLIBM_DIR)/s_atanf.c \
+	$(OPENLIBM_DIR)/s_cosf.c \
+	$(OPENLIBM_DIR)/s_expm1f.c \
+	$(OPENLIBM_DIR)/s_log1pf.c \
+	$(OPENLIBM_DIR)/s_sinf.c \
+	$(OPENLIBM_DIR)/s_sincosf.c \
+	$(OPENLIBM_DIR)/s_tanf.c \
+	$(OPENLIBM_DIR)/s_tanhf.c
+endif
+
+ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
+CPP_INCLUDE_OPTIONS := -iquote . -iquote $(PATH1)
+ifndef FEATURE_CORE_MATH
+CPP_INCLUDE_OPTIONS += -I $(PATH1)/$(OPENLIBM_DIR) -DOPENLIBM_USE_HOST_MATH_H
+endif
+else
+CPP_INCLUDE_OPTIONS := -iquote . -iquote $(PATH1) -I $(PATH1)/$(OPENLIBM_DIR) -I-
+ifndef FEATURE_CORE_MATH
+CPP_INCLUDE_OPTIONS += -I $(PATH1)/$(OPENLIBM_DIR)
+endif
+endif
+
+CPPFLAGS := -DUNICODE -iquote . -iquote $(PATH1) $(CPP_INCLUDE_OPTIONS)
 CFLAGS += -marm -Wstrict-prototypes -Wall -O0 -ggdb3 -fno-omit-frame-pointer -ffp-contract=off
 ASFLAGS = -g
 
@@ -25,6 +130,7 @@ ASSEM_SRC = arm-assem.S undefineds-assem.S
 OS_SRC += Linux-os.c os-common.c elf.c
 OS_LIBS = -ldl -lutil
 OS_LINK_FLAGS = -marm -rdynamic -Wl,-Map,foo -Wl,-z,noexecstack
+CFLAGS += -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 
 EXEC_FINAL_OBJ = exec-final.o
 
