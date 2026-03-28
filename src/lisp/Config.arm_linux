@@ -105,6 +105,11 @@ OPENLIBM_SRCS = \
 	$(OPENLIBM_DIR)/s_tanhf.c
 endif
 
+# We're currently building cmucl on a Raspberry Pi5 running a 64-bit
+# raspbian.  We had to download the arm32 compiler and libraries to be
+# able to build and run cmucl.
+CC = arm-linux-gnueabihf-gcc
+
 ifeq ($(filter 2% 3%, $(shell $(CC) -dumpversion)),)
 CPP_INCLUDE_OPTIONS := -iquote . -iquote $(PATH1)
 ifndef FEATURE_CORE_MATH
@@ -130,7 +135,7 @@ ASSEM_SRC = arm-assem.S undefineds-assem.S
 OS_SRC += Linux-os.c os-common.c elf.c
 OS_LIBS = -ldl -lutil
 OS_LINK_FLAGS = -marm -rdynamic -Wl,-Map,foo -Wl,-z,noexecstack
-CFLAGS += -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+CFLAGS += -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DDEFINE_C_COMPILER=$(CC)
 
 EXEC_FINAL_OBJ = exec-final.o
 

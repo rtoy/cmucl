@@ -34,7 +34,7 @@
  */
 #if defined(__SUNPRO_C)
 #define C_COMPILER "cc"
-#else
+#elif !defined(C_COMPILER)
 #define C_COMPILER "gcc"
 #endif
 
