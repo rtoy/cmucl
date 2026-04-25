@@ -257,11 +257,6 @@ be set at runtime."
           (eq :macro (first (lambda-name lambda-node))))
      (lambda-name lambda-node))
 
-    ;; a reference from a macro is named (:macro name)
-    #+nil
-    ((eql 0 (search "defmacro" toplevel-name :test 'char-equal))
-     (list :macro (subseq toplevel-name 9)))
-
     ;; probably "Top-Level Form"
     ((stringp (lambda-name lambda-node))
      (lambda-name lambda-node))
