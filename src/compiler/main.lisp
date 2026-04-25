@@ -1251,8 +1251,23 @@
 	     (let ((exp (preprocessor-macroexpand form)))
 	       (if (eq exp form)
 		   (convert-and-maybe-compile form path)
-		   (process-form exp path))))))))
-      
+		   (progn
+		     ;; If FORM was a global macro call, record an
+		     ;; xref entry for the macroexpansion.  Top-level
+		     ;; macro calls are expanded here, before IR1
+		     ;; conversion runs, so we register from this pass
+		     ;; directly.  The "Top-Level Form" caller name
+		     ;; matches the convention documented in the
+		     ;; "Cross-Referencing Facility" chapter of the
+		     ;; CMUCL User's Manual.
+		     (when (and *record-xref-info*
+				(consp form)
+				(symbolp (car form))
+				(eq :macro (info function kind (car form))))
+		       (xref:register-xref
+			:macroexpands (car form)
+			(xref:make-xref-context :name "Top-Level Form")))
+		     (process-form exp path)))))))))
   (undefined-value))
 
 
