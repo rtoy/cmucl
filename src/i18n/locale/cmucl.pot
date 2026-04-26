@@ -19855,6 +19855,24 @@ msgid "Return the Nth VOP in the IR2-Block pointed to by Thing."
 msgstr ""
 
 #: src/compiler/xref.lisp
+msgid ""
+"Return the name slot of an xref-context, identifying the program\n"
+"site that originated the cross-reference."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return the source file truename of an xref-context, or NIL if\n"
+"the code was not compiled from a file."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return the source-path of an xref-context, a list of positive\n"
+"integers identifying the form that contains the cross-reference."
+msgstr ""
+
+#: src/compiler/xref.lisp
 msgid "Reinitialize the cross-reference database."
 msgstr ""
 
@@ -19872,14 +19890,74 @@ msgstr ""
 
 #: src/compiler/xref.lisp
 msgid ""
-"Return a list of those program contexts where GLOBAL-VARIABLE may\n"
-"be bound at runtime."
+"Return a list of those program contexts where GLOBAL-VARIABLE may be bound "
+"at runtime.\n"
+"\n"
+"  A binding is recorded whenever the compiler emits a special binding\n"
+" for the form -- including cases that look lexical in source, such as (LET "
+"(FOO)\n"
+" ...), if FOO has been proclaimed special earlier in the compiling\n"
+" image.  WHO-BINDS reflects what the compiler did, not what the source\n"
+" text appears to say."
 msgstr ""
 
 #: src/compiler/xref.lisp
 msgid ""
-"Return a list of those program contexts where GLOBAL-VARIABLE may\n"
-"be set at runtime."
+"Return a list of those program contexts where GLOBAL-VARIABLE may be\n"
+"  set at runtime."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return a list of those program contexts where MACRO may be expanded at\n"
+"  compile time.  The caller name in each context is the form whose\n"
+"  compilation triggered the macroexpansion (a function, a method, or\n"
+"  the string \"Top-Level Form\")."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return the list of direct subclasses of CLASS.  Only direct subclasses\n"
+"  are returned; transitive subclasses are not.  CLASS is a class\n"
+"  metaobject, not a class-name symbol; use FIND-CLASS to convert a\n"
+"  name."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return the list of direct superclasses of CLASS.  Only direct\n"
+"  superclasses are returned; transitive superclasses are not.  CLASS\n"
+"  is a class metaobject, not a class-name symbol; use FIND-CLASS to\n"
+"  convert a name."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return the list of methods that specialize directly on CLASS. CLASS is\n"
+"  a class metaobject, not a class-name symbol; use FIND-CLASS to\n"
+"  convert a name."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Remove from every cross-reference database all xref-contexts whose\n"
+"  source file is NAMESTRING.  Used to clear stale entries before\n"
+"  recompiling a file."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return entries from cross-reference database DB whose source file\n"
+"  matches PATHNAME.  DB is one of :CALLS, :CALLED, :REFERENCES,\n"
+"  :BINDS, :SETS, or :MACROEXPANDS.\n"
+"\n"
+"  Each entry is a two-element list (TARGET CONTEXTS), where TARGET is\n"
+" the the symbol (or (SETF foo) form for setf functions) being\n"
+" cross-referenced ? a function name for :CALLS, :CALLED, and\n"
+" :MACROEXPANDS, a variable name for :REFERENCES, :BINDS, and :SETS.\n"
+" and CONTEXTS is the list of xref-contexts (the program sites\n"
+" originating the cross-reference) for TARGET whose file slot matches\n"
+" PATHNAME."
 msgstr ""
 
 #: src/compiler/dyncount.lisp
