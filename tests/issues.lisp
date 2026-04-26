@@ -1154,3 +1154,40 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+(define-test issue.436.funcall-the-function-signature
+    (:tag :issues)
+  ;; Compiling a FUNCALL whose callee is wrapped in (THE (FUNCTION
+  ;; ...) ...) used to trigger an internal assertion failure in
+  ;; FUNCTION-CONTINUATION-TN -- the IR1 type-check flag was left as T
+  ;; even though LTN had already given the callee TN the FUNCTION
+  ;; primitive type, because the function-signature portion of the
+  ;; assertion is not runtime-checkable.  Verify these all compile
+  ;; without error and behave correctly when called.
+  (let ((c1 (compile nil
+                     '(lambda (x)
+                       (declare (type function x))
+                       (funcall (the (function () t) x))))))
+    (assert-equal 42 (funcall c1 (lambda () 42))))
+  ;; Same shape, with a non-tail call site.
+  (let ((c2 (compile nil
+                     '(lambda (x)
+                       (declare (type function x))
+                       (1+ (funcall (the (function () integer) x)))))))
+    (assert-equal 8 (funcall c2 (lambda () 7))))
+  ;; Same shape, multiple-value-call exercising a different IR2
+  ;; entry point that shares the callee-continuation plumbing.
+  (let ((c3 (compile nil
+                     '(lambda (x)
+                       (declare (type function x))
+                       (multiple-value-call
+                           (the (function (&rest t) t) x)
+                         (values 1 2))))))
+    (assert-equal 3 (funcall c3 #'+)))
+  ;; Without the outer FUNCTION declaration, the proven type is just
+  ;; T and the existing path (Branch B in FUNCTION-CONTINUATION-TN)
+  ;; should still emit a runtime check.  Make sure that path keeps
+  ;; working.
+  (let ((c4 (compile nil
+                     '(lambda (x)
+                       (funcall (the (function () t) x))))))
+    (assert-equal :ok (funcall c4 (lambda () :ok)))))

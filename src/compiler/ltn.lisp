@@ -170,6 +170,20 @@
 			(single-value-type
 			 (continuation-proven-type cont)))))
 	 (info (make-ir2-continuation ptype)))
+    ;; If the TN we're about to allocate already has the FUNCTION
+    ;; primitive type, then any pending runtime type check on this
+    ;; continuation is incoherent: the only thing a runtime check on a
+    ;; function continuation can verify is "is this a function?", and
+    ;; that's already settled by the TN's representation.  This
+    ;; situation arises when the asserted type is a non-trivial
+    ;; function type (e.g. (FUNCTION () T) from a THE form) and the
+    ;; proven type is FUNCTION -- the function-signature portion of
+    ;; the assertion is not runtime-checkable, so it should not
+    ;; survive into IR2 conversion as a check request.  Flushing here
+    ;; preserves the invariant that FUNCTION-CONTINUATION-TN asserts:
+    ;; a TN of FUNCTION primitive type never carries CHECK = T.
+    (when (eq tn-ptype (primitive-type-or-lose 'function *backend*))
+      (flush-type-check cont))
     (setf (continuation-info cont) info)
     (let ((name (continuation-function-name cont t)))
       (if (and delay name)
