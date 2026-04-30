@@ -1,11 +1,20 @@
+;; Bootstrap file for issue #495 to add more information when
+;; describing user-defined types.
+;;
 (setf lisp::*enable-package-locked-errors* nil)
 
 (in-package "C")
-;; deftype information
+;; New deftype information.
+;;
+;; We define a :lambda-list for types where we can store the
+;; lambda-list of the deftype.  We also add a :defype source-location
+;; for deftypes so we don't use :defvar for this.
 (define-info-type type lambda-list list nil)
 (define-info-type source-location deftype (or form-numbers null) nil)
 
 (in-package "LISP")
+;; New deftype macro to saves the lambda-list of the type.  %deftype
+;; is updated to take the extra arg for the lambda-list.
 (defmacro deftype (name arglist &body body)
   "Syntax like DEFMACRO, but defines a new type."
   (unless (symbolp name)
