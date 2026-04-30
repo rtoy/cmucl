@@ -480,18 +480,14 @@
 	  (describe pcl-class)))))
   ;;
   ;; Print out information about any types named by the symbol
-  #+nil
-  (when (eq (info type kind x) :defined)
-    (format t (intl:gettext "~&It names a type specifier.")))
-  (format t "info type kind = ~A~%" (info type kind x))
-  (case (info type kind x)
+  (case (info :type :kind x)
     (:defined
      ;; User defined type
      (format t (intl:gettext "~&It names a type specifier."))
      (let ((lambda-list (info type lambda-list x)))
        (when lambda-list
-	 (format t (intl:gettext "~& Lambda list: ~S") lambda-list)))
-     (let ((expander (info type expander x)))
+	 (format t (intl:gettext "~&  Lambda list: ~S") lambda-list)))
+     (let ((expander (info :type :expander x)))
        (when expander
 	 (let ((expansion (ignore-errors (funcall expander (list x)))))
 	   (when expansion
@@ -499,10 +495,10 @@
 		     (list x) expansion))))))
     (:primitive
      ;; Primitive built-in type
-     (format t (intl:gettext "~&It names a type specifier."))
-     (let ((builtin (info type builtin x)))
+     (format t (intl:gettext "~&It names a primitive type specifier."))
+     (let ((builtin (info :type :builtin x)))
        (when builtin
-	 (format t (intl:gettext "~& Internal type: ~S") builtin)))))
+	 (format t (intl:gettext "~&  Internal type: ~S") builtin)))))
   ;;
   ;; Print out properties, possibly ignoring implementation details.
   (do ((plist (symbol-plist X) (cddr plist)))
@@ -512,6 +508,15 @@
       (describe (cadr plist))))
 
   ;; Describe where it was defined.
+  ;;
+  ;; Note: Source location for user-defined types is stored in
+  ;; :deftype.  However :defvar is currently used for defvar,
+  ;; defparameter, defconstant.  Just try printing both :defvar and
+  ;; :deftype locations.  They should be distinct.
   (let ((locn (info :source-location :defvar x)))
     (when locn
-      (format t (intl:gettext "~&It is defined in:~&~A") (c::file-source-location-pathname locn)))))
+      (format t (intl:gettext "~&It is defined in:~&~A") (c::file-source-location-pathname locn))))
+  (let ((locn (info :source-location :deftype x)))
+    (when locn
+      (format t (intl:gettext "~&The type is defined in:~&~A")
+	      (c::file-source-location-pathname locn)))))

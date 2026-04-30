@@ -13132,7 +13132,7 @@ msgid "~&It names a type specifier."
 msgstr ""
 
 #: src/code/describe.lisp
-msgid "~& Lambda list: ~S"
+msgid "~&  Lambda list: ~S"
 msgstr ""
 
 #: src/code/describe.lisp
@@ -13140,7 +13140,11 @@ msgid "~&  Sample expansion: ~S: ~S"
 msgstr ""
 
 #: src/code/describe.lisp
-msgid "~& Internal type: ~S"
+msgid "~&It names a primitive type specifier."
+msgstr ""
+
+#: src/code/describe.lisp
+msgid "~&  Internal type: ~S"
 msgstr ""
 
 #: src/code/describe.lisp
@@ -13149,6 +13153,10 @@ msgstr ""
 
 #: src/code/describe.lisp
 msgid "~&It is defined in:~&~A"
+msgstr ""
+
+#: src/code/describe.lisp
+msgid "~&The type is defined in:~&~A"
 msgstr ""
 
 #: src/code/tty-inspect.lisp
