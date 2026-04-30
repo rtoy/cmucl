@@ -247,14 +247,15 @@
       (when doc
 	(intl::note-translatable intl::*default-domain* doc))
       `(eval-when (:compile-toplevel :load-toplevel :execute)
-	 (set-defvar-source-location ',name (c::source-location))
+	 (set-deftype-source-location ',name (c::source-location))
 	 (%deftype ',name
+		   ',arglist
 		   #'(lambda (,whole)
 		       ,@local-decs
 		       (block ,name ,body))
 		   ,@(when doc `(,doc)))))))
 ;;;
-(defun %deftype (name expander &optional doc)
+(defun %deftype (name lambda-list expander &optional doc)
   (when (info declaration recognized name)
     (error (intl:gettext "Deftype already names a declaration: ~S.") name))
   (ecase (info type kind name)
@@ -272,6 +273,7 @@
      (setf (info type kind name) :defined)))
 
   (setf (info type expander name) expander)
+  (setf (info type lambda-list name) lambda-list)
   (when doc
     (setf (documentation name 'type) doc))
   ;; ### Bootstrap hack -- we need to define types before %note-type-defined
@@ -423,6 +425,9 @@
 
 (defun set-defvar-source-location (name source-location)
   (setf (info :source-location :defvar name) source-location))
+
+(defun set-deftype-source-location (name source-location)
+  (setf (info :source-location :deftype name) source-location))
 
 ;;; %Defconstant, %%Defconstant  --  Internal
 ;;;

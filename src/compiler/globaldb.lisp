@@ -1186,6 +1186,9 @@
 (define-info-type typed-structure textdomain (or string null) nil)
 (define-info-type setf textdomain (or string null) nil)
 
+;; deftype information
+(define-info-type source-location deftype (or form-numbers null) nil)
+(define-info-type type lambda-list list nil)
 ); defun other-info-init
 
 (declaim (freeze-type info-env))

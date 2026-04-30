@@ -13132,6 +13132,18 @@ msgid "~&It names a type specifier."
 msgstr ""
 
 #: src/code/describe.lisp
+msgid "~& Lambda list: ~S"
+msgstr ""
+
+#: src/code/describe.lisp
+msgid "~&  Sample expansion: ~S: ~S"
+msgstr ""
+
+#: src/code/describe.lisp
+msgid "~& Internal type: ~S"
+msgstr ""
+
+#: src/code/describe.lisp
 msgid "~&Its ~S property is ~S."
 msgstr ""
 
