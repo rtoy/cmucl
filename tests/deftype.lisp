@@ -25,8 +25,12 @@
 
 (define-test issue.495.lambda-list
   (:tag :issues)
-  ;; lambda-list should be empty
-  (assert-false (c::info :type :lambda-list 'issue.495.no-args))
+  ;; lambda-list should be empty.  Make sure the lambda-list is NIL
+  ;; and that it was actually recorded.
+  (multiple-value-bind (result recorded-p)
+      (c::info :type :lambda-list 'issue.495.no-args)
+    (assert-equal nil result)
+    (assert-true recorded-p))
   ;; lambda-list should match
   (assert-equal '(&optional low high)
 		(c::info :type :lambda-list 'issue.495.optional))
@@ -72,15 +76,10 @@
   ;;
   ;; Create a temp file that contains the deftype.  Compile it and
   ;; load it into this lisp.
-  (ext:with-temporary-file (temp-file)
-    (with-open-file (s temp-file
-		       :direction :io
-		       :if-exists :supersede
-		       :element-type 'character)
-      (format s "(in-package ~A)~%" (package-name *test-package*))
-      (format s "(deftype issue.495.locn () 'integer)")
-      (file-position s 0)
-      (ext:compile-from-stream s)))
+  (with-input-from-string (s (format nil
+				     "(in-package ~A)~%(deftype issue.495.locn () 'integer)"
+				     (package-name *test-package*)))
+    (ext:compile-from-stream s))
   ;; The source-location should be stored only in the :deftype, not
   ;; :defvar.
   (assert-true (c::info :source-location :deftype 'issue.495.locn))
