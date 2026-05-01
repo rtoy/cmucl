@@ -82,3 +82,46 @@
   (when (fboundp 'c::%note-type-defined)
     (c::%note-type-defined name))
   name)
+
+
+;; Fix #497.  Need these new definitions here, including
+;; def-ir1-translator to get defmacros from setup.lisp processed
+;; correctly.
+(define-info-type function macro-arglist list nil)
+(defun c::%defmacro (name definition lambda-list doc)
+  (assert (eval:interpreted-function-p definition))
+  (setf (eval:interpreted-function-name definition) name)
+  (setf (eval:interpreted-function-arglist definition) lambda-list)
+  (c::%%defmacro name definition lambda-list doc))
+
+;; lambda-list and doc are optional here so we can bootstrap these
+;; changes.  The final implementation has 4 required args in this
+;; order.  The kernel.core might have slots in the wrong place, but
+;; should get fixed up later.
+(defun c::%%defmacro (name definition &optional lambda-list doc)
+  (when (and (or (stringp lambda-list) (null lambda-list))
+	     (null doc))
+    (setf doc lambda-list
+	  lambda-list nil))
+  (clear-info function where-from name)
+  (setf (macro-function name) definition)
+  (setf (documentation name 'function) doc)
+  (when lambda-list
+    (setf (info :function :macro-arglist name) lambda-list))
+  name)
+
+(in-package "C")
+(def-ir1-translator %defmacro ((name def lambda-list doc) start cont
+			       :kind :function)
+  (let ((name (eval name))
+	(def (second def))) ; Don't want to make a function just yet...
+
+    (let* ((*current-path* (revert-source-path 'defmacro))
+	   (fun (ir1-convert-lambda def name 'defmacro)))
+      (setf (leaf-name fun) (list :macro name))
+      (setf (functional-arg-documentation fun) (eval lambda-list))
+      ;; Save the macro lambda-list so it can be retrieved later.
+      (ir1-convert start cont `(%%defmacro ',name ,fun ',(eval lambda-list) ,doc)))
+
+    (when *compile-print*
+      (compiler-mumble (intl:gettext "~&; Converted ~S.~%") name))))

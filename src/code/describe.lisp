@@ -357,9 +357,24 @@
   (print-compiled-from (kernel:function-code-header x)))
 
 
+#+nil
 (defun describe-function-byte-compiled (x kind name)
 
   (let ((name (or name (c::byte-function-name x))))
+    (desc-doc name 'function kind)
+    (unless (eq kind :macro)
+      (describe-function-name name 'function)))
+
+  (print-compiled-from (c::byte-function-component x)))
+
+(defun describe-function-byte-compiled (x kind name)
+
+  (let ((name (or name (c::byte-function-name x))))
+    (when (eq kind :macro)
+      (let ((args (c::info :function :macro-arglist name)))
+	(when args
+	  (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
+	  (format t "  ~S" args))))
     (desc-doc name 'function kind)
     (unless (eq kind :macro)
       (describe-function-name name 'function)))

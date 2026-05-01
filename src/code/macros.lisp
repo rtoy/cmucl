@@ -134,12 +134,13 @@
   (assert (eval:interpreted-function-p definition))
   (setf (eval:interpreted-function-name definition) name)
   (setf (eval:interpreted-function-arglist definition) lambda-list)
-  (c::%%defmacro name definition doc))
+  (c::%%defmacro name definition lambda-list doc))
 ;;;
-(defun c::%%defmacro (name definition doc)
+(defun c::%%defmacro (name definition lambda-list doc)
   (clear-info function where-from name)
   (setf (macro-function name) definition)
   (setf (documentation name 'function) doc)
+  (setf (info :function :macro-arglist name) lambda-list)
   name)
 
 

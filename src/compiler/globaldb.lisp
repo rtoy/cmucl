@@ -1189,6 +1189,13 @@
 ;; deftype information
 (define-info-type source-location deftype (or form-numbers null) nil)
 (define-info-type type lambda-list list nil)
+
+;; macro-arglist
+;;
+;; The maccro-arglist for byte-compiled macros which otherwise
+;; wouldn't have the arglist printed.
+(define-info-type function macro-arglist list nil)
+  
 ); defun other-info-init
 
 (declaim (freeze-type info-env))
