@@ -331,6 +331,20 @@
 	      (:stream (format t "~&~S" name))
 	      (:lisp (format t "~&~S" name)))))))))
 
+;; Common function for printing the function or macro lambda-list.
+(defun print-function/macro-arglist (kind args knownp)
+  (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
+  (cond ((not knownp)
+	 (format t (intl:gettext "  There is no argument information available.")))
+	((or (null args)
+	     (equal args "()"))
+	 (write-string (intl:gettext "  There are no arguments.")))
+	(t
+	 (write-string "  ")
+	 (indenting-further *standard-output* 2
+			    (etypecase args
+			      (string (write-string args))
+			      (list (prin1 args)))))))
 
 ;;; DESCRIBE-FUNCTION-COMPILED  --  Internal
 ;;;
@@ -339,15 +353,7 @@
 ;;;
 (defun describe-function-compiled (x kind name)
   (let ((args (%function-arglist x)))
-    (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
-    (cond ((not args)
-	   (format t (intl:gettext "  There is no argument information available.")))
-	  ((string= args "()")
-	   (write-string (intl:gettext "  There are no arguments.")))
-	  (t
-	   (write-string "  ")
-	   (indenting-further *standard-output* 2
-	     (write-string args)))))
+    (print-function/macro-arglist kind args (not (null args))))
 
   (let ((name (or name (%function-name x))))
     (desc-doc name 'function kind)
@@ -356,10 +362,15 @@
 
   (print-compiled-from (kernel:function-code-header x)))
 
-
+;;; DESCRIBE-FUNCTION-BYTE-COMPILED -- Internal
+;;;
+;;;    Describe a byte-compiled function.
 (defun describe-function-byte-compiled (x kind name)
-
   (let ((name (or name (c::byte-function-name x))))
+    (when (eq kind :macro)
+      (multiple-value-bind (args knownp)
+	  (c::info :function :macro-arglist name)
+	(print-function/macro-arglist kind args knownp)))
     (desc-doc name 'function kind)
     (unless (eq kind :macro)
       (describe-function-name name 'function)))
@@ -480,8 +491,25 @@
 	  (describe pcl-class)))))
   ;;
   ;; Print out information about any types named by the symbol
-  (when (eq (info type kind x) :defined)
-    (format t (intl:gettext "~&It names a type specifier.")))
+  (case (info :type :kind x)
+    (:defined
+     ;; User defined type
+     (format t (intl:gettext "~&It names a type specifier."))
+     (let ((lambda-list (info type lambda-list x)))
+       (when lambda-list
+	 (format t (intl:gettext "~&  Lambda list: ~S") lambda-list)))
+     (let ((expander (info :type :expander x)))
+       (when expander
+	 (let ((expansion (ignore-errors (funcall expander (list x)))))
+	   (when expansion
+	     (format t (intl:gettext "~&  Sample expansion: ~S: ~S")
+		     (list x) expansion))))))
+    (:primitive
+     ;; Primitive built-in type
+     (format t (intl:gettext "~&It names a primitive type specifier."))
+     (let ((builtin (info :type :builtin x)))
+       (when builtin
+	 (format t (intl:gettext "~&  Internal type: ~S") builtin)))))
   ;;
   ;; Print out properties, possibly ignoring implementation details.
   (do ((plist (symbol-plist X) (cddr plist)))
@@ -491,6 +519,15 @@
       (describe (cadr plist))))
 
   ;; Describe where it was defined.
+  ;;
+  ;; Note: Source location for user-defined types is stored in
+  ;; :deftype.  However :defvar is currently used for defvar,
+  ;; defparameter, defconstant.  Just try printing both :defvar and
+  ;; :deftype locations.  They should be distinct.
   (let ((locn (info :source-location :defvar x)))
     (when locn
-      (format t (intl:gettext "~&It is defined in:~&~A") (c::file-source-location-pathname locn)))))
+      (format t (intl:gettext "~&It is defined in:~&~A") (c::file-source-location-pathname locn))))
+  (let ((locn (info :source-location :deftype x)))
+    (when locn
+      (format t (intl:gettext "~&The type is defined in:~&~A")
+	      (c::file-source-location-pathname locn)))))

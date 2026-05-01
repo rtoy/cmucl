@@ -1171,7 +1171,7 @@
 ;;; Used to record the source-location of definitions.  Despite the
 ;;; type name of "defvar", this holds the location information for
 ;;; defvar, defparameter, and defconstant.  It also has the source
-;;; location for defstruct and deftype.
+;;; location for defstruct.
 (define-info-class source-location)
 (define-info-type source-location defvar (or form-numbers null) nil)
 ;; This is used for define-condition.  It could also be used for
@@ -1186,6 +1186,16 @@
 (define-info-type typed-structure textdomain (or string null) nil)
 (define-info-type setf textdomain (or string null) nil)
 
+;; deftype information
+(define-info-type source-location deftype (or form-numbers null) nil)
+(define-info-type type lambda-list list nil)
+
+;; macro-arglist
+;;
+;; The maccro-arglist for byte-compiled macros which otherwise
+;; wouldn't have the arglist printed.
+(define-info-type function macro-arglist list nil)
+  
 ); defun other-info-init
 
 (declaim (freeze-type info-env))
