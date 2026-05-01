@@ -1195,7 +1195,7 @@
 ;; The maccro-arglist for byte-compiled macros which otherwise
 ;; wouldn't have the arglist printed.
 (define-info-type function macro-arglist list nil)
-  
+(define-info-type source-location defmacro (or form-numbers null) nil)  
 ); defun other-info-init
 
 (declaim (freeze-type info-env))

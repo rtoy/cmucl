@@ -81,3 +81,11 @@
     (assert-true winp)
     (assert-true (consp args))))
 
+(define-test issue.498.source-location
+  (:tag :issues)
+  (with-input-from-string
+    (s (format nil
+	       "(in-package ~A)~%(defmacro issue.498.locn (a) `(list ,a))~%"
+	       (package-name *test-package*)))
+    (ext:compile-from-stream s))
+  (assert-true (c::info :source-location :defmacro 'issue.498.locn)))

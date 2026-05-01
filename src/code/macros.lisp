@@ -116,6 +116,7 @@
 	   (eval-when (:compile-toplevel)
 	     (c::do-macro-compile-time ',name #',def))
 	   (eval-when (:load-toplevel :execute)
+	     (set-defmacro-source-location ',name (c::source-location))
 	     (c::%defmacro ',name #',def ',lambda-list ,doc)))))))
 
 
@@ -143,6 +144,8 @@
   (setf (info :function :macro-arglist name) lambda-list)
   name)
 
+(defun set-defmacro-source-location (name source-location)
+  (setf (info :source-location :defmacro name) source-location))
 
 
 ;;;; DEFINE-COMPILER-MACRO

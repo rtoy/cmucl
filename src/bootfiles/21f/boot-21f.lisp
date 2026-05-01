@@ -125,3 +125,7 @@
 
     (when *compile-print*
       (compiler-mumble (intl:gettext "~&; Converted ~S.~%") name))))
+
+
+;;; For #498:  add source-location info for defmacro
+(define-info-type source-location defmacro (or form-numbers null) nil)  
