@@ -5,6 +5,10 @@
 
 (in-package "DEFMACRO-TESTS")
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; Capture the package.
+  (defvar *test-package* *package*))
+
 (defmacro issue.497.no-args ()
   `(list))
 
