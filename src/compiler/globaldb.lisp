@@ -1171,7 +1171,7 @@
 ;;; Used to record the source-location of definitions.  Despite the
 ;;; type name of "defvar", this holds the location information for
 ;;; defvar, defparameter, and defconstant.  It also has the source
-;;; location for defstruct and deftype.
+;;; location for defstruct.
 (define-info-class source-location)
 (define-info-type source-location defvar (or form-numbers null) nil)
 ;; This is used for define-condition.  It could also be used for
