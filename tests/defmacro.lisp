@@ -43,6 +43,11 @@
   (assert-equal '(name &body body)
 		(c::info :function :macro-arglist 'issue.497.body)))
 
+(define-test issue.497.documentation
+  (:tag :issues)
+  (assert-equal "Build a list from two args"
+		(documentation 'issue.497.with-doc 'function)))
+
 (define-test issue.497.macro-expands
   (:tag :issues)
   ;; Storing the lambda-list must not have broken the macro-function
