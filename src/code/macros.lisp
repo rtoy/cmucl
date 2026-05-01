@@ -140,7 +140,10 @@
 (defun c::%%defmacro (name definition doc)
   (let ((package (symbol-package name)))
     (when package
-      (when (ext:package-definition-lock package)
+      (when (and (ext:package-definition-lock package)
+		 ;; Bootstrap.  This might not be bound yet.
+		 (boundp 'lisp::*enable-package-locked-errors)
+		 lisp::*enable-package-locked-errors)
         (restart-case
             (error 'lisp::package-locked-error
                    :package package
