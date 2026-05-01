@@ -653,7 +653,8 @@
 	(file-template (gensym "TEMP-PATH-"))
 	(unique-filename (gensym "UNIQUE-FILENAME-")))
     `(let ((,file-template (create-template ,directory ,prefix))
-	   ,unique-filename)
+	   ,unique-filename
+	   ,filename)
        (unwind-protect
 	    (let (,fd)
 	      (multiple-value-setq (,fd ,unique-filename)
