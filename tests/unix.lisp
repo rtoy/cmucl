@@ -20,7 +20,7 @@
 			  filename
 			  template))))
       (when fd
-	(unix:unix-unlink filename)))))
+	(unix:unix-unlink filename))))
 
 (define-test mkstemp.non-ascii-name-returned
   (:tag :issues)
