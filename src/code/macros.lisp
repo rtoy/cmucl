@@ -77,11 +77,11 @@
 ;;; definition is done by %defmacro which we expand into.
 ;;;
 (defmacro defmacro (name lambda-list &body body)
+  #+nil
   (when lisp::*enable-package-locked-errors*
     (multiple-value-bind (valid block-name)
         (ext:valid-function-name-p name)
       (declare (ignore valid))
-      #+nil
       (let ((package (symbol-package block-name)))
         (when package
           (when (ext:package-definition-lock package)
@@ -138,28 +138,33 @@
   (c::%%defmacro name definition doc))
 ;;;
 (defun c::%%defmacro (name definition doc)
-  (let ((package (symbol-package name)))
-    (when package
-      (when (and (ext:package-definition-lock package)
-		 ;; Bootstrap.  This might not be bound yet.
-		 (boundp 'lisp::*enable-package-locked-errors)
-		 lisp::*enable-package-locked-errors)
-        (restart-case
-            (error 'lisp::package-locked-error
-                   :package package
-                   :format-control (intl:gettext "defining macro ~A")
-                   :format-arguments (list name))
-          (continue ()
-            :report (lambda (stream)
-		      (write-string (intl:gettext "Ignore the lock and continue") stream)))
-          (unlock-package ()
-            :report (lambda (stream)
-		      (write-string (intl:gettext "Disable the package's definition-lock then continue") stream))
-            (setf (ext:package-definition-lock package) nil))
-          (unlock-all ()
-            :report (lambda (stream)
-		      (write-string (intl:gettext "Unlock all packages, then continue") stream))
-            (lisp::unlock-all-packages))))))
+  ;; Bootstrap: *enable-package-locked-errors* may not be bound while
+  ;; loading the kernel.core.
+  (when (and (boundp 'lisp::*enable-package-locked-errors*)
+	     lisp::*enable-package-locked-errors*)
+    (multiple-value-bind (valid block-name)
+        (ext:valid-function-name-p name)
+      (declare (ignore valid))
+      (let ((package (symbol-package block-name)))
+        (when package
+          (when (ext:package-definition-lock package)
+            (restart-case
+                (error 'lisp::package-locked-error
+                       :package package
+                       :format-control (intl:gettext "defining macro ~A")
+                       :format-arguments (list name))
+              (continue ()
+                :report (lambda (stream)
+			  (write-string (intl:gettext "Ignore the lock and continue") stream)))
+              (unlock-package ()
+                :report (lambda (stream)
+			  (write-string (intl:gettext "Disable the package's definition-lock then continue") stream))
+                (setf (ext:package-definition-lock package) nil))
+              (unlock-all ()
+                :report (lambda (stream)
+			  (write-string (intl:gettext "Unlock all packages, then continue") stream))
+                (lisp::unlock-all-packages))))))))
+
   (clear-info function where-from name)
   (setf (macro-function name) definition)
   (setf (documentation name 'function) doc)
