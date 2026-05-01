@@ -331,6 +331,20 @@
 	      (:stream (format t "~&~S" name))
 	      (:lisp (format t "~&~S" name)))))))))
 
+;; Common function for printing the function or macro lambda-list.
+(defun print-function/macro-arglist (kind args knownp)
+  (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
+  (cond ((not knownp)
+	 (format t (intl:gettext "  There is no argument information available.")))
+	((or (null args)
+	     (equal args "()"))
+	 (write-string (intl:gettext "  There are no arguments.")))
+	(t
+	 (write-string "  ")
+	 (indenting-further *standard-output* 2
+			    (etypecase args
+			      (string (write-string args))
+			      (list (prin1 args)))))))
 
 ;;; DESCRIBE-FUNCTION-COMPILED  --  Internal
 ;;;
@@ -339,15 +353,7 @@
 ;;;
 (defun describe-function-compiled (x kind name)
   (let ((args (%function-arglist x)))
-    (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
-    (cond ((not args)
-	   (format t (intl:gettext "  There is no argument information available.")))
-	  ((string= args "()")
-	   (write-string (intl:gettext "  There are no arguments.")))
-	  (t
-	   (write-string "  ")
-	   (indenting-further *standard-output* 2
-	     (write-string args)))))
+    (print-function/macro-arglist kind args (not (null args))))
 
   (let ((name (or name (%function-name x))))
     (desc-doc name 'function kind)
@@ -356,25 +362,15 @@
 
   (print-compiled-from (kernel:function-code-header x)))
 
-
-#+nil
+;;; DESCRIBE-FUNCTION-BYTE-COMPILED -- Internal
+;;;
+;;;    Describe a byte-compiled function.
 (defun describe-function-byte-compiled (x kind name)
-
-  (let ((name (or name (c::byte-function-name x))))
-    (desc-doc name 'function kind)
-    (unless (eq kind :macro)
-      (describe-function-name name 'function)))
-
-  (print-compiled-from (c::byte-function-component x)))
-
-(defun describe-function-byte-compiled (x kind name)
-
   (let ((name (or name (c::byte-function-name x))))
     (when (eq kind :macro)
-      (let ((args (c::info :function :macro-arglist name)))
-	(when args
-	  (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
-	  (format t "  ~S" args))))
+      (multiple-value-bind (args knownp)
+	  (c::info :function :macro-arglist name)
+	(print-function/macro-arglist kind args knownp)))
     (desc-doc name 'function kind)
     (unless (eq kind :macro)
       (describe-function-name name 'function)))
