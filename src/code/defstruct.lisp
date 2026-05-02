@@ -452,6 +452,13 @@
 			 name-and-options)))
 	 (name (dd-name defstruct))
 	 (pkg (symbol-package name)))
+    (when (and pkg
+	       (ext:package-definition-lock pkg))
+      (lisp::signal-package-locked-error
+       pkg :definition
+       (intl:gettext "defining structure ~A")
+       name))
+    #+nil
     (when (and lisp::*enable-package-locked-errors*
 	       pkg
 	       (ext:package-definition-lock pkg))

@@ -221,6 +221,13 @@
   "Syntax like DEFMACRO, but defines a new type."
   (unless (symbolp name)
     (simple-program-error (intl:gettext "~S -- Type name not a symbol.") name))
+  (let ((pkg (symbol-package name)))
+    (when pkg
+      (signal-package-locked-error pkg :definition
+				   (intl:gettext "defining type ~A")
+				   name)))
+      
+  #+nil
   (and lisp::*enable-package-locked-errors*
        (symbol-package name)
        (ext:package-definition-lock (symbol-package name))
