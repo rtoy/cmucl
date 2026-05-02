@@ -13,20 +13,6 @@
 (defpackage :test-locked-package
   (:use :cl))
 
-(let* ((p (find-package :test-locked-package))
-       (sym (intern "TOPLEVEL-PROBE" p)))
-  (setf (ext:package-lock p) t)
-  (format t "~&TOPLEVEL: package-lock=~S enable=~S~%"
-          (ext:package-lock p) lisp::*enable-package-locked-errors*)
-  (handler-case
-      (let ((result (unintern sym p)))
-        (format t "~&TOPLEVEL: unintern returned ~S (no error)~%" result))
-    (lisp::package-locked-error (c)
-      (format t "~&TOPLEVEL: caught error ~A~%" c))
-    (error (c)
-      (format t "~&TOPLEVEL: caught other error ~A (~A)~%" c (type-of c))))
-  (setf (ext:package-lock p) nil))
-
 (defmacro with-definition-locked ((package) &body body)
   "Run BODY with PACKAGE's definition-lock enabled and namespace-lock
    disabled, so failures from BODY can be attributed unambiguously to
@@ -103,45 +89,3 @@
       (assert-error 'lisp::package-locked-error
                     (unexport sym p)))))
 
-(define-test package-lock-debug
-  (:tag :issues)
-  (let* ((p (find-package :test-locked-package))
-         (sym (intern "DEBUG-SYM" p)))
-    (setf (ext:package-lock p) t)
-    (format t "~&Just before unintern:~%")
-    (format t "  package-lock: ~S~%" (ext:package-lock p))
-    (format t "  *enable-package-locked-errors*: ~S~%"
-            lisp::*enable-package-locked-errors*)
-    (format t "  *package*: ~S~%" *package*)
-    (format t "  package of unintern fn: ~S~%"
-            (symbol-package 'unintern))
-    (handler-case
-        (let ((result (unintern sym p)))
-          (format t "  unintern returned: ~S~%" result))
-      (lisp::package-locked-error (c)
-        (format t "  GOT package-locked-error: ~A~%" c))
-      (error (c)
-        (format t "  got OTHER error: ~A~%" c)))
-    (setf (ext:package-lock p) nil)
-    (assert-true t)))
-
-;; At end of file:
-(format *error-output* "~&~%==== TOPLEVEL PROBE ====~%")
-(force-output *error-output*)
-(let* ((p (find-package :test-locked-package))
-       (sym (intern "TOPLEVEL-PROBE" p)))
-  (setf (ext:package-lock p) t)
-  (format *error-output* "package-lock=~S enable=~S~%"
-          (ext:package-lock p) lisp::*enable-package-locked-errors*)
-  (force-output *error-output*)
-  (handler-case
-      (let ((result (unintern sym p)))
-        (format *error-output* "unintern returned ~S (NO ERROR!)~%" result))
-    (lisp::package-locked-error (c)
-      (format *error-output* "GOT package-locked-error: ~A~%" c))
-    (error (c)
-      (format *error-output* "got OTHER error: ~A (~A)~%" c (type-of c))))
-  (force-output *error-output*)
-  (setf (ext:package-lock p) nil))
-(format *error-output* "==== END PROBE ====~%~%")
-(force-output *error-output*)
