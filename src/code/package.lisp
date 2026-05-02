@@ -195,8 +195,7 @@
 (defun signal-package-locked-error (package lock-kind message-control &rest message-args)
   (when (and (boundp 'lisp::*enable-package-locked-errors*)
 	     lisp::*enable-package-locked-errors*)
-    (when (ext:package-definition-lock package)
-      (restart-case
+    (restart-case
           (error 'lisp::package-locked-error
                  :package package
                  :format-control message-control
@@ -217,7 +216,7 @@
         (unlock-all ()
           :report (lambda (stream)
 		    (write-string (intl:gettext "Unlock all packages, then continue") stream))
-          (unlock-all-packages))))))
+          (unlock-all-packages)))))
 
 ;; trap attempts to redefine a function in a locked package, and
 ;; signal a continuable error.
@@ -1488,9 +1487,10 @@
 	 (name (symbol-name symbol))
 	 (shadowing-symbols (package-%shadowing-symbols package)))
     (declare (list shadowing-symbols) (simple-string name))
-    (signal-package-locked-error package :namespace
+    (when (ext:package-lock package)
+      (signal-package-locked-error package :namespace
 				 (intl:gettext "uninterning symbol ~A")
-				 name)
+				 name))
     #+nil
     (when *enable-package-locked-errors*
       (when (ext:package-lock package)
@@ -1674,9 +1674,10 @@
   "Makes SYMBOLS no longer exported from PACKAGE."
   (let ((package (package-or-lose package))
 	(syms ()))
-    (signal-package-locked-error package :namespace
-				 (intl:gettext "unexporting symbols ~A")
-				 symbols)
+    (when (ext:package-lock package)
+      (signal-package-locked-error package :namespace
+				   (intl:gettext "unexporting symbols ~A")
+				   symbols))
     #+nil
     (when *enable-package-locked-errors*
       (when (ext:package-lock package)

@@ -222,7 +222,7 @@
   (unless (symbolp name)
     (simple-program-error (intl:gettext "~S -- Type name not a symbol.") name))
   (let ((pkg (symbol-package name)))
-    (when pkg
+    (when (and pkg (ext:package-definition-lock pkg))
       (signal-package-locked-error pkg :definition
 				   (intl:gettext "defining type ~A")
 				   name)))
