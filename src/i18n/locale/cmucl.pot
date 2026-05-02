@@ -6031,10 +6031,10 @@ msgstr ""
 #: src/code/extensions.lisp
 msgid ""
 "Creates a temporary file with a name bound to Filename which a\n"
-" namestring.  If Directory is not provided, the temporary file is created\n"
-" in a OS-dependent location.  The Prefix is a prefix to the file name\n"
-" to be created.  If not provided a default prefix is used.\n"
-" On completion, the file is automatically removed."
+"  namestring.  If Directory is not provided, the temporary file is created\n"
+"  in a OS-dependent location.  The Prefix is a prefix to the file name\n"
+"  to be created.  If not provided a default prefix is used.\n"
+"  On completion, the file is automatically removed."
 msgstr ""
 
 #: src/code/extensions.lisp
@@ -6053,11 +6053,11 @@ msgstr ""
 #: src/code/extensions.lisp
 msgid ""
 "Return a namestring to a temporary directory.  If Directory is not\n"
-" provided, the directory is created in an OS-dependent location.  The\n"
-" Prefix is a string that is used as a prefix for the name of the\n"
-" temporary directory.  If Prefix is not given, a default prefix is\n"
-" used.  The directory and all its contents are automatically removed\n"
-" afterward."
+"  provided, the directory is created in an OS-dependent location.  The\n"
+"  Prefix is a string that is used as a prefix for the name of the\n"
+"  temporary directory.  If Prefix is not given, a default prefix is\n"
+"  used.  The directory and all its contents are automatically removed\n"
+"  afterward."
 msgstr ""
 
 #: src/code/ext-code.lisp
