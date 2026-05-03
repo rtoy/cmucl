@@ -291,7 +291,7 @@
      (and (consp object)
 	  (%%typep (car object) (cons-type-car-type type))
 	  (%%typep (cdr object) (cons-type-cdr-type type))))
-    (standard-char-type
+    (kernel::standard-char-type
      (and (characterp object)
 	  (standard-char-p object)))
     (unknown-type

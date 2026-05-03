@@ -52,7 +52,7 @@
 (define-type-class intersection)
 (define-type-class alien)
 (define-type-class cons)
-(define-type-class standard-char named)
+(define-type-class standard-char)
 
 ;;; The Args-Type structure is used both to represent Values types and
 ;;; and Function types.
@@ -3350,7 +3350,6 @@
 
 ;; (subtypep other standard-char)
 (define-type-method (standard-char :complex-subtypep-arg2) (type1 type2)
-  (declare (ignore type2))
   (cond ((member-type-p type1)
 	 ;; If TYPE1 is a member-type, check whether it contains all
 	 ;; standard-chars.
@@ -3359,7 +3358,7 @@
 	(t
 	 (values nil t))))
 
- (define-type-method (standard-char :complex-union) (type1 type2)
+(define-type-method (standard-char :complex-union) (type1 type2)
    (cond ((csubtypep (specifier-type 'character) type2)
 	  ;; STANDARD-CHAR union any super-type of CHARACTER is that
 	  ;; super-type. Hence, it's TYPE2.
@@ -3379,7 +3378,7 @@
 	  nil)))
 
 (define-type-method (standard-char :complex-intersection) (type1 type2)
-  (cond ((csubtype (specifier-type 'character) type2)
+  (cond ((csubtypep (specifier-type 'character) type2)
 	 ;; STANDARD-CHAR intersect super-type of CHARACTER is a
 	 ;; STANDARD-CHAR.
 	 type1)
