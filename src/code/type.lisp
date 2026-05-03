@@ -52,6 +52,7 @@
 (define-type-class intersection)
 (define-type-class alien)
 (define-type-class cons)
+(define-type-class standard-char named)
 
 ;;; The Args-Type structure is used both to represent Values types and
 ;;; and Function types.
@@ -363,6 +364,13 @@
       *empty-type*
       (%make-cons-type car-type cdr-type)))
 
+(defstruct (standard-char-type
+	    (:include ctype (class-info (type-class-or-lose 'standard-char)))
+	    (:constructor %make-standard-char-type ())
+	    (:copier nil)))
+
+(defun make-standard-char-type ()
+  (%make-standard-char-type))
 
 
 ;;;
@@ -3294,6 +3302,121 @@
 			   cdr-int2)))))
 
 
+;;;; Standard-char type
+(def-type-translator standard-char ()
+  (make-standard-char-type))
+
+(define-type-method (standard-char :unparse) (type)
+  (declare (ignore type))
+  'standard-char)
+
+(define-type-method (standard-char :simple-=) (type1 type2)
+  (declare (ignore type1 type2))
+  (values t t))
+
+(define-type-method (standard-char :simple-subtypep) (type1 type2)
+  (declare (ignore type1 type2))
+  (values t t))
+
+(defconstant +standard-chars+
+  '(#\NEWLINE #\SPACE #\! #\" #\# #\$ #\% #\& #\' #\( #\) #\* #\+ #\,
+    #\- #\. #\/ #\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9 #\: #\; #\< #\=
+    #\> #\?  #\@ #\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M
+    #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z #\[ #\\ #\]
+    #\^ #\_ #\` #\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m
+    #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z #\{
+    #\| #\} #\~))
+
+(define-type-method (standard-char :simple-union) (type1 type2)
+  (declare (ignore type2))
+  type1)
+
+(define-type-method (standard-char :simple-intersection) (type1 type2)
+  (declare (ignore type2))
+  type1)
+
+;; (subtype standard-char other)
+(define-type-method (standard-char :complex-subtypep-arg1) (type1 type2)
+  (declare (ignore type1))
+  (cond ((csubtypep (specifier-type 'character) type2)
+	 ;; STANDARD-CHAR is a subtype of CHARACTER/BASE-CHAR
+	 (values t t))
+	((member-type-p type2)
+	 ;; If TYPE2 is a member-type, check whether it contains all standard-chars
+	 (values (subsetp +standard-chars+ (member-type-members type2))
+		 t))
+	(t
+	 (values nil t))))
+
+;; (subtypep other standard-char)
+(define-type-method (standard-char :complex-subtypep-arg2) (type1 type2)
+  (declare (ignore type2))
+  (cond ((member-type-p type1)
+	 ;; If TYPE1 is a member-type, check whether it contains all
+	 ;; standard-chars.
+	 (values (subsetp (member-type-members type2) +standard-chars+)
+		 t))
+	(t
+	 (values nil t))))
+
+ (define-type-method (standard-char :complex-union) (type1 type2)
+   (cond ((csubtypep (specifier-type 'character) type2)
+	  ;; STANDARD-CHAR union any super-type of CHARACTER is that
+	  ;; super-type. Hence, it's TYPE2.
+	  type2)
+	 ((and (member-type-p type2)
+	       (every #'characterp (member-type-members type2)))
+	  ;; STANDARD-CHAR union MEMBER-TYPE whose members are all
+	  ;; standard-characters is a STANDARD-CHAR.
+	  type1)
+	 ((eq (type-intersection (specifier-type 'standard-char)
+				 type2)
+	      *empty-type*)
+	  ;; STANDARD-CHAR union with disjoint type2 has no simplification.
+	  nil)
+	 (t
+	  ;; No simplification
+	  nil)))
+
+(define-type-method (standard-char :complex-intersection) (type1 type2)
+  (cond ((csubtype (specifier-type 'character) type2)
+	 ;; STANDARD-CHAR intersect super-type of CHARACTER is a
+	 ;; STANDARD-CHAR.
+	 type1)
+	((member-type-p type2)
+	 ;; STANDARD-CHAR intersect member-type.  The result is a
+	 ;; member type with everything removed except the standard
+	 ;; chars.
+	 (let ((common-chars (intersection (member-type-members type2)
+					   +standard-chars+)))
+	   (if common-chars
+	       (make-member-type :members common-chars)
+	       *empty-type*)))
+	((negation-type-p type2)
+	 ;; Handle (and standard-char (not stuff))
+	 (let ((not-neg (negation-type-type type2)))
+	   (cond ((csubtypep type1 not-neg)
+		  ;; If standard-char is a subtype of stuff, the
+		  ;; intersection is empty.
+		  *empty-type*)
+		 ((eq (type-intersection type1 not-neg)
+		      *empty-type*)
+		  ;; If the intersection of standard-char and stuff is
+		  ;; empty, the intersection is standard-char.
+		  type1)
+		 (t nil))))
+	((eq (type-intersection (specifier-type 'standard-char)
+				type2)
+	     *empty-type*)
+	 ;; STANDARD-CHAR intersect with disjoing TYPE2 results in the
+	 ;; empty type.
+	 *empty-type*)
+	(t
+	 ;; Default is can't simplify
+	 nil)))
+	 
+	 
+
 ;;; TYPE-DIFFERENCE  --  Interface
 ;;;
 ;;;    Return the type that describes all objects that are in X but not in Y.
@@ -3379,7 +3502,8 @@
   (declare (type ctype type))
   (etypecase type
     ((or numeric-type named-type member-type array-type
-	 kernel::built-in-class cons-type)
+	 kernel::built-in-class cons-type
+	 standard-char-type)
      (values (%typep obj type) t))
     (class
      (if (if (csubtypep type (specifier-type 'funcallable-instance))
@@ -3520,6 +3644,7 @@
   "Type of characters that aren't base-char's.  None in CMU CL."
   '(and character (not base-char)))
 
+#+nil
 (deftype standard-char ()
   "Type corresponding to the charaters required by the standard."
   '(member #\NEWLINE #\SPACE #\! #\" #\# #\$ #\% #\& #\' #\( #\) #\* #\+ #\,
@@ -3528,8 +3653,7 @@
 	   #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z #\[ #\\ #\]
 	   #\^ #\_ #\` #\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m
 	   #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z #\{
-	   #\| #\} #\~))
-
+    #\| #\} #\~))
 (deftype keyword ()
   "Type for any keyword symbol."
   '(and symbol (satisfies keywordp)))

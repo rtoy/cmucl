@@ -291,6 +291,9 @@
      (and (consp object)
 	  (%%typep (car object) (cons-type-car-type type))
 	  (%%typep (cdr object) (cons-type-cdr-type type))))
+    (standard-char-type
+     (and (characterp object)
+	  (standard-char-p object)))
     (unknown-type
      ;; Parse it again to make sure it's really undefined.
      (let ((reparse (specifier-type (unknown-type-specifier type))))
