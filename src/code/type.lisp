@@ -2950,6 +2950,7 @@
 ;;; We don't need a :COMPLEX-UNION, since the only interesting case is a union
 ;;; type, and the member/union interaction is handled by the union type
 ;;; method.
+#+nil
 (define-type-method (member :simple-union) (type1 type2)
   (let ((mem1 (member-type-members type1))
 	(mem2 (member-type-members type2)))
@@ -2957,6 +2958,16 @@
 	  ((subsetp mem2 mem1) type1)
 	  (t
 	   (make-member-type :members (union mem1 mem2))))))
+
+(define-type-method (member :simple-union) (type1 type2)
+  (let ((mem1 (member-type-members type1))
+        (mem2 (member-type-members type2)))
+    (cond ((subsetp mem1 mem2) type2)
+          ((subsetp mem2 mem1) type1)
+          ;; NEW: refuse to merge across character/non-character domains
+          ((and (some #'characterp mem1) (notevery #'characterp mem2)) nil)
+          ((and (some #'characterp mem2) (notevery #'characterp mem1)) nil)
+          (t (make-member-type :members (union mem1 mem2))))))
 
 (define-type-method (member :simple-=) (type1 type2)
   (let ((mem1 (member-type-members type1))

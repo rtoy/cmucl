@@ -454,30 +454,9 @@
 	 (pkg (symbol-package name)))
     (when (and pkg
 	       (ext:package-definition-lock pkg))
-      (lisp::signal-package-locked-error
-       pkg :definition
-       (intl:gettext "defining structure ~A")
-       name))
-    #+nil
-    (when (and lisp::*enable-package-locked-errors*
-	       pkg
-	       (ext:package-definition-lock pkg))
-      (restart-case
-	  (error 'lisp::package-locked-error
-		 :package pkg
-		 :format-control (intl:gettext "defining structure ~A")
-		 :format-arguments (list name))
-	(continue ()
-	  :report (lambda (stream)
-		    (write-string (intl:gettext "Ignore the lock and continue") stream)))
-	(unlock-package ()
-	  :report (lambda (stream)
-		    (write-string (intl:gettext "Disable package's definition lock then continue") stream))
-	  (setf (ext:package-definition-lock pkg) nil))
-        (unlock-all ()
-          :report (lambda (stream)
-		    (write-string (intl:gettext "Unlock all packages, then continue") stream))
-          (lisp::unlock-all-packages))))
+      (lisp::signal-package-locked-error pkg :definition
+					 (intl:gettext "defining structure ~A")
+					 name))
     (when (info declaration recognized name)
       (error (intl:gettext "Defstruct already names a declaration: ~S.") name))
     (when (stringp (car slot-descriptions))
