@@ -77,30 +77,6 @@
 ;;; definition is done by %defmacro which we expand into.
 ;;;
 (defmacro defmacro (name lambda-list &body body)
-  #+nil
-  (when lisp::*enable-package-locked-errors*
-    (multiple-value-bind (valid block-name)
-        (ext:valid-function-name-p name)
-      (declare (ignore valid))
-      (let ((package (symbol-package block-name)))
-        (when package
-          (when (ext:package-definition-lock package)
-            (restart-case
-                (error 'lisp::package-locked-error
-                       :package package
-                       :format-control (intl:gettext "defining macro ~A")
-                       :format-arguments (list name))
-              (continue ()
-                :report (lambda (stream)
-			  (write-string (intl:gettext "Ignore the lock and continue") stream)))
-              (unlock-package ()
-                :report (lambda (stream)
-			  (write-string (intl:gettext "Disable the package's definition-lock then continue") stream))
-                (setf (ext:package-definition-lock package) nil))
-              (unlock-all ()
-                :report (lambda (stream)
-			  (write-string (intl:gettext "Unlock all packages, then continue") stream))
-                (lisp::unlock-all-packages))))))))
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENV-")))
     (multiple-value-bind
