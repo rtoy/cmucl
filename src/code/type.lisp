@@ -367,7 +367,8 @@
 (defstruct (standard-char-type
 	    (:include ctype (class-info (type-class-or-lose 'standard-char)))
 	    (:constructor %make-standard-char-type ())
-	    (:copier nil)))
+	    (:copier nil)
+	    (:print-function %print-type)))
 
 (defun make-standard-char-type ()
   (%make-standard-char-type))
@@ -3350,10 +3351,11 @@
 
 ;; (subtypep other standard-char)
 (define-type-method (standard-char :complex-subtypep-arg2) (type1 type2)
+  (declare (ignore type2))
   (cond ((member-type-p type1)
 	 ;; If TYPE1 is a member-type, check whether it contains all
 	 ;; standard-chars.
-	 (values (subsetp (member-type-members type2) +standard-chars+)
+	 (values (subsetp (member-type-members type1) +standard-chars+)
 		 t))
 	(t
 	 (values nil t))))

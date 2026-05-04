@@ -1229,10 +1229,6 @@ msgid "Type of characters that aren't base-char's.  None in CMU CL."
 msgstr ""
 
 #: src/code/type.lisp
-msgid "Type corresponding to the charaters required by the standard."
-msgstr ""
-
-#: src/code/type.lisp
 msgid "Type for any keyword symbol."
 msgstr ""
 
