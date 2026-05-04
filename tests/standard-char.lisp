@@ -244,61 +244,71 @@
 (define-test standard-char.intersection-character-both-orderings
     (:tag :issues)
   ;; Standard-char intersect character = standard-char, regardless of argument order.
-  (assert-equality #'kernel::type=
-    (kernel::specifier-type 'standard-char)
-    (kernel::type-intersection (kernel::specifier-type 'standard-char)
-                               (kernel::specifier-type 'character)))
-  (assert-equality #'kernel::type=
-    (kernel::specifier-type 'standard-char)
-    (kernel::type-intersection (kernel::specifier-type 'character)
-                               (kernel::specifier-type 'standard-char))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 (kernel::specifier-type 'standard-char)
+		 (kernel::type-intersection (kernel::specifier-type 'standard-char)
+					    (kernel::specifier-type 'character))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 (kernel::specifier-type 'standard-char)
+		 (kernel::type-intersection (kernel::specifier-type 'character)
+					    (kernel::specifier-type 'standard-char)))))
 
 (define-test standard-char.intersection-disjoint-both-orderings
     (:tag :issues)
-  (assert-equality #'kernel::type=
-    kernel::*empty-type*
-    (kernel::type-intersection (kernel::specifier-type 'standard-char)
-                               (kernel::specifier-type 'integer)))
-  (assert-equality #'kernel::type=
-    kernel::*empty-type*
-    (kernel::type-intersection (kernel::specifier-type 'integer)
-                               (kernel::specifier-type 'standard-char))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 kernel::*empty-type*
+		 (kernel::type-intersection (kernel::specifier-type 'standard-char)
+					    (kernel::specifier-type 'integer))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 kernel::*empty-type*
+		 (kernel::type-intersection (kernel::specifier-type 'integer)
+					    (kernel::specifier-type 'standard-char)))))
 
 (define-test standard-char.intersection-member-both-orderings
     (:tag :issues)
   ;; Filter member-type to standard chars only.
-  (assert-equality #'kernel::type=
-    (kernel::specifier-type '(member #\a #\b))
-    (kernel::type-intersection (kernel::specifier-type 'standard-char)
-                               (kernel::specifier-type '(member #\a #\Tab #\b))))
-  (assert-equality #'kernel::type=
-    (kernel::specifier-type '(member #\a #\b))
-    (kernel::type-intersection (kernel::specifier-type '(member #\a #\Tab #\b))
-                               (kernel::specifier-type 'standard-char))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 (kernel::specifier-type '(member #\a #\b))
+		 (kernel::type-intersection (kernel::specifier-type 'standard-char)
+					    (kernel::specifier-type '(member #\a #\Tab #\b)))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 (kernel::specifier-type '(member #\a #\b))
+		 (kernel::type-intersection (kernel::specifier-type '(member #\a #\Tab #\b))
+					    (kernel::specifier-type 'standard-char)))))
 
 (define-test standard-char.union-character-both-orderings
     (:tag :issues)
   ;; Standard-char union character = character.
-  (assert-equality #'kernel::type=
-    (kernel::specifier-type 'character)
-    (kernel::type-union (kernel::specifier-type 'standard-char)
-                        (kernel::specifier-type 'character)))
-  (assert-equality #'kernel::type=
-    (kernel::specifier-type 'character)
-    (kernel::type-union (kernel::specifier-type 'character)
-                        (kernel::specifier-type 'standard-char))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 (kernel::specifier-type 'character)
+		 (kernel::type-union (kernel::specifier-type 'standard-char)
+				     (kernel::specifier-type 'character))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 (kernel::specifier-type 'character)
+		 (kernel::type-union (kernel::specifier-type 'character)
+				     (kernel::specifier-type 'standard-char)))))
 
 (define-test standard-char.union-member-of-standard-both-orderings
     (:tag :issues)
   ;; Standard-char absorbs all-standard member-type.
-  (assert-equality #'kernel::type=
-    (kernel::specifier-type 'standard-char)
-    (kernel::type-union (kernel::specifier-type 'standard-char)
-                        (kernel::specifier-type '(member #\a #\b))))
-  (assert-equality #'kernel::type=
-    (kernel::specifier-type 'standard-char)
-    (kernel::type-union (kernel::specifier-type '(member #\a #\b))
-                        (kernel::specifier-type 'standard-char))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 (kernel::specifier-type 'standard-char)
+		 (kernel::type-union (kernel::specifier-type 'standard-char)
+				     (kernel::specifier-type '(member #\a #\b)))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 (kernel::specifier-type 'standard-char)
+		 (kernel::type-union (kernel::specifier-type '(member #\a #\b))
+				     (kernel::specifier-type 'standard-char)))))
 
 (define-test standard-char.union-disjoint-stays-symbolic-both-orderings
     (:tag :issues)
@@ -308,7 +318,8 @@
         (r2 (kernel::specifier-type '(or standard-char boolean))))
     (assert-true (kernel::union-type-p r1))
     (assert-true (kernel::union-type-p r2))
-    (assert-equality #'kernel::type= r1 r2)
+    (assert-equal (values t t)
+		  (kernel::type= r1 r2))
     ;; Neither should contain a member-type with both characters
     ;; and non-characters.
     (dolist (m (kernel::union-type-types r1))
@@ -319,18 +330,20 @@
 
 (defun assert-commutative-union (type-a-spec type-b-spec)
   "Assert that union(A, B) and union(B, A) produce type= results."
-  (assert-equality #'kernel::type=
-    (kernel::type-union (kernel::specifier-type type-a-spec)
-                        (kernel::specifier-type type-b-spec))
-    (kernel::type-union (kernel::specifier-type type-b-spec)
-                        (kernel::specifier-type type-a-spec))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 (kernel::type-union (kernel::specifier-type type-a-spec)
+				     (kernel::specifier-type type-b-spec))
+		 (kernel::type-union (kernel::specifier-type type-b-spec)
+				     (kernel::specifier-type type-a-spec)))))
 
 (defun assert-commutative-intersection (type-a-spec type-b-spec)
-  (assert-equality #'kernel::type=
-    (kernel::type-intersection (kernel::specifier-type type-a-spec)
-                               (kernel::specifier-type type-b-spec))
-    (kernel::type-intersection (kernel::specifier-type type-b-spec)
-                               (kernel::specifier-type type-a-spec))))
+  (assert-equal (values t t)
+		(kernel::type=
+		 (kernel::type-intersection (kernel::specifier-type type-a-spec)
+					    (kernel::specifier-type type-b-spec))
+		 (kernel::type-intersection (kernel::specifier-type type-b-spec)
+					    (kernel::specifier-type type-a-spec)))))
 
 (define-test standard-char.commutativity
     (:tag :issues)
