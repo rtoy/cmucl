@@ -232,21 +232,19 @@
 
 (define-test standard-char.etypecase
     (:tag :issues)
-  (let ((*random-state* (make-random-state)))
-    ;; Test etypecase with standard-char works correctly using random
-    ;; characters.  To make this repeatable, use a fixed random-state,
-    ;; otherwise, it becomes hard to debug
-    (dotimes (k 200)
-      (let* ((ch (code-char (random 128)))
-	     (expected (if (standard-char-p ch)
-			   :is-standard :is-other))
-	     (actual (handler-case
-			 (etypecase ch
-			   (standard-char :is-standard)
-			   (character :is-other))
-		       (error ()
-			 :error))))
-	(assert-eql expected actual ch)))))
+  ;; Test that etypecase works using ASCII characters which will cover
+  ;; standard-char values and other characters.
+  (dotimes (k 128)
+    (let* ((ch (code-char k))
+	   (expected (if (standard-char-p ch)
+			 :is-standard :is-other))
+	   (actual (handler-case
+		       (etypecase ch
+			 (standard-char :is-standard)
+			 (character :is-other))
+		     (error ()
+		       :error))))
+      (assert-eql expected actual ch))))
 
 (define-test standard-char.caching
     (:tag :issues)
