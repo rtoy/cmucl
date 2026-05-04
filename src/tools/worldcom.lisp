@@ -137,13 +137,7 @@
   (:optimize '(optimize (safety 2) (debug 2)))
   (comf "target:code/class"))
 
-;; When cross-compiling, it's good to have all the type classes
-;; defined for code/pred.lisp to use.
-#-bootstrap
 (comf "target:code/type")
-#+bootstrap
-(comf "target:code/type" :load t)
-
 (comf "target:compiler/generic/vm-type")
 (comf "target:code/type-init")
 (comf "target:code/pred")
