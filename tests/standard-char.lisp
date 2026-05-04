@@ -5,6 +5,10 @@
 
 (in-package "STANDARD-CHAR-TESTS")
 
+;; For the following tests, we generally want to use
+;; kernel::type-intersection and kernel::type-union directly to make
+;; sure we test the intersection and union methods for standard-char.
+
 (define-test standard-char.typep
     (:tag :issues)
   (assert-true (typep #\a 'standard-char))
@@ -33,7 +37,6 @@
 		  '(not (or pathname boolean standard-char standard-object character file-error)))
 		 (c::specifier-type
 		  '(not (or file-error character standard-object standard-char boolean pathname))))))
-
 
 (define-test standard-char.identity
     (:tag :issues)
@@ -227,17 +230,23 @@
 		(c::type= (c::specifier-type '(and standard-char (not (member #\a))))
 			  (c::specifier-type '(and (not (member #\a)) standard-char)))))
 
-#+nil
 (define-test standard-char.etypecase
-  ;; This is the original failing test family — should now pass reliably.
-  (loop repeat 100
-	always (eql nil
-                    (handler-case
-			(etypecase #\a
-                          (standard-char :ok)
-                          (number :wrong))
-		      (error () :error))
-                    :ok)))
+    (:tag :issues)
+  (let ((*random-state* (make-random-state)))
+    ;; Test etypecase with standard-char works correctly using random
+    ;; characters.  To make this repeatable, use a fixed random-state,
+    ;; otherwise, it becomes hard to debug
+    (dotimes (k 200)
+      (let* ((ch (code-char (random char-code-limit)))
+	     (expected (if (standard-char-p ch)
+			   :is-standard :is-other))
+	     (actual (handler-case
+			 (etypecase ch
+			   (standard-char :is-standard)
+			   (character :is-other))
+		       (error ()
+			 :error))))
+	(assert-eql expected actual ch)))))
 
 (define-test standard-char.caching
     (:tag :issues)
@@ -250,9 +259,6 @@
 	     (c::specifier-type 'standard-char)))
 					;
 
-;; For the following tests, we want to use kernel::type-intersection
-;; and kernel::type-union directly to make sure we test the
-;; intersection and union methods for standard-char.
 (define-test standard-char.intersection-character-both-orderings
     (:tag :issues)
   ;; Standard-char intersect character = standard-char, regardless of argument order.
