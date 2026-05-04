@@ -365,7 +365,9 @@
       (%make-cons-type car-type cdr-type)))
 
 (defstruct (standard-char-type
-	    (:include ctype (class-info (type-class-or-lose 'standard-char)))
+	    (:include ctype
+	     (class-info (type-class-or-lose 'standard-char))
+	     (:enumerable t))
 	    (:constructor %make-standard-char-type ())
 	    (:copier nil)
 	    (:print-function %print-type)))
@@ -3360,6 +3362,7 @@
 	(t
 	 (values nil t))))
 
+#+nil
 (define-type-method (standard-char :complex-union) (type1 type2)
    (cond ((csubtypep (specifier-type 'character) type2)
 	  ;; STANDARD-CHAR union any super-type of CHARACTER is that
@@ -3379,43 +3382,48 @@
 	  ;; No simplification
 	  nil)))
 
+(define-type-method (standard-char :complex-union) (type1 type2)
+  (let* ((sc (if (standard-char-type-p type1) type1 type2))
+         (other (if (eq sc type1) type2 type1)))
+    (cond
+      ((csubtypep (specifier-type 'character) other) other)
+      ((and (member-type-p other)
+            (subsetp (member-type-members other) kernel::+standard-chars+))
+       sc)
+      (t nil))))
+
 (define-type-method (standard-char :complex-intersection) (type1 type2)
-  (cond ((csubtypep (specifier-type 'character) type2)
-	 ;; STANDARD-CHAR intersect super-type of CHARACTER is a
-	 ;; STANDARD-CHAR.
-	 type1)
-	((member-type-p type2)
-	 ;; STANDARD-CHAR intersect member-type.  The result is a
-	 ;; member type with everything removed except the standard
-	 ;; chars.
-	 (let ((common-chars (intersection (member-type-members type2)
-					   +standard-chars+)))
-	   (if common-chars
-	       (make-member-type :members common-chars)
-	       *empty-type*)))
-	((negation-type-p type2)
-	 ;; Handle (and standard-char (not stuff))
-	 (let ((not-neg (negation-type-type type2)))
-	   (cond ((csubtypep type1 not-neg)
-		  ;; If standard-char is a subtype of stuff, the
-		  ;; intersection is empty.
-		  *empty-type*)
-		 ((eq (type-intersection type1 not-neg)
-		      *empty-type*)
-		  ;; If the intersection of standard-char and stuff is
-		  ;; empty, the intersection is standard-char.
-		  type1)
-		 (t nil))))
-	((eq (type-intersection (specifier-type 'standard-char)
-				type2)
-	     *empty-type*)
-	 ;; STANDARD-CHAR intersect with disjoing TYPE2 results in the
-	 ;; empty type.
-	 *empty-type*)
-	(t
-	 ;; Default is can't simplify
-	 nil)))
-	 
+  ;; The standard-char type could be in type1 or type2.  Figure out
+  ;; which one is a standard-char.
+  (multiple-value-bind (sc other)
+      (if (standard-char-type-p type1)
+	  (values type1 type2)
+	  (values type2 type1))
+    (cond
+      ((csubtypep (specifier-type 'character) other)
+       ;; STANDARD-CHAR intersect any super-type of CHARACTER is a
+       ;; STANDARD-CHAR.
+       sc)
+      (t
+       (block punt
+	 ;; Look through OTHER and find OTHER contains any standard
+	 ;; character.  If so, collect them all.  If there are, the
+	 ;; intersection is a member-type of the collected characters.
+         (collect ((members))
+           (dolist (ch +standard-chars+)
+             (multiple-value-bind (val win)
+		 (ctypep ch other)
+               (unless win
+		 (return-from punt nil))
+               (when val
+		 (members ch))))
+           (cond ((null (members))
+		  c::*empty-type*)
+                 ((= (length (members))
+		     (length kernel::+standard-chars+))
+		  sc)
+                 (t
+		  (make-member-type :members (members))))))))))
 	 
 
 ;;; TYPE-DIFFERENCE  --  Interface
