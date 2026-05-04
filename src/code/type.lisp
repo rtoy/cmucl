@@ -3321,15 +3321,15 @@
   (declare (ignore type1 type2))
   (values t t))
 
-(defconstant +standard-chars+
-  "The set of characters in the STANDARD-CHAR type"
+(defconstant +standard-chars+ 
   '(#\NEWLINE #\SPACE #\! #\" #\# #\$ #\% #\& #\' #\( #\) #\* #\+ #\,
     #\- #\. #\/ #\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9 #\: #\; #\< #\=
     #\> #\?  #\@ #\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M
     #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z #\[ #\\ #\]
     #\^ #\_ #\` #\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m
     #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z #\{
-    #\| #\} #\~))
+    #\| #\} #\~)
+  "The set of characters in the STANDARD-CHAR type")
 
 (define-type-method (standard-char :simple-union) (type1 type2)
   (declare (ignore type2))
