@@ -237,7 +237,7 @@
     ;; characters.  To make this repeatable, use a fixed random-state,
     ;; otherwise, it becomes hard to debug
     (dotimes (k 200)
-      (let* ((ch (code-char (random char-code-limit)))
+      (let* ((ch (code-char (random 128)))
 	     (expected (if (standard-char-p ch)
 			   :is-standard :is-other))
 	     (actual (handler-case
