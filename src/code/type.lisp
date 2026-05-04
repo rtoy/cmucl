@@ -3322,6 +3322,7 @@
   (values t t))
 
 (defconstant +standard-chars+
+  "The set of characters in the STANDARD-CHAR type"
   '(#\NEWLINE #\SPACE #\! #\" #\# #\$ #\% #\& #\' #\( #\) #\* #\+ #\,
     #\- #\. #\/ #\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9 #\: #\; #\< #\=
     #\> #\?  #\@ #\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M
@@ -3362,33 +3363,19 @@
 	(t
 	 (values nil t))))
 
-#+nil
 (define-type-method (standard-char :complex-union) (type1 type2)
-   (cond ((csubtypep (specifier-type 'character) type2)
-	  ;; STANDARD-CHAR union any super-type of CHARACTER is that
-	  ;; super-type. Hence, it's TYPE2.
-	  type2)
-	 ((and (member-type-p type2)
-	       (every #'characterp (member-type-members type2)))
-	  ;; STANDARD-CHAR union MEMBER-TYPE whose members are all
-	  ;; standard-characters is a STANDARD-CHAR.
-	  type1)
-	 ((eq (type-intersection (specifier-type 'standard-char)
-				 type2)
-	      *empty-type*)
-	  ;; STANDARD-CHAR union with disjoint type2 has no simplification.
-	  nil)
-	 (t
-	  ;; No simplification
-	  nil)))
-
-(define-type-method (standard-char :complex-union) (type1 type2)
-  (let* ((sc (if (standard-char-type-p type1) type1 type2))
-         (other (if (eq sc type1) type2 type1)))
+  ;; The standard-char type could be in type1 or type2.  Figure out
+  ;; which one is a standard-char.
+  (multiple-value-bind (sc other)
+      (if (standard-char-type-p type1)
+	  (values type1 type2)
+	  (values type2 type1))
     (cond
-      ((csubtypep (specifier-type 'character) other) other)
+      ((csubtypep (specifier-type 'character) other)
+       other)
       ((and (member-type-p other)
-            (subsetp (member-type-members other) kernel::+standard-chars+))
+            (subsetp (member-type-members other)
+		     +standard-chars+))
        sc)
       (t nil))))
 
@@ -3420,7 +3407,7 @@
            (cond ((null (members))
 		  c::*empty-type*)
                  ((= (length (members))
-		     (length kernel::+standard-chars+))
+		     (length +standard-chars+))
 		  sc)
                  (t
 		  (make-member-type :members (members))))))))))

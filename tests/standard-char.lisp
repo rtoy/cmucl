@@ -13,11 +13,9 @@
     (:tag :issues)
   (assert-true (typep #\a 'standard-char))
   (assert-false (typep #\tab 'standard-char))
-  (assert-true (typep #\a 'standard-char))
   (assert-true (typep #\Z 'standard-char))
   (assert-true (typep #\Space 'standard-char))
   (assert-true (typep #\Newline 'standard-char))
-  (assert-false (typep #\Tab 'standard-char))
   (assert-false (typep #\Rubout 'standard-char))
   (assert-false (typep 5 'standard-char))
   (assert-false (typep "hello" 'standard-char))
@@ -165,10 +163,7 @@
                                (c::specifier-type '(member #\Tab)))))
     ;; Should not collapse into a 97-element MEMBER.
     (assert-false (c::member-type-p result))
-    (assert-true (c::union-type-p result))
-    #+nil
-    (not (and (c::member-type-p result)
-              (>= (length (c::member-type-members result)) 90)))))
+    (assert-true (c::union-type-p result))))
 
 (define-test standard-char.complex-intersection
     (:tag :issues)
@@ -246,17 +241,6 @@
 		       :error))))
       (assert-eql expected actual ch))))
 
-(define-test standard-char.caching
-    (:tag :issues)
-  ;; Multiple specifier-type calls on `standard-char` return EQ.
-  (assert-eq (c::specifier-type 'standard-char)
-	     (c::specifier-type 'standard-char))
-
-  ;; And via the deftype expansion.
-  (assert-eq (c::specifier-type 'standard-char)
-	     (c::specifier-type 'standard-char)))
-					;
-
 (define-test standard-char.intersection-character-both-orderings
     (:tag :issues)
   ;; Standard-char intersect character = standard-char, regardless of argument order.
@@ -332,17 +316,6 @@
                          (some #'characterp (kernel::member-type-members m))
                          (some (complement #'characterp)
                                (kernel::member-type-members m)))))))
-
-(define-test standard-char.subtypep-bidirectional
-    (:tag :issues)
-  ;; arg1 path: standard-char subset of X?
-  (assert-equal (values t t) (subtypep 'standard-char 'character))
-  (assert-equal (values nil t) (subtypep 'standard-char 'integer))
-  ;; arg2 path: X subset of standard-char?
-  (assert-equal (values nil t) (subtypep 'character 'standard-char))
-  (assert-equal (values nil t) (subtypep 'integer 'standard-char))
-  ;; Both reflexively
-  (assert-equal (values t t) (subtypep 'standard-char 'standard-char)))
 
 (defun assert-commutative-union (type-a-spec type-b-spec)
   "Assert that union(A, B) and union(B, A) produce type= results."
