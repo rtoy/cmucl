@@ -1225,6 +1225,10 @@ msgid "Array dimensions is not a list, integer or *:~%  ~S"
 msgstr ""
 
 #: src/code/type.lisp
+msgid "The set of characters in the STANDARD-CHAR type"
+msgstr ""
+
+#: src/code/type.lisp
 msgid "Type of characters that aren't base-char's.  None in CMU CL."
 msgstr ""
 
