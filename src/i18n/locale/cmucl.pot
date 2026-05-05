@@ -5644,37 +5644,37 @@ msgstr ""
 #: src/code/char.lisp
 msgid ""
 "Returns T if all of its arguments are the same character.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if no two of its arguments are the same character.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly increasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly decreasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly non-decreasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly non-increasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
