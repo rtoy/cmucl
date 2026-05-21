@@ -2056,7 +2056,17 @@ radix-R.  If you have a power-list then pass it in as PL."
 	 (mantissa (subseq raw 0 e-pos))
 	 (exp (parse-integer raw :start (1+ e-pos))))
     (values mantissa exp)))
-    
+
+(defun parsed-exp-form (raw-string)
+  ;; Parse RAW-STRING, that is in exponential form.  That is, it must
+  ;; the form "d.dddEeee".  There cannot be a leading sign.
+  (let* ((e-pos (position-if #'(lambda (c)
+				 (member c '(#\e #\E)))
+			     raw-string))
+	 (mantissa (subseq raw-string 0 e-pos))
+	 (exp (parse-integer raw-string :start (1+ e-pos))))
+    (values mantissa exp)))
+
 (defun reshape-format-e (mantissa-text k)
   (let ((raw-digits (remove #\. mantissa-text)))
     (cond
@@ -2087,44 +2097,54 @@ radix-R.  If you have a power-list then pass it in as PL."
 	(t
 	 ;; 0.000...ddd with d-|k| signfficant digits.  So d2exp needs
 	 ;; d - |k| - 1 digits after the decimal point.
-	 (+ d k -1))))
+	 (max (+ d k -1) 0))))
 		  
+(defun format-e-string (mantissa exponent is-negative-p w e k overflowchar padchar exponentchar at-sign-p)
+  (declare (type simple-string mantissa)
+	   (fixnum exponent))
+  (let* ((shown-exp (- exponent (1- k)))
+	 (exp-sign (if (minusp shown-exp) #\- #\+))
+	 (exp-abs (abs shown-exp))
+	 (exp-marker (or exponentchar #\d))
+	 (exp-string (if e
+			 (format nil "~a~c~v,'0d" exp-marker exp-sign e exp-abs)
+			 (format nil "~a~c~d" exp-marker exp-sign exp-abs)))
+	 (sign-mantissa (cond (is-negative-p #\-)
+			      (at-sign-p #\+)
+			      (t #\space)))
+	 (field (with-output-to-string (s)
+		  (write-char sign-mantissa s)
+		  (write-string (reshape-format-e mantissa k) s)
+		  (write-string exp-string s))))
+    #+nil
+    (format t "field: ~D: ~A~%" (length field) field)
+    ;; Width/overflow/padding
+    (cond
+      ((null w)
+       field)
+      ((> (length field) w)
+       (if overflowchar
+	   (make-string w :initial-element overflowchar)
+	   field))
+      (t
+       (concatenate 'string
+		    (make-string (- w (length field))
+				 :initial-element (or padchar #\space))
+		    field)))))
+  
 (defun format-e (value w d e k overflowchar padchar exponentchar at-sign-p)
+  (declare (type (or double-float) value)
+	   (fixnum k)
+	   (type (or null (and unsigned-byte fixnum)) w d e)
+	   (optimize (speed 3)))
   (let* ((is-negative-p (minusp (float-sign value)))
-	 (abs (abs value))
-	 (digits (d2exp-precision d k)))
+	 (abs-value (abs value)))
     (multiple-value-bind (mantissa exponent)
-	(parsed-d2exp abs digits)
-      (let* ((exp-padded (format nil "~c~c~v,'0d"
-				 (or exponentchar #\d)
-				 (if (minusp exponent) #\- #\+)
-				 e
-				 (abs (- exponent (- k 1)))))
-	     (field (concatenate 'string
-				 (cond (is-negative-p
-					"-")
-				       (at-sign-p
-					"+")
-				       (t
-					""))
-				 (reshape-format-e mantissa k)
-				 exp-padded)))
-	(format t "field: ~D: ~A~%" (length field) field)
-	;; Width/overflow/padding
-	(cond
-	  ((null w)
-	   field)
-	  ((> (length field) w)
-	   (if overflowchar
-	       (make-string w :initial-element overflowchar)
-	       field))
-	  (t
-	   (concatenate 'string
-			(make-string (- w (length field))
-				     :initial-element (or padchar #\space))
-			field)))))))
-	 
-     
+	(parsed-exp-form (if d
+			     (d2exp abs-value (d2exp-precision d k))
+			     (d2s abs-value)))
+      (format-e-string mantissa exponent is-negative-p
+		       w e k overflowchar padchar exponentchar at-sign-p))))
 
 (defun output-float-aux (x stream e-min e-max)
   (multiple-value-bind (e string)
