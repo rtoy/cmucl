@@ -141,6 +141,15 @@ CPP_INCLUDE_OPTIONS += -I $(PATH1)/$(OPENLIBM_DIR)
 endif
 endif
 
+#ifdef FEATURE_RYU_PRINTF
+RYU_DIR=ryu
+RYU_SRCS=\
+	${RYU_DIR}/d2fixed.c \
+	${RYU_DIR}/d2s.c \
+	${RYU_DIR}/f2s.c
+
+#endif
+
 CPPFLAGS := $(CPP_DEFINE_OPTIONS) $(CPP_INCLUDE_OPTIONS) 
 CFLAGS += -Wstrict-prototypes -Wall -g -fno-omit-frame-pointer
 

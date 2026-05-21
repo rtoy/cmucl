@@ -1999,6 +1999,132 @@ radix-R.  If you have a power-list then pass it in as PL."
 		    (setf high-ok t)))))
 	    (scale r s m+ m-)))))))
 
+(defconstant +d2fixed-max-precision+
+  64
+  "")
+
+(defconstant +d2fixed-buffer-size+
+  (+ +d2fixed-max-precision+ 320)
+  "")
+
+(defun d2fixed (d precision)
+  (declare (double-float d)
+	   (type (integer 0 #.+d2fixed-max-precision+) precision))
+  (alien:with-alien ((buf (alien:array c-call:char #.+d2fixed-buffer-size+)))
+    (alien:alien-funcall
+     (alien:extern-alien "d2fixed_buffered"
+			 (function c-call:void
+				   c-call:double
+				   c-call:unsigned-int
+				   (* c-call:char)))
+     d
+     precision
+     (alien:cast buf (* c-call:char)))
+    (alien:cast buf c-call:c-string)))
+
+(defun d2exp (d precision)
+  (declare (double-float d)
+	   (type (integer 0 #.+d2fixed-max-precision+) precision))
+  (alien:with-alien ((buf (alien:array c-call:char #.+d2fixed-buffer-size+)))
+    (alien:alien-funcall
+     (alien:extern-alien "d2exp_buffered"
+			 (function c-call:void
+				   c-call:double
+				   c-call:unsigned-int
+				   (* c-call:char)))
+     d
+     precision
+     (alien:cast buf (* c-call:char)))
+    (alien:cast buf c-call:c-string)))
+			 
+(defun d2s (d)
+  (declare (double-float d))
+  (alien:with-alien ((buf (alien:array c-call:char #.+d2fixed-buffer-size+)))
+    (alien:alien-funcall
+     (alien:extern-alien "d2s_buffered"
+			 (function c-call:void
+				   c-call:double
+				   (* c-call:char)))
+     d
+     (alien:cast buf (* c-call:char)))
+    (alien:cast buf c-call:c-string)))
+
+(defun parsed-d2exp (pos-x digits)
+  (let* ((raw (d2exp pos-x digits))
+	 ;; Parse the result from d2exp.  It has the form "d.dddEeee".
+	 (e-pos (position #\e raw))
+	 (mantissa (subseq raw 0 e-pos))
+	 (exp (parse-integer raw :start (1+ e-pos))))
+    (values mantissa exp)))
+    
+(defun reshape-format-e (mantissa-text k)
+  (let ((raw-digits (remove #\. mantissa-text)))
+    (cond
+      ((>= k 1)
+       (with-output-to-string (s)
+	 (loop for index from 0
+	       for c across raw-digits
+	       when (= index k)
+		 do (write-char #\. s)
+	       do (write-char c s))))
+      ((= k 0)
+       (concatenate 'string "0." raw-digits))
+      (t
+       (concatenate 'string "0."
+		    (make-string (- k) :initial-element #\0)
+		    raw-digits)))))
+
+(defun d2exp-precision (d k)
+  ;; Compute precision for d2exp when CL requests D digits and the
+  ;; scale factor is K."
+  (cond ((plusp k)
+	 ;; k digits before the decimal, d-k+1 after, so D is the
+	 ;; right precision for d2exp.
+	 d)
+	((zerop k)
+	 ;; Output is 0.dddd, so d2exp needs one less digit.
+	 (max (1- d) 0))
+	(t
+	 ;; 0.000...ddd with d-|k| signfficant digits.  So d2exp needs
+	 ;; d - |k| - 1 digits after the decimal point.
+	 (+ d k -1))))
+		  
+(defun format-e (value w d e k overflowchar padchar exponentchar at-sign-p)
+  (let* ((is-negative-p (minusp (float-sign value)))
+	 (abs (abs value))
+	 (digits (d2exp-precision d k)))
+    (multiple-value-bind (mantissa exponent)
+	(parsed-d2exp abs digits)
+      (let* ((exp-padded (format nil "~c~c~v,'0d"
+				 (or exponentchar #\d)
+				 (if (minusp exponent) #\- #\+)
+				 e
+				 (abs (- exponent (- k 1)))))
+	     (field (concatenate 'string
+				 (cond (is-negative-p
+					"-")
+				       (at-sign-p
+					"+")
+				       (t
+					""))
+				 (reshape-format-e mantissa k)
+				 exp-padded)))
+	(format t "field: ~D: ~A~%" (length field) field)
+	;; Width/overflow/padding
+	(cond
+	  ((null w)
+	   field)
+	  ((> (length field) w)
+	   (if overflowchar
+	       (make-string w :initial-element overflowchar)
+	       field))
+	  (t
+	   (concatenate 'string
+			(make-string (- w (length field))
+				     :initial-element (or padchar #\space))
+			field)))))))
+	 
+     
 
 (defun output-float-aux (x stream e-min e-max)
   (multiple-value-bind (e string)

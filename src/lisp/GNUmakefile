@@ -38,6 +38,7 @@ SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	irrat.c \
 	${CORE_MATH_SRCS} \
 	${OPENLIBM_SRCS} \
+	${RYU_SRCS} \
 	${FDLIBM} ${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC} ${GC_SRC}
 
 
