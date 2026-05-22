@@ -2105,7 +2105,9 @@ radix-R.  If you have a power-list then pass it in as PL."
   (let* ((sign-len (if (or is-negative-p at-sign-p) 1 0))
 	 (exp-digits (max (or e 1)
 			  (length (princ-to-string (abs actual-exp)))))
-	 (raw-digits (1- (length mantissa)))
+	 (dotp (find #\. mantissa))
+	 (raw-digits (let ((len (length mantissa)))
+		       (if dotp (1- len) len)))
 	 (mantissa-len
 	   (cond
 	     ((plusp k)
@@ -2129,6 +2131,8 @@ radix-R.  If you have a power-list then pass it in as PL."
   ;; mantissa-text: "d.ddddEeee" or "dEeee" from d2exp/d2s.  With the
   ;; given scale factor, change the text to account for it by moving
   ;; the decimal point so the scaling is exact.
+  ;;
+  ;; Force ".0" for k=1 when there's no fractional part
   (let* ((raw-digits (remove #\. mantissa-text))
 	 (digit-len (length raw-digits)))
     (cond
@@ -2139,8 +2143,14 @@ radix-R.  If you have a power-list then pass it in as PL."
 			    "")))
 	 (concatenate 'string
 		      before-dot
-		      (when (plusp (length after-dot))
-			".")
+		      (cond ((plusp (length after-dot))
+			     ".")
+			    ((= k 1)
+			     ;; Want "d.0" not just "d" when k=1 and
+			     ;; there's no fractional part so the
+			     ;; result reads back as a float.
+			     ".0")
+			    (t ""))
 		      after-dot)))
       (t
        (concatenate 'string
@@ -2174,13 +2184,14 @@ radix-R.  If you have a power-list then pass it in as PL."
 	 (exp-string (if e
 			 (format nil "~a~c~v,'0d" exp-marker exp-sign e exp-abs)
 			 (format nil "~a~c~d" exp-marker exp-sign exp-abs)))
-	 (sign-mantissa (cond (is-negative-p #\-)
-			      (at-sign-p #\+)
-			      (t #\space)))
+	 (sign-mantissa (cond (is-negative-p "-")
+			      (at-sign-p "+")
+			      (t "")))
 	 (field (with-output-to-string (s)
-		  (write-char sign-mantissa s)
+		  (write-string sign-mantissa s)
 		  (write-string (reshape-format-e mantissa k drop-leading-zero-p) s)
 		  (write-string exp-string s))))
+    #+nil
     (format t "field: ~D: ~A~%" (length field) field)
     ;; Width/overflow/padding
     (cond
@@ -2220,10 +2231,17 @@ radix-R.  If you have a power-list then pass it in as PL."
 	 (let* ((actual-exp (- exponent (1- k)))
 		(full-len (compute-exp-output-length mantissa actual-exp k e is-negative-p at-sign-p
 						    nil)))
+	   #+nil
+	   (format t "mantissa = ~A exponent = ~D actual-exp = ~D full-len = ~D w = ~D~%"
+		   mantissa exponent actual-exp full-len w)
 	   (cond
 	     ((or (null w) (<= full-len w))
+	      ;; Shortest fits.  Emit it.  Drop the leading 0 whenever
+	      ;; k <= 0 so the actual emitted legnth matches the
+	      ;; predicted one.
 	      (format-e-string mantissa exponent is-negative-p
-			       w e k overflowchar padchar exponentchar at-sign-p nil))
+			       w e k overflowchar padchar exponentchar at-sign-p
+			       (not (plusp k))))
 	     (t
 	      ;; Doesn't fit.  Compute the largest fitting d and
 	      ;; recompute the result via d2exp.  For backwards
@@ -2247,51 +2265,10 @@ radix-R.  If you have a power-list then pass it in as PL."
 				     nil)))))))))))
 
 ;; Some test cases for format-e vs format.  format-e should match
-;;
-;; Shortest fits w=17 exactly:
-;;   (format t "~17,,4,,'*,'P,zE" -1.23456789d12)
-;;     =>  -1.23456789z+0012
-;;   (lisp::format-e -1.23456789d12 17 nil 4 1 #\* #\P #\z t)
-;;     => "-1.23456789z+0012"
-;;
-;; Shortest needs 17 digits, d-fit = 8.
-;;   (format t "~17,,4,,'*,'P,'zE" (float -1.23456789e12 1d0))
-;;     =>  -1.23456795z+0012
-;;   (lisp::format-e (float -1.23456789e12 1d0) 17 nil 4 1 #\* #\P #\z t)
-;;     => "-1.23456795z+0012"
-;;
-;; Shortest doesn't fit with w=12.  Then d-fit = 3
-;;   (format t "~12,,4,1,'*,'P,'ze" -1.23456789d12)
-;;     =>  -1.235z+0012
-;;   (lisp::format-e -1.23456789d12 12 nil 4 1 #\* #\P #\z t)
-;;     => "-1.235z+0012"
-;;
-;; Shortest doesn't fit with w=10.  Then d-fit = 2 and drop leading 0.
-;;   (format t "~10,,4,-1,'*,'P,'ze" -1.23456789d12)
-;;     =>  -.01z+0014
-;;   (lisp::format-e -1.23456789d12 10 nil 4 1 #\* #\P #\z t)
-;;     => "-.01z+0014"
-;;
-;; d non-nil path
-;;   (format t "~22,10,4,-2,'*,'P,'ze" -1.23456789d12)
-;;     =>  PPP-0.0012345679z+0015
-;;   (lisp::format-e -1.23456789d12 22 10 4 -2 #\* #\P #\z t)
-;;     => "PPP-0.0012345679z+0015"
-;;
-;; Things that need to be checked:
-;;   (format t "~12,,4,1,'*,'P,'ze" 9.9999999999999995d11 )
-;;     =>  PPP1.0z+0012
-;;   (lisp::format-e 9.9999999999999995d11 12 nil 4 1 #\* #\P #\z t)
-;;     => "PPPP+1z+0012"
-;;
-;; This looks ok for handling of trailing zeroes from d2exp.
-;; (lisp::d2exp 0.5d0 5) returns "5.00000e-01".
-;;
-;;   (format t "~,5,2,,,,'eE" 0.5d0)
-;;     =>  5.00000e-01
-;;   (lisp::format-e 0.5d0 nil 5 2 1 nil nil #\e t)
-;;     => "+5.00000e-01"
-;;
+;;   (format t "~12,,2,1,'*,'P,'ze" 9.999999999d99)
+;;     => PPPPP1.0z+100
+;;   (lisp::format-e 9.999999999d99 12 nil 2 1 #\* #\P #\z t)
+;;     => "************"
 
 
 (defun output-float-aux (x stream e-min e-max)
