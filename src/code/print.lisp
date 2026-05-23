@@ -2270,10 +2270,13 @@ radix-R.  If you have a power-list then pass it in as PL."
       ((null w)
        ;; No width constraint.  Return the result as is.
        result)
-      ((and (> len w) overflowchar)
+      ((> len w)
        ;; Result is too long to fit in a field of length w and the
        ;; overflow char is given.  Return the overflow string.
-       (make-string w :initial-element overflowchar))
+       ;; Otherwise, return the result.
+       (if overflowchar
+	   (make-string w :initial-element overflowchar)
+	   result))
       (t
        ;; Result fits.  Insert the pad char if given or spaces.
        (let ((pad (or padchar #\space)))
@@ -2291,10 +2294,10 @@ radix-R.  If you have a power-list then pass it in as PL."
 			   f)))
 	 (field
 	   (with-output-to-string (s)
-	     (write-string (cond (is-negative-p "-")
-				 (at-sign-p "+")
-				 (t ""))
-			   s)
+	     (cond (is-negative-p
+		    (write-char #\- s))
+		   (at-sign-p
+		    (write-char #\+ s)))
 	     (write-string raw-string s))))
     (format-f-pad-overflow field w overflowchar padchar)))
 
@@ -2350,7 +2353,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 	     (write-string "0." s)
 	     (loop for k from 0 below (- left-count)
 		   do (write-char #\0 s))
-	     (write-string raw-digits))))))
+	     (write-string raw-digits s))))))
 
 (defun emit-shortest (raw-digits exponent is-negative-p w overflowchar padchar at-sign-p)
   (let* ((reshaped (reshape-fixed raw-digits exponent))
@@ -2372,7 +2375,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 	   (d-fit (and w (- w sign-len int-len 1))))
       (cond
 	((or (null w)
-	     (and d-fit (>= d-fit shortest-d)))
+	     (>= d-fit shortest-d))
 	 ;; Shortest fits or no width bound
 	 (emit-shortest raw-digits exponent is-negative-p w overflowchar padchar at-sign-p))
 	((minusp d-fit)
@@ -2404,7 +2407,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 	   (format-f-fixed abs-value is-negative-p w d overflowchar padchar at-sign-p))
 	  (t
 	   ;; No d, so use d2s to get the shortest digits; convert by
-	   ;; placing the decimal poin at teh right spot.
+	   ;; placing the decimal poin at the right spot.
 	   (format-f-free abs-value is-negative-p  w overflowchar padchar at-sign-p)))))
 	   
 (defun output-float-aux (x stream e-min e-max)

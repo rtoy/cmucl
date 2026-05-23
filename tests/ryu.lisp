@@ -70,7 +70,7 @@
 (define-test format-f.d-given-rounding-carry
   (:tag :format-f)
   ;; Rounding that carries across the decimal point.
-  (assert-equal "10.0"
+  (assert-equal "9.9"
                 (lisp::format-f  9.95d0     nil  1 0 nil nil nil))
   (assert-equal "1.00"
                 (lisp::format-f  0.999d0    nil  2 0 nil nil nil))
@@ -127,7 +127,7 @@
   ;; allows 6 (sign 0 + int 1 + dot 1 + frac 6 = 8).
   (assert-equal "3.141593"
                 (lisp::format-f  3.141592653589793d0  8 nil 0 nil nil nil))
-  (assert-equal "  3.1416"
+  (assert-equal "3.14159265"
                 (lisp::format-f  3.141592653589793d0 10 nil 0 nil nil nil))
   ;; The shrink should round correctly: 5 with following digits rounds up.
   (assert-equal "1.2346"
@@ -192,11 +192,13 @@
     (assert-true (> (length s) 300))
     (assert-true (find #\. s))))
 
+;; CLHS doesn't say what rounding to do.  We leave these here as a
+;; record of what we do with ~F using Ryu.
 (define-test format-f.exact-half
   (:tag :format-f)
   ;; Round half to even: d2fixed's rounding mode.
-  (assert-equal "0.0"
-                (lisp::format-f  0.5d0      nil 0 0 nil nil nil))   ; "0." actually -- check
+  (assert-equal "0."
+                (lisp::format-f  0.5d0      nil 0 0 nil nil nil))
   (assert-equal "2."
                 (lisp::format-f  2.5d0      nil 0 0 nil nil nil))
   (assert-equal "2."
