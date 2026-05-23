@@ -2176,38 +2176,48 @@ radix-R.  If you have a power-list then pass it in as PL."
 	 ;; d - |k| - 1 digits after the decimal point.
 	 (max (+ d k -1) 0))))
 		  
-(defun format-e-string (mantissa exponent is-negative-p w e k overflowchar padchar exponentchar at-sign-p drop-leading-zero-p)
+(defun format-e-string (mantissa exponent is-negative-p w e k
+                        overflowchar padchar exponentchar at-sign-p
+                        drop-leading-zero-p)
   (declare (type simple-string mantissa)
-	   (fixnum exponent k))
+           (fixnum exponent k))
   (let* ((shown-exp (- exponent (1- k)))
-	 (exp-sign (if (minusp shown-exp) #\- #\+))
-	 (exp-abs (abs shown-exp))
-	 (exp-marker (or exponentchar #\d))
-	 (exp-string (if e
-			 (format nil "~a~c~v,'0d" exp-marker exp-sign e exp-abs)
-			 (format nil "~a~c~d" exp-marker exp-sign exp-abs)))
-	 (sign-mantissa (cond (is-negative-p "-")
-			      (at-sign-p "+")
-			      (t "")))
-	 (field (with-output-to-string (s)
-		  (write-string sign-mantissa s)
-		  (write-string (reshape-format-e mantissa k drop-leading-zero-p) s)
-		  (write-string exp-string s))))
-    #+nil
-    (format t "field: ~D: ~A~%" (length field) field)
-    ;; Width/overflow/padding
-    (cond
-      ((null w)
-       field)
-      ((> (length field) w)
-       (if overflowchar
-	   (make-string w :initial-element overflowchar)
-	   field))
-      (t
-       (concatenate 'string
-		    (make-string (- w (length field))
-				 :initial-element (or padchar #\space))
-		    field)))))
+         (exp-sign (if (minusp shown-exp) #\- #\+))
+         (exp-abs (abs shown-exp))
+         (exp-marker (or exponentchar #\d))
+         (exp-string
+           (with-output-to-string (s)
+             (write-char exp-marker s)
+             (write-char exp-sign s)
+             (let ((digits (princ-to-string exp-abs)))
+               (when e
+                 (loop repeat (- e (length digits))
+                       do (write-char #\0 s)))
+               (write-string digits s))))
+         (sign-mantissa (cond (is-negative-p "-")
+                              (at-sign-p "+")
+                              (t "")))
+         ;; Reshape once, reuse everywhere.
+         (reshaped (reshape-format-e mantissa k drop-leading-zero-p))
+         (field-len (+ (length sign-mantissa)
+                       (length reshaped)
+                       (length exp-string))))
+    (flet ((write-field (s)
+             (write-string sign-mantissa s)
+             (write-string reshaped s)
+             (write-string exp-string s)))
+      (with-output-to-string (s)
+        (cond
+          ((null w)
+           (write-field s))
+          ((> field-len w)
+           (if overflowchar
+               (loop repeat w do (write-char overflowchar s))
+               (write-field s)))
+          (t
+           (let ((pad-char (or padchar #\Space)))
+             (loop repeat (- w field-len) do (write-char pad-char s))
+             (write-field s))))))))
 
 (defun format-e (value w d e k overflowchar padchar exponentchar at-sign-p)
   (declare (double-float value)
