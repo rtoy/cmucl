@@ -2098,6 +2098,15 @@ radix-R.  If you have a power-list then pass it in as PL."
 	  (t
 	   d-fit))))
 
+(defun count-decimal-digits (n)
+  "Number of decimal digits in N.  N is the absolute value of a
+   double-float's exponent, so 0 <= n <= 324."
+  (declare (type (integer 0 324) n)
+	   (optimize speed))
+  (cond ((< n 10)  1)
+        ((< n 100) 2)
+        (t         3)))
+
 (defun compute-exp-output-length (mantissa actual-exp k e is-negative-p at-sign-p leading-zero-p)
   ;; Compute length of the ~E result with the given parameters, but
   ;; don't build the string.  MANTISSA is "d.dddEee" from d2exp or
@@ -2106,7 +2115,9 @@ radix-R.  If you have a power-list then pass it in as PL."
   ;; 0.  Otherwise it's ignored.
   (let* ((sign-len (if (or is-negative-p at-sign-p) 1 0))
 	 (exp-digits (max (or e 1)
-			  (length (princ-to-string (abs actual-exp)))))
+			  #+nil
+			  (length (princ-to-string (abs actual-exp)))
+			  (count-decimal-digits (abs actual-exp))))
 	 (dotp (find #\. mantissa))
 	 (raw-digits (let ((len (length mantissa)))
 		       (if dotp (1- len) len)))
@@ -2189,11 +2200,17 @@ radix-R.  If you have a power-list then pass it in as PL."
            (with-output-to-string (s)
              (write-char exp-marker s)
              (write-char exp-sign s)
+	     #+nil
              (let ((digits (princ-to-string exp-abs)))
                (when e
                  (loop repeat (- e (length digits))
                        do (write-char #\0 s)))
-               (write-string digits s))))
+               (write-string digits s))
+	     (let ((d (count-decimal-digits exp-abs)))
+	       (when e
+                 (loop repeat (- e d)
+                       do (write-char #\0 s)))
+	       (princ exp-abs s))))
          (sign-mantissa (cond (is-negative-p "-")
                               (at-sign-p "+")
                               (t "")))
