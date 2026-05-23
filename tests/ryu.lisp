@@ -203,3 +203,20 @@
                 (lisp::format-f  2.5d0      nil 0 0 nil nil nil))
   (assert-equal "2."
                 (lisp::format-f  1.5d0      nil 0 0 nil nil nil)))
+
+
+(define-test format-f.overflow-no-overflowchar
+  (:tag :format-f)
+  ;; When the field overflows w and no overflowchar is given, CLHS says
+  ;; only "the number is printed using as many positions as necessary"
+  ;; (CLHS 22.3.3.1) -- it does not specify whether digits should be
+  ;; rounded to fit.
+  ;;
+  ;; The Burger & Dybvig implementation says:
+  ;; (format nil "~8,f" 123456789d0) => "123456800."
+  (assert-equal "123456789.0"
+                (lisp::format-f 123456789d0  8 nil 0 nil nil nil))
+  ;; The Burger & Dybvig implementation says:
+  ;; (format nil "~8,f" -123456789d0) => "-123457000."
+  (assert-equal "-123456789.0"
+                (lisp::format-f -123456789d0 8 nil 0 nil nil nil)))
