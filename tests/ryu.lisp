@@ -268,6 +268,26 @@
   (assert-equal "5.0d-1"
                 (lisp::format-e 0.5d0 nil nil nil 1 nil nil #\d nil)))
 
+(define-test format-e.signed-zero
+  (:tag :format-e)
+  ;; -0.0 preserves its sign through ~E.  This is the IEEE-754 default
+  ;; and what SBCL/CMUCL/CCL all do.
+  (assert-equal "-0.0d+0"
+                (lisp::format-e (- 0d0) nil nil nil 1 nil nil #\d nil))
+  (assert-equal "-0.00d+0"
+                (lisp::format-e (- 0d0) nil 2 nil 1 nil nil #\d nil))
+  ;; @ modifier emits the existing minus, not a plus.
+  (assert-equal "-0.0d+0"
+                (lisp::format-e (- 0d0) nil nil nil 1 nil nil #\d t))
+  ;; +0.0 with @ modifier emits an explicit "+".
+  (assert-equal "+0.0d+0"
+                (lisp::format-e 0d0 nil nil nil 1 nil nil #\d t))
+  (assert-equal "+0.00d+0"
+                (lisp::format-e 0d0 nil 2 nil 1 nil nil #\d t))
+  ;; Without @, no sign on positive zero.
+  (assert-equal "0.0d+0"
+                (lisp::format-e 0d0 nil nil nil 1 nil nil #\d nil)))
+
 ;;; ~F tests
 (define-test format-f.basic
   (:tag :format-f)
@@ -447,3 +467,25 @@
   ;; (format nil "~8,f" -123456789d0) => "-123457000."
   (assert-equal "-123456789.0"
                 (lisp::format-f -123456789d0 8 nil 0 nil nil nil)))
+
+(define-test format-f.signed-zero
+  (:tag :format-f)
+  (assert-equal "-0.0"
+                (lisp::format-f (- 0d0) nil nil 0 nil nil nil))
+  (assert-equal "-0.00"
+                (lisp::format-f (- 0d0) nil 2 0 nil nil nil))
+  (assert-equal "-0."
+                (lisp::format-f (- 0d0) nil 0 0 nil nil nil))
+  ;; @ doesn't override the existing minus.
+  (assert-equal "-0.0"
+                (lisp::format-f (- 0d0) nil nil 0 nil nil t))
+  (assert-equal "+0.0"
+                (lisp::format-f 0d0 nil nil 0 nil nil t))
+  (assert-equal "+0.00"
+                (lisp::format-f 0d0 nil 2 0 nil nil t))
+  (assert-equal "+0."
+                (lisp::format-f 0d0 nil 0 0 nil nil t))
+  ;; Without @, no sign on positive zero.
+  (assert-equal "0.0"
+                (lisp::format-f 0d0 nil nil 0 nil nil nil)))
+
