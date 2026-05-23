@@ -41,6 +41,233 @@
   (assert-equal (format nil "~12,,2,1,'*,'P,'ze" 9.999999999d99)
 		(lisp::format-e 9.999999999d99 12 nil 2 1 #\* #\P #\z t)))
 
+;;; ~E tests, extended coverage.
+
+(define-test format-e.basic
+  (:tag :format-e)
+  ;; No width, default scale (k=1), default everything.  Mantissa form
+  ;; is one digit before the dot.
+  (assert-equal "3.14159265358979d+0"
+                (lisp::format-e 3.14159265358979d0 nil nil nil 1 nil nil #\d nil))
+  (assert-equal "-3.14159265358979d+0"
+                (lisp::format-e -3.14159265358979d0 nil nil nil 1 nil nil #\d nil))
+  (assert-equal "1.0d+0"
+                (lisp::format-e 1d0 nil nil nil 1 nil nil #\d nil))
+  (assert-equal "1.0d-1"
+                (lisp::format-e 0.1d0 nil nil nil 1 nil nil #\d nil)))
+
+(define-test format-e.d-given-trailing-zeros
+  (:tag :format-e)
+  ;; When d is given, trailing zeros are emitted to reach exactly d
+  ;; fractional digits, since CL ~E asks for exactly d+1 significant
+  ;; digits with k=1.
+  (assert-equal "5.00000e-1"
+                (lisp::format-e 0.5d0 nil 5 nil 1 nil nil #\e nil))
+  (assert-equal "1.000d+0"
+                (lisp::format-e 1d0 nil 3 nil 1 nil nil #\d nil))
+  (assert-equal "3.00000d+0"
+                (lisp::format-e 3d0 nil 5 nil 1 nil nil #\d nil)))
+
+(define-test format-e.zero-d
+  (:tag :format-e)
+  ;; d=0.  CLHS seems to say no digits should follow the decimal
+  ;; point, but cmucl has always produced one digit.  Let's keep it
+  ;; that way.
+  (assert-equal "3.0d+0"
+                (lisp::format-e 3.14d0 nil 0 nil 1 nil nil #\d nil))
+  (assert-equal "1.0d+1"
+                (lisp::format-e 9.9d0 nil 0 nil 1 nil nil #\d nil)))   ; rounds up
+
+(define-test format-e.exponent-padding
+  (:tag :format-e)
+  ;; e parameter controls minimum exponent width.  Larger exponents
+  ;; expand the field if e is too small.
+  (assert-equal "3.14d+00"
+                (lisp::format-e 3.14d0 nil 2 2 1 nil nil #\d nil))
+  (assert-equal "3.14d+000"
+                (lisp::format-e 3.14d0 nil 2 3 1 nil nil #\d nil))
+  ;; Exponent doesn't fit in e -- emit at natural width (overflow).
+  (assert-equal "3.14d+100"
+                (lisp::format-e 3.14d100 nil 2 2 1 nil nil #\d nil)))
+
+(define-test format-e.negative-exponent
+  (:tag :format-e)
+  (assert-equal "5.0d-2"
+                (lisp::format-e 0.05d0 nil 1 nil 1 nil nil #\d nil))
+  (assert-equal "1.5d-300"
+                (lisp::format-e 1.5d-300 nil 1 nil 1 nil nil #\d nil)))
+
+(define-test format-e.k-positive-large
+  (:tag :format-e)
+  ;; k > 1: more digits before the dot, fewer after.  CLHS: total
+  ;; significant digits = d+1 when k > 0.
+  (assert-equal "31.416d-1"
+                (lisp::format-e 3.14159d0 nil 4 nil 2 nil nil #\d nil))
+  (assert-equal "314.16d-2"
+                (lisp::format-e 3.14159d0 nil 4 nil 3 nil nil #\d nil)))
+
+(define-test format-e.k-zero
+  (:tag :format-e)
+  ;; k=0: form is 0.DDDD with d significant digits.
+  (assert-equal "0.3142d+1"
+                (lisp::format-e 3.14159d0 nil 4 nil 0 nil nil #\d nil))
+  (assert-equal "0.5d+1"
+                (lisp::format-e 5d0 nil 1 nil 0 nil nil #\d nil)))
+
+(define-test format-e.k-negative
+  (:tag :format-e)
+  ;; k < 0: 0.0...0DDDD with |k| leading zeros after the dot.
+  (assert-equal "0.0001d+5"
+                (lisp::format-e 10d0 nil 4 nil -3 nil nil #\d nil))
+  (assert-equal "0.0314d+2"
+                (lisp::format-e 3.14d0 nil 4 nil -1 nil nil #\d nil)))
+
+(define-test format-e.padding-and-at-sign
+  (:tag :format-e)
+  ;; Default padchar is space.  @ forces + on the mantissa.
+  (assert-equal "    3.14d+0"
+                (lisp::format-e 3.14d0 11 2 nil 1 nil nil #\d nil))
+  (assert-equal "   +3.14d+0"
+                (lisp::format-e 3.14d0 11 2 nil 1 nil nil #\d t))
+  ;; Custom padchar.
+  (assert-equal "****3.14d+0"
+                (lisp::format-e 3.14d0 11 2 nil 1 nil #\* #\d nil))
+  ;; Negative value always gets the sign.
+  (assert-equal "   -3.14d+0"
+                (lisp::format-e -3.14d0 11 2 nil 1 nil nil #\d nil)))
+
+(define-test format-e.exponent-marker
+  (:tag :format-e)
+  ;; The marker character is whatever the caller passes.  We pass
+  ;; explicit markers everywhere; CL chooses 'e' / 'f' / 'd' based on
+  ;; *read-default-float-format*, but that's the dispatcher's job, not
+  ;; format-e's.
+  (assert-equal "3.14e+0"  (lisp::format-e 3.14d0 nil 2 nil 1 nil nil #\e nil))
+  (assert-equal "3.14d+0"  (lisp::format-e 3.14d0 nil 2 nil 1 nil nil #\d nil))
+  (assert-equal "3.14E+0"  (lisp::format-e 3.14d0 nil 2 nil 1 nil nil #\E nil)))
+
+(define-test format-e.boundary-values
+  (:tag :format-e)
+  ;; Most positive and most negative doubles.
+  (let ((big (lisp::format-e most-positive-double-float nil nil nil 1 nil nil #\d nil)))
+    (assert-true (search "d+308" big) big))
+  (let ((tiny (lisp::format-e least-positive-double-float nil nil nil 1 nil nil #\d nil)))
+    (assert-true (search "d-324" tiny) tiny))
+  ;; Smallest positive normal.
+  (let ((norm (lisp::format-e least-positive-normalized-double-float
+                              nil nil nil 1 nil nil #\d nil)))
+    (assert-true (search "d-308" norm) norm)))
+
+(define-test format-e.power-of-two-skew
+  (:tag :format-e)
+  ;; 2^89 is the article's worked example: shortest is 16 digits
+  ;; ending in ...902, not the naive ...901 from fixed-width-17.
+  ;; Free-format ~E must emit ...902.
+  (assert-equal "6.189700196426902d+26"
+                (lisp::format-e (scale-float 1d0 89)
+                                nil nil nil 1 nil nil #\d nil)))
+
+(define-test format-e.shrink-rounds-correctly
+  (:tag :format-e)
+  ;; d=nil with tight w forces shrinking via d2exp.  Verify rounding
+  ;; is correct (not just truncation).
+  ;; pi to 5 sig digits is "3.1416", not "3.1415".
+  (assert-equal "3.1416d+0"
+                (lisp::format-e 3.14159265358979d0 9 nil nil 1 nil nil #\d nil))
+  ;; pi to 4 sig digits is "3.142".
+  (assert-equal "3.142d+0"
+                (lisp::format-e 3.14159265358979d0 8 nil nil 1 nil nil #\d nil))
+  ;; 9.999... at low precision carries into a new binade.
+  (assert-equal "1.00d+1"
+                (lisp::format-e 9.999d0 7 2 nil 1 nil nil #\d nil)))
+
+(define-test format-e.width-fits-without-shrink
+  (:tag :format-e)
+  ;; If w is generous, no shrink happens -- emit shortest.
+  (assert-equal " 3.14159265358979d+0"
+                (lisp::format-e 3.14159265358979d0 20 nil nil 1 nil nil #\d nil)))
+
+(define-test format-e.overflow-with-overflowchar
+  (:tag :format-e)
+  ;; w too small AND overflowchar given -- fill the field.
+  ;; 3.14d100 at full precision needs ~10 chars; w=3 with overflowchar
+  ;; fills.
+  (assert-equal "***"
+                (lisp::format-e 3.14d100 3 nil nil 1 #\* nil #\d nil))
+  ;; w too small even after shrink: same outcome.
+  (assert-equal "*****"
+                (lisp::format-e 3.14159265358979d0 5 nil nil 1 #\* nil #\d nil)))
+
+(define-test format-e.overflow-no-overflowchar
+  (:tag :format-e)
+  ;; w too small AND no overflowchar -- emit the field at natural
+  ;; width, exceeding w.  No truncation.
+  (assert-equal "3.14d+100"
+                (lisp::format-e 3.14d100 3 nil nil 1 nil nil #\d nil))
+  ;; Free-format too long for w with no overflowchar.
+  (assert-equal "3.14159265358979d+0"
+                (lisp::format-e 3.14159265358979d0 5 nil nil 1 nil nil #\d nil)))
+
+(define-test format-e.overflow-exponent-too-wide
+  (:tag :format-e)
+  ;; e is given, but the actual exponent has more digits than e.
+  ;; CLHS says this triggers overflow: the field grows to fit the
+  ;; exponent, and if overflowchar is given, the field is overflowed.
+  (assert-equal "***"
+                (lisp::format-e 3.14d100 3 2 2 1 #\* nil #\d nil))
+  ;; Without overflowchar, field grows.
+  (assert-equal "3.14d+100"
+                (lisp::format-e 3.14d100 nil 2 2 1 nil nil #\d nil)))
+
+(define-test format-e.overflow-bumped-exponent
+  (:tag :format-e)
+  ;; Rounding bumps the exponent into more digits than e allows.
+  ;; 9.999d99 at d=2 rounds to "1.00e+100", which has 3 exponent
+  ;; digits.  With e=2 given, this is overflow.
+  (assert-equal "*******"
+                (lisp::format-e 9.999d99 7 2 2 1 #\* nil #\d nil))
+  ;; Without overflowchar: field grows by one to accommodate.
+  (assert-equal "1.00d+100"
+                (lisp::format-e 9.999d99 nil 2 2 1 nil nil #\d nil)))
+
+(define-test format-e.overflow-shrink-exhausts
+  (:tag :format-e)
+  ;; w forces shrinking down to d_fit = 0, which still won't fit.
+  ;; Should produce overflow fill.
+  (assert-equal "****"
+                (lisp::format-e 3.14159265358979d0 4 nil nil 1 #\* nil #\d nil))
+  ;; Same but no overflowchar -- emit at natural shortest width.
+  (assert-equal "3.14159265358979d+0"
+                (lisp::format-e 3.14159265358979d0 4 nil nil 1 nil nil #\d nil)))
+
+(define-test format-e.overflow-with-padchar
+  (:tag :format-e)
+  ;; padchar doesn't affect overflow detection -- it only matters when
+  ;; the field fits.
+  (assert-equal "PPPP3.14d+0"
+                (lisp::format-e 3.14d0 11 2 nil 1 #\* #\P #\d nil))
+  (assert-equal "***"
+                (lisp::format-e 3.14d100 3 nil nil 1 #\* #\P #\d nil)))
+
+(define-test format-e.large-exponent
+  (:tag :format-e)
+  ;; e is given but the actual exponent has more digits.  CL ~E
+  ;; lets the field grow to accommodate (no truncation of the
+  ;; exponent digits).
+  (assert-equal "3.14d+250"
+                (lisp::format-e 3.14d250 nil 2 2 1 nil nil #\d nil)))
+
+(define-test format-e.tiny-d-and-shortest
+  (:tag :format-e)
+  ;; Values whose shortest representation is just 1 digit, with d=nil.
+  ;; Must force ".0" since CL ~E always shows the dot.
+  (assert-equal "1.0d+0"
+                (lisp::format-e 1d0 nil nil nil 1 nil nil #\d nil))
+  (assert-equal "2.0d+0"
+                (lisp::format-e 2d0 nil nil nil 1 nil nil #\d nil))
+  (assert-equal "5.0d-1"
+                (lisp::format-e 0.5d0 nil nil nil 1 nil nil #\d nil)))
+
 ;;; ~F tests
 (define-test format-f.basic
   (:tag :format-f)
