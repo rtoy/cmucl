@@ -2264,13 +2264,149 @@ radix-R.  If you have a power-list then pass it in as PL."
 				     w e k overflowchar padchar exponentchar at-sign-p
 				     nil)))))))))))
 
-;; Some test cases for format-e vs format.  format-e should match
-;;   (format t "~12,,2,1,'*,'P,'ze" 9.999999999d99)
-;;     => PPPPP1.0z+100
-;;   (lisp::format-e 9.999999999d99 12 nil 2 1 #\* #\P #\z t)
-;;     => "************"
+(defun format-f-pad-overflow (result w overflowchar padchar)
+  (let ((len (length result)))
+    (cond
+      ((null w)
+       ;; No width constraint.  Return the result as is.
+       result)
+      ((and (> len w) overflowchar)
+       ;; Result is too long to fit in a field of length w and the
+       ;; overflow char is given.  Return the overflow string.
+       (make-string w :initial-element overflowchar))
+      (t
+       ;; Result fits.  Insert the pad char if given or spaces.
+       (let ((pad (or padchar #\space)))
+	 (with-output-to-string (s)
+	   (loop for k from 0 below (- w len)
+		 do (write-char pad s))
+	   (write-string result s)))))))
 
+(defun format-f-fixed (abs-value is-negative-p w d overflowchar padchar at-sign-p)
+  (let* ((raw-string (let ((f (d2fixed abs-value d)))
+		       ;; If precision = 0, d2fixed doesn't have a
+		       ;; dot.  We need it.
+		       (if (zerop d)
+			   (concatenate 'string f ".")
+			   f)))
+	 (field
+	   (with-output-to-string (s)
+	     (write-string (cond (is-negative-p "-")
+				 (at-sign-p "+")
+				 (t ""))
+			   s)
+	     (write-string raw-string s))))
+    (format-f-pad-overflow field w overflowchar padchar)))
 
+#+nil
+(defun reshape-fixed (raw-digits exponent)
+  ;; RAW-DIGITS is a string of digits with no sign or decimal point.
+  (declare (simple-string raw-digits)
+	   (fixnu exponent))
+  (let* ((digit-count (length raw-digits))
+	 (left-count (1+ exponent)))
+    (cond ((>= left-count digit-count)
+	   ;; All digits go in the integer part; pad with trailing
+	   ;; zeros
+	   (concatenate 'string
+			raw-digits
+			(make-string (- left-count digit-count)
+				     :initial-element #\0)
+			".0"))
+	  ((plusp left-count)
+	   (concatenate 'string
+			(subseq raw-digits 0 left-count)
+			"."
+			(subseq raw-digits left-count)))
+	  (t
+	   ;; All digits go in the fractional part; prepend "0." and
+	   ;; any needed leading zeroes.
+	   (concatenate 'string
+			"0."
+			(make-string (- left-count) :initial-element #\0)
+			raw-digits)))))
+
+(defun reshape-fixed (raw-digits exponent)
+  ;; RAW-DIGITS is a string of digits with no sign or decimal point.
+  (declare (simple-string raw-digits)
+	   (fixnum exponent))
+  (let* ((digit-count (length raw-digits))
+	 (left-count (1+ exponent)))
+    (with-output-to-string (s)
+      (cond ((>= left-count digit-count)
+	     ;; All digits go in the integer part; pad with trailing
+	     ;; zeros
+	     (write-string raw-digits s)
+	     (loop for k from 0 below (- left-count digit-count)
+		   do (write-char #\0 s))
+	     (write-string ".0" s))
+	    ((plusp left-count)
+	     (write-string raw-digits s :start 0 :end left-count)
+	     (write-char #\. s)
+	     (write-string raw-digits s :start left-count))
+	    (t
+	     ;; All digits go in the fractional part; prepend "0." and
+	     ;; any needed leading zeroes.
+	     (write-string "0." s)
+	     (loop for k from 0 below (- left-count)
+		   do (write-char #\0 s))
+	     (write-string raw-digits))))))
+
+(defun emit-shortest (raw-digits exponent is-negative-p w overflowchar padchar at-sign-p)
+  (let* ((reshaped (reshape-fixed raw-digits exponent))
+	 (sign-text (cond (is-negative-p "-")
+			  (at-sign-p "+")
+			  (t "")))
+	 (field (concatenate 'string sign-text reshaped)))
+    (format-f-pad-overflow field w overflowchar padchar)))
+	 
+(defun format-f-free (abs-value is-negative-p w overflowchar padchar at-sign-p)
+  ;; We need to call d2s to get the shortest.
+  (multiple-value-bind (mantissa exponent)
+      (parsed-exp-form (d2s abs-value))
+    (let* ((raw-digits (remove #\. mantissa))
+	   (int-len (max 1 (1+ exponent)))
+	   (digit-count (length raw-digits))
+	   (shortest-d (max 0 (- digit-count 1 exponent)))
+	   (sign-len (if (or is-negative-p at-sign-p) 1 0))
+	   (d-fit (and w (- w sign-len int-len 1))))
+      (cond
+	((or (null w)
+	     (and d-fit (>= d-fit shortest-d)))
+	 ;; Shortest fits or no width bound
+	 (emit-shortest raw-digits exponent is-negative-p w overflowchar padchar at-sign-p))
+	((minusp d-fit)
+	 ;; Integer part alone exceeds w--overflow path
+	 (if overflowchar
+	     (make-string w :initial-element overflowchar)
+	     ;; No overflow; emit shortest at natural width, overflow w.
+	     (emit-shortest raw-digits exponent is-negative-p
+			    w overflowchar padchar at-sign-p)))
+	(t
+	 ;; d-fit between 0 and shortest-d.  Shrink via d2fixed.
+	 (format-f-fixed abs-value is-negative-p
+			 w d-fit overflowchar padchar at-sign-p))))))
+
+(defun format-f (value w d k overflowchar padchar at-sign-p)
+  (declare (double-float value)
+	   (fixnum k)
+	   (type (or null (and unsigned-byte fixnum)) w d))
+  (let ((is-negative-p (minusp (float-sign value)))
+	(abs-value (abs value)))
+    (cond ((not (zerop k))
+	   ;;  Complex case that doesn't fit with what d2s and d2fixed
+	   ;;  returns.  Especially when d+k is negative so that some
+	   ;;  digits are shifted right past the desired precision.
+	   ;;  We'd have to round the result.  Just use our existing
+	   ;;  code to handle this case with the correct rounding.
+	   (format::format-fixed-aux nil value w d k overflowchar padchar at-sign-p))
+	  (d
+	   (format-f-fixed abs-value is-negative-p w d overflowchar padchar at-sign-p))
+	  (t
+	   ;; No d, so use d2s to get the shortest digits; convert by
+	   ;; placing the decimal poin at teh right spot.
+	   (format-f-free abs-value is-negative-p  w overflowchar padchar at-sign-p)))))
+	   
 (defun output-float-aux (x stream e-min e-max)
   (multiple-value-bind (e string)
       (flonum-to-digits x)
