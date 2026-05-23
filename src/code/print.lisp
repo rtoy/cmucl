@@ -1999,6 +1999,8 @@ radix-R.  If you have a power-list then pass it in as PL."
 		    (setf high-ok t)))))
 	    (scale r s m+ m-)))))))
 
+
+;;; Ryu interface
 (defconstant +d2fixed-max-precision+
   64
   "")
@@ -2264,6 +2266,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 				     w e k overflowchar padchar exponentchar at-sign-p
 				     nil)))))))))))
 
+;;; Ryu ~F
 (defun format-f-pad-overflow (result w overflowchar padchar)
   (let ((len (length result)))
     (cond
@@ -2409,7 +2412,34 @@ radix-R.  If you have a power-list then pass it in as PL."
 	   ;; No d, so use d2s to get the shortest digits; convert by
 	   ;; placing the decimal poin at the right spot.
 	   (format-f-free abs-value is-negative-p  w overflowchar padchar at-sign-p)))))
-	   
+
+;;; Ryu ~G
+(defun format-g (value w d e k overflowchar padchar exponentchar at-sign-p)
+  (declare (double-float value)
+	   (fixnum k)
+	   (type (or null (and unsigned-byte fixnum)) w d e))
+  (multiple-value-bind (mantissa exponent)
+      (parsed-exp-form (d2s (abs value)))
+    (let* ((digit-count (length (remove #\. mantissa)))
+	   (n (1+ exponent))
+	   (effective-d (or d (max digit-count (min n 7))))
+	   (ee (if e (+ e 2) 4))
+	   (ww (cond ((null w)
+		      nil)
+		     ((minusp (- w ee))
+		      nil)
+		     (t
+		      (- w ee))))
+	   (dd (- effective-d n)))
+      (cond
+	((<= 0 dd effective-d)
+	 (concatenate 'string
+		      (format-f value ww dd 0 overflowchar padchar at-sign-p)
+		      (make-string ee :initial-element #\space)))
+	(t
+	 ;; ~E form
+	 (format-e value w effective-d e k overflowchar padchar exponentchar at-sign-p))))))
+
 (defun output-float-aux (x stream e-min e-max)
   (multiple-value-bind (e string)
       (flonum-to-digits x)

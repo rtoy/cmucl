@@ -489,3 +489,116 @@
   (assert-equal "0.0"
                 (lisp::format-f 0d0 nil nil 0 nil nil nil)))
 
+;;; ~G tests
+
+(define-test format-g.basic
+  (:tag :format-g)
+  ;; Values that fit the ~F-like range (n in [1, 7]).  Should produce
+  ;; ~F-form output with trailing spaces.  Default ee = 4.
+  (assert-equal "3.14    "
+                (lisp::format-g 3.14d0 nil nil nil 1 nil nil #\d nil))
+  (assert-equal "10.    "
+                (lisp::format-g 10d0 nil nil nil 1 nil nil #\d nil))
+  (assert-equal "1000.    "
+                (lisp::format-g 1000d0 nil nil nil 1 nil nil #\d nil)))
+
+(define-test format-g.zero
+  (:tag :format-g)
+  ;; Zero falls into the ~F path with the d-from-d2s shortcut.
+  ;; CMUCL emits "0." (d=0 form), then 4 trailing spaces.
+  (assert-equal "0.    "
+                (lisp::format-g 0d0 nil nil nil 1 nil nil #\d nil))
+  ;; Negative zero preserves the sign.
+  (assert-equal "-0.    "
+                (lisp::format-g (- 0d0) nil nil nil 1 nil nil #\d nil)))
+
+(define-test format-g.large-uses-e
+  (:tag :format-g)
+  ;; Values with n > 7 should fall into ~E form (no trailing spaces).
+  ;; 1d10 has n=11, q=1, effective-d = max(1, 7) = 7, dd = 7-11 = -4.
+  ;; ~E with effective-d = 7: 1.0000000d+10.
+  (assert-equal "1.0000000d+10"
+                (lisp::format-g 1d10 nil nil nil 1 nil nil #\d nil))
+  (assert-equal "1.0000000d+100"
+                (lisp::format-g 1d100 nil nil nil 1 nil nil #\d nil)))
+
+(define-test format-g.small-uses-e
+  (:tag :format-g)
+  ;; Very small values: n is negative or zero.  effective-d = max(q, n)
+  ;; with n <= 0 means effective-d = q, dd = q - n which is > q for
+  ;; negative n.  Falls into ~E.
+  (assert-equal "1.0d-5"
+                (lisp::format-g 1d-5 nil nil nil 1 nil nil #\d nil))
+  (assert-equal "1.0d-300"
+                (lisp::format-g 1d-300 nil nil nil 1 nil nil #\d nil)))
+
+(define-test format-g.d-given-f-form
+  (:tag :format-g)
+  ;; d given, value in ~F range.
+  ;; pi to d=5 sig digits: ~F form with dd = 5-1 = 4 fractional.
+  (assert-equal "3.1416    "
+                (lisp::format-g 3.14159265d0 nil 5 nil 1 nil nil #\d nil))
+  ;; d=2 for 3.14: dd = 2-1 = 1 -> "3.1" + 4 spaces.
+  (assert-equal "3.1    "
+                (lisp::format-g 3.14d0 nil 2 nil 1 nil nil #\d nil)))
+
+(define-test format-g.d-given-e-form
+  (:tag :format-g)
+  ;; d given, value in ~E range.
+  ;; 1d10 with d=4: dd = 4-11 = -7 -> ~E.
+  (assert-equal "1.0000d+10"
+                (lisp::format-g 1d10 nil 4 nil 1 nil nil #\d nil)))
+
+(define-test format-g.width-fits
+  (:tag :format-g)
+  ;; w is generous enough that no shrinking is needed.
+  ;; ~F path: format-f gets ww = w - ee.
+  (assert-equal "      3.14    "
+                (lisp::format-g 3.14d0 14 nil nil 1 nil nil #\d nil)))
+
+(define-test format-g.e-parameter
+  (:tag :format-g)
+  ;; e parameter controls exponent width in the ~E branch and ee in
+  ;; the ~F branch (ee = e + 2).
+  ;; 1d10 with e=3: ~E with 3-digit exponent, "1.0000000d+010".
+  (assert-equal "1.0000000d+010"
+                (lisp::format-g 1d10 nil nil 3 1 nil nil #\d nil))
+  ;; 3.14 with e=3: ~F branch, ee = 5 trailing spaces.
+  (assert-equal "3.14     "
+                (lisp::format-g 3.14d0 nil nil 3 1 nil nil #\d nil)))
+
+(define-test format-g.at-sign
+  (:tag :format-g)
+  ;; @ modifier forces + on positive values, passed through to ~F or ~E.
+  (assert-equal "+3.14    "
+                (lisp::format-g 3.14d0 nil nil nil 1 nil nil #\d t))
+  (assert-equal "-3.14    "
+                (lisp::format-g -3.14d0 nil nil nil 1 nil nil #\d t))
+  (assert-equal "+1.0000000d+10"
+                (lisp::format-g 1d10 nil nil nil 1 nil nil #\d t)))
+
+(define-test format-g.boundary-n-7
+  (:tag :format-g)
+  ;; At n=7 the value is still in the ~F range.
+  ;; 1d6 has n=7, q=1, effective-d = max(1, 7) = 7, dd = 7-7 = 0.
+  ;; dd = 0 is in [0, d] so ~F path with d=0.  Output: "1000000." + 4 sp.
+  (assert-equal "1000000.    "
+                (lisp::format-g 1d6 nil nil nil 1 nil nil #\d nil))
+  ;; 1d7 has n=8, dd = 7-8 = -1, falls into ~E.
+  (assert-equal "1.0000000d+7"
+                (lisp::format-g 1d7 nil nil nil 1 nil nil #\d nil)))
+
+(define-test format-g.padchar
+  (:tag :format-g)
+  ;; padchar passed through to whichever sub-formatter fires.
+  (assert-equal "PPPPPP3.14    "
+                (lisp::format-g 3.14d0 14 nil nil 1 nil #\P #\d nil)))
+
+(define-test format-g.overflow-tight-w
+  (:tag :format-g)
+  ;; CLHS-strict reading: ~F sub-form emits at natural width when ww
+  ;; would be negative; trailing ee chars are spaces, not overflowchar.
+  ;; CMUCL extends this with overflowchar in the trailing chars; we
+  ;; follow CLHS literally.
+  (assert-equal "3.14    "
+                (lisp::format-g 3.14d0 3 nil nil 1 #\* nil #\d nil)))
