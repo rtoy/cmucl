@@ -2015,6 +2015,7 @@ radix-R.  If you have a power-list then pass it in as PL."
   "Buffer size for d2fixed.")
 
 (defun d2fixed (d precision)
+  "Lisp interface to Ryu d2fixed routine (specically d2fixed_buffered)"
   (declare (double-float d)
 	   (type (integer 0 #.+d2fixed-max-precision+) precision))
   (alien:with-alien ((buf (alien:array c-call:char #.+d2fixed-buffer-size+)))
@@ -2030,6 +2031,7 @@ radix-R.  If you have a power-list then pass it in as PL."
     (alien:cast buf c-call:c-string)))
 
 (defun d2exp (d precision)
+  "Lisp interface to Ryu d2exp (specifically d2exp-buffered)."
   (declare (double-float d)
 	   (type (integer 0 #.+d2fixed-max-precision+) precision))
   (alien:with-alien ((buf (alien:array c-call:char #.+d2fixed-buffer-size+)))
@@ -2045,6 +2047,7 @@ radix-R.  If you have a power-list then pass it in as PL."
     (alien:cast buf c-call:c-string)))
 			 
 (defun d2s (d)
+  "Lisp interface to Ryu d2s (specifically d2s_buffered"
   (declare (double-float d))
   (alien:with-alien ((buf (alien:array c-call:char #.+d2fixed-buffer-size+)))
     (alien:alien-funcall
@@ -2055,6 +2058,27 @@ radix-R.  If you have a power-list then pass it in as PL."
      d
      (alien:cast buf (* c-call:char)))
     (alien:cast buf c-call:c-string)))
+
+(defun f2s (s)
+  (declare (single-float s))
+  (alien:with-alien ((buf (alien:array c-call:char 16)))
+    (alien:alien-funcall
+     (alien:extern-alien "f2s_buffered"
+                         (function c-call:void
+                                   c-call:float
+                                   (* c-call:char)))
+     s
+     (alien:cast buf (* c-call:char)))
+    (alien:cast buf c-call:c-string)))
+
+(declaim (inline float-to-string))
+(defun float-to-string (f)
+  "Convert F, a single-float or double-float, to a string of the shortest
+  form."
+  (declare (type (or single-float double-float) f))
+  (etypecase f
+    (double-float (d2s (abs f)))
+    (single-float (f2s (abs f)))))
 
 (defun parsed-d2exp (pos-x digits)
   (let* ((raw (d2exp pos-x digits))
@@ -2265,22 +2289,29 @@ radix-R.  If you have a power-list then pass it in as PL."
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 
 (defun format-e (value w d e k overflowchar padchar exponentchar at-sign-p)
-  (declare (double-float value)
+  (declare (type (or single-float double-float) value)
            (fixnum k)
            (type (or null (and unsigned-byte fixnum)) w d e)
            (optimize (speed 3)))
-  (let* ((is-negative-p (minusp (float-sign value)))
-         (abs-value (abs value)))
+  (multiple-value-bind (is-negative-p abs-value)
+      (etypecase value
+	(double-float
+	 (values (minusp (float-sign value))
+		 (abs value)))
+	(single-float
+	 (values (minusp (float-sign value))
+		 (abs (float value 1d0)))))
     (with-output-to-string (stream)
       (cond
         (d
          (multiple-value-bind (mantissa exponent)
-             (parsed-exp-form (d2exp abs-value (d2exp-precision d k)))
+             (parsed-exp-form (d2exp abs-value
+				     (d2exp-precision d k)))
            (format-e-string stream mantissa exponent is-negative-p
                             w e k overflowchar padchar exponentchar at-sign-p nil)))
         (t
          (multiple-value-bind (mantissa exponent)
-             (parsed-exp-form (d2s abs-value))
+             (parsed-exp-form (float-to-string value))
            (let* ((actual-exp (- exponent (1- k)))
                   (full-len (compute-exp-output-length mantissa actual-exp k e
                                                        is-negative-p at-sign-p
@@ -2296,7 +2327,8 @@ radix-R.  If you have a power-list then pass it in as PL."
                        (drop-zero-p (and d-fit (<= k 0))))
                   (if d-fit
                       (multiple-value-bind (mantissa exponent)
-                          (parsed-exp-form (d2exp abs-value (d2exp-precision d-fit k)))
+                          (parsed-exp-form (d2exp abs-value
+						  (d2exp-precision d-fit k)))
                         (format-e-string stream mantissa exponent is-negative-p
                                          w e k overflowchar padchar exponentchar at-sign-p
                                          drop-zero-p))
@@ -2327,6 +2359,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 (defun format-f-fixed (stream abs-value is-negative-p w d
                        overflowchar padchar at-sign-p)
+  (declare (double-float abs-value))
   (let* ((raw-string (d2fixed abs-value d))
          (raw-len    (length raw-string))
          (sign-len   (if (or is-negative-p at-sign-p) 1 0))
@@ -2375,10 +2408,11 @@ radix-R.  If you have a power-list then pass it in as PL."
       (declare (dynamic-extent #'write-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 	 
-(defun format-f-free (stream abs-value is-negative-p w
+(defun format-f-free (stream value is-negative-p w
                       overflowchar padchar at-sign-p)
+  (declare (type (or single-float double-float) value))
   (multiple-value-bind (mantissa exponent)
-      (parsed-exp-form (d2s abs-value))
+      (parsed-exp-form (float-to-string value))
     (let* ((has-dot     (find #\. mantissa))
            (digit-count (if has-dot (1- (length mantissa)) (length mantissa)))
            (int-len     (max 1 (1+ exponent)))
@@ -2396,15 +2430,24 @@ radix-R.  If you have a power-list then pass it in as PL."
                 (emit-shortest stream mantissa exponent is-negative-p w
                                overflowchar padchar at-sign-p))))
         (t
-         (format-f-fixed stream abs-value is-negative-p w d-fit
-                         overflowchar padchar at-sign-p))))))
+	 (let ((abs-value (etypecase value
+			    (double-float (abs value))
+			    (single-float (abs value)))))
+           (format-f-fixed stream abs-value is-negative-p w d-fit
+                           overflowchar padchar at-sign-p)))))))
 
 (defun format-f (value w d k overflowchar padchar at-sign-p)
-  (declare (double-float value)
+  (declare (type (or single-float double-float) value)
 	   (fixnum k)
 	   (type (or null (and unsigned-byte fixnum)) w d))
-  (let ((is-negative-p (minusp (float-sign value)))
-	(abs-value (abs value)))
+  (multiple-value-bind (is-negative-p abs-value)
+      (etypecase value
+	(double-float
+	 (values (minusp (float-sign value))
+		 (abs value)))
+	(single-float
+	 (values (minusp (float-sign value))
+		 (abs (float value 1d0)))))
     (with-output-to-string (s)
       (cond ((not (zerop k))
 	     ;;  Complex case that doesn't fit with what d2s and d2fixed
@@ -2418,15 +2461,15 @@ radix-R.  If you have a power-list then pass it in as PL."
 	    (t
 	     ;; No d, so use d2s to get the shortest digits; convert by
 	     ;; placing the decimal poin at the right spot.
-	     (format-f-free s abs-value is-negative-p  w overflowchar padchar at-sign-p))))))
+	     (format-f-free s value is-negative-p  w overflowchar padchar at-sign-p))))))
 
 ;;; Ryu ~G
 (defun format-g (value w d e k overflowchar padchar exponentchar at-sign-p)
-  (declare (double-float value)
+  (declare (type (or single-float double-float) value)
 	   (fixnum k)
 	   (type (or null (and unsigned-byte fixnum)) w d e))
   (multiple-value-bind (mantissa exponent)
-      (parsed-exp-form (d2s (abs value)))
+      (parsed-exp-form (float-to-string value))
     (let* ((digit-count (length (remove #\. mantissa)))
 	   (n (1+ exponent))
 	   (effective-d (or d (max digit-count (min n 7))))

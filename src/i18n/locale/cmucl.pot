@@ -7712,7 +7712,29 @@ msgid "Print out a double-double to a string"
 msgstr ""
 
 #: src/code/print.lisp
+msgid "Maximum precision (fractional digits for d2fixed."
+msgstr ""
+
+#: src/code/print.lisp
+msgid "Buffer size for d2fixed."
+msgstr ""
+
+#: src/code/print.lisp
+msgid "Lisp interface to Ryu d2fixed routine (specically d2fixed_buffered)"
+msgstr ""
+
+#: src/code/print.lisp
+msgid "Lisp interface to Ryu d2exp (specifically d2exp-buffered)."
+msgstr ""
+
+#: src/code/print.lisp
+msgid "Lisp interface to Ryu d2s (specifically d2s_buffered"
+msgstr ""
+
+#: src/code/print.lisp
 msgid ""
+"Convert F, a single-float or double-float, to a string of the shortest\n"
+"  form."
 msgstr ""
 
 #: src/code/print.lisp

@@ -602,3 +602,184 @@
   ;; follow CLHS literally.
   (assert-equal "3.14    "
                 (lisp::format-g 3.14d0 3 nil nil 1 #\* nil #\d nil)))
+
+
+;;;; Single-float tests for format-e, format-f, format-g.
+;;;;
+;;;; The shortest-form (d-nil) paths use f2s and may produce different
+;;;; digits than d2s would for the corresponding double-float value,
+;;;; since the shortest round-trip representation depends on float
+;;;; precision.  The d-given paths widen to double and use d2fixed/
+;;;; d2exp; results match the double-float case at that precision.
+
+(define-test format-e.single-basic
+  (:tag :format-e :single-float)
+  ;; Default ~E exponent marker for single-floats is 'f' (matches
+  ;; CL's single-float-format default).
+  (assert-equal "3.1415927f+0"
+                (lisp::format-e 3.1415927f0 nil nil nil 1 nil nil #\f nil))
+  (assert-equal "-3.1415927f+0"
+                (lisp::format-e -3.1415927f0 nil nil nil 1 nil nil #\f nil))
+  (assert-equal "1.0f+0"
+                (lisp::format-e 1f0 nil nil nil 1 nil nil #\f nil))
+  (assert-equal "1.0f-1"
+                (lisp::format-e 0.1f0 nil nil nil 1 nil nil #\f nil)))
+
+(define-test format-e.single-d-given
+  (:tag :format-e :single-float)
+  ;; d-given path: widens to double, calls d2exp.  At precision 5,
+  ;; matches what d2exp produces for the exact double representation
+  ;; of the single value.
+  (assert-equal "3.14159f+0"
+                (lisp::format-e 3.1415927f0 nil 5 nil 1 nil nil #\f nil))
+  (assert-equal "5.00000f-1"
+                (lisp::format-e 0.5f0 nil 5 nil 1 nil nil #\f nil)))
+
+(define-test format-e.single-shortest-differs-from-double
+  (:tag :format-e :single-float)
+  ;; The single-float path uses f2s, which gives the shortest form
+  ;; for the single-precision value.  Widening to double first would
+  ;; produce a different (longer) shortest form because the widened
+  ;; value 0.10000000149011612d0 is not the same as 0.1d0.
+  (assert-equal "1.0f-1"
+                (lisp::format-e 0.1f0 nil nil nil 1 nil nil #\f nil))
+  ;; Confirm: if you widened first, d2s on the result would give:
+  (assert-equal "1.0000000149011612f-1"
+                (lisp::format-e 0.10000000149011612d0 nil nil nil 1 nil nil #\f nil)))
+
+
+(define-test format-e.single-boundary
+  (:tag :format-e :single-float)
+  ;; Single-float bounds.
+  (let ((maxs (lisp::format-e most-positive-single-float
+                              nil nil nil 1 nil nil #\f nil)))
+    (assert-true (search "f+38" maxs) maxs))
+  (let ((mins (lisp::format-e least-positive-single-float
+                              nil nil nil 1 nil nil #\f nil)))
+    (assert-true (search "f-45" mins) mins)))
+
+(define-test format-e.single-negative-zero
+  (:tag :format-e :single-float)
+  (assert-equal "-0.0f+0"
+                (lisp::format-e (- 0f0) nil nil nil 1 nil nil #\f nil))
+  (assert-equal "+0.0f+0"
+                (lisp::format-e 0f0 nil nil nil 1 nil nil #\f t)))
+
+;;; ----------------------------------------------------------------------
+;;; ~F single-float
+
+(define-test format-f.single-basic
+  (:tag :format-f :single-float)
+  (assert-equal "3.14"
+                (lisp::format-f 3.14159f0 nil 2 0 nil nil nil))
+  (assert-equal "-3.14"
+                (lisp::format-f -3.14159f0 nil 2 0 nil nil nil))
+  (assert-equal "1.00000"
+                (lisp::format-f 1f0 nil 5 0 nil nil nil)))
+
+(define-test format-f.single-d-nil
+  (:tag :format-f :single-float)
+  ;; Shortest path: f2s output for single-floats is shorter than
+  ;; d2s would be for the widened value.
+  (assert-equal "3.1415927"
+                (lisp::format-f 3.1415927f0 nil nil 0 nil nil nil))
+  (assert-equal "1.0"
+                (lisp::format-f 1f0 nil nil 0 nil nil nil))
+  (assert-equal "0.1"
+                (lisp::format-f 0.1f0 nil nil 0 nil nil nil))
+  (assert-equal "0.5"
+                (lisp::format-f 0.5f0 nil nil 0 nil nil nil)))
+
+(define-test format-f.single-d-nil-vs-double
+  (:tag :format-f :single-float)
+  ;; Confirm that the single-float path uses f2s, not d2s on a
+  ;; widened value.  For 0.1f0, f2s gives "1" at exp -1, so output
+  ;; is "0.1".  If we widened first, d2s on the resulting double
+  ;; would give a longer shortest form.
+  (assert-equal "0.1"
+                (lisp::format-f 0.1f0 nil nil 0 nil nil nil))
+  ;; Same numeric value, but as a double-float literal -- d2s gives
+  ;; the long shortest form that round-trips through double.
+  (assert-equal "0.10000000149011612"
+                (lisp::format-f 0.10000000149011612d0 nil nil 0 nil nil nil))
+  ;; And 0.1d0 (the double literal nearest to 0.1) has its own
+  ;; shortest form, which IS "0.1" since 0.1d0 is the canonical
+  ;; double for that decimal.
+  (assert-equal "0.1"
+                (lisp::format-f 0.1d0 nil nil 0 nil nil nil)))
+
+
+(define-test format-f.single-leading-zeros
+  (:tag :format-f :single-float)
+  ;; Small singles still need leading-zero handling.
+  (assert-equal "0.001"
+                (lisp::format-f 0.001f0 nil nil 0 nil nil nil))
+  (assert-equal "0.00001"
+                (lisp::format-f 0.00001f0 nil nil 0 nil nil nil)))
+
+(define-test format-f.single-integer-valued
+  (:tag :format-f :single-float)
+  ;; Integer-valued singles get ".0" forced.
+  (assert-equal "1.0"
+                (lisp::format-f 1f0 nil nil 0 nil nil nil))
+  (assert-equal "100.0"
+                (lisp::format-f 100f0 nil nil 0 nil nil nil))
+  (assert-equal "1000000.0"
+                (lisp::format-f 1000000f0 nil nil 0 nil nil nil)))
+
+(define-test format-f.single-width-fits
+  (:tag :format-f :single-float)
+  (assert-equal "      3.14"
+                (lisp::format-f 3.14f0 10 nil 0 nil nil nil)))
+
+(define-test format-f.single-negative-zero
+  (:tag :format-f :single-float)
+  (assert-equal "-0.0"
+                (lisp::format-f (- 0f0) nil nil 0 nil nil nil))
+  (assert-equal "+0.0"
+                (lisp::format-f 0f0 nil nil 0 nil nil t)))
+
+;;; ----------------------------------------------------------------------
+;;; ~G single-float
+
+(define-test format-g.single-basic
+  (:tag :format-g :single-float)
+  ;; ~F-form path for value in normal range.
+  (assert-equal "3.1415927    "
+                (lisp::format-g 3.1415927f0 nil nil nil 1 nil nil #\f nil))
+  (assert-equal "0.    "
+                (lisp::format-g 0f0 nil nil nil 1 nil nil #\f nil))
+  (assert-equal "-0.    "
+                (lisp::format-g (- 0f0) nil nil nil 1 nil nil #\f nil)))
+
+(define-test format-g.single-large-uses-e
+  (:tag :format-g :single-float)
+  ;; Large values fall to ~E form.  effective-d for f2s shortest
+  ;; depends on the digit count, but for 1e10f0 it's small.
+  ;; 1e10f0 has n=11, q small, dd negative -> ~E form.
+  (let ((s (lisp::format-g 1f10 nil nil nil 1 nil nil #\f nil)))
+    (assert-true (search "f+10" s) s)))
+
+(define-test format-g.single-small-uses-e
+  (:tag :format-g :single-float)
+  (let ((s (lisp::format-g 1f-5 nil nil nil 1 nil nil #\f nil)))
+    (assert-true (search "f-5" s) s)))
+
+(define-test format-g.single-d-given
+  (:tag :format-g :single-float)
+  ;; d-given uses the double path internally.
+  (assert-equal "3.1416    "
+                (lisp::format-g 3.1415927f0 nil 5 nil 1 nil nil #\f nil)))
+
+;;; ----------------------------------------------------------------------
+;;; Mixed-type sanity checks
+
+(define-test format-e.mixed-types
+  (:tag :format-e :single-float)
+  ;; Same nominal value, different float types -- should produce
+  ;; different shortest forms.
+  (let ((single-out (lisp::format-e 3.14f0 nil nil nil 1 nil nil #\f nil))
+        (double-out (lisp::format-e 3.14d0 nil nil nil 1 nil nil #\d nil)))
+    (assert-true (search "f" single-out) single-out)
+    (assert-true (search "d" double-out) double-out)))
+
