@@ -2140,6 +2140,7 @@ radix-R.  If you have a power-list then pass it in as PL."
     ;; +2 for the exponent marker and sign
     (+ sign-len mantissa-len exp-digits 2)))
 
+#+nil
 (defun reshape-format-e (mantissa-text k drop-leading-zero-p)
   "Reshape MANTISSA-TEXT of the form 'd[.dddd]Eee' from d2s or d2exp into
   the displayed mantissa for ~E with scale factor K.  If
@@ -2209,6 +2210,78 @@ radix-R.  If you have a power-list then pass it in as PL."
 	       do (write-char #\0 s))
 	 ;; Finish with ".0".
          (write-string ".0" s))))))
+
+(defun scale-mantissa (stream mantissa-text k drop-leading-zero-p)
+  "Write MANTISSA-TEXT to STREAM, shifting the decimal point so that
+   the new dot lands K digits in from the start of the digit string.
+   MANTISSA-TEXT is 'D' or 'D.DDDD' from d2s/d2exp.
+   DROP-LEADING-ZERO-P controls whether the leading '0' before the dot
+   is emitted when the result starts with '0.'.  K=0 puts the dot
+   before all digits; K=1 leaves it at the original position."
+  (declare (type simple-string mantissa-text)
+           (fixnum k))
+  ;; Fast path: k=1, mantissa already in target form.
+  (when (= k 1)
+    (write-string mantissa-text stream)
+    (unless (find #\. mantissa-text)
+      (write-string ".0" stream))
+    (return-from scale-mantissa))
+  (let* ((has-dot     (find #\. mantissa-text))
+         (lead-char   (char mantissa-text 0))
+	 ;; Where the stuff after the dot starts
+         (tail-start  (if has-dot 2 1))
+         (tail-len    (- (length mantissa-text) tail-start))
+         (digit-count (1+ tail-len)))
+    ;; Several cases to consider:
+    ;;
+    ;; * k is negative so the new dot preceeds the mantissa.  Pad with
+    ;;   zeroes.
+    ;; * k is so large that the dot is past the rightmost part of the
+    ;;   mantissa.  Append enough zeroes and then add ".0"
+    ;; * k is somewhere in the mantissa.  Handling of this case
+    ;;   depends on if the new dot is to the left or to the right of
+    ;;   the original dot.
+    (cond
+      ;; Case 2: new dot at or before position 0.
+      ((<= k 0)
+       ;; Write "0." or "."
+       (unless drop-leading-zero-p
+	 (write-char #\0 stream))
+       (write-char #\. stream)
+       ;; Insert zeros after the decimal but before the mantissa.
+       (loop repeat (- k)
+	     do (write-char #\0 stream))
+       ;; Add the mantissa, skipping any existing dot.
+       (write-char lead-char stream)
+       (when (plusp tail-len)
+         (write-string mantissa-text stream :start tail-start)))
+      ;; Case 1b: 1 < k < digit-count.
+      ((< k digit-count)
+       ;; Output the original mantissa up to the original dot.
+       (write-char lead-char stream)
+       (write-string mantissa-text stream
+                     :start tail-start
+                     :end (+ tail-start k -1))
+       ;; Output the dot at the new position.
+       (write-char #\. stream)
+       ;; Output everything after the original dot.
+       (write-string mantissa-text stream :start (+ tail-start k -1)))
+      ;; Case 3: k >= digit-count.
+      (t
+       ;; Output the original mantissa, then everything after the
+       ;; dot (if there was one).
+       (write-char lead-char stream)
+       (when (plusp tail-len)
+         (write-string mantissa-text stream :start tail-start))
+       ;; Pad with 0's
+       (loop repeat (- k digit-count)
+	     do (write-char #\0 stream))
+       ;; Finish with ".0"
+       (write-string ".0" stream)))))
+
+(defun reshape-format-e (mantissa-text k drop-leading-zero-p)
+  (with-output-to-string (s)
+    (scale-mantissa s mantissa-text k drop-leading-zero-p)))
 
 (defun d2exp-precision (d k)
   ;; Compute precision for d2exp when CL requests D digits and the
@@ -2446,6 +2519,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 	   (fixnum exponent))
   (reshape-format-e mantissa-text (1+ exponent) nil))
 
+#+nil
 (defun reshape-fixed (stream mantissa-text exponent)
   "Adjust MANTISSA-TEXT is scaled exactly by 10^{EXPONENT} by moving the
   decimal point.  MANTISSA-TEXT is of the form 'd[.dddd]' from d2exp
@@ -2511,6 +2585,12 @@ radix-R.  If you have a power-list then pass it in as PL."
 	     do (write-char #\0 stream))
        ;; Finish with ".0".
        (write-string ".0" stream))))))
+
+(defun reshape-fixed (stream mantissa-text exponent)
+  "Adjust MANTISSA-TEXT is scaled exactly by 10^{EXPONENT} by moving the
+  decimal point.  MANTISSA-TEXT is of the form 'd[.dddd]' from d2exp
+  or d2s.  The scaled value is written to STREAM."
+  (scale-mantissa stream mantissa-text (1+ exponent) nil))
     
 
 #+nil
