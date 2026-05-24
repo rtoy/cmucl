@@ -2332,27 +2332,6 @@ radix-R.  If you have a power-list then pass it in as PL."
 				     nil)))))))))))
 
 ;;; Ryu ~F
-(defun format-f-pad-overflow (result w overflowchar padchar)
-  (let ((len (length result)))
-    (cond
-      ((null w)
-       ;; No width constraint.  Return the result as is.
-       result)
-      ((> len w)
-       ;; Result is too long to fit in a field of length w and the
-       ;; overflow char is given.  Return the overflow string.
-       ;; Otherwise, return the result.
-       (if overflowchar
-	   (make-string w :initial-element overflowchar)
-	   result))
-      (t
-       ;; Result fits.  Insert the pad char if given or spaces.
-       (let ((pad (or padchar #\space)))
-	 (with-output-to-string (s)
-	   (loop for k from 0 below (- w len)
-		 do (write-char pad s))
-	   (write-string result s)))))))
-
 #+nil
 (defun format-f-fixed (stream abs-value is-negative-p w d overflowchar padchar at-sign-p)
   (let* ((raw-string (let ((f (d2fixed abs-value d)))
@@ -2370,6 +2349,26 @@ radix-R.  If you have a power-list then pass it in as PL."
 	     (write-string raw-string s))))
     (format-f-pad-overflow field w overflowchar padchar)))
 
+(declaim (inline pad-overflow))
+(defun pad-overflow (stream field-len w overflowchar padchar field-writer)
+  "Apply width/pad/overflow rules.  FIELD-WRITER is a thunk of zero
+   arguments that writes the field characters to STREAM."
+  (declare (function field-writer))
+  (cond
+    ((null w)
+     (funcall field-writer))
+    ((and (> field-len w)
+	  overflowchar)
+     (loop repeat w do
+       (write-char overflowchar stream)))
+    ((> field-len w)
+     (funcall field-writer))
+    (t
+     (let ((pad (or padchar #\space)))
+       (loop repeat (- w field-len)
+             do (write-char pad stream)))
+     (funcall field-writer))))
+
 (defun format-f-fixed (stream abs-value is-negative-p w d
                        overflowchar padchar at-sign-p)
   (let* ((raw-string (d2fixed abs-value d))
@@ -2382,17 +2381,8 @@ radix-R.  If you have a power-list then pass it in as PL."
                    (at-sign-p     (write-char #\+ stream)))
              (write-string raw-string stream)
              (when need-dot (write-char #\. stream))))
-      (cond
-        ((null w)
-         (write-field))
-        ((and (> field-len w) overflowchar)
-         (loop repeat w do (write-char overflowchar stream)))
-        ((> field-len w)
-         (write-field))
-        (t
-         (loop repeat (- w field-len)
-               do (write-char (or padchar #\Space) stream))
-         (write-field))))))
+      (declare (dynamic-extent #'writ-field))
+      (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 	       
 
 #+nil
@@ -2455,7 +2445,6 @@ radix-R.  If you have a power-list then pass it in as PL."
 	   (fixnum exponent))
   (reshape-format-e mantissa-text (1+ exponent) nil))
 
-
 #+nil
 (defun emit-shortest (mantissa-text exponent is-negative-p w overflowchar padchar at-sign-p)
   (let* ((reshaped (reshape-fixed mantissa-text exponent))
@@ -2474,17 +2463,8 @@ radix-R.  If you have a power-list then pass it in as PL."
              (cond (is-negative-p (write-char #\- stream))
                    (at-sign-p     (write-char #\+ stream)))
              (write-string reshaped stream)))
-      (cond
-        ((null w)
-         (write-field))
-        ((and (> field-len w) overflowchar)
-         (loop repeat w do (write-char overflowchar stream)))
-        ((> field-len w)
-         (write-field))
-        (t
-         (loop repeat (- w field-len)
-               do (write-char (or padchar #\Space) stream))
-         (write-field))))))
+      (declare (dynamic-extent #'write-field))
+      (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 	 
 #+nil
 (defun format-f-free (abs-value is-negative-p w overflowchar padchar at-sign-p)
