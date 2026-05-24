@@ -7732,10 +7732,6 @@ msgid ""
 msgstr ""
 
 #: src/code/print.lisp
-msgid "Execution of a form compiled with errors:~% ~S"
-msgstr ""
-
-#: src/code/print.lisp
 msgid ""
 "Apply width/pad/overflow rules.  FIELD-WRITER is a thunk of zero\n"
 "   arguments that writes the field characters to STREAM."
