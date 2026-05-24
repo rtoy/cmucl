@@ -2107,36 +2107,34 @@ radix-R.  If you have a power-list then pass it in as PL."
         ((< n 100) 2)
         (t         3)))
 
-(defun compute-exp-output-length (mantissa actual-exp k e is-negative-p at-sign-p leading-zero-p)
+(defun compute-exp-output-length (mantissa actual-exp k e is-negative-p at-sign-p drop-leading-zero-p)
   ;; Compute length of the ~E result with the given parameters, but
-  ;; don't build the string.  MANTISSA is "d.dddEee" from d2exp or
-  ;; d2s.  ACTUAL-EXP is the exponent with scaling factor applied.  If
-  ;; LEADING-ZERO-P is not NIL, the leading "0" will be kept when K <=
-  ;; 0.  Otherwise it's ignored.
+  ;; don't build the string.  MANTISSA is "d[.dddd]" from d2exp or d2s.
+  ;; ACTUAL-EXP is the exponent with scaling factor applied.  If
+  ;; DROP-LEADING-ZERO-P is non-NIL, the leading "0" before the dot
+  ;; (in the K <= 0 form) is omitted from the length.
   (let* ((sign-len (if (or is-negative-p at-sign-p) 1 0))
-	 (exp-digits (max (or e 1)
-			  #+nil
-			  (length (princ-to-string (abs actual-exp)))
-			  (count-decimal-digits (abs actual-exp))))
-	 (dotp (find #\. mantissa))
-	 (raw-digits (let ((len (length mantissa)))
-		       (if dotp (1- len) len)))
-	 (mantissa-len
-	   (cond
-	     ((plusp k)
-	      ;; k digits before, raw-digits - k after the dot.  If
-	      ;; raw-digitis <= k no dot and pad with zeroes before.
-	      (if (> raw-digits k)
-		  ;; "d.dddd" so raw-dits with dot.
-		  (1+ raw-digits)
-		  ;; "dddd" no dot, possibly padded.
-		  (max raw-digits k)))
-	     (t
-	      ;; "0.000ddd" or ".000ddd"
-	      (+ (if leading-zero-p 1 0)
-		 1
-		 (- k)
-		 raw-digits)))))
+         (exp-digits (max (or e 1)
+                          (count-decimal-digits (abs actual-exp))))
+         (dotp (find #\. mantissa))
+         (raw-digits (let ((len (length mantissa)))
+                       (if dotp (1- len) len)))
+         (mantissa-len
+           (cond
+             ((plusp k)
+              (cond
+                ((> raw-digits k)
+                 (1+ raw-digits))                     ; "D.DDDD"
+                ((and (= k 1) (= raw-digits 1))
+                 3)                                   ; "D.0" forced
+                (t
+                 (max raw-digits k))))                ; "DDDD"
+             (t
+              ;; "0.000DDD" or ".000DDD"
+              (+ (if drop-leading-zero-p 0 1)
+                 1                                    ; the dot
+                 (- k)                                ; leading zeros after the dot
+                 raw-digits)))))
     ;; +2 for the exponent marker and sign
     (+ sign-len mantissa-len exp-digits 2)))
 
@@ -2279,10 +2277,6 @@ radix-R.  If you have a power-list then pass it in as PL."
        ;; Finish with ".0"
        (write-string ".0" stream)))))
 
-(defun reshape-format-e (mantissa-text k drop-leading-zero-p)
-  (with-output-to-string (s)
-    (scale-mantissa s mantissa-text k drop-leading-zero-p)))
-
 (defun d2exp-precision (d k)
   ;; Compute precision for d2exp when CL requests D digits and the
   ;; scale factor is K."
@@ -2298,6 +2292,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 	 ;; d - |k| - 1 digits after the decimal point.
 	 (max (+ d k -1) 0))))
 		  
+#+nil
 (defun format-e-string (mantissa exponent is-negative-p w e k
                         overflowchar padchar exponentchar at-sign-p
                         drop-leading-zero-p)
@@ -2347,6 +2342,44 @@ radix-R.  If you have a power-list then pass it in as PL."
              (loop repeat (- w field-len) do (write-char pad-char s))
              (write-field s))))))))
 
+(defun format-e-string (stream mantissa exponent is-negative-p w e k
+                        overflowchar padchar exponentchar at-sign-p
+                        drop-leading-zero-p)
+  (declare (type simple-string mantissa)
+           (fixnum exponent k))
+  (let* ((shown-exp (- exponent (1- k)))
+         (exp-sign (if (minusp shown-exp)
+		       #\- #\+))
+         (exp-abs (abs shown-exp))
+         (exp-marker (or exponentchar #\d))
+         (exp-digits (count-decimal-digits exp-abs))
+         (exp-width (max (or e 1)
+			 exp-digits))
+         (sign-len (if (or is-negative-p at-sign-p)
+		       1 0))
+         ;; Full output length: sign + reshaped + marker + exp-sign +
+         ;; exp-width.  compute-exp-output-length gives reshape + exp
+         ;; body (marker + exp-sign + max(e, exp-digits)), but it also
+         ;; includes sign, so use it directly.  Wait, it doesn't
+         ;; account for drop-leading-zero, so we use it carefully.
+         (field-len (compute-exp-output-length mantissa shown-exp k e
+                                               is-negative-p at-sign-p
+                                               drop-leading-zero-p)))
+    (flet ((write-field ()
+             (cond (is-negative-p
+		    (write-char #\- stream))
+                   (at-sign-p
+		    (write-char #\+ stream)))
+             (scale-mantissa stream mantissa k drop-leading-zero-p)
+             (write-char exp-marker stream)
+             (write-char exp-sign stream)
+             (loop repeat (- exp-width exp-digits)
+		   do (write-char #\0 stream))
+             (princ exp-abs stream)))
+      (declare (dynamic-extent #'write-field))
+      (pad-overflow stream field-len w overflowchar padchar #'write-field))))
+
+#+nil
 (defun format-e (value w d e k overflowchar padchar exponentchar at-sign-p)
   (declare (double-float value)
 	   (fixnum k)
@@ -2404,6 +2437,46 @@ radix-R.  If you have a power-list then pass it in as PL."
 				     w e k overflowchar padchar exponentchar at-sign-p
 				     nil)))))))))))
 
+(defun format-e (value w d e k overflowchar padchar exponentchar at-sign-p)
+  (declare (double-float value)
+           (fixnum k)
+           (type (or null (and unsigned-byte fixnum)) w d e)
+           (optimize (speed 3)))
+  (let* ((is-negative-p (minusp (float-sign value)))
+         (abs-value (abs value)))
+    (with-output-to-string (stream)
+      (cond
+        (d
+         (multiple-value-bind (mantissa exponent)
+             (parsed-exp-form (d2exp abs-value (d2exp-precision d k)))
+           (format-e-string stream mantissa exponent is-negative-p
+                            w e k overflowchar padchar exponentchar at-sign-p nil)))
+        (t
+         (multiple-value-bind (mantissa exponent)
+             (parsed-exp-form (d2s abs-value))
+           (let* ((actual-exp (- exponent (1- k)))
+                  (full-len (compute-exp-output-length mantissa actual-exp k e
+                                                       is-negative-p at-sign-p
+                                                       nil)))
+             (cond
+               ((or (null w)
+		    (<= full-len w))
+                (format-e-string stream mantissa exponent is-negative-p
+                                 w e k overflowchar padchar exponentchar at-sign-p
+                                 (not (plusp k))))
+               (t
+                (let* ((d-fit (compute-d-for-width w e k actual-exp is-negative-p at-sign-p))
+                       (drop-zero-p (and d-fit (<= k 0))))
+                  (if d-fit
+                      (multiple-value-bind (mantissa exponent)
+                          (parsed-exp-form (d2exp abs-value (d2exp-precision d-fit k)))
+                        (format-e-string stream mantissa exponent is-negative-p
+                                         w e k overflowchar padchar exponentchar at-sign-p
+                                         drop-zero-p))
+                      (format-e-string stream mantissa exponent is-negative-p
+                                       w e k overflowchar padchar exponentchar at-sign-p
+                                       nil))))))))))))
+
 ;;; Ryu ~F
 #+nil
 (defun format-f-fixed (stream abs-value is-negative-p w d overflowchar padchar at-sign-p)
@@ -2457,13 +2530,6 @@ radix-R.  If you have a power-list then pass it in as PL."
       (declare (dynamic-extent #'writ-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 	       
-(defun reshape-fixed (stream mantissa-text exponent)
-  "Adjust MANTISSA-TEXT is scaled exactly by 10^{EXPONENT} by moving the
-  decimal point.  MANTISSA-TEXT is of the form 'd[.dddd]' from d2exp
-  or d2s.  The scaled value is written to STREAM."
-  (scale-mantissa stream mantissa-text (1+ exponent) nil))
-    
-
 (defun reshape-fixed-length (digit-count exponent)
   (let ((k (1+ exponent)))
     (cond ((zerop exponent)
@@ -2491,9 +2557,11 @@ radix-R.  If you have a power-list then pass it in as PL."
 	 (reshaped-len (reshape-fixed-length digit-count exponent))
          (field-len (+ sign-len reshaped-len)))
     (flet ((write-field ()
-             (cond (is-negative-p (write-char #\- stream))
-                   (at-sign-p     (write-char #\+ stream)))
-             (reshape-fixed stream mantissa exponent)))
+             (cond (is-negative-p
+		    (write-char #\- stream))
+                   (at-sign-p
+		    (write-char #\+ stream)))
+             (scale-mantissa stream mantissa (1+ exponent) nil)))
       (declare (dynamic-extent #'write-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 	 

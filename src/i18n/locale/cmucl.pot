@@ -7738,13 +7738,6 @@ msgid ""
 msgstr ""
 
 #: src/code/print.lisp
-msgid ""
-"Adjust MANTISSA-TEXT is scaled exactly by 10^{EXPONENT} by moving the\n"
-"  decimal point.  MANTISSA-TEXT is of the form 'd[.dddd]' from d2exp\n"
-"  or d2s.  The scaled value is written to STREAM."
-msgstr ""
-
-#: src/code/print.lisp
 msgid "Weak Pointer: "
 msgstr ""
 
