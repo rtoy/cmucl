@@ -2236,6 +2236,39 @@ radix-R.  If you have a power-list then pass it in as PL."
        ;; Finish with ".0"
        (write-string ".0" stream)))))
 
+(declaim (inline pad-overflow))
+(defun pad-overflow (stream field-len w overflowchar padchar field-writer)
+  "Apply width/pad/overflow rules.  FIELD-WRITER is a thunk of zero
+   arguments that writes the field characters to STREAM."
+  (declare (function field-writer))
+  (cond
+    ((null w)
+     (funcall field-writer))
+    ((and (> field-len w)
+	  overflowchar)
+     (loop repeat w do
+       (write-char overflowchar stream)))
+    ((> field-len w)
+     (funcall field-writer))
+    (t
+     (let ((pad (or padchar #\space)))
+       (loop repeat (- w field-len)
+             do (write-char pad stream)))
+     (funcall field-writer))))
+
+(declaim (inline get-sign-and-absolute-value))
+(defun get-sign-and-absolute-value (value)
+  "Returns two values for the float VALUE: T if the value is negative and
+  the double-float absolute value of VALUE."
+  (declare (type (or single-float double-float) value))
+  (etypecase value
+    (double-float
+     (values (minusp (float-sign value))
+	     (abs value)))
+    (single-float
+     (values (minusp (float-sign value))
+	     (abs (float (value 1d0)))))))
+     
 (defun d2exp-precision (d k)
   ;; Compute precision for d2exp when CL requests D digits and the
   ;; scale factor is K."
@@ -2294,13 +2327,7 @@ radix-R.  If you have a power-list then pass it in as PL."
            (type (or null (and unsigned-byte fixnum)) w d e)
            (optimize (speed 3)))
   (multiple-value-bind (is-negative-p abs-value)
-      (etypecase value
-	(double-float
-	 (values (minusp (float-sign value))
-		 (abs value)))
-	(single-float
-	 (values (minusp (float-sign value))
-		 (abs (float value 1d0)))))
+      (get-sign-and-absolute-value value)
     (with-output-to-string (stream)
       (cond
         (d
@@ -2337,26 +2364,6 @@ radix-R.  If you have a power-list then pass it in as PL."
                                        nil))))))))))))
 
 ;;; Ryu ~F
-(declaim (inline pad-overflow))
-(defun pad-overflow (stream field-len w overflowchar padchar field-writer)
-  "Apply width/pad/overflow rules.  FIELD-WRITER is a thunk of zero
-   arguments that writes the field characters to STREAM."
-  (declare (function field-writer))
-  (cond
-    ((null w)
-     (funcall field-writer))
-    ((and (> field-len w)
-	  overflowchar)
-     (loop repeat w do
-       (write-char overflowchar stream)))
-    ((> field-len w)
-     (funcall field-writer))
-    (t
-     (let ((pad (or padchar #\space)))
-       (loop repeat (- w field-len)
-             do (write-char pad stream)))
-     (funcall field-writer))))
-
 (defun format-f-fixed (stream abs-value is-negative-p w d
                        overflowchar padchar at-sign-p)
   (declare (double-float abs-value))
@@ -2370,7 +2377,7 @@ radix-R.  If you have a power-list then pass it in as PL."
                    (at-sign-p     (write-char #\+ stream)))
              (write-string raw-string stream)
              (when need-dot (write-char #\. stream))))
-      (declare (dynamic-extent #'writ-field))
+      (declare (dynamic-extent #'write-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 	       
 (defun reshape-fixed-length (digit-count exponent)
@@ -2430,9 +2437,8 @@ radix-R.  If you have a power-list then pass it in as PL."
                 (emit-shortest stream mantissa exponent is-negative-p w
                                overflowchar padchar at-sign-p))))
         (t
-	 (let ((abs-value (etypecase value
-			    (double-float (abs value))
-			    (single-float (abs value)))))
+	 (multiple-value-bind (is-negative-p abs-value)
+	     (get-sign-and-absolute-value value)
            (format-f-fixed stream abs-value is-negative-p w d-fit
                            overflowchar padchar at-sign-p)))))))
 
@@ -2441,13 +2447,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 	   (fixnum k)
 	   (type (or null (and unsigned-byte fixnum)) w d))
   (multiple-value-bind (is-negative-p abs-value)
-      (etypecase value
-	(double-float
-	 (values (minusp (float-sign value))
-		 (abs value)))
-	(single-float
-	 (values (minusp (float-sign value))
-		 (abs (float value 1d0)))))
+      (get-sign-and-absolute-value value)
     (with-output-to-string (s)
       (cond ((not (zerop k))
 	     ;;  Complex case that doesn't fit with what d2s and d2fixed
