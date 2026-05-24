@@ -7712,6 +7712,24 @@ msgid "Print out a double-double to a string"
 msgstr ""
 
 #: src/code/print.lisp
+msgid ""
+msgstr ""
+
+#: src/code/print.lisp
+msgid ""
+"Number of decimal digits in N.  N is the absolute value of a\n"
+"   double-float's exponent, so 0 <= n <= 324."
+msgstr ""
+
+#: src/code/print.lisp
+msgid ""
+"Reshape MANTISSA-TEXT of the form 'd[.dddd]Eee' from d2s or d2exp into\n"
+"  the displayed mantissa for ~E with scale factor K.  If\n"
+"  DROP-LEADING-ZERO-P is non-NIL, the leading 0 that would have been\n"
+"  printed is dropped."
+msgstr ""
+
+#: src/code/print.lisp
 msgid "Weak Pointer: "
 msgstr ""
 

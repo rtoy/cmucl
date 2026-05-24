@@ -2141,36 +2141,74 @@ radix-R.  If you have a power-list then pass it in as PL."
     (+ sign-len mantissa-len exp-digits 2)))
 
 (defun reshape-format-e (mantissa-text k drop-leading-zero-p)
-  ;; mantissa-text: "d.ddddEeee" or "dEeee" from d2exp/d2s.  With the
-  ;; given scale factor, change the text to account for it by moving
-  ;; the decimal point so the scaling is exact.
-  ;;
-  ;; Force ".0" for k=1 when there's no fractional part
-  (let* ((raw-digits (remove #\. mantissa-text))
-	 (digit-len (length raw-digits)))
-    (cond
-      ((>= k 1)
-       (let ((before-dot (subseq raw-digits 0 (min k digit-len)))
-	     (after-dot (if (>= digit-len k)
-			    (subseq raw-digits k)
-			    "")))
-	 (concatenate 'string
-		      before-dot
-		      (cond ((plusp (length after-dot))
-			     ".")
-			    ((= k 1)
-			     ;; Want "d.0" not just "d" when k=1 and
-			     ;; there's no fractional part so the
-			     ;; result reads back as a float.
-			     ".0")
-			    (t ""))
-		      after-dot)))
-      (t
-       (concatenate 'string
-		    (if drop-leading-zero-p "" "0")
-		    "."
-		    (make-string (- k) :initial-element #\0)
-		    raw-digits)))))
+  "Reshape MANTISSA-TEXT of the form 'd[.dddd]Eee' from d2s or d2exp into
+  the displayed mantissa for ~E with scale factor K.  If
+  DROP-LEADING-ZERO-P is non-NIL, the leading 0 that would have been
+  printed is dropped."
+  (declare (type simple-string mantissa-text)
+           (fixnum k))
+  ;; Fast path: K=1 covers the overwhelmingly common case since K=1 is
+  ;; the default.
+  (when (= k 1)
+    (return-from reshape-format-e
+      (cond
+        ((find #\. mantissa-text)
+         mantissa-text)                                      ; verbatim
+        (t
+         (concatenate 'string mantissa-text ".0")))))         ; single digit -> "D.0"
+  (let* ((has-dot     (find #\. mantissa-text))
+         (lead-char   (char mantissa-text 0))
+	 ;; Where the stuff after the dot starts
+         (tail-start  (if has-dot 2 1))
+         (tail-len    (- (length mantissa-text) tail-start))
+         (digit-count (1+ tail-len)))
+    ;; Several cases to consider:
+    ;;
+    ;; * k is negative so the new dot preceeds the mantissa.  Pad with
+    ;;   zeroes.
+    ;; * k is so large that the dot is past the rightmost part of the
+    ;;   mantissa.  Append enough zeroes and then add ".0"
+    ;; * k is somewhere in the mantissa.  Handling of this case
+    ;;   depends on if the new dot is to the left or to the right of
+    ;;   the original dot.
+    (with-output-to-string (s)
+      (cond
+        ;; Case 2: new dot at or before position 0.
+        ((<= k 0)
+         (unless drop-leading-zero-p
+	   (write-char #\0 s))
+         (write-char #\. s)
+	 ;; Insert zeros after the decimal but before the mantissa.
+         (loop repeat (- k)
+	       do (write-char #\0 s))
+	 ;; Insert the mantissa, skipping the existing dot.
+         (write-char lead-char s)
+         (when (plusp tail-len)
+           (write-string mantissa-text s :start tail-start)))
+        ;; Case 1b: 1 < k < digit-count.  Move dot right by (k-1).
+        ((< k digit-count)
+	 ;; Output the original mantissa up to the original dot.
+         (write-char lead-char s)
+         (write-string mantissa-text s
+                       :start tail-start
+                       :end (+ tail-start k -1))
+	 ;; Output the new dot.
+         (write-char #\. s)
+	 ;; Output everything after the original dot.
+         (write-string mantissa-text s
+		       :start (+ tail-start k -1)))
+        ;; Case 3: k >= digit-count.  Pad with zeros, force ".0".
+        (t
+	 ;; Output the original mantissa, then everything after the
+	 ;; dot (if there was one).
+         (write-char lead-char s)
+         (when (plusp tail-len)
+           (write-string mantissa-text s :start tail-start))
+	 ;; Pad with 0's
+         (loop repeat (- k digit-count)
+	       do (write-char #\0 s))
+	 ;; Finish with ".0".
+         (write-string ".0" s))))))
 
 (defun d2exp-precision (d k)
   ;; Compute precision for d2exp when CL requests D digits and the
