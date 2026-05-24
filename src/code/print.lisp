@@ -2001,13 +2001,18 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 
 ;;; Ryu interface
+
+;; This could be larger, but that would mean larger stack size for the
+;; foreign call.  This should be large enough for practical use.
 (defconstant +d2fixed-max-precision+
-  64
-  "")
+  1000
+  "Maximum precision (fractional digits for d2fixed.")
 
 (defconstant +d2fixed-buffer-size+
+  ;; +320 to account for 300 ingeger digts + sign + dot + terminator +
+  ;; slack.
   (+ +d2fixed-max-precision+ 320)
-  "")
+  "Buffer size for d2fixed.")
 
 (defun d2fixed (d precision)
   (declare (double-float d)
