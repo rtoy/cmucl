@@ -2440,10 +2440,78 @@ radix-R.  If you have a power-list then pass it in as PL."
 		   do (write-char #\0 s))
 	     (write-string raw-digits s))))))
 
+#+nil
 (defun reshape-fixed (mantissa-text exponent)
   (declare (type simple-string mantissa-text)
 	   (fixnum exponent))
   (reshape-format-e mantissa-text (1+ exponent) nil))
+
+(defun reshape-fixed (stream mantissa-text exponent)
+  "Adjust MANTISSA-TEXT is scaled exactly by 10^{EXPONENT} by moving the
+  decimal point.  MANTISSA-TEXT is of the form 'd[.dddd]' from d2exp
+  or d2s.  The scaled value is written to STREAM."
+  (declare (type simple-string mantissa-text)
+	   (fixnum exponent))
+  (let ((k (1+ exponent)))
+    ;; If exponent = 0, the mantissa is already the right value, but
+    ;; we need to append ".0" if there's not dot in the mantissa.
+    ;; This happens when d2s is given a small exact integral value.
+    (when (zerop exponent)
+      (write-string mantissa-text stream)
+      (unless (find #\. mantissa-text)
+	(write-string ".0" stream))
+      (return-from reshape-fixed))
+  (let* ((has-dot     (find #\. mantissa-text))
+         (lead-char   (char mantissa-text 0))
+	 ;; Where the stuff after the dot starts
+         (tail-start  (if has-dot 2 1))
+         (tail-len    (- (length mantissa-text) tail-start))
+         (digit-count (1+ tail-len)))
+    ;; Several cases to consider:
+    ;;
+    ;; * k is negative so the new dot preceeds the mantissa.  Pad with
+    ;;   zeroes.
+    ;; * k is so large that the dot is past the rightmost part of the
+    ;;   mantissa.  Append enough zeroes and then add ".0"
+    ;; * k is somewhere in the mantissa.  Handling of this case
+    ;;   depends on if the new dot is to the left or to the right of
+    ;;   the original dot.
+    (cond
+      ;; Case 2: new dot at or before position 0.
+      ((<= k 0)
+       (write-string "0." stream)
+       ;; Insert zeros after the decimal but before the mantissa.
+       (loop repeat (- k)
+	     do (write-char #\0 stream))
+       ;; Insert the mantissa, skipping the existing dot.
+       (write-char lead-char stream)
+       (when (plusp tail-len)
+         (write-string mantissa-text stream :start tail-start)))
+      ;; Case 1b: 1 < k < digit-count.  Move dot right by (k-1).
+      ((< k digit-count)
+       ;; Output the original mantissa up to the original dot.
+       (write-char lead-char stream)
+       (write-string mantissa-text stream
+                     :start tail-start
+                     :end (+ tail-start k -1))
+       ;; Output the new dot.
+       (write-char #\. stream)
+       ;; Output everything after the original dot.
+       (write-string mantissa-text stream
+		     :start (+ tail-start k -1)))
+      ;; Case 3: k >= digit-count.  Pad with zeros, force ".0".
+      (t
+       ;; Output the original mantissa, then everything after the
+       ;; dot (if there was one).
+       (write-char lead-char stream)
+       (when (plusp tail-len)
+         (write-string mantissa-text stream :start tail-start))
+       ;; Pad with 0's
+       (loop repeat (- k digit-count)
+	     do (write-char #\0 stream))
+       ;; Finish with ".0".
+       (write-string ".0" stream))))))
+    
 
 #+nil
 (defun emit-shortest (mantissa-text exponent is-negative-p w overflowchar padchar at-sign-p)
@@ -2454,15 +2522,36 @@ radix-R.  If you have a power-list then pass it in as PL."
 	 (field (concatenate 'string sign-text reshaped)))
     (format-f-pad-overflow field w overflowchar padchar)))
 
+(defun reshape-fixed-length (digit-count exponent)
+  (let ((k (1+ exponent)))
+    (cond ((zerop exponent)
+	   ;; Fast path
+	   (if (= digit-count 1)
+	       3
+	       (1+ digit-count)))
+	  ((<= k 0)
+	   ;; "0." + |k| zeros + digits
+	   (+ 2 (- k) digit-count))
+	  ((< k digit-count)
+	   ;; "ddd.ddd"; add one for the dot.
+	   (1+ digit-count))
+	  (t
+	   ;; "ddddd.0"; k digits + ".0"
+	   (+ k 2)))))
+
 (defun emit-shortest (stream mantissa exponent is-negative-p w
                       overflowchar padchar at-sign-p)
-  (let* ((reshaped  (reshape-fixed mantissa exponent))
+  (let* ((has-dot (find #\. mantissa))
+	 ;; Number of digits, not including the decimal point.
+	 (digit-count (- (length mantissa)
+			 (if has-dot 1 0)))
          (sign-len  (if (or is-negative-p at-sign-p) 1 0))
-         (field-len (+ sign-len (length reshaped))))
+	 (reshaped-len (reshape-fixed-length digit-count exponent))
+         (field-len (+ sign-len reshaped-len)))
     (flet ((write-field ()
              (cond (is-negative-p (write-char #\- stream))
                    (at-sign-p     (write-char #\+ stream)))
-             (write-string reshaped stream)))
+             (reshape-fixed stream mantissa exponent)))
       (declare (dynamic-extent #'write-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 	 
