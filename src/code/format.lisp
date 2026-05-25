@@ -1577,6 +1577,34 @@
 ;;;
 (defun format-fixed-aux (stream number w d k ovf pad atsign)
   (declare (type float number))
+  ;; Dispatch to either the Burger and Dybvig implementation or the
+  ;; Ryu-based implementation.  The Ryu code only handles single- and
+  ;; double-float values, so any other float type (notably
+  ;; DOUBLE-DOUBLE-FLOAT) always falls through to the B&D path.
+  (cond
+    ((and lisp::*use-ryu-printer*
+	  (and k (zerop k))
+	  (typep number '(or single-float double-float)))
+     (format-fixed-ryu stream number w d k ovf pad atsign))
+    (t
+     (format-fixed-aux-bd stream number w d k ovf pad atsign))))
+
+(defun format-fixed-ryu (stream number w d k ovf pad atsign)
+  "Ryu-based implementation of the ~F directive.  Delegates to
+  LISP::FORMAT-F, which returns the formatted field as a string."
+  (cond
+    ((and (floatp number)
+	  (or (float-infinity-p number)
+	      (float-nan-p number)))
+     (prin1 number stream)
+     nil)
+    (t
+     (write-string (lisp::format-f number w d k ovf pad atsign) stream)))
+  nil)
+
+(defun format-fixed-aux-bd (stream number w d k ovf pad atsign)
+  "Burger and Dybvig based implementation of the ~F directive."
+  (declare (type float number))
   (cond
    ((and (floatp number)
 	 (or (float-infinity-p number)
@@ -1748,7 +1776,8 @@
 ;;; causes errors when printing infinities or NaN's.  The Hyperspec is
 ;;; silent here, so let's just print out infinities and NaN's instead
 ;;; of causing an error.
-(defun format-exp-aux (stream number w d e k ovf pad marker atsign)
+(defun format-exp-aux-bd (stream number w d e k ovf pad marker atsign)
+  "Burger and Dybvig based implementation of the ~E directive."
   (if (and (floatp number)
 	   (or (float-infinity-p number)
 	       (float-nan-p number)))
@@ -1855,6 +1884,35 @@
 			 (write-string estr stream))))))))
   (values))
 
+(defun format-exp-ryu (stream number w d e k ovf pad marker atsign)
+  "Ryu-based implementation of the ~E directive.  Delegates to
+  LISP::FORMAT-E, which returns the formatted field as a string."
+  (cond
+    ((and (floatp number)
+	  (or (float-infinity-p number)
+	      (float-nan-p number)))
+     (prin1 number stream))
+    (t
+     (write-string (lisp::format-e number w d e k ovf pad marker atsign)
+		   stream)))
+  (values))
+
+(defun format-exp-aux (stream number w d e k ovf pad marker atsign)
+  ;; Dispatch to either the Burger and Dybvig implementation or the
+  ;; Ryu-based implementation.  The Ryu code only handles single- and
+  ;; double-float values, so any other float type (notably
+  ;; DOUBLE-DOUBLE-FLOAT) always falls through to the B&D path.
+  (cond
+    ((and lisp::*use-ryu-printer*
+	  (floatp number)
+	  (typep number '(or single-float double-float))
+	  (not (or (float-infinity-p number)
+		   (float-nan-p number))))
+     (format-exp-ryu stream number w d e k ovf pad marker atsign))
+    (t
+     (format-exp-aux-bd stream number w d e k ovf pad marker atsign))))
+
+
 (def-format-directive #\G (colonp atsignp params)
   (when colonp
     (error 'format-error
@@ -1891,6 +1949,34 @@
 
 ;;; toy@rtp.ericsson.se:  Same change as for format-exp-aux.
 (defun format-general-aux (stream number w d e k ovf pad marker atsign)
+  ;; Dispatch to either the Burger and Dybvig implementation or the
+  ;; Ryu-based implementation.  The Ryu code only handles single- and
+  ;; double-float values, so any other float type (notably
+  ;; DOUBLE-DOUBLE-FLOAT) always falls through to the B&D path.
+  (cond
+    ((and lisp::*use-ryu-printer*
+	  (floatp number)
+	  (typep number '(or single-float double-float)))
+     (format-general-ryu stream number w d e k ovf pad marker atsign))
+    (t
+     (format-general-aux-bd stream number w d e k ovf pad marker atsign))))
+
+(defun format-general-ryu (stream number w d e k ovf pad marker atsign)
+  "Ryu-based implementation of the ~G directive.  Delegates to
+  LISP::FORMAT-G, which returns the formatted field as a string."
+  (cond
+   ((and (floatp number)
+	 (or (float-infinity-p number)
+	     (float-nan-p number)))
+    (prin1 number stream)
+    nil)
+   (t
+    (write-string (lisp::format-g number w d e k ovf pad marker atsign)
+		  stream)))
+  (values))
+
+(defun format-general-aux-bd (stream number w d e k ovf pad marker atsign)
+  "Burger and Dybvig based implementation of the ~G directive."
   (if (and (floatp number)
 	   (or (float-infinity-p number)
 	       (float-nan-p number)))

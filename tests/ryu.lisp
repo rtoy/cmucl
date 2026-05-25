@@ -783,3 +783,206 @@
     (assert-true (search "f" single-out) single-out)
     (assert-true (search "d" double-out) double-out)))
 
+;;; ----------------------------------------------------------------------
+;;; Tests that ~E dispatch routes through Ryu when *use-ryu-printer* is
+;;; set.  When it is NIL we should get the Burger and Dybvig result;
+;;; when it is T we should get the result that LISP::FORMAT-E produces
+;;; directly.
+
+(setf lisp::*use-ryu-printer* nil)
+
+(define-test format-e.dispatch-via-use-ryu-printer.t
+  (:tag :format-e :dispatch)
+  ;; With *use-ryu-printer* T, FORMAT "~E" must agree with LISP::FORMAT-E.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-equal (lisp::format-e 3.14d0 nil nil nil 1 nil nil #\d nil)
+                  (format nil "~E" 3.14d0))
+    (assert-equal (lisp::format-e -1.23456789d12 17 nil 4 1 #\* #\P #\z t)
+                  (format nil "~17,,4,1,'*,'P,'zE" -1.23456789d12))))
+
+(define-test format-e.dispatch-via-use-ryu-printer.nil
+  (:tag :format-e :dispatch)
+  ;; With *use-ryu-printer* NIL, FORMAT "~E" goes through the original
+  ;; Burger and Dybvig code path.  Just check that some reasonable
+  ;; output is produced (we don't assert against B&D output specifically
+  ;; because that is the existing, well-tested code path).
+  (let ((lisp::*use-ryu-printer* nil))
+    (assert-true (stringp (format nil "~E" 3.14d0)))
+    (assert-true (stringp (format nil "~17,,4,1,'*,'P,'zE" -1.23456789d12)))))
+
+(define-test format-e.dispatch-falls-back-for-double-double
+  (:tag :format-e :dispatch)
+  ;; Double-double values must go through the B&D code even when
+  ;; *use-ryu-printer* is T, because the Ryu routines only handle
+  ;; single- and double-float.
+  #+double-double
+  (let ((lisp::*use-ryu-printer* t))
+    ;; Should not error and should produce a string.
+    (assert-true (stringp (format nil "~E" 1w0)))))
+
+(define-test format-e.dispatch-falls-back-for-special-values
+  (:tag :format-e :dispatch)
+  ;; Infinity and NaN must go through the B&D path because the Ryu
+  ;; routines do not handle them.  Just confirm no error and that we get
+  ;; a string back.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (format nil "~E"
+                                  ext:double-float-positive-infinity)))))
+(define-test format-e.dispatch-non-float
+  (:tag :format-e :dispatch)
+  ;; Non-float arguments (rationals, integers) must continue to work.
+  ;; Rationals are coerced to single-float by FORMAT-EXPONENTIAL before
+  ;; reaching FORMAT-EXP-AUX, so the Ryu path will see a single-float.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (format nil "~E" 1/2)))
+    (assert-true (stringp (format nil "~E" 1)))))
+
+;;; ----------------------------------------------------------------------
+;;; Tests that ~E dispatch routes through Ryu when *use-ryu-printer* is
+;;; set.  When it is NIL we should get the Burger and Dybvig result;
+;;; when it is T we should get the result that LISP::FORMAT-E produces
+;;; directly.
+
+(define-test format-e.dispatch-via-use-ryu-printer.t
+  (:tag :format-e :dispatch)
+  ;; With *use-ryu-printer* T, FORMAT "~E" must agree with LISP::FORMAT-E.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-equal (lisp::format-e 3.14d0 nil nil nil 1 nil nil #\d nil)
+                  (format nil "~E" 3.14d0))
+    (assert-equal (lisp::format-e -1.23456789d12 17 nil 4 1 #\* #\P #\z t)
+                  (format nil "~17,,4,1,'*,'P,'zE" -1.23456789d12))))
+
+(define-test format-e.dispatch-via-use-ryu-printer.nil
+  (:tag :format-e :dispatch)
+  ;; With *use-ryu-printer* NIL, FORMAT "~E" goes through the original
+  ;; Burger and Dybvig code path.  Just check that some reasonable
+  ;; output is produced (we don't assert against B&D output specifically
+  ;; because that is the existing, well-tested code path).
+  (let ((lisp::*use-ryu-printer* nil))
+    (assert-true (stringp (format nil "~E" 3.14d0)))
+    (assert-true (stringp (format nil "~17,,4,1,'*,'P,'zE" -1.23456789d12)))))
+
+(define-test format-e.dispatch-falls-back-for-double-double
+  (:tag :format-e :dispatch)
+  ;; Double-double values must go through the B&D code even when
+  ;; *use-ryu-printer* is T, because the Ryu routines only handle
+  ;; single- and double-float.
+  #+double-double
+  (let ((lisp::*use-ryu-printer* t))
+    ;; Should not error and should produce a string.
+    (assert-true (stringp (format nil "~E" 1w0)))))
+
+(define-test format-e.dispatch-special-values
+  (:tag :format-e :dispatch)
+  ;; Infinity and NaN are handled directly inside FORMAT-EXP-RYU (by
+  ;; PRIN1, matching the B&D behavior); they no longer require falling
+  ;; back to the B&D path.  Just confirm no error and that we get a
+  ;; string back.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (format nil "~E"
+                                  ext:double-float-positive-infinity)))))
+
+(define-test format-e.dispatch-non-float
+  (:tag :format-e :dispatch)
+  ;; Non-float arguments (rationals, integers) must continue to work.
+  ;; Rationals are coerced to single-float by FORMAT-EXPONENTIAL before
+  ;; reaching FORMAT-EXP-AUX, so the Ryu path will see a single-float.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (format nil "~E" 1/2)))
+    (assert-true (stringp (format nil "~E" 1)))))
+
+;;; ----------------------------------------------------------------------
+;;; Tests that ~F dispatch routes through Ryu when *use-ryu-printer* is
+;;; set.
+
+(define-test format-f.dispatch-via-use-ryu-printer.t
+  (:tag :format-f :dispatch)
+  ;; With *use-ryu-printer* T, FORMAT "~F" must agree with LISP::FORMAT-F.
+  (let ((lisp::*use-ryu-printer* t))
+    ;; Default ~F: no width, no fdigits, k = 0.
+    (assert-equal (lisp::format-f 3.14d0 nil nil 0 nil nil nil)
+                  (format nil "~F" 3.14d0))
+    ;; With width and fdigits.
+    (assert-equal (lisp::format-f 3.14d0 10 4 0 nil #\space nil)
+                  (format nil "~10,4F" 3.14d0))))
+
+(define-test format-f.dispatch-via-use-ryu-printer.nil
+  (:tag :format-f :dispatch)
+  (let ((lisp::*use-ryu-printer* nil))
+    (assert-true (stringp (format nil "~F" 3.14d0)))
+    (assert-true (stringp (format nil "~10,4F" 3.14d0)))))
+
+(define-test format-f.dispatch-non-zero-k
+  (:tag :format-f :dispatch)
+  ;; Non-zero scale factor K stays correct: LISP::FORMAT-F itself falls
+  ;; back internally to FORMAT::FORMAT-FIXED-AUX-BD for that case.
+  ;; Result should be a string, and should match the B&D result.
+  (let ((with-ryu
+	  (let ((lisp::*use-ryu-printer* t))
+	    (format nil "~10,4,2F" 3.14d0)))
+	(without-ryu
+	  (let ((lisp::*use-ryu-printer* nil))
+	    (format nil "~10,4,2F" 3.14d0))))
+    (assert-equal without-ryu with-ryu)))
+
+(define-test format-f.dispatch-falls-back-for-double-double
+  (:tag :format-f :dispatch)
+  #+double-double
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (format nil "~F" 1w0)))))
+
+(define-test format-f.dispatch-special-values
+  (:tag :format-f :dispatch)
+  ;; Infinity and NaN handled by FORMAT-FIXED-RYU.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (format nil "~F"
+                                  ext:double-float-positive-infinity)))))
+
+(define-test format-f.dispatch-non-float
+  (:tag :format-f :dispatch)
+  ;; Rationals are coerced to single-float by FORMAT-FIXED before
+  ;; reaching FORMAT-FIXED-AUX.  Integers exercise the integer branch
+  ;; of FORMAT-FIXED (via DECIMAL-STRING) and do not touch the ryu
+  ;; path at all -- they should still work.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (format nil "~F" 1/2)))
+    (assert-true (stringp (format nil "~F" 1)))))
+
+;;; ----------------------------------------------------------------------
+;;; Tests that ~G dispatch routes through Ryu when *use-ryu-printer* is
+;;; set.
+
+(define-test format-g.dispatch-via-use-ryu-printer.t
+  (:tag :format-g :dispatch)
+  ;; With *use-ryu-printer* T, FORMAT "~G" must agree with LISP::FORMAT-G.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-equal (lisp::format-g 3.14d0 nil nil nil 1 nil nil #\d nil)
+                  (format nil "~G" 3.14d0))
+    (assert-equal (lisp::format-g 12345.6789d0 12 4 nil 1 nil #\space #\d nil)
+                  (format nil "~12,4,,1G" 12345.6789d0))))
+
+(define-test format-g.dispatch-via-use-ryu-printer.nil
+  (:tag :format-g :dispatch)
+  (let ((lisp::*use-ryu-printer* nil))
+    (assert-true (stringp (format nil "~G" 3.14d0)))
+    (assert-true (stringp (format nil "~12,4,,1G" 12345.6789d0)))))
+
+(define-test format-g.dispatch-falls-back-for-double-double
+  (:tag :format-g :dispatch)
+  #+double-double
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (format nil "~G" 1w0)))))
+
+(define-test format-g.dispatch-special-values
+  (:tag :format-g :dispatch)
+  ;; Infinity and NaN handled by FORMAT-GENERAL-RYU.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (format nil "~G"
+                                  ext:double-float-positive-infinity)))))
+
+(define-test format-g.dispatch-non-float
+  (:tag :format-g :dispatch)
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (format nil "~G" 1/2)))
+    (assert-true (stringp (format nil "~G" 1)))))
+

@@ -7788,6 +7788,17 @@ msgid "Cannot find ~S, so unicode support is not available"
 msgstr ""
 
 #: src/code/ryu-print.lisp
+msgid ""
+"When non-NIL, format directives ~E, ~F, ~G and the float printer used\n"
+"  by PRINC/PRIN1/PRINT/WRITE route through the Ryu-based formatter\n"
+"  (FORMAT-E, FORMAT-F, FORMAT-G, and the shortest-form D2S/F2S\n"
+"  routines).  When NIL, the original Burger and Dybvig based code is\n"
+"  used.  Some cases (notably ~F with non-zero scale factor K, and\n"
+"  printing of DOUBLE-DOUBLE-FLOAT values) always fall back to the\n"
+"  Burger and Dybvig code regardless of this variable."
+msgstr ""
+
+#: src/code/ryu-print.lisp
 msgid "Maximum precision (fractional digits for d2fixed."
 msgstr ""
 
@@ -8111,6 +8122,36 @@ msgstr ""
 
 #: src/code/format.lisp
 msgid "Cannot specify the colon modifier with this directive."
+msgstr ""
+
+#: src/code/format.lisp
+msgid ""
+"Ryu-based implementation of the ~F directive.  Delegates to\n"
+"  LISP::FORMAT-F, which returns the formatted field as a string."
+msgstr ""
+
+#: src/code/format.lisp
+msgid "Burger and Dybvig based implementation of the ~F directive."
+msgstr ""
+
+#: src/code/format.lisp
+msgid "Burger and Dybvig based implementation of the ~E directive."
+msgstr ""
+
+#: src/code/format.lisp
+msgid ""
+"Ryu-based implementation of the ~E directive.  Delegates to\n"
+"  LISP::FORMAT-E, which returns the formatted field as a string."
+msgstr ""
+
+#: src/code/format.lisp
+msgid ""
+"Ryu-based implementation of the ~G directive.  Delegates to\n"
+"  LISP::FORMAT-G, which returns the formatted field as a string."
+msgstr ""
+
+#: src/code/format.lisp
+msgid "Burger and Dybvig based implementation of the ~G directive."
 msgstr ""
 
 #: src/code/format.lisp
