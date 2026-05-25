@@ -1585,7 +1585,7 @@
     ((and lisp::*use-ryu-printer*
 	  (or (null k) (zerop k))
 	  (typep number '(or single-float double-float)))
-     (format-fixed-ryu stream number w d (or k 0) ovf pad atsign))
+     (format-fixed-ryu stream number w d k ovf pad atsign))
     (t
      (format-fixed-aux-bd stream number w d k ovf pad atsign))))
 
@@ -1599,7 +1599,7 @@
      (prin1 number stream)
      nil)
     (t
-     (write-string (lisp::format-f number w d k ovf pad atsign) stream)))
+     (write-string (lisp::format-f number w d (or k 0) ovf pad atsign) stream)))
   nil)
 
 (defun format-fixed-aux-bd (stream number w d k ovf pad atsign)
