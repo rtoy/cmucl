@@ -367,18 +367,21 @@
   (assert-equal "       1.0"
                 (lisp::format-f  1d0        10 nil 0 nil nil nil)))
 
-(define-test format-f.d-nil-with-w-shrinks
+(define-test format-f.d-nil-with-w-no-shrink
   (:tag :format-f)
-  ;; d=nil with tight width: must shrink fractional digits via d2fixed.
-  ;; 3.141592653589793 has 16 fractional digits at shortest; w=8 only
-  ;; allows 6 (sign 0 + int 1 + dot 1 + frac 6 = 8).
-  (assert-equal "3.141593"
-                (lisp::format-f  3.141592653589793d0  8 nil 0 nil nil nil))
-  (assert-equal "3.14159265"
+  ;; CLHS 22.3.3.1: when d is unspecified, the digit count is set so
+  ;; that the result reads back as an EQUAL float, with no extraneous
+  ;; trailing zeros.  This is the round-trip count.  When the result
+  ;; does not fit in w and no overflowchar is supplied, the field
+  ;; expands -- it does NOT shrink the digits, because doing so would
+  ;; produce a different float on read-back.  (Earlier ryu code did
+  ;; shrink here; that change was needed to pass ANSI FORMAT.F.5.)
+  (assert-equal "1.234567"
+                (lisp::format-f  1.234567d0   6 nil 0 nil nil nil))
+  (assert-equal "3.141592653589793"
                 (lisp::format-f  3.141592653589793d0 10 nil 0 nil nil nil))
-  ;; The shrink should round correctly: 5 with following digits rounds up.
-  (assert-equal "1.2346"
-                (lisp::format-f  1.234567d0   6 nil 0 nil nil nil)))
+  (assert-equal "3.141592653589793"
+                (lisp::format-f  3.141592653589793d0  8 nil 0 nil nil nil)))
 
 (define-test format-f.d-nil-with-w-overflow
   (:tag :format-f)
