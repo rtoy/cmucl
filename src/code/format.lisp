@@ -1893,7 +1893,14 @@
 	      (float-nan-p number)))
      (prin1 number stream))
     (t
-     (write-string (lisp::format-e number w d e k ovf pad marker atsign)
+     ;; LISP::FORMAT-E uses a literal #\d as the default exponent
+     ;; marker when EXPONENTCHAR is NIL, but the CL ~E directive
+     ;; chooses the marker based on the value's type and
+     ;; *READ-DEFAULT-FLOAT-FORMAT* (see FORMAT-EXPONENT-MARKER).
+     ;; Resolve the default here so the same rule applies.
+     (write-string (lisp::format-e number w d e k ovf pad
+				   (or marker (format-exponent-marker number))
+				   atsign)
 		   stream)))
   (values))
 
@@ -1971,7 +1978,9 @@
     (prin1 number stream)
     nil)
    (t
-    (write-string (lisp::format-g number w d e (or k 1) ovf pad marker atsign)
+    (write-string (lisp::format-g number w d e (or k 1) ovf pad
+				  (or marker (format-exponent-marker number))
+				  atsign)
 		  stream)))
   (values))
 
