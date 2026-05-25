@@ -7760,6 +7760,12 @@ msgid ""
 msgstr ""
 
 #: src/code/print.lisp
+msgid ""
+"Returns two values for the float VALUE: T if the value is negative and\n"
+"  the double-float absolute value of VALUE."
+msgstr ""
+
+#: src/code/print.lisp
 msgid "Weak Pointer: "
 msgstr ""
 

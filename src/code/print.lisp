@@ -2096,7 +2096,10 @@ radix-R.  If you have a power-list then pass it in as PL."
 			     raw-string))
 	 (mantissa (subseq raw-string 0 e-pos))
 	 (exp (parse-integer raw-string :start (1+ e-pos))))
-    (values mantissa exp)))
+    ;; The exponent from a double-float is in the range of [-324,
+    ;; 308].  Just declare the exponent as a (signed-byte 11).
+    (values mantissa
+	    (truly-the (signed-byte 11) exp))))
 
 (defun compute-d-for-width (w e k actual-exp is-negative-p at-sign-p)
   ;; Find the largest d (precision) value that fits in width W given
@@ -2138,6 +2141,9 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 (defun compute-exp-output-length (mantissa actual-exp k e is-negative-p at-sign-p
 				  drop-leading-zero-p)
+  (declare (type simple-string mantissa)
+	   (fixnum actual-exp k)
+	   (type (or null fixnum) e))
   ;; Compute length of the ~E result with the given parameters, but
   ;; don't build the string.  MANTISSA is "d[.dddd]" from d2exp or d2s.
   ;; ACTUAL-EXP is the exponent with scaling factor applied.  If
@@ -2154,19 +2160,20 @@ radix-R.  If you have a power-list then pass it in as PL."
              ((plusp k)
               (cond
                 ((> raw-digits k)
-                 (1+ raw-digits))                     ; "D.DDDD"
+                 (1+ raw-digits))	; "D.DDDD"
                 ((and (= k 1) (= raw-digits 1))
-                 3)                                   ; "D.0" forced
+                 3)			; "D.0" forced
                 (t
-                 (max raw-digits k))))                ; "DDDD"
+                 (max raw-digits k))))	; "DDDD"
              (t
               ;; "0.000DDD" or ".000DDD"
               (+ (if drop-leading-zero-p 0 1)
-                 1                                    ; the dot
-                 (- k)                                ; leading zeros after the dot
+                 1			; the dot
+                 (- k)			; leading zeros after the dot
                  raw-digits)))))
     ;; +2 for the exponent marker and sign
-    (+ sign-len mantissa-len exp-digits 2)))
+    (the (and unsigned-byte fixnum)
+		 (+ sign-len mantissa-len exp-digits 2))))
 
 (defun scale-mantissa (stream mantissa-text k drop-leading-zero-p)
   "Write MANTISSA-TEXT to STREAM, shifting the decimal point so that
@@ -2240,7 +2247,9 @@ radix-R.  If you have a power-list then pass it in as PL."
 (defun pad-overflow (stream field-len w overflowchar padchar field-writer)
   "Apply width/pad/overflow rules.  FIELD-WRITER is a thunk of zero
    arguments that writes the field characters to STREAM."
-  (declare (function field-writer))
+  (declare (fixnum field-len)
+	   (type (or null fixnum) w)
+	   (function field-writer))
   (cond
     ((null w)
      (funcall field-writer))
@@ -2267,7 +2276,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 	     (abs value)))
     (single-float
      (values (minusp (float-sign value))
-	     (abs (float (value 1d0)))))))
+	     (abs (float value 1d0))))))
      
 (defun d2exp-precision (d k)
   ;; Compute precision for d2exp when CL requests D digits and the
@@ -2297,8 +2306,6 @@ radix-R.  If you have a power-list then pass it in as PL."
          (exp-digits (count-decimal-digits exp-abs))
          (exp-width (max (or e 1)
 			 exp-digits))
-         (sign-len (if (or is-negative-p at-sign-p)
-		       1 0))
          ;; Full output length: sign + reshaped + marker + exp-sign +
          ;; exp-width.  compute-exp-output-length gives reshape + exp
          ;; body (marker + exp-sign + max(e, exp-digits)), but it also
@@ -2364,23 +2371,33 @@ radix-R.  If you have a power-list then pass it in as PL."
                                        nil))))))))))))
 
 ;;; Ryu ~F
-(defun format-f-fixed (stream abs-value is-negative-p w d
+(defun format-f-fixed (stream value w d
                        overflowchar padchar at-sign-p)
-  (declare (double-float abs-value))
-  (let* ((raw-string (d2fixed abs-value d))
-         (raw-len    (length raw-string))
-         (sign-len   (if (or is-negative-p at-sign-p) 1 0))
-         (need-dot   (zerop d))
-         (field-len  (+ sign-len raw-len (if need-dot 1 0))))
-    (flet ((write-field ()
-             (cond (is-negative-p (write-char #\- stream))
-                   (at-sign-p     (write-char #\+ stream)))
-             (write-string raw-string stream)
-             (when need-dot (write-char #\. stream))))
-      (declare (dynamic-extent #'write-field))
-      (pad-overflow stream field-len w overflowchar padchar #'write-field))))
-	       
+  (declare (type (or single-float double-float) value))
+  (multiple-value-bind (is-negative-p abs-value)
+      (get-sign-and-absolute-value value)
+    (let* ((raw-string (d2fixed abs-value d))
+           (raw-len    (length raw-string))
+           (sign-len   (if (or is-negative-p at-sign-p) 1 0))
+           (need-dot   (zerop d))
+           (field-len  (+ sign-len raw-len (if need-dot 1 0))))
+      (flet ((write-field ()
+               (cond (is-negative-p (write-char #\- stream))
+                     (at-sign-p     (write-char #\+ stream)))
+               (write-string raw-string stream)
+               (when need-dot (write-char #\. stream))))
+	(declare (dynamic-extent #'write-field))
+	(pad-overflow stream field-len w overflowchar padchar #'write-field)))))
+
 (defun reshape-fixed-length (digit-count exponent)
+  ;; DIGIT-COUNT is the number of digits returned by d2s/f2s.  That no
+  ;; more than 20.  EXPONENT is teh power of 10 for a double-float.  A
+  ;; signed-byte 10 is large enough to hold this.
+  ;;
+  ;; We don't need to be super-precise here; we just need to be close
+  ;; enough so as not to use bignums.
+  (declare (type (integer 1 20) digit-count)
+	   (type (signed-byte 10) exponent))
   (let ((k (1+ exponent)))
     (cond ((zerop exponent)
 	   ;; Fast path
@@ -2399,6 +2416,8 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 (defun emit-shortest (stream mantissa exponent is-negative-p w
                       overflowchar padchar at-sign-p)
+  (declare (type simple-string mantissa)
+	   (type (signed-byte 10) exponent))
   (let* ((has-dot (find #\. mantissa))
 	 ;; Number of digits, not including the decimal point.
 	 (digit-count (- (length mantissa)
@@ -2415,53 +2434,52 @@ radix-R.  If you have a power-list then pass it in as PL."
       (declare (dynamic-extent #'write-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 	 
-(defun format-f-free (stream value is-negative-p w
+(defun format-f-free (stream value w
                       overflowchar padchar at-sign-p)
   (declare (type (or single-float double-float) value))
-  (multiple-value-bind (mantissa exponent)
-      (parsed-exp-form (float-to-string value))
-    (let* ((has-dot     (find #\. mantissa))
-           (digit-count (if has-dot (1- (length mantissa)) (length mantissa)))
-           (int-len     (max 1 (1+ exponent)))
-           (shortest-d  (max 0 (- digit-count 1 exponent)))
-           (sign-len    (if (or is-negative-p at-sign-p) 1 0))
-           (d-fit       (and w (- w sign-len int-len 1))))
-      (cond
-        ((or (null w) (>= d-fit shortest-d))
-         (emit-shortest stream mantissa exponent is-negative-p w
-                        overflowchar padchar at-sign-p))
-        ((minusp d-fit)
-         (cond (overflowchar
-                (loop repeat w do (write-char overflowchar stream)))
-               (t
-                (emit-shortest stream mantissa exponent is-negative-p w
-                               overflowchar padchar at-sign-p))))
-        (t
-	 (multiple-value-bind (is-negative-p abs-value)
-	     (get-sign-and-absolute-value value)
-           (format-f-fixed stream abs-value is-negative-p w d-fit
+  (multiple-value-bind (is-negative-p abs-value)
+      (get-sign-and-absolute-value value)
+    (declare (ignore abs-value))
+    (multiple-value-bind (mantissa exponent)
+	(parsed-exp-form (float-to-string value))
+      (let* ((has-dot     (find #\. mantissa))
+             (digit-count (if has-dot (1- (length mantissa)) (length mantissa)))
+             (int-len     (max 1 (1+ exponent)))
+             (shortest-d  (max 0 (- digit-count 1 exponent)))
+             (sign-len    (if (or is-negative-p at-sign-p) 1 0))
+             (d-fit       (and w (- w sign-len int-len 1))))
+	(cond
+          ((or (null w) (>= d-fit shortest-d))
+           (emit-shortest stream mantissa exponent is-negative-p w
+                          overflowchar padchar at-sign-p))
+          ((minusp d-fit)
+           (cond (overflowchar
+                  (loop repeat w do (write-char overflowchar stream)))
+		 (t
+                  (emit-shortest stream mantissa exponent is-negative-p w
+				 overflowchar padchar at-sign-p))))
+          (t
+           (format-f-fixed stream value w d-fit
                            overflowchar padchar at-sign-p)))))))
 
 (defun format-f (value w d k overflowchar padchar at-sign-p)
   (declare (type (or single-float double-float) value)
 	   (fixnum k)
 	   (type (or null (and unsigned-byte fixnum)) w d))
-  (multiple-value-bind (is-negative-p abs-value)
-      (get-sign-and-absolute-value value)
-    (with-output-to-string (s)
-      (cond ((not (zerop k))
-	     ;;  Complex case that doesn't fit with what d2s and d2fixed
-	     ;;  returns.  Especially when d+k is negative so that some
-	     ;;  digits are shifted right past the desired precision.
-	     ;;  We'd have to round the result.  Just use our existing
-	     ;;  code to handle this case with the correct rounding.
-	     (format::format-fixed-aux s value w d k overflowchar padchar at-sign-p))
-	    (d
-	     (format-f-fixed s abs-value is-negative-p w d overflowchar padchar at-sign-p))
-	    (t
-	     ;; No d, so use d2s to get the shortest digits; convert by
-	     ;; placing the decimal poin at the right spot.
-	     (format-f-free s value is-negative-p  w overflowchar padchar at-sign-p))))))
+  (with-output-to-string (s)
+    (cond ((not (zerop k))
+	   ;;  Complex case that doesn't fit with what d2s and d2fixed
+	   ;;  returns.  Especially when d+k is negative so that some
+	   ;;  digits are shifted right past the desired precision.
+	   ;;  We'd have to round the result.  Just use our existing
+	   ;;  code to handle this case with the correct rounding.
+	   (format::format-fixed-aux s value w d k overflowchar padchar at-sign-p))
+	  (d
+	   (format-f-fixed s value w d overflowchar padchar at-sign-p))
+	  (t
+	   ;; No d, so use d2s to get the shortest digits; convert by
+	   ;; placing the decimal poin at the right spot.
+	   (format-f-free s value  w overflowchar padchar at-sign-p)))))
 
 ;;; Ryu ~G
 (defun format-g (value w d e k overflowchar padchar exponentchar at-sign-p)
@@ -2470,7 +2488,9 @@ radix-R.  If you have a power-list then pass it in as PL."
 	   (type (or null (and unsigned-byte fixnum)) w d e))
   (multiple-value-bind (mantissa exponent)
       (parsed-exp-form (float-to-string value))
-    (let* ((digit-count (length (remove #\. mantissa)))
+    (let* ((digit-count (- (length mantissa)
+			   (if (find #\. mantissa)
+			       1 0)))
 	   (n (1+ exponent))
 	   (effective-d (or d (max digit-count (min n 7))))
 	   (ee (if e (+ e 2) 4))
