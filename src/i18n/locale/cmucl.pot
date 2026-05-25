@@ -7412,6 +7412,71 @@ msgstr ""
 msgid "Trying to output binary data to a text stream."
 msgstr ""
 
+#: src/code/ryu-print.lisp
+msgid ""
+"When non-NIL, format directives ~E, ~F, ~G and the float printer used\n"
+"  by PRINC/PRIN1/PRINT/WRITE route through the Ryu-based formatter\n"
+"  (FORMAT-E, FORMAT-F, FORMAT-G, and the shortest-form D2S/F2S\n"
+"  routines).  When NIL, the original Burger and Dybvig based code is\n"
+"  used.  Some cases (notably ~F with non-zero scale factor K, and\n"
+"  printing of DOUBLE-DOUBLE-FLOAT values) always fall back to the\n"
+"  Burger and Dybvig code regardless of this variable."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid "Maximum precision (fractional digits for d2fixed."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid "Buffer size for d2fixed."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid "Lisp interface to Ryu d2fixed routine (specically d2fixed_buffered)"
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid "Lisp interface to Ryu d2exp (specifically d2exp-buffered)."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid "Lisp interface to Ryu d2s (specifically d2s_buffered"
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
+"Convert F, a single-float or double-float, to a string of the shortest\n"
+"  form."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
+"Number of decimal digits in N.  N is the absolute value of a\n"
+"   double-float's exponent, so 0 <= n <= 324."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
+"Write MANTISSA-TEXT to STREAM, shifting the decimal point so that\n"
+"   the new dot lands K digits in from the start of the digit string.\n"
+"   MANTISSA-TEXT is 'D' or 'D.DDDD' from d2s/d2exp.\n"
+"   DROP-LEADING-ZERO-P controls whether the leading '0' before the dot\n"
+"   is emitted when the result starts with '0.'.  K=0 puts the dot\n"
+"   before all digits; K=1 leaves it at the original position."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
+"Apply width/pad/overflow rules.  FIELD-WRITER is a thunk of zero\n"
+"   arguments that writes the field characters to STREAM."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
+"Returns two values for the float VALUE: T if the value is negative and\n"
+"  the double-float absolute value of VALUE."
+msgstr ""
+
 #: src/code/print.lisp
 msgid ""
 "If true, all objects will printed readably.  If readably printing is\n"
@@ -7712,6 +7777,18 @@ msgid "Print out a double-double to a string"
 msgstr ""
 
 #: src/code/print.lisp
+msgid ""
+"Ryu-based implementation of free-format float printing.  Uses\n"
+"  FLOAT-TO-STRING (D2S/F2S) to obtain the shortest round-tripping digit\n"
+"  string, then dispatches on the exponent to either free or exponential\n"
+"  notation, matching the layout produced by OUTPUT-FLOAT-AUX-BD."
+msgstr ""
+
+#: src/code/print.lisp
+msgid "Burger and Dybvig based implementation of free-format float printing."
+msgstr ""
+
+#: src/code/print.lisp
 msgid "Weak Pointer: "
 msgstr ""
 
@@ -7785,71 +7862,6 @@ msgstr ""
 
 #: src/code/print.lisp
 msgid "Cannot find ~S, so unicode support is not available"
-msgstr ""
-
-#: src/code/ryu-print.lisp
-msgid ""
-"When non-NIL, format directives ~E, ~F, ~G and the float printer used\n"
-"  by PRINC/PRIN1/PRINT/WRITE route through the Ryu-based formatter\n"
-"  (FORMAT-E, FORMAT-F, FORMAT-G, and the shortest-form D2S/F2S\n"
-"  routines).  When NIL, the original Burger and Dybvig based code is\n"
-"  used.  Some cases (notably ~F with non-zero scale factor K, and\n"
-"  printing of DOUBLE-DOUBLE-FLOAT values) always fall back to the\n"
-"  Burger and Dybvig code regardless of this variable."
-msgstr ""
-
-#: src/code/ryu-print.lisp
-msgid "Maximum precision (fractional digits for d2fixed."
-msgstr ""
-
-#: src/code/ryu-print.lisp
-msgid "Buffer size for d2fixed."
-msgstr ""
-
-#: src/code/ryu-print.lisp
-msgid "Lisp interface to Ryu d2fixed routine (specically d2fixed_buffered)"
-msgstr ""
-
-#: src/code/ryu-print.lisp
-msgid "Lisp interface to Ryu d2exp (specifically d2exp-buffered)."
-msgstr ""
-
-#: src/code/ryu-print.lisp
-msgid "Lisp interface to Ryu d2s (specifically d2s_buffered"
-msgstr ""
-
-#: src/code/ryu-print.lisp
-msgid ""
-"Convert F, a single-float or double-float, to a string of the shortest\n"
-"  form."
-msgstr ""
-
-#: src/code/ryu-print.lisp
-msgid ""
-"Number of decimal digits in N.  N is the absolute value of a\n"
-"   double-float's exponent, so 0 <= n <= 324."
-msgstr ""
-
-#: src/code/ryu-print.lisp
-msgid ""
-"Write MANTISSA-TEXT to STREAM, shifting the decimal point so that\n"
-"   the new dot lands K digits in from the start of the digit string.\n"
-"   MANTISSA-TEXT is 'D' or 'D.DDDD' from d2s/d2exp.\n"
-"   DROP-LEADING-ZERO-P controls whether the leading '0' before the dot\n"
-"   is emitted when the result starts with '0.'.  K=0 puts the dot\n"
-"   before all digits; K=1 leaves it at the original position."
-msgstr ""
-
-#: src/code/ryu-print.lisp
-msgid ""
-"Apply width/pad/overflow rules.  FIELD-WRITER is a thunk of zero\n"
-"   arguments that writes the field characters to STREAM."
-msgstr ""
-
-#: src/code/ryu-print.lisp
-msgid ""
-"Returns two values for the float VALUE: T if the value is negative and\n"
-"  the double-float absolute value of VALUE."
 msgstr ""
 
 #: src/code/pprint.lisp

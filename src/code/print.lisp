@@ -2001,6 +2001,67 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 
 (defun output-float-aux (x stream e-min e-max)
+  ;; Dispatch to either the Burger and Dybvig implementation or the
+  ;; Ryu-based implementation.  The Ryu code only handles single- and
+  ;; double-float values, so any other float type (notably
+  ;; DOUBLE-DOUBLE-FLOAT) always falls through to the B&D path.
+  (cond
+    ((and *use-ryu-printer*
+	  (typep x '(or single-float double-float)))
+     (output-float-ryu x stream e-min e-max))
+    (t
+     (output-float-aux-bd x stream e-min e-max))))
+
+(defun output-float-ryu (x stream e-min e-max)
+  "Ryu-based implementation of free-format float printing.  Uses
+  FLOAT-TO-STRING (D2S/F2S) to obtain the shortest round-tripping digit
+  string, then dispatches on the exponent to either free or exponential
+  notation, matching the layout produced by OUTPUT-FLOAT-AUX-BD."
+  (multiple-value-bind (mantissa actual-exp)
+      (parsed-exp-form (float-to-string x))
+    ;; MANTISSA is "d.ddd"; strip the decimal point so STRING is just
+    ;; the digit run, matching the second value of FLONUM-TO-DIGITS.
+    ;; The B&D convention is that the value equals 0.STRING * 10^E,
+    ;; so E = ACTUAL-EXP + 1 (mantissa "d.ddd" has the point one
+    ;; position right of the implicit "0.").
+    (let* ((dot-pos (position #\. mantissa))
+	   (string (if dot-pos
+		       (concatenate 'string
+				    (subseq mantissa 0 dot-pos)
+				    (subseq mantissa (1+ dot-pos)))
+		       mantissa))
+	   (e (1+ actual-exp)))
+      (cond
+	((< e-min e e-max)
+	 ;; free format
+	 (cond ((plusp e)
+		(write-string string stream :end (min (length string) e))
+		(dotimes (i (- e (length string)))
+		  (write-char #\0 stream))
+		(write-char #\. stream)
+		(write-string string stream :start (min (length string) e))
+		(when (<= (length string) e)
+		  (write-char #\0 stream))
+		(print-float-exponent x 0 stream))
+	       (t
+		(write-string "0." stream)
+		(dotimes (i (- e))
+		  (write-char #\0 stream))
+		(write-string string stream)
+		(print-float-exponent x 0 stream))))
+	(t
+	 ;; Exponential format
+	 (write-string string stream :end 1)
+	 (write-char #\. stream)
+	 (write-string string stream :start 1)
+	 ;; CLHS 22.1.3.1.3 says at least one digit must be printed
+	 ;; after the decimal point.
+	 (when (= (length string) 1)
+	   (write-char #\0 stream))
+	 (print-float-exponent x (1- e) stream))))))
+
+(defun output-float-aux-bd (x stream e-min e-max)
+  "Burger and Dybvig based implementation of free-format float printing."
   (multiple-value-bind (e string)
       (flonum-to-digits x)
     (cond

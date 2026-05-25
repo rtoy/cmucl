@@ -1583,9 +1583,9 @@
   ;; DOUBLE-DOUBLE-FLOAT) always falls through to the B&D path.
   (cond
     ((and lisp::*use-ryu-printer*
-	  (and k (zerop k))
+	  (or (null k) (zerop k))
 	  (typep number '(or single-float double-float)))
-     (format-fixed-ryu stream number w d k ovf pad atsign))
+     (format-fixed-ryu stream number w d (or k 0) ovf pad atsign))
     (t
      (format-fixed-aux-bd stream number w d k ovf pad atsign))))
 
@@ -1971,7 +1971,7 @@
     (prin1 number stream)
     nil)
    (t
-    (write-string (lisp::format-g number w d e k ovf pad marker atsign)
+    (write-string (lisp::format-g number w d e (or k 1) ovf pad marker atsign)
 		  stream)))
   (values))
 

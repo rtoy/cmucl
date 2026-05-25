@@ -237,8 +237,8 @@
 (comf "target:code/save")
 
 (comf "target:code/stream")
-(comf "target:code/print")
 (comf "target:code/ryu-print")
+(comf "target:code/print")
 (comf "target:code/pprint")
 #-no-runtime (comf "target:code/pprint" :byte-compile t)
 (comf "target:code/pprint-loop")

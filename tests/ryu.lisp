@@ -986,3 +986,75 @@
     (assert-true (stringp (format nil "~G" 1/2)))
     (assert-true (stringp (format nil "~G" 1)))))
 
+;;; ----------------------------------------------------------------------
+;;; Tests that the float printer used by PRIN1/PRINC/PRINT/WRITE
+;;; (i.e. OUTPUT-FLOAT-AUX) dispatches through Ryu when
+;;; *use-ryu-printer* is set.  Both code paths should produce
+;;; round-trippable strings.  We don't assert character equality
+;;; between the two paths because the shortest round-tripping digit
+;;; sequence is allowed to differ in rounding of the tie case; we do
+;;; assert each path round-trips.
+
+(define-test output-float.dispatch.round-trip
+  (:tag :output-float :dispatch)
+  (let ((values '(3.14d0
+		  -3.14d0
+		  0.1d0
+		  1.0d100
+		  1.0d-100
+		  1.0d0
+		  3.14f0
+		  -3.14f0
+		  0.1f0)))
+    (dolist (v values)
+      (let ((with-ryu
+	      (let ((lisp::*use-ryu-printer* t))
+		(prin1-to-string v)))
+	    (without-ryu
+	      (let ((lisp::*use-ryu-printer* nil))
+		(prin1-to-string v))))
+	(assert-equal v (read-from-string with-ryu) v with-ryu)
+	(assert-equal v (read-from-string without-ryu) v without-ryu)))))
+
+(define-test output-float.dispatch.princ-matches-prin1
+  (:tag :output-float :dispatch)
+  ;; For floats, PRIN1 and PRINC produce the same string (floats don't
+  ;; have escape characters).  This should hold under both code paths.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-equal (prin1-to-string 3.14d0)
+                  (princ-to-string 3.14d0))
+    (assert-equal (prin1-to-string 3.14f0)
+                  (princ-to-string 3.14f0))))
+
+(define-test output-float.dispatch.zero
+  (:tag :output-float :dispatch)
+  ;; Zero is handled by OUTPUT-FLOAT itself (not OUTPUT-FLOAT-AUX), so
+  ;; the dispatch is never reached.  Still, make sure both settings
+  ;; produce identical output.
+  (let ((with-ryu
+	  (let ((lisp::*use-ryu-printer* t))
+	    (prin1-to-string 0.0d0)))
+	(without-ryu
+	  (let ((lisp::*use-ryu-printer* nil))
+	    (prin1-to-string 0.0d0))))
+    (assert-equal without-ryu with-ryu)))
+
+(define-test output-float.dispatch.special-values
+  (:tag :output-float :dispatch)
+  ;; Infinity and NaN are handled in OUTPUT-FLOAT itself, before the
+  ;; OUTPUT-FLOAT-AUX dispatch, so the Ryu path is not exercised.
+  ;; Verify no error.
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (prin1-to-string
+                            ext:double-float-positive-infinity)))))
+
+(define-test output-float.dispatch.double-double
+  (:tag :output-float :dispatch)
+  ;; DOUBLE-DOUBLE-FLOAT is handled in OUTPUT-FLOAT itself when the
+  ;; feature is enabled (currently behind #+(and nil double-double),
+  ;; i.e. inactive), so it actually reaches OUTPUT-FLOAT-AUX.  Confirm
+  ;; the type-guard in the dispatch wrapper sends it to the B&D path.
+  #+double-double
+  (let ((lisp::*use-ryu-printer* t))
+    (assert-true (stringp (prin1-to-string 1w0)))))
+
