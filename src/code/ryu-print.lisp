@@ -23,15 +23,6 @@
   printing of DOUBLE-DOUBLE-FLOAT values) always fall back to the
   Burger and Dybvig code regardless of this variable.")
 
-(defvar *use-ryu-printer* nil
-  "When non-NIL, format directives ~E, ~F, ~G and the float printer used
-  by PRINC/PRIN1/PRINT/WRITE route through the Ryu-based formatter
-  (FORMAT-E, FORMAT-F, FORMAT-G, and the shortest-form D2S/F2S
-  routines).  When NIL, the original Burger and Dybvig based code is
-  used.  Some cases (notably ~F with non-zero scale factor K, and
-  printing of DOUBLE-DOUBLE-FLOAT values) always fall back to the
-  Burger and Dybvig code regardless of this variable.")
-
 ;;; Ryu interface
 
 ;; This could be larger, but that would mean larger stack size for the
