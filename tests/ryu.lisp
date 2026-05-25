@@ -732,6 +732,68 @@
   (assert-equal "      3.14"
                 (lisp::format-f 3.14f0 10 nil 0 nil nil nil)))
 
+(define-test format-f.single-narrow-width-no-overflow-char
+  (:tag :format-f :single-float)
+  ;; CLHS 22.3.3.1: when the shortest form does not fit in the
+  ;; specified width and no overflow character is supplied, the field
+  ;; expands rather than truncating digits.  Round-trip and the
+  ;; "at least one digit after the decimal point" rule must both hold.
+  (assert-equal "1.0"
+                (lisp::format-f 1.0f0 2 nil 0 nil nil nil))
+  (assert-equal "1.0"
+                (lisp::format-f 1.0f0 1 nil 0 nil nil nil))
+  ;; Same for double-floats.
+  (assert-equal "1.0"
+                (lisp::format-f 1.0d0 2 nil 0 nil nil nil)))
+
+(define-test format-f.single-narrow-width-with-overflow-char
+  (:tag :format-f :single-float)
+  ;; With overflowchar supplied, the field is filled with the overflow
+  ;; character when the shortest form does not fit.
+  (assert-equal "**"
+                (lisp::format-f 1.0f0 2 nil 0 #\* nil nil))
+  (assert-equal "***"
+                (lisp::format-f 1234.5f0 3 nil 0 #\* nil nil)))
+
+(define-test format-f.optional-leading-zero
+  (:tag :format-f :single-float :double-float)
+  ;; CLHS 22.3.3.1: "a zero is printed before the decimal point if
+  ;; there is room".  When the field is too narrow to fit the leading
+  ;; zero, it is dropped, and the output starts with the decimal point.
+  ;; ANSI tests FORMAT.F.13-16.
+  ;;
+  ;; ~3,2F of 0.5 -> ".50"
+  (assert-equal ".50" (lisp::format-f 0.5f0 3 2 0 nil nil nil))
+  (assert-equal ".50" (lisp::format-f 0.5d0 3 2 0 nil nil nil))
+  ;; ~2,1F of 0.5 -> ".5"
+  (assert-equal ".5"  (lisp::format-f 0.5f0 2 1 0 nil nil nil))
+  (assert-equal ".5"  (lisp::format-f 0.5d0 2 1 0 nil nil nil))
+  ;; ~4,2@F of 0.5 -> "+.50"
+  (assert-equal "+.50" (lisp::format-f 0.5f0 4 2 0 nil nil t))
+  (assert-equal "+.50" (lisp::format-f 0.5d0 4 2 0 nil nil t))
+  ;; ~2,2F of 0.5 -> ".50" (field expands beyond w=2 since no overflowchar)
+  (assert-equal ".50" (lisp::format-f 0.5f0 2 2 0 nil nil nil))
+  (assert-equal ".50" (lisp::format-f 0.5d0 2 2 0 nil nil nil))
+  ;; Negative values: ~3,2F of -0.5 -> "-.50" (field expands past w=3).
+  (assert-equal "-.50" (lisp::format-f -0.5d0 3 2 0 nil nil nil))
+  ;; -0.5 in width 4: drops the zero, fits exactly.
+  (assert-equal "-.50" (lisp::format-f -0.5d0 4 2 0 nil nil nil)))
+
+(define-test format-f.leading-zero-kept-when-room
+  (:tag :format-f :single-float :double-float)
+  ;; When there is room for the leading zero, it must be printed.
+  (assert-equal " 0.50" (lisp::format-f 0.5d0 5 2 0 nil nil nil))
+  (assert-equal "0.50"  (lisp::format-f 0.5d0 4 2 0 nil nil nil))
+  (assert-equal "0.50"  (lisp::format-f 0.5d0 nil 2 0 nil nil nil)))
+
+(define-test format-f.leading-zero-required-for-exact-zero
+  (:tag :format-f :single-float :double-float)
+  ;; CLHS 22.3.3.1: "If the magnitude is exactly zero, a single zero
+  ;; digit is printed before the decimal point."  Don't drop it even
+  ;; if the field would overflow.
+  (assert-equal "0.00" (lisp::format-f 0.0d0 3 2 0 nil nil nil))
+  (assert-equal "0.00" (lisp::format-f 0.0f0 3 2 0 nil nil nil)))
+
 (define-test format-f.single-negative-zero
   (:tag :format-f :single-float)
   (assert-equal "-0.0"

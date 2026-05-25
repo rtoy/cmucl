@@ -412,11 +412,32 @@
            (raw-len    (length raw-string))
            (sign-len   (if (or is-negative-p at-sign-p) 1 0))
            (need-dot   (zerop d))
-           (field-len  (+ sign-len raw-len (if need-dot 1 0))))
+	   (full-field-len (+ sign-len raw-len (if need-dot 1 0)))
+	   ;; CLHS 22.3.3.1: the leading zero before the decimal point
+	   ;; is optional when the magnitude is nonzero and less than 1.
+	   ;; d2fixed always emits it (e.g. "0.50" for 0.5), so detect
+	   ;; that case here and drop the zero if the field would not
+	   ;; otherwise fit in W.  For exact zero the leading digit is
+	   ;; required, so PLUSP ABS-VALUE gates the dropping.
+	   (lpoint-droppable
+	     (and (plusp abs-value)
+		  (>= raw-len 2)
+		  (char= (char raw-string 0) #\0)
+		  (char= (char raw-string 1) #\.)))
+	   (drop-leading-zero-p
+	     (and lpoint-droppable
+		  w
+		  (> full-field-len w)))
+           (field-len (if drop-leading-zero-p
+			  (1- full-field-len)
+			  full-field-len)))
       (flet ((write-field ()
                (cond (is-negative-p (write-char #\- stream))
                      (at-sign-p     (write-char #\+ stream)))
-               (write-string raw-string stream)
+	       (cond (drop-leading-zero-p
+		      (write-string raw-string stream :start 1))
+		     (t
+		      (write-string raw-string stream)))
                (when need-dot (write-char #\. stream))))
 	(declare (dynamic-extent #'write-field))
 	(pad-overflow stream field-len w overflowchar padchar #'write-field)))))
@@ -482,17 +503,21 @@
              (d-fit       (and w (- w sign-len int-len 1))))
 	(cond
           ((or (null w) (>= d-fit shortest-d))
+	   ;; No width or the shortest form fits within a field width
+	   ;; of W.
            (emit-shortest stream mantissa exponent is-negative-p w
                           overflowchar padchar at-sign-p))
-          ((minusp d-fit)
-           (cond (overflowchar
-                  (loop repeat w do (write-char overflowchar stream)))
-		 (t
-                  (emit-shortest stream mantissa exponent is-negative-p w
-				 overflowchar padchar at-sign-p))))
-          (t
-           (format-f-fixed stream value w d-fit
-                           overflowchar padchar at-sign-p)))))))
+	  (overflowchar
+	   ;; Shortest form does not fit and OVERFLOWCHAR is set; fill
+	   ;; the field with overflow characters.
+	   (loop repeat w
+		 do (write-char overflowchar stream)))
+	  (t
+	   ;; Shortest form does not fit and no OVERFLOWCHAR; emit the
+	   ;; full shortest form, letting the field expand.  CLHS
+	   ;; 22.3.3.1 requires this.
+	   (emit-shortest stream mantissa exponent is-negative-p w
+			  overflowchar padchar at-sign-p)))))))
 
 (defun format-f (value w d k overflowchar padchar at-sign-p)
   (declare (type (or single-float double-float) value)
