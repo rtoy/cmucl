@@ -179,7 +179,9 @@
                     (kernel::float-ratio-float (* 4 expo) 'double-float))
       (assert-equal least-positive-double-float
                     (kernel::float-ratio-float (* 494/100 expo) 'double-float))
-      (assert-equal least-positive-double-float
+      ;; 988/100*10^-324 is very close to 2*least-positive (the exact ratio
+      ;; is 1.9997 * least-positive), so it rounds to 2*least-positive.
+      (assert-equal (* 2 least-positive-double-float)
                     (kernel::float-ratio-float (* 988/100 expo) 'double-float)))))
     
 (define-test reader-error.small-single-floats
@@ -678,8 +680,11 @@
   (frob cdiv.maxima-case
 	#c(5.43d-10 1.13d-100)
 	#c(1.2d-311 5.7d-312)
-	#c(3.691993880674614517999740937026568563794896024143749539711267954d301
-	   -1.753697093319947872394996242210428954266103103602859195409591583d301)
+	;; Compute the expected value using rational arithmetic after
+	;; converting the complex numbers above to the equivalent
+	;; complex rationals.
+	(/ (complex (rational 5.43d-10) (rational 1.13d-100))
+	   (complex (rational 1.2d-311) (rational 5.7d-312)))
 	52)
   ;; 12
   ;;
@@ -766,3 +771,85 @@
 		     (coerce y '(complex single-float)))
 		  x
 		  y)))
+
+(define-test scale-float-underflow-rounding.single
+    (:tag :issues)
+  ;; SCALE-FLOAT into the denormal range must round to nearest, ties to
+  ;; even, instead of truncating the discarded bits.  Each (X EXP BITS)
+  ;; triple gives a normal X, an exponent EXP to scale by, and the IEEE
+  ;; bits of the expected single-float result.
+  (ext:with-float-traps-masked (:underflow :inexact)
+    (dolist (case (list
+                   ;; 1.7f0 * 2^-149: between denormals 1 and 2, closer to 2.
+                   (list 1.7f0  -149 #x00000002)
+                   ;; 1.5f0 * 2^-149: halfway between denormals 1 and 2;
+                   ;; ties round to even -> 2.
+                   (list 1.5f0  -149 #x00000002)
+                   ;; 1.1f0 * 2^-149: closer to denormal 1.
+                   (list 1.1f0  -149 #x00000001)
+                   ;; 1.0001f0 * 2^-150: just above halfway between 0 and
+                   ;; smallest denormal; rounds up to 1.
+                   (list 1.0001f0 -150 #x00000001)
+                   ;; 1.0f0 * 2^-150: exactly halfway between 0 and smallest
+                   ;; denormal; ties round to even -> 0.
+                   (list 1.0f0  -150 #x00000000)
+                   ;; Largest single < 2 scaled by 2^-127: rounding carries
+                   ;; into the implicit-1 position and produces the smallest
+                   ;; normal number.
+                   (list (kernel:make-single-float #x3fffffff)
+                         -127 #x00800000)))
+      (destructuring-bind (x exp bits) case
+        (let ((result (scale-float x exp)))
+          (assert-equal bits (kernel:single-float-bits result)
+                        x exp result))))))
+
+(define-test scale-float-underflow-rounding.double
+    (:tag :issues)
+  ;; Like SCALE-FLOAT-UNDERFLOW-ROUNDING.SINGLE but for double-floats.
+  ;; Each (X EXP HI LO) gives a normal X, an exponent EXP, and the IEEE
+  ;; high and low bits of the expected double-float result.
+  (ext:with-float-traps-masked (:underflow :inexact)
+    (dolist (case (list
+                   ;; 1.7d0 * 2^-1074: between denormals 1 and 2, closer to 2.
+                   (list 1.7d0  -1074 0 2)
+                   ;; 1.5d0 * 2^-1074: tie, rounds to even -> 2.
+                   (list 1.5d0  -1074 0 2)
+                   ;; 1.1d0 * 2^-1074: closer to denormal 1.
+                   (list 1.1d0  -1074 0 1)
+                   ;; 1.0001d0 * 2^-1075: just above halfway, rounds up.
+                   (list 1.0001d0 -1075 0 1)
+                   ;; 1.0d0 * 2^-1075: tie at the bottom, rounds to even -> 0.
+                   (list 1.0d0  -1075 0 0)
+                   ;; Largest double < 2 scaled by 2^-1023: rounding carries
+                   ;; into the implicit-1 position and produces the smallest
+                   ;; normal number.
+                   (list (kernel:make-double-float #x3fffffff #xffffffff)
+                         -1023 #x00100000 0)))
+      (destructuring-bind (x exp hi lo) case
+        (let ((result (scale-float x exp)))
+          (assert-equal hi (kernel:double-float-high-bits result)
+                        x exp result)
+          (assert-equal lo (kernel:double-float-low-bits result)
+                        x exp result))))))
+
+(define-test scale-float-underflow-rounding.reader-single
+    (:tag :issues)
+  ;; The reader uses FLOAT-RATIO-FLOAT, which calls SCALE-FLOAT and
+  ;; hence SCALE-FLOAT-MAYBE-UNDERFLOW on denormal results.  Reading
+  ;; small float literals must therefore also round to nearest.
+  (ext:with-float-traps-masked (:underflow :inexact)
+    ;; 1.1e-44 is closer to 8 * least-positive-single-float than to 7.
+    (assert-equal #x00000008
+                  (kernel:single-float-bits 1.1e-44))
+    ;; 1.121e-44 (essentially the IEEE representation of 1.1e-44) reads
+    ;; as the same denormal.
+    (assert-equal #x00000008
+                  (kernel:single-float-bits 1.121e-44))))
+
+(define-test scale-float-underflow-rounding.reader-double
+    (:tag :issues)
+  ;; Like the single-float reader test, in the double denormal range.
+  ;; 1.1d-322 is closest to denormal #x16 (= 22).
+  (ext:with-float-traps-masked (:underflow :inexact)
+    (assert-equal 0 (kernel:double-float-high-bits 1.1d-322))
+    (assert-equal #x16 (kernel:double-float-low-bits 1.1d-322))))

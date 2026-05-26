@@ -885,40 +885,57 @@
 ;;; denormalized or underflows to 0.
 ;;;
 (defun scale-float-maybe-underflow (x exp)
+  (declare (type (or single-float double-float) x)
+	   (fixnum exp))
   (multiple-value-bind (sig old-exp)
-		       (integer-decode-float x)
+      (integer-decode-float x)
     (let* ((digits (float-digits x))
+	   (1+digits (1+ digits))
 	   (new-exp (+ exp old-exp digits
 		       (etypecase x
 			 (single-float vm:single-float-bias)
 			 (double-float vm:double-float-bias))))
 	   (sign (if (minusp (float-sign x)) 1 0)))
       (cond
-       ((< new-exp
-	   (etypecase x
-	     (single-float vm:single-float-normal-exponent-min)
-	     (double-float vm:double-float-normal-exponent-min)))
-	(when (vm:current-float-trap :inexact)
-	  (error 'floating-point-inexact :operation 'scale-float
-		 :operands (list x exp)))
-	(when (vm:current-float-trap :underflow)
-	  (error 'floating-point-underflow :operation 'scale-float
-		 :operands (list x exp)))
-	(let ((shift (1- new-exp)))
-	  ;; Is it necessary to have this IF here?  Is there any case
-	  ;; where (ash sig shift) won't return 0 when
-	  ;; shift < -(digits-1)?
-	  (if (< shift (- (1- digits)))
+	((< new-exp
+	    (etypecase x
+	      (single-float vm:single-float-normal-exponent-min)
+	      (double-float vm:double-float-normal-exponent-min)))
+	 (when (vm:current-float-trap :inexact)
+	   (error 'floating-point-inexact :operation 'scale-float
+		  :operands (list x exp)))
+	 (when (vm:current-float-trap :underflow)
+	   (error 'floating-point-underflow :operation 'scale-float
+		  :operands (list x exp)))
+	 ;; To round correctly, let the hardware multiplier do the
+	 ;; rounding: build a normal float whose stored exponent is
+	 ;; bumped up by 1+DIGITS (which puts it safely in the normal
+	 ;; range), then multiply by 2^-(1+DIGITS).  The multiplier is
+	 ;; an exact power of two, so the multiplication is exact
+	 ;; apart from the unavoidable rounding step that expresses
+	 ;; the product as a denormal, which the FPU performs in the
+	 ;; current rounding mode.  If the bumped exponent is zero or
+	 ;; negative the bumped float would itself be a denormal --
+	 ;; losing the implicit 1 bit of SIG -- so handle that case
+	 ;; explicitly by returning signed zero.
+	 (let ((bumped-exp (+ new-exp 1+digits)))
+	   (cond
+	     ((<= bumped-exp 0)
 	      (etypecase x
 		(single-float (single-from-bits sign 0 0))
-		(double-float (double-from-bits sign 0 0)))
+		(double-float (double-from-bits sign 0 0))))
+	     (t
 	      (etypecase x
-		(single-float (single-from-bits sign 0 (ash sig shift)))
-		(double-float (double-from-bits sign 0 (ash sig shift)))))))
-       (t
-	(etypecase x
-	  (single-float (single-from-bits sign new-exp sig))
-	  (double-float (double-from-bits sign new-exp sig))))))))
+		(single-float
+		 (* (single-from-bits sign bumped-exp sig)
+		    (scale-float 1f0 (- 1+digits))))
+		(double-float
+		 (* (double-from-bits sign bumped-exp sig)
+		    (scale-float 1d0 (- 1+digits)))))))))
+	(t
+	 (etypecase x
+	   (single-float (single-from-bits sign new-exp sig))
+	   (double-float (double-from-bits sign new-exp sig))))))))
 
 
 ;;; SCALE-FLOAT-MAYBE-OVERFLOW  --  Internal
@@ -1150,27 +1167,11 @@
 			      (format t "2: f0, f1 = ~A~%" f0)
 			      (format t "   scale = ~A~%" scale)
 			      (format t "scale-float f0 = ~A~%" (scale-float f0 scale)))
-                            (let ((min-exponent
-                                    ;; Compute the min (unbiased) exponent
-                                    (ecase format
-                                      (single-float
-                                       (- vm:single-float-normal-exponent-min
-                                          vm:single-float-bias
-                                          vm:single-float-digits))
-                                      (double-float
-                                       (- vm:double-float-normal-exponent-min
-                                          vm:double-float-bias
-                                          vm:double-float-digits)))))
-                              ;; F0 is always between 0.5 and 1.  If
-                              ;; SCALE is the min exponent, we have a
-                              ;; denormal number just less than the
-                              ;; least-positive float.  We want to
-                              ;; return the least-positive-float so
-                              ;; multiply F0 by 2 (without adjusting
-                              ;; SCALE) to get the nearest float.
-                              (if (= scale min-exponent)
-                                  (scale-float (* 2 f0) scale)
-			          (scale-float f0 scale))))))))
+			    ;; SCALE-FLOAT-MAYBE-UNDERFLOW correctly rounds
+			    ;; to nearest when constructing a denormal result,
+			    ;; so just call SCALE-FLOAT here without any
+			    ;; boundary-case fixup.
+			    (scale-float f0 scale))))))
 	       (floatit (bits)
 		 (let ((sign (if plusp 0 1)))
 		   (case format
