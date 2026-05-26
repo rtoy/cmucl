@@ -885,8 +885,10 @@
 ;;; denormalized or underflows to 0.
 ;;;
 (defun scale-float-maybe-underflow (x exp)
+  (declare (type (or single-float double-float) x)
+	   (type kernel:double-float-exponent exp))
   (multiple-value-bind (sig old-exp)
-		       (integer-decode-float x)
+      (integer-decode-float x)
     (let* ((digits (float-digits x))
 	   (1+digits (1+ digits))
 	   (new-exp (+ exp old-exp digits
@@ -905,25 +907,18 @@
 	 (when (vm:current-float-trap :underflow)
 	   (error 'floating-point-underflow :operation 'scale-float
 		  :operands (list x exp)))
-	 ;; The naive expression (ash sig (1- new-exp)) just truncates
-	 ;; the discarded bits, so values like 1.1e-44 would round
-	 ;; toward zero instead of to nearest.  Instead, let the
-	 ;; hardware multiplier do the rounding: build a normal float
-	 ;; whose stored exponent is bumped up by 1+DIGITS (which puts
-	 ;; it safely in the normal range), then multiply by
-	 ;; 2^-(1+DIGITS).  The multiplier is an exact power of two,
-	 ;; so the multiplication is exact apart from the unavoidable
-	 ;; rounding step that expresses the product as a denormal,
-	 ;; which the FPU performs in the current rounding mode.  If
-	 ;; the bumped exponent is zero or negative the bumped float
-	 ;; would itself be a denormal -- losing the implicit 1 bit of
-	 ;; SIG -- so handle that case explicitly by returning signed
-	 ;; zero.  FLOAT-DIGITS is inlined and folds to a constant
-	 ;; inside each ETYPECASE branch, so the SCALE-FLOAT call has
-	 ;; a compile-time-constant exponent and its deftransform
-	 ;; reduces it to a multiply by a precomputed power-of-two.
+	 ;; To round correctly, let the hardware multiplier do the
+	 ;; rounding: build a normal float whose stored exponent is
+	 ;; bumped up by 1+DIGITS (which puts it safely in the normal
+	 ;; range), then multiply by 2^-(1+DIGITS).  The multiplier is
+	 ;; an exact power of two, so the multiplication is exact
+	 ;; apart from the unavoidable rounding step that expresses
+	 ;; the product as a denormal, which the FPU performs in the
+	 ;; current rounding mode.  If the bumped exponent is zero or
+	 ;; negative the bumped float would itself be a denormal --
+	 ;; losing the implicit 1 bit of SIG -- so handle that case
+	 ;; explicitly by returning signed zero.
 	 (let ((bumped-exp (+ new-exp 1+digits)))
-	   (declare (fixnum bumped-exp))
 	   (cond
 	     ((<= bumped-exp 0)
 	      (etypecase x
