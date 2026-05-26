@@ -886,7 +886,7 @@
 ;;;
 (defun scale-float-maybe-underflow (x exp)
   (declare (type (or single-float double-float) x)
-	   (type kernel:double-float-exponent exp))
+	   (fixnum exp))
   (multiple-value-bind (sig old-exp)
       (integer-decode-float x)
     (let* ((digits (float-digits x))
