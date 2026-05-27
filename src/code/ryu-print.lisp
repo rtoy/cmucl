@@ -555,6 +555,10 @@
 		      (format-f value ww dd 0 overflowchar padchar at-sign-p)
 		      (make-string ee :initial-element #\space)))
 	(t
-	 ;; ~E form
-	 (format-e value w effective-d e k overflowchar padchar exponentchar at-sign-p))))))
+	 ;; ~E form.  CLHS 22.3.3.3 specifies the resulting call as
+	 ;; "~w,d,e,k,...,E" -- using the user's original D, not the
+	 ;; EFFECTIVE-D computed for the ~F-vs-~E decision.  When D is
+	 ;; NIL this lets format-e produce its free-format (shortest)
+	 ;; output rather than fixed-precision.
+	 (format-e value w d e k overflowchar padchar exponentchar at-sign-p))))))
 

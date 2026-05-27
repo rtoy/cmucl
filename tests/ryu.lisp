@@ -518,11 +518,12 @@
 (define-test format-g.large-uses-e
   (:tag :format-g)
   ;; Values with n > 7 should fall into ~E form (no trailing spaces).
-  ;; 1d10 has n=11, q=1, effective-d = max(1, 7) = 7, dd = 7-11 = -4.
-  ;; ~E with effective-d = 7: 1.0000000d+10.
-  (assert-equal "1.0000000d+10"
+  ;; Per CLHS 22.3.3.3, when D is unspecified ~G's ~E call also has
+  ;; D unspecified, so ~E uses free-format (shortest) output rather
+  ;; than fixed precision.
+  (assert-equal "1.0d+10"
                 (lisp::format-g 1d10 nil nil nil 1 nil nil #\d nil))
-  (assert-equal "1.0000000d+100"
+  (assert-equal "1.0d+100"
                 (lisp::format-g 1d100 nil nil nil 1 nil nil #\d nil)))
 
 (define-test format-g.small-uses-e
@@ -563,8 +564,9 @@
   (:tag :format-g)
   ;; e parameter controls exponent width in the ~E branch and ee in
   ;; the ~F branch (ee = e + 2).
-  ;; 1d10 with e=3: ~E with 3-digit exponent, "1.0000000d+010".
-  (assert-equal "1.0000000d+010"
+  ;; 1d10 with e=3: ~E with 3-digit exponent.  D is unspecified so
+  ;; ~E uses free-format, giving "1.0d+010".
+  (assert-equal "1.0d+010"
                 (lisp::format-g 1d10 nil nil 3 1 nil nil #\d nil))
   ;; 3.14 with e=3: ~F branch, ee = 5 trailing spaces.
   (assert-equal "3.14     "
@@ -577,7 +579,7 @@
                 (lisp::format-g 3.14d0 nil nil nil 1 nil nil #\d t))
   (assert-equal "-3.14    "
                 (lisp::format-g -3.14d0 nil nil nil 1 nil nil #\d t))
-  (assert-equal "+1.0000000d+10"
+  (assert-equal "+1.0d+10"
                 (lisp::format-g 1d10 nil nil nil 1 nil nil #\d t)))
 
 (define-test format-g.boundary-n-7
@@ -587,9 +589,25 @@
   ;; dd = 0 is in [0, d] so ~F path with d=0.  Output: "1000000." + 4 sp.
   (assert-equal "1000000.    "
                 (lisp::format-g 1d6 nil nil nil 1 nil nil #\d nil))
-  ;; 1d7 has n=8, dd = 7-8 = -1, falls into ~E.
-  (assert-equal "1.0000000d+7"
+  ;; 1d7 has n=8, dd = 7-8 = -1, falls into ~E.  D is unspecified so
+  ;; ~E uses free-format.
+  (assert-equal "1.0d+7"
                 (lisp::format-g 1d7 nil nil nil 1 nil nil #\d nil)))
+
+(define-test format-g.d-nil-routes-to-e-with-d-nil
+  (:tag :format-g)
+  ;; CLHS 22.3.3.3 specifies that when ~G falls through to the ~E
+  ;; branch, the ~E directive is called with the user's original D
+  ;; (per "~w,d,e,k,...,E"), NOT the EFFECTIVE-D that ~G computed for
+  ;; the ~F-vs-~E decision.  This makes a visible difference when D
+  ;; was originally NIL: ~E then produces its free-format (shortest)
+  ;; output rather than the longer fixed-precision form.
+  ;; 1.5d-10 has n=-9, q=2, effective-d=2, dd=11 -> ~E with D=nil.
+  (assert-equal "1.5d-10"
+                (lisp::format-g 1.5d-10 nil nil nil 1 nil nil #\d nil))
+  ;; If we passed effective-d=2 to ~E we'd get "1.50d-10" instead.
+  (assert-false (equal "1.50d-10"
+                       (lisp::format-g 1.5d-10 nil nil nil 1 nil nil #\d nil))))
 
 (define-test format-g.padchar
   (:tag :format-g)
