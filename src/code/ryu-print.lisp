@@ -124,6 +124,15 @@
     (values mantissa
 	    (truly-the (signed-byte 11) exp))))
 
+(declaim (inline mantissa-digit-count))
+(defun mantissa-digit-count (mantissa)
+  "Return the number of significant digits in MANTISSA, a string of
+   the form \"d\" or \"d.dddd\" (as produced by d2s/d2exp).  The decimal
+   point, if present, is not counted."
+  (declare (type string mantissa))
+  (- (length mantissa)
+     (if (find #\. mantissa) 1 0)))
+
 (defun compute-d-for-width (w e k actual-exp is-negative-p at-sign-p)
   ;; Find the largest d (precision) value that fits in width W given
   ;; the actual exponent (adjusted by k), and whether signs are
@@ -175,9 +184,7 @@
   (let* ((sign-len (if (or is-negative-p at-sign-p) 1 0))
          (exp-digits (max (or e 1)
                           (count-decimal-digits (abs actual-exp))))
-         (dotp (find #\. mantissa))
-         (raw-digits (let ((len (length mantissa)))
-                       (if dotp (1- len) len)))
+         (raw-digits (mantissa-digit-count mantissa))
          (mantissa-len
            (cond
              ((plusp k)
@@ -462,10 +469,8 @@
                       overflowchar padchar at-sign-p)
   (declare (type simple-string mantissa)
 	   (type (signed-byte 10) exponent))
-  (let* ((has-dot (find #\. mantissa))
-	 ;; Number of digits, not including the decimal point.
-	 (digit-count (- (length mantissa)
-			 (if has-dot 1 0)))
+  (let* (;; Number of digits, not including the decimal point.
+	 (digit-count (mantissa-digit-count mantissa))
          (sign-len  (if (or is-negative-p at-sign-p) 1 0))
 	 (reshaped-len (reshape-fixed-length digit-count exponent))
          (field-len (+ sign-len reshaped-len)))
@@ -478,6 +483,55 @@
       (declare (dynamic-extent #'write-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 	 
+(defun emit-rounded-to-width (stream value frac is-negative-p w
+			      overflowchar padchar at-sign-p)
+  "Round (the magnitude of) VALUE to FRAC fractional digits with
+   d2fixed and write it right-justified in a field of width W.  At
+   least one fractional digit is always shown: if FRAC is 0 the
+   rounded value is integral and a single \"0\" is appended after the
+   decimal point (CLHS 22.3.3.1).  The optional leading zero before
+   the decimal point is dropped when the field would otherwise
+   overflow W.  Used by the free-format ~F path when the shortest
+   representation does not fit in W."
+  (declare (type (or single-float double-float) value)
+	   (type (integer 0 *) frac))
+  (let* ((rounded   (d2fixed (float (abs value) 1d0) frac))
+	 (len       (length rounded))
+	 ;; ROUNDED is "ddd" (frac=0) or "ddd.ddd" (frac>0).  Locate the
+	 ;; decimal point and the integer/fractional digit spans without
+	 ;; allocating substrings.
+	 (dot        (position #\. rounded))
+	 (int-end    (or dot len))
+	 (frac-start (if dot (1+ dot) len))
+	 (frac-len   (- len frac-start))
+	 ;; At least one fractional digit is always shown; when there are
+	 ;; none a single "0" is emitted instead.
+	 (frac-out-len (max 1 frac-len))
+	 (sign-len   (if (or is-negative-p at-sign-p) 1 0))
+	 ;; The leading "0." may be shortened to "." when the magnitude
+	 ;; is < 1 (integer part is the single digit "0") and nonzero,
+	 ;; and the full field would not fit in W.
+	 (lpoint-droppable
+	   (and (= int-end 1)
+		(char= (char rounded 0) #\0)
+		(not (zerop value))))
+	 (full-len   (+ sign-len int-end 1 frac-out-len))
+	 (drop-leading-zero-p
+	   (and lpoint-droppable w (> full-len w)))
+	 (field-len  (if drop-leading-zero-p (1- full-len) full-len)))
+    (flet ((write-field ()
+	     (cond (is-negative-p (write-char #\- stream))
+		   (at-sign-p     (write-char #\+ stream)))
+	     (unless drop-leading-zero-p
+	       (write-string rounded stream :start 0 :end int-end))
+	     (write-char #\. stream)
+	     (cond ((zerop frac-len)
+		    (write-char #\0 stream))
+		   (t
+		    (write-string rounded stream :start frac-start :end len)))))
+      (declare (dynamic-extent #'write-field))
+      (pad-overflow stream field-len w overflowchar padchar #'write-field))))
+
 (defun format-f-free (stream value w
                       overflowchar padchar at-sign-p)
   (declare (type (or single-float double-float) value))
@@ -486,8 +540,7 @@
     (declare (ignore abs-value))
     (multiple-value-bind (mantissa exponent)
 	(parsed-exp-form (float-to-string value))
-      (let* ((has-dot     (find #\. mantissa))
-             (digit-count (if has-dot (1- (length mantissa)) (length mantissa)))
+      (let* ((digit-count (mantissa-digit-count mantissa))
              (int-len     (max 1 (1+ exponent)))
              (shortest-d  (max 0 (- digit-count 1 exponent)))
              (sign-len    (if (or is-negative-p at-sign-p) 1 0))
@@ -524,47 +577,6 @@
 				  is-negative-p w
 				  overflowchar padchar at-sign-p)))))))
 
-(defun emit-rounded-to-width (stream value frac is-negative-p w
-			      overflowchar padchar at-sign-p)
-  "Round (the magnitude of) VALUE to FRAC fractional digits with
-   d2fixed and write it right-justified in a field of width W.  At
-   least one fractional digit is always shown: if FRAC is 0 the
-   rounded value is integral and a single \"0\" is appended after the
-   decimal point (CLHS 22.3.3.1).  The optional leading zero before
-   the decimal point is dropped when the field would otherwise
-   overflow W.  Used by the free-format ~F path when the shortest
-   representation does not fit in W."
-  (declare (type (or single-float double-float) value)
-	   (type (integer 0 *) frac))
-  (let* ((rounded   (d2fixed (float (abs value) 1d0) frac))
-	 ;; ROUNDED is "ddd" (frac=0) or "ddd.ddd" (frac>0).  Split it
-	 ;; into integer and fractional digit runs.
-	 (dot        (position #\. rounded))
-	 (int-part   (if dot (subseq rounded 0 dot) rounded))
-	 (frac-part  (if dot (subseq rounded (1+ dot)) ""))
-	 ;; Force at least one fractional digit.
-	 (frac-out   (if (zerop (length frac-part)) "0" frac-part))
-	 (sign-len   (if (or is-negative-p at-sign-p) 1 0))
-	 ;; The leading "0." may be shortened to "." when the magnitude
-	 ;; is < 1 (integer part is a single "0") and nonzero, and the
-	 ;; full field would not fit in W.
-	 (lpoint-droppable
-	   (and (string= int-part "0")
-		(not (zerop value))))
-	 (full-len   (+ sign-len (length int-part) 1 (length frac-out)))
-	 (drop-leading-zero-p
-	   (and lpoint-droppable w (> full-len w)))
-	 (field-len  (if drop-leading-zero-p (1- full-len) full-len)))
-    (flet ((write-field ()
-	     (cond (is-negative-p (write-char #\- stream))
-		   (at-sign-p     (write-char #\+ stream)))
-	     (unless drop-leading-zero-p
-	       (write-string int-part stream))
-	     (write-char #\. stream)
-	     (write-string frac-out stream)))
-      (declare (dynamic-extent #'write-field))
-      (pad-overflow stream field-len w overflowchar padchar #'write-field))))
-
 (defun format-f (value w d k overflowchar padchar at-sign-p)
   (declare (type (or single-float double-float) value)
 	   (fixnum k)
@@ -591,9 +603,7 @@
 	   (type (or null (and unsigned-byte fixnum)) w d e))
   (multiple-value-bind (mantissa exponent)
       (parsed-exp-form (float-to-string value))
-    (let* ((digit-count (- (length mantissa)
-			   (if (find #\. mantissa)
-			       1 0)))
+    (let* ((digit-count (mantissa-digit-count mantissa))
 	   (n (1+ exponent))
 	   (effective-d (or d (max digit-count (min n 7))))
 	   (ee (if e (+ e 2) 4))
