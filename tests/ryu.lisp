@@ -767,18 +767,24 @@
 
 (define-test format-f.d-nil-rounds-to-width-with-forced-zero
   (:tag :format-f)
-  ;; ANSI FORMAT.F.45/F.47: ~F with unspecified d rounds the value to
-  ;; the fractional digits that fit in W, but always shows at least one
-  ;; fractional digit (a single "0" if the fraction rounds away).  The
-  ;; field expands past W when even that minimum doesn't fit and no
-  ;; overflow char is given.
-  ;; ~2f of 1.1 and 1.9 round to integers, forced ".0", overflow to 3.
+  ;; ANSI FORMAT.F.45/F.46/F.47: ~F with unspecified d rounds the
+  ;; value to the fractional digits that fit in W, always shows at
+  ;; least one fractional digit (a single "0" if the fraction rounds
+  ;; away), and drops the leading "0." -> "." only when keeping it
+  ;; would overflow W.
+  ;; ~2f of 1.1 and 1.9 round to integers, forced ".0", overflow to 3
+  ;; (FORMAT.F.45).
   (assert-equal "1.0" (lisp::format-f 1.1f0 2 nil 0 nil nil nil))
   (assert-equal "2.0" (lisp::format-f 1.9f0 2 nil 0 nil nil nil))
-  ;; ~3f of 1e-6: rounds to .00 (leading zero dropped to fit width 3).
-  (assert-equal ".00" (lisp::format-f 1.0f-6 3 nil 0 nil nil nil))
-  ;; ~4f of 1e-6: .000.
-  (assert-equal ".000" (lisp::format-f 1.0f-6 4 nil 0 nil nil nil)))
+  ;; ~3f of 1e-6: "0.0" fits w=3 exactly, leading zero kept
+  ;; (FORMAT.F.47).
+  (assert-equal "0.0" (lisp::format-f 1.0f-6 3 nil 0 nil nil nil))
+  ;; ~4f of 1e-6: "0.00" fits w=4 exactly.
+  (assert-equal "0.00" (lisp::format-f 1.0f-6 4 nil 0 nil nil nil))
+  ;; ~2f, ~1f, ~0f of 0.01: leading zero dropped to ".0" (FORMAT.F.46).
+  (assert-equal ".0" (lisp::format-f 0.01f0 2 nil 0 nil nil nil))
+  (assert-equal ".0" (lisp::format-f 0.01f0 1 nil 0 nil nil nil))
+  (assert-equal ".0" (lisp::format-f 0.01f0 0 nil 0 nil nil nil)))
 
 (define-test format-f.single-narrow-width-with-overflow-char
   (:tag :format-f :single-float)
