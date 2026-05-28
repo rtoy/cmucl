@@ -367,20 +367,17 @@
   (assert-equal "       1.0"
                 (lisp::format-f  1d0        10 nil 0 nil nil nil)))
 
-(define-test format-f.d-nil-with-w-no-shrink
+(define-test format-f.d-nil-with-w-shrinks
   (:tag :format-f)
-  ;; CLHS 22.3.3.1: when d is unspecified, the digit count is set so
-  ;; that the result reads back as an EQUAL float, with no extraneous
-  ;; trailing zeros.  This is the round-trip count.  When the result
-  ;; does not fit in w and no overflowchar is supplied, the field
-  ;; expands -- it does NOT shrink the digits, because doing so would
-  ;; produce a different float on read-back.  (Earlier ryu code did
-  ;; shrink here; that change was needed to pass ANSI FORMAT.F.5.)
-  (assert-equal "1.234567"
+  ;; d=nil with a tight width: CL rounds the value to the largest
+  ;; number of fractional digits that fits in W (matching the B&D
+  ;; reference output).  3.141592653589793 shrinks to fit; 1.234567
+  ;; with w=6 rounds to "1.2346".
+  (assert-equal "1.2346"
                 (lisp::format-f  1.234567d0   6 nil 0 nil nil nil))
-  (assert-equal "3.141592653589793"
+  (assert-equal "3.14159265"
                 (lisp::format-f  3.141592653589793d0 10 nil 0 nil nil nil))
-  (assert-equal "3.141592653589793"
+  (assert-equal "3.141593"
                 (lisp::format-f  3.141592653589793d0  8 nil 0 nil nil nil)))
 
 (define-test format-f.d-nil-with-w-overflow
@@ -755,10 +752,11 @@
 
 (define-test format-f.single-narrow-width-no-overflow-char
   (:tag :format-f :single-float)
-  ;; CLHS 22.3.3.1: when the shortest form does not fit in the
-  ;; specified width and no overflow character is supplied, the field
-  ;; expands rather than truncating digits.  Round-trip and the
-  ;; "at least one digit after the decimal point" rule must both hold.
+  ;; ~F with unspecified d and a width too small for the shortest form:
+  ;; the value is rounded to the fractional digits that fit, but at
+  ;; least one fractional digit is always shown (CLHS 22.3.3.1).  With
+  ;; no overflow char the field expands when even that minimum
+  ;; doesn't fit.  1.0 -> "1.0".
   (assert-equal "1.0"
                 (lisp::format-f 1.0f0 2 nil 0 nil nil nil))
   (assert-equal "1.0"
@@ -766,6 +764,21 @@
   ;; Same for double-floats.
   (assert-equal "1.0"
                 (lisp::format-f 1.0d0 2 nil 0 nil nil nil)))
+
+(define-test format-f.d-nil-rounds-to-width-with-forced-zero
+  (:tag :format-f)
+  ;; ANSI FORMAT.F.45/F.47: ~F with unspecified d rounds the value to
+  ;; the fractional digits that fit in W, but always shows at least one
+  ;; fractional digit (a single "0" if the fraction rounds away).  The
+  ;; field expands past W when even that minimum doesn't fit and no
+  ;; overflow char is given.
+  ;; ~2f of 1.1 and 1.9 round to integers, forced ".0", overflow to 3.
+  (assert-equal "1.0" (lisp::format-f 1.1f0 2 nil 0 nil nil nil))
+  (assert-equal "2.0" (lisp::format-f 1.9f0 2 nil 0 nil nil nil))
+  ;; ~3f of 1e-6: rounds to .00 (leading zero dropped to fit width 3).
+  (assert-equal ".00" (lisp::format-f 1.0f-6 3 nil 0 nil nil nil))
+  ;; ~4f of 1e-6: .000.
+  (assert-equal ".000" (lisp::format-f 1.0f-6 4 nil 0 nil nil nil)))
 
 (define-test format-f.single-narrow-width-with-overflow-char
   (:tag :format-f :single-float)

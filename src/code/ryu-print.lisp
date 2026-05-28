@@ -491,24 +491,79 @@
              (int-len     (max 1 (1+ exponent)))
              (shortest-d  (max 0 (- digit-count 1 exponent)))
              (sign-len    (if (or is-negative-p at-sign-p) 1 0))
-             (d-fit       (and w (- w sign-len int-len 1))))
+             (d-fit       (and w (- w sign-len int-len 1)))
+	     ;; When the magnitude is < 1 the integer part is a single
+	     ;; "0" that may be dropped (the leading zero is optional),
+	     ;; freeing one more slot for a fractional digit.  Compute
+	     ;; the fractional-digit count that exactly fills W under
+	     ;; that rule.
+	     (frac-fit (and w
+			    (if (plusp (1+ exponent))
+				(- w sign-len int-len 1)	; "[int]."
+				(- w sign-len 1)))))		; ".[frac]"
 	(cond
           ((or (null w) (>= d-fit shortest-d))
-	   ;; No width or the shortest form fits within a field width
-	   ;; of W.
+	   ;; No width, or the shortest round-trip form already fits
+	   ;; within a field width of W.  Emit it directly.
            (emit-shortest stream mantissa exponent is-negative-p w
                           overflowchar padchar at-sign-p))
-	  (overflowchar
-	   ;; Shortest form does not fit and OVERFLOWCHAR is set; fill
-	   ;; the field with overflow characters.
+	  ((and overflowchar (minusp frac-fit))
+	   ;; Not even the integer part and decimal point fit, and an
+	   ;; overflow character was supplied: fill the field.
 	   (loop repeat w
 		 do (write-char overflowchar stream)))
 	  (t
-	   ;; Shortest form does not fit and no OVERFLOWCHAR; emit the
-	   ;; full shortest form, letting the field expand.  CLHS
-	   ;; 22.3.3.1 requires this.
-	   (emit-shortest stream mantissa exponent is-negative-p w
-			  overflowchar padchar at-sign-p)))))))
+	   ;; The shortest form does not fit in W.  D was not specified,
+	   ;; so round the value to the largest number of fractional
+	   ;; digits FRAC-FIT that fits, then display it.  Per CLHS
+	   ;; 22.3.3.1, if the fraction rounds away to nothing a single
+	   ;; zero digit must still appear after the decimal point.  We
+	   ;; therefore round at FRAC-FIT places (which may be 0) but
+	   ;; always show at least one fractional digit.
+	   (emit-rounded-to-width stream value (max 0 frac-fit)
+				  is-negative-p w
+				  overflowchar padchar at-sign-p)))))))
+
+(defun emit-rounded-to-width (stream value frac is-negative-p w
+			      overflowchar padchar at-sign-p)
+  "Round (the magnitude of) VALUE to FRAC fractional digits with
+   d2fixed and write it right-justified in a field of width W.  At
+   least one fractional digit is always shown: if FRAC is 0 the
+   rounded value is integral and a single \"0\" is appended after the
+   decimal point (CLHS 22.3.3.1).  The optional leading zero before
+   the decimal point is dropped when the field would otherwise
+   overflow W.  Used by the free-format ~F path when the shortest
+   representation does not fit in W."
+  (declare (type (or single-float double-float) value)
+	   (type (integer 0 *) frac))
+  (let* ((rounded   (d2fixed (float (abs value) 1d0) frac))
+	 ;; ROUNDED is "ddd" (frac=0) or "ddd.ddd" (frac>0).  Split it
+	 ;; into integer and fractional digit runs.
+	 (dot        (position #\. rounded))
+	 (int-part   (if dot (subseq rounded 0 dot) rounded))
+	 (frac-part  (if dot (subseq rounded (1+ dot)) ""))
+	 ;; Force at least one fractional digit.
+	 (frac-out   (if (zerop (length frac-part)) "0" frac-part))
+	 (sign-len   (if (or is-negative-p at-sign-p) 1 0))
+	 ;; The leading "0." may be shortened to "." when the magnitude
+	 ;; is < 1 (integer part is a single "0") and nonzero, and the
+	 ;; full field would not fit in W.
+	 (lpoint-droppable
+	   (and (string= int-part "0")
+		(not (zerop value))))
+	 (full-len   (+ sign-len (length int-part) 1 (length frac-out)))
+	 (drop-leading-zero-p
+	   (and lpoint-droppable w (> full-len w)))
+	 (field-len  (if drop-leading-zero-p (1- full-len) full-len)))
+    (flet ((write-field ()
+	     (cond (is-negative-p (write-char #\- stream))
+		   (at-sign-p     (write-char #\+ stream)))
+	     (unless drop-leading-zero-p
+	       (write-string int-part stream))
+	     (write-char #\. stream)
+	     (write-string frac-out stream)))
+      (declare (dynamic-extent #'write-field))
+      (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 
 (defun format-f (value w d k overflowchar padchar at-sign-p)
   (declare (type (or single-float double-float) value)
