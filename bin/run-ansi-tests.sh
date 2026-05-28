@@ -36,7 +36,8 @@ shift $((OPTIND - 1))
 # Use branch cmucl-expected-failures in general since this branch
 # generally has the list of expected failures.  This is the branch to
 # use on cmucl master in general.
-BRANCH=cmucl-expected-failures
+#BRANCH=cmucl-expected-failures
+BRANCH=rtoy-print-using-ryu
 
 set -x
 if [ -d ../ansi-test ]; then

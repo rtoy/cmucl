@@ -7451,6 +7451,13 @@ msgstr ""
 
 #: src/code/ryu-print.lisp
 msgid ""
+"Return the number of significant digits in MANTISSA, a string of\n"
+"   the form \"d\" or \"d.dddd\" (as produced by d2s/d2exp).  The decimal\n"
+"   point, if present, is not counted."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
 "Number of decimal digits in N.  N is the absolute value of a\n"
 "   double-float's exponent, so 0 <= n <= 324."
 msgstr ""
