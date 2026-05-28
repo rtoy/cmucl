@@ -142,7 +142,7 @@
   (declare (fixnum k actual-exp))
   (let* ((sign-len (if (or is-negative-p at-sign-p) 1 0))
 	 (exp-digits (max (or e 1)
-			  (length (princ-to-string (abs actual-exp)))))
+			  (count-decimal-digits (abs actual-exp))))
 	 ;; The min output includes the leading sign, and the length
 	 ;; of the exponent.  If k > 0, we have a leading digit, a
 	 ;; dot, the exponent marker and exponent sign for 4 extra.
@@ -389,16 +389,48 @@
                (t
                 (let* ((d-fit (compute-d-for-width w e k actual-exp is-negative-p at-sign-p))
                        (drop-zero-p (and d-fit (<= k 0))))
-                  (if d-fit
-                      (multiple-value-bind (mantissa exponent)
-                          (parsed-exp-form (d2exp abs-value
+                  (cond
+                    (d-fit
+                     (multiple-value-bind (mantissa exponent)
+                         (parsed-exp-form (d2exp abs-value
 						  (d2exp-precision d-fit k)))
-                        (format-e-string stream mantissa exponent is-negative-p
-                                         w e k overflowchar padchar exponentchar at-sign-p
-                                         drop-zero-p))
-                      (format-e-string stream mantissa exponent is-negative-p
-                                       w e k overflowchar padchar exponentchar at-sign-p
-                                       nil))))))))))))
+                       (format-e-string stream mantissa exponent is-negative-p
+                                        w e k overflowchar padchar exponentchar at-sign-p
+                                        drop-zero-p)))
+                    (overflowchar
+                     ;; Not even the no-fractional-digit form fits and
+                     ;; an overflow char was supplied: fill W.
+                     (loop repeat w do (write-char overflowchar stream)))
+                    ((= k 1)
+                     ;; No fractional digit fits.  Emit "[d].e[exp]"
+                     ;; directly -- no forced ".0".  CLHS 22.3.3.2
+                     ;; "single zero digit ... if the width w permits";
+                     ;; here it does not, so the field overflows W.
+                     ;; Handled only for k=1 (default); other k values
+                     ;; fall through to the old format-e-string path.
+                     (multiple-value-bind (one-digit shown-exp)
+                         (parsed-exp-form (d2exp abs-value 0))
+                       (let* ((exp-sign  (if (minusp shown-exp) #\- #\+))
+                              (exp-abs   (abs shown-exp))
+                              (exp-digits (count-decimal-digits exp-abs))
+                              (exp-width (max (or e 1) exp-digits))
+                              (exp-marker (or exponentchar #\d)))
+                         (cond (is-negative-p (write-char #\- stream))
+                               (at-sign-p     (write-char #\+ stream)))
+                         (write-string one-digit stream)
+                         (write-char #\. stream)
+                         (write-char exp-marker stream)
+                         (write-char exp-sign stream)
+                         (loop repeat (- exp-width exp-digits)
+                               do (write-char #\0 stream))
+                         (princ exp-abs stream))))
+                    (t
+                     ;; k != 1 and no width fits: fall back to the
+                     ;; shortest form (may still emit a forced ".0";
+                     ;; rare, not yet handled).
+                     (format-e-string stream mantissa exponent is-negative-p
+                                      w e k overflowchar padchar exponentchar at-sign-p
+                                      nil)))))))))))))
 
 ;;; Ryu ~F
 (defun format-f-fixed (stream value w d

@@ -288,6 +288,24 @@
   (assert-equal "0.0d+0"
                 (lisp::format-e 0d0 nil nil nil 1 nil nil #\d nil)))
 
+(define-test format-e.tight-width-no-fraction
+  (:tag :format-e)
+  ;; ANSI FORMAT.E.4/.5/.7/.8/.9: ~Ne with N too small for the
+  ;; "d.0e+0" shortest form drops the fractional digit instead of
+  ;; forcing the ".0", giving "d.e+0" (overflowing W when even that
+  ;; form is wider).  CLHS 22.3.3.2 "single zero digit ... if the
+  ;; width w permits" -- here it does not.
+  (assert-equal "1.e+0"
+                (lisp::format-e 1.0f0 5 nil nil 1 nil nil #\e nil))
+  (assert-equal "1.e+0"
+                (lisp::format-e 1.0f0 4 nil nil 1 nil nil #\e nil))
+  (assert-equal "+1.e+0"
+                (lisp::format-e 1.0f0 6 nil nil 1 nil nil #\e t))
+  (assert-equal "+1.e+0"
+                (lisp::format-e 1.0f0 5 nil nil 1 nil nil #\e t))
+  (assert-equal "-1.e+0"
+                (lisp::format-e -1.0f0 6 nil nil 1 nil nil #\e nil)))
+
 ;;; ~F tests
 (define-test format-f.basic
   (:tag :format-f)
