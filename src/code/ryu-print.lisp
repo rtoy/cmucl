@@ -38,7 +38,9 @@
   "Buffer size for d2fixed.")
 
 (defun d2fixed (d precision)
-  "Lisp interface to Ryu d2fixed routine (specically d2fixed_buffered)"
+  "Lisp interface to Ryu d2fixed routine (specically d2fixed_buffered).
+  D is the number to convert and PRECISION is the number of digits
+  after the decimal point.  The total number of digits could be more."
   (declare (double-float d)
 	   (type (integer 0 #.+d2fixed-max-precision+) precision))
   (alien:with-alien ((buf (alien:array c-call:char #.+d2fixed-buffer-size+)))
@@ -54,7 +56,9 @@
     (alien:cast buf c-call:c-string)))
 
 (defun d2exp (d precision)
-  "Lisp interface to Ryu d2exp (specifically d2exp-buffered)."
+  "Lisp interface to Ryu d2exp (specifically d2exp-buffered).  D is the
+  number to convert and PRECISION is the number of digits after the
+  decimal point.  The result is of the form \"d.ddddEeee\"."
   (declare (double-float d)
 	   (type (integer 0 #.+d2fixed-max-precision+) precision))
   (alien:with-alien ((buf (alien:array c-call:char #.+d2fixed-buffer-size+)))
@@ -70,7 +74,9 @@
     (alien:cast buf c-call:c-string)))
 			 
 (defun d2s (d)
-  "Lisp interface to Ryu d2s (specifically d2s_buffered"
+  "Lisp interface to Ryu d2s (specifically d2s_buffered.  D is the number
+  to convert and the result is the shortest string that reproduces the
+  value when read back in."
   (declare (double-float d))
   (alien:with-alien ((buf (alien:array c-call:char #.+d2fixed-buffer-size+)))
     (alien:alien-funcall
@@ -83,6 +89,9 @@
     (alien:cast buf c-call:c-string)))
 
 (defun f2s (s)
+  "Lisp interface to Ryu f2s (specifically f2s_buffered.  D is the number
+  to convert and the result is the shortest string that reproduces the
+  value when read back in."
   (declare (single-float s))
   (alien:with-alien ((buf (alien:array c-call:char 16)))
     (alien:alien-funcall
@@ -103,17 +112,14 @@
     (double-float (d2s (abs f)))
     (single-float (f2s (abs f)))))
 
-(defun parsed-d2exp (pos-x digits)
-  (let* ((raw (d2exp pos-x digits))
-	 ;; Parse the result from d2exp.  It has the form "d.dddEeee".
-	 (e-pos (position #\e raw))
-	 (mantissa (subseq raw 0 e-pos))
-	 (exp (parse-integer raw :start (1+ e-pos))))
-    (values mantissa exp)))
-
 (defun parsed-exp-form (raw-string)
+  "Parse RAW-STRING which is a number in exponential form and return the
+  mantissa part as a string and the exponent part as an integer.
+
+  RAW-STRING is of the form \"d.ddddEeee\" where the exponent marker
+  must exist and must be \"e\" or \"E\"."
   ;; Parse RAW-STRING, that is in exponential form.  That is, it must
-  ;; the form "d.dddEeee".  There cannot be a leading sign.
+  ;; the form "d.dddEeee".  There cannot be a leading sign.  Returns 
   (let* ((e-pos (position-if #'(lambda (c)
 				 (member c '(#\e #\E)))
 			     raw-string))
@@ -133,12 +139,20 @@
   (- (length mantissa)
      (if (find #\. mantissa) 1 0)))
 
+(defun count-decimal-digits (n)
+  "Number of decimal digits in N.  N is the absolute value of a
+   double-float's exponent, so 0 <= n <= 324."
+  (declare (type (integer 0 324) n))
+  (cond ((< n 10)  1)
+        ((< n 100) 2)
+        (t         3)))
+
 (defun compute-d-for-width (w e k actual-exp is-negative-p at-sign-p)
-  ;; Find the largest d (precision) value that fits in width W given
-  ;; the actual exponent (adjusted by k), and whether signs are
-  ;; printed or not.
-  ;;
-  ;; Returns NIL if no width d can fit in a field of length w.
+  "Find the largest d (precision) value that fits in width W given the
+  actual exponent (adjusted by k), and whether signs are printed or
+  not.
+
+  Returns NIL if no width d can fit in a field of length w."
   (declare (fixnum k actual-exp))
   (let* ((sign-len (if (or is-negative-p at-sign-p) 1 0))
 	 (exp-digits (max (or e 1)
@@ -162,25 +176,16 @@
 	  (t
 	   d-fit))))
 
-(defun count-decimal-digits (n)
-  "Number of decimal digits in N.  N is the absolute value of a
-   double-float's exponent, so 0 <= n <= 324."
-  (declare (type (integer 0 324) n)
-	   (optimize speed))
-  (cond ((< n 10)  1)
-        ((< n 100) 2)
-        (t         3)))
-
 (defun compute-exp-output-length (mantissa actual-exp k e is-negative-p at-sign-p
 				  drop-leading-zero-p)
+  "Compute length of the ~E result with the given parameters, but don't
+  build the string.  MANTISSA is \"d[.dddd]\" from d2exp or
+  d2s. ACTUAL-EXP is the exponent with scaling factor applied.  If
+  DROP-LEADING-ZERO-P is non-NIL, the leading \"0\" before the dot (in
+  the K <= 0 form) is omitted from the length."
   (declare (type simple-string mantissa)
 	   (fixnum actual-exp k)
 	   (type (or null fixnum) e))
-  ;; Compute length of the ~E result with the given parameters, but
-  ;; don't build the string.  MANTISSA is "d[.dddd]" from d2exp or d2s.
-  ;; ACTUAL-EXP is the exponent with scaling factor applied.  If
-  ;; DROP-LEADING-ZERO-P is non-NIL, the leading "0" before the dot
-  ;; (in the K <= 0 form) is omitted from the length.
   (let* ((sign-len (if (or is-negative-p at-sign-p) 1 0))
          (exp-digits (max (or e 1)
                           (count-decimal-digits (abs actual-exp))))
@@ -309,8 +314,8 @@
 	     (abs (float value 1d0))))))
      
 (defun d2exp-precision (d k)
-  ;; Compute precision for d2exp when CL requests D digits and the
-  ;; scale factor is K."
+  "Compute precision for d2exp when CL requests D digits and the
+  scale factor is K."
   (cond ((plusp k)
 	 ;; k digits before the decimal, d-k+1 after, so D is the
 	 ;; right precision for d2exp.
@@ -326,6 +331,14 @@
 (defun format-e-string (stream mantissa exponent is-negative-p w e k
                         overflowchar padchar exponentchar at-sign-p
                         drop-leading-zero-p)
+  "Write the ~E representation of MANTISSA * 10^EXPONENT to STREAM,
+  right-justified in a field of width W.  If specified, the PADCHAR is
+  inserted.  If OVERFLOWCHAR is given and the result won't fit in the
+  field, OVERFLOWCHAR replaces the result.
+
+  K is the scale factor causing the decimal point to be placed K
+  digits in from the start and the displayed exponent is adjusted
+  appropriately."
   (declare (type simple-string mantissa)
            (fixnum exponent k))
   (let* ((shown-exp (- exponent (1- k)))
@@ -486,6 +499,8 @@
 ;;; Ryu ~F
 (defun format-f-fixed (stream value w d
                        overflowchar padchar at-sign-p)
+  "Write the ~F representation of VALUE rounded to D digits after the
+  decimal point, right-justified in a field of width W."
   (declare (type (or single-float double-float) value))
   (multiple-value-bind (is-negative-p abs-value)
       (get-sign-and-absolute-value value)
@@ -500,13 +515,15 @@
 	   ;; that case here and drop the zero if the field would not
 	   ;; otherwise fit in W.  For exact zero the leading digit is
 	   ;; required, so PLUSP ABS-VALUE gates the dropping.
-	   (lpoint-droppable
+	   (leading-zero-droppable
 	     (and (plusp abs-value)
 		  (>= raw-len 2)
 		  (char= (char raw-string 0) #\0)
 		  (char= (char raw-string 1) #\.)))
+	   ;; Drop the leading zero if we it's droppable and W is
+	   ;; given and the number won't fit in width W field.
 	   (drop-leading-zero-p
-	     (and lpoint-droppable
+	     (and leading-zero-droppable
 		  w
 		  (> full-field-len w)))
            (field-len (if drop-leading-zero-p
@@ -595,13 +612,13 @@
 	 ;; The leading "0." may be shortened to "." when the magnitude
 	 ;; is < 1 (integer part is the single digit "0") and nonzero,
 	 ;; and only when the full field would not fit in W.
-	 (lpoint-droppable
+	 (leading-zero-droppable
 	   (and (= int-end 1)
 		(char= (char rounded 0) #\0)
 		(not (zerop value))))
 	 (full-len   (+ sign-len int-end 1 frac-out-len))
 	 (drop-leading-zero-p
-	   (and lpoint-droppable w (> full-len w)))
+	   (and leading-zero-droppable w (> full-len w)))
 	 (field-len  (if drop-leading-zero-p (1- full-len) full-len)))
     (flet ((write-field ()
 	     (cond (is-negative-p (write-char #\- stream))
