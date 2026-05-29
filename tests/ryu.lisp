@@ -200,12 +200,15 @@
 
 (define-test format-e.overflow-no-overflowchar
   (:tag :format-e)
-  ;; w too small AND no overflowchar -- emit the field at natural
-  ;; width, exceeding w.  No truncation.
-  (assert-equal "3.14d+100"
+  ;; w too small AND no overflowchar -- emit the no-fractional-digit
+  ;; form "d.e+exp" (overflowing W), per CLHS 22.3.3.2 "single zero
+  ;; digit ... if the width w permits" (here it does not).
+  (assert-equal "3.d+100"
                 (lisp::format-e 3.14d100 3 nil nil 1 nil nil #\d nil))
-  ;; Free-format too long for w with no overflowchar.
-  (assert-equal "3.14159265358979d+0"
+  ;; Free-format too long for w with no overflowchar -- same rule:
+  ;; drop to no-fractional-digit form rather than emitting the full
+  ;; multi-digit shortest representation.
+  (assert-equal "3.d+0"
                 (lisp::format-e 3.14159265358979d0 5 nil nil 1 nil nil #\d nil)))
 
 (define-test format-e.overflow-exponent-too-wide
@@ -232,12 +235,14 @@
 
 (define-test format-e.overflow-shrink-exhausts
   (:tag :format-e)
-  ;; w forces shrinking down to d_fit = 0, which still won't fit.
-  ;; Should produce overflow fill.
+  ;; w forces shrinking down to d_fit = nil (not even d=0 fits).
+  ;; With an overflow char, the field is filled.
   (assert-equal "****"
                 (lisp::format-e 3.14159265358979d0 4 nil nil 1 #\* nil #\d nil))
-  ;; Same but no overflowchar -- emit at natural shortest width.
-  (assert-equal "3.14159265358979d+0"
+  ;; Without overflowchar, emit the no-fractional-digit form
+  ;; "d.e+exp" (overflowing W) rather than the full multi-digit
+  ;; shortest representation.
+  (assert-equal "3.d+0"
                 (lisp::format-e 3.14159265358979d0 4 nil nil 1 nil nil #\d nil)))
 
 (define-test format-e.overflow-with-padchar
@@ -305,6 +310,24 @@
                 (lisp::format-e 1.0f0 5 nil nil 1 nil nil #\e t))
   (assert-equal "-1.e+0"
                 (lisp::format-e -1.0f0 6 nil nil 1 nil nil #\e nil)))
+
+(define-test format-e.d-given-k-consumes-fraction
+  (:tag :format-e)
+  ;; ANSI FORMAT.E.19: with D specified, the number of fractional
+  ;; digits is exactly d-(k-1).  When k >= d+1 (and k >= 2) that count
+  ;; is 0, and the output is "[int].e[exp]" with no forced ".0".
+  ;; d=2, k=3, value 0.05 -> "5.00E-2" rounded by d2exp -> "500.e-4"
+  ;; after the k-shift consumes the fractional digits.
+  (assert-equal "500.e-4"
+                (lisp::format-e 0.05f0 nil 2 nil 3 nil nil #\e nil))
+  (assert-equal "500.e-4"
+                (lisp::format-e 0.05d0 nil 2 nil 3 nil nil #\e nil))
+  ;; Negated: leading "-" sign included.
+  (assert-equal "-500.e-4"
+                (lisp::format-e -0.05d0 nil 2 nil 3 nil nil #\e nil))
+  ;; At-sign: explicit "+".
+  (assert-equal "+500.e-4"
+                (lisp::format-e 0.05d0 nil 2 nil 3 nil nil #\e t)))
 
 ;;; ~F tests
 (define-test format-f.basic

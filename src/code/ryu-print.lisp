@@ -358,6 +358,54 @@
       (declare (dynamic-extent #'write-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 
+(defun emit-exp-no-fraction (stream mantissa shown-exp int-digits
+			     is-negative-p at-sign-p
+			     w e overflowchar padchar exponentchar)
+  "Emit \"[sign][INT-DIGITS].[marker][exp-sign][exp]\" with no
+   fractional digits, right-justified in width W.  MANTISSA is a
+   string of significant digits from d2s/d2exp, with or without an
+   internal dot; the integer digits are written from it (skipping the
+   dot if any), zero-padded to INT-DIGITS."
+  (declare (type simple-string mantissa)
+	   (fixnum shown-exp int-digits)
+	   (type (or null fixnum) w e))
+  (let* ((dotpos     (position #\. mantissa))
+	 (mant-len   (length mantissa))
+	 (sig-digits (mantissa-digit-count mantissa))
+	 (exp-sign   (if (minusp shown-exp) #\- #\+))
+	 (exp-abs    (abs shown-exp))
+	 (exp-digits (count-decimal-digits exp-abs))
+	 (exp-width  (max (or e 1) exp-digits))
+	 (exp-marker (or exponentchar #\d))
+	 (sign-len   (if (or is-negative-p at-sign-p) 1 0))
+	 ;; sign + int + dot + marker + exp-sign + exp-width
+	 (field-len  (+ sign-len int-digits 3 exp-width)))
+    (flet ((write-field ()
+	     (cond (is-negative-p (write-char #\- stream))
+		   (at-sign-p     (write-char #\+ stream)))
+	     ;; Write up to sig-digits from mantissa (skipping the dot),
+	     ;; then zero-pad if int-digits exceeds available.
+	     (let ((available (min int-digits sig-digits)))
+	       (cond ((null dotpos)
+		      (write-string mantissa stream :start 0 :end available))
+		     ((<= available dotpos)
+		      (write-string mantissa stream :start 0 :end available))
+		     (t
+		      (write-string mantissa stream :start 0 :end dotpos)
+		      (write-string mantissa stream
+				    :start (1+ dotpos)
+				    :end (min mant-len (1+ available))))))
+	     (loop repeat (- int-digits sig-digits)
+		   do (write-char #\0 stream))
+	     (write-char #\. stream)
+	     (write-char exp-marker stream)
+	     (write-char exp-sign stream)
+	     (loop repeat (- exp-width exp-digits)
+		   do (write-char #\0 stream))
+	     (princ exp-abs stream)))
+      (declare (dynamic-extent #'write-field))
+      (pad-overflow stream field-len w overflowchar padchar #'write-field))))
+
 (defun format-e (value w d e k overflowchar padchar exponentchar at-sign-p)
   (declare (type (or single-float double-float) value)
            (fixnum k)
@@ -371,8 +419,22 @@
          (multiple-value-bind (mantissa exponent)
              (parsed-exp-form (d2exp abs-value
 				     (d2exp-precision d k)))
-           (format-e-string stream mantissa exponent is-negative-p
-                            w e k overflowchar padchar exponentchar at-sign-p nil)))
+	   (cond
+	     ;; CLHS 22.3.3.2: with D specified, exactly d-(k-1)
+	     ;; fractional digits appear after the dot.  When that is 0
+	     ;; (k >= d+1, plusp k), emit "[int].e[exp]" directly with
+	     ;; no forced ".0" -- the d2exp result has been rounded to
+	     ;; exactly the digits we need to show.  The k=1, d=0 case
+	     ;; is excluded: cmucl has always emitted "D.0eN" there and
+	     ;; existing tests rely on it.
+	     ((and (>= k 2) (>= k (1+ d)))
+	      (emit-exp-no-fraction stream mantissa
+				    (- exponent (1- k))
+				    k is-negative-p at-sign-p
+				    w e overflowchar padchar exponentchar))
+	     (t
+	      (format-e-string stream mantissa exponent is-negative-p
+			       w e k overflowchar padchar exponentchar at-sign-p nil)))))
         (t
          (multiple-value-bind (mantissa exponent)
              (parsed-exp-form (float-to-string value))
@@ -410,20 +472,10 @@
                      ;; fall through to the old format-e-string path.
                      (multiple-value-bind (one-digit shown-exp)
                          (parsed-exp-form (d2exp abs-value 0))
-                       (let* ((exp-sign  (if (minusp shown-exp) #\- #\+))
-                              (exp-abs   (abs shown-exp))
-                              (exp-digits (count-decimal-digits exp-abs))
-                              (exp-width (max (or e 1) exp-digits))
-                              (exp-marker (or exponentchar #\d)))
-                         (cond (is-negative-p (write-char #\- stream))
-                               (at-sign-p     (write-char #\+ stream)))
-                         (write-string one-digit stream)
-                         (write-char #\. stream)
-                         (write-char exp-marker stream)
-                         (write-char exp-sign stream)
-                         (loop repeat (- exp-width exp-digits)
-                               do (write-char #\0 stream))
-                         (princ exp-abs stream))))
+                       (emit-exp-no-fraction stream one-digit shown-exp 1
+					     is-negative-p at-sign-p
+					     w e overflowchar padchar
+					     exponentchar)))
                     (t
                      ;; k != 1 and no width fits: fall back to the
                      ;; shortest form (may still emit a forced ".0";

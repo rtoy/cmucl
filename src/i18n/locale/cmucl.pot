@@ -7486,6 +7486,15 @@ msgstr ""
 
 #: src/code/ryu-print.lisp
 msgid ""
+"Emit \"[sign][INT-DIGITS].[marker][exp-sign][exp]\" with no\n"
+"   fractional digits, right-justified in width W.  MANTISSA is a\n"
+"   string of significant digits from d2s/d2exp, with or without an\n"
+"   internal dot; the integer digits are written from it (skipping the\n"
+"   dot if any), zero-padded to INT-DIGITS."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
 "Round (the magnitude of) VALUE to FRAC fractional digits with\n"
 "   d2fixed and write it right-justified in a field of width W.  At\n"
 "   least one fractional digit is always shown: if FRAC is 0 the\n"
