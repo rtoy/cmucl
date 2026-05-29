@@ -5,41 +5,54 @@
 
 (in-package #:ryu-tests)
 
+(defun format-e-stream (&rest args)
+  (with-output-to-string (s)
+    (apply #'lisp::format-e s args)))
+
+(defun format-f-stream (&rest args)
+  (with-output-to-string (s)
+    (apply #'lisp::format-f s args)))
+
+(defun format-g-stream (&rest args)
+  (with-output-to-string (s)
+    (apply #'lisp::format-g s args)))
+
+
 (define-test format-e.1
   (assert-equal "-1.23456789z+0012"
-		(lisp::format-e -1.23456789d12 17 nil 4 1 #\* #\P #\z t)))
+		(format-e-stream -1.23456789d12 17 nil 4 1 #\* #\P #\z t)))
 
 (define-test format-e.2
   (assert-equal "-1.23456795z+0012"
-		(lisp::format-e (float -1.23456789e12 1d0) 17 nil 4 1 #\* #\P #\z t)))
+		(format-e-stream (float -1.23456789e12 1d0) 17 nil 4 1 #\* #\P #\z t)))
 
 (define-test format-e.3
   (assert-equal "-1.235z+0012"
-		(lisp::format-e -1.23456789d12 12 nil 4 1 #\* #\P #\z t)))
+		(format-e-stream -1.23456789d12 12 nil 4 1 #\* #\P #\z t)))
 
 (define-test format-e.4
   (assert-equal "-.01z+0014"
-		(lisp::format-e -1.23456789d12 10 nil 4 -1 #\* #\P #\z t)))
+		(format-e-stream -1.23456789d12 10 nil 4 -1 #\* #\P #\z t)))
 
 (define-test format-e.5
   (assert-equal "PPP-0.0012345679z+0015"
-		(lisp::format-e -1.23456789d12 22 10 4 -2 #\* #\P #\z t)))
+		(format-e-stream -1.23456789d12 22 10 4 -2 #\* #\P #\z t)))
 
 (define-test format-e.6
   (assert-equal "PP+1.0z+0012"
-		(lisp::format-e 9.9999999999999995d11 12 nil 4 1 #\* #\P #\z t)))
+		(format-e-stream 9.9999999999999995d11 12 nil 4 1 #\* #\P #\z t)))
 
 (define-test format-e.7
   (assert-equal "+5.00000e-01"
-		(lisp::format-e 0.5d0 nil 5 2 1 nil nil #\e t))
+		(format-e-stream 0.5d0 nil 5 2 1 nil nil #\e t))
   (assert-equal "5.00000e-01"
-		(lisp::format-e 0.5d0 nil 5 2 1 nil nil #\e nil)))
+		(format-e-stream 0.5d0 nil 5 2 1 nil nil #\e nil)))
 
 ;; This tests currently fails.
 #+nil
 (define-test format-e.8
   (assert-equal (format nil "~12,,2,1,'*,'P,'ze" 9.999999999d99)
-		(lisp::format-e 9.999999999d99 12 nil 2 1 #\* #\P #\z t)))
+		(format-e-stream 9.999999999d99 12 nil 2 1 #\* #\P #\z t)))
 
 ;;; ~E tests, extended coverage.
 
@@ -48,13 +61,13 @@
   ;; No width, default scale (k=1), default everything.  Mantissa form
   ;; is one digit before the dot.
   (assert-equal "3.14159265358979d+0"
-                (lisp::format-e 3.14159265358979d0 nil nil nil 1 nil nil #\d nil))
+                (format-e-stream 3.14159265358979d0 nil nil nil 1 nil nil #\d nil))
   (assert-equal "-3.14159265358979d+0"
-                (lisp::format-e -3.14159265358979d0 nil nil nil 1 nil nil #\d nil))
+                (format-e-stream -3.14159265358979d0 nil nil nil 1 nil nil #\d nil))
   (assert-equal "1.0d+0"
-                (lisp::format-e 1d0 nil nil nil 1 nil nil #\d nil))
+                (format-e-stream 1d0 nil nil nil 1 nil nil #\d nil))
   (assert-equal "1.0d-1"
-                (lisp::format-e 0.1d0 nil nil nil 1 nil nil #\d nil)))
+                (format-e-stream 0.1d0 nil nil nil 1 nil nil #\d nil)))
 
 (define-test format-e.d-given-trailing-zeros
   (:tag :format-e)
@@ -62,11 +75,11 @@
   ;; fractional digits, since CL ~E asks for exactly d+1 significant
   ;; digits with k=1.
   (assert-equal "5.00000e-1"
-                (lisp::format-e 0.5d0 nil 5 nil 1 nil nil #\e nil))
+                (format-e-stream 0.5d0 nil 5 nil 1 nil nil #\e nil))
   (assert-equal "1.000d+0"
-                (lisp::format-e 1d0 nil 3 nil 1 nil nil #\d nil))
+                (format-e-stream 1d0 nil 3 nil 1 nil nil #\d nil))
   (assert-equal "3.00000d+0"
-                (lisp::format-e 3d0 nil 5 nil 1 nil nil #\d nil)))
+                (format-e-stream 3d0 nil 5 nil 1 nil nil #\d nil)))
 
 (define-test format-e.zero-d
   (:tag :format-e)
@@ -74,67 +87,67 @@
   ;; point, but cmucl has always produced one digit.  Let's keep it
   ;; that way.
   (assert-equal "3.0d+0"
-                (lisp::format-e 3.14d0 nil 0 nil 1 nil nil #\d nil))
+                (format-e-stream 3.14d0 nil 0 nil 1 nil nil #\d nil))
   (assert-equal "1.0d+1"
-                (lisp::format-e 9.9d0 nil 0 nil 1 nil nil #\d nil)))   ; rounds up
+                (format-e-stream 9.9d0 nil 0 nil 1 nil nil #\d nil)))   ; rounds up
 
 (define-test format-e.exponent-padding
   (:tag :format-e)
   ;; e parameter controls minimum exponent width.  Larger exponents
   ;; expand the field if e is too small.
   (assert-equal "3.14d+00"
-                (lisp::format-e 3.14d0 nil 2 2 1 nil nil #\d nil))
+                (format-e-stream 3.14d0 nil 2 2 1 nil nil #\d nil))
   (assert-equal "3.14d+000"
-                (lisp::format-e 3.14d0 nil 2 3 1 nil nil #\d nil))
+                (format-e-stream 3.14d0 nil 2 3 1 nil nil #\d nil))
   ;; Exponent doesn't fit in e -- emit at natural width (overflow).
   (assert-equal "3.14d+100"
-                (lisp::format-e 3.14d100 nil 2 2 1 nil nil #\d nil)))
+                (format-e-stream 3.14d100 nil 2 2 1 nil nil #\d nil)))
 
 (define-test format-e.negative-exponent
   (:tag :format-e)
   (assert-equal "5.0d-2"
-                (lisp::format-e 0.05d0 nil 1 nil 1 nil nil #\d nil))
+                (format-e-stream 0.05d0 nil 1 nil 1 nil nil #\d nil))
   (assert-equal "1.5d-300"
-                (lisp::format-e 1.5d-300 nil 1 nil 1 nil nil #\d nil)))
+                (format-e-stream 1.5d-300 nil 1 nil 1 nil nil #\d nil)))
 
 (define-test format-e.k-positive-large
   (:tag :format-e)
   ;; k > 1: more digits before the dot, fewer after.  CLHS: total
   ;; significant digits = d+1 when k > 0.
   (assert-equal "31.416d-1"
-                (lisp::format-e 3.14159d0 nil 4 nil 2 nil nil #\d nil))
+                (format-e-stream 3.14159d0 nil 4 nil 2 nil nil #\d nil))
   (assert-equal "314.16d-2"
-                (lisp::format-e 3.14159d0 nil 4 nil 3 nil nil #\d nil)))
+                (format-e-stream 3.14159d0 nil 4 nil 3 nil nil #\d nil)))
 
 (define-test format-e.k-zero
   (:tag :format-e)
   ;; k=0: form is 0.DDDD with d significant digits.
   (assert-equal "0.3142d+1"
-                (lisp::format-e 3.14159d0 nil 4 nil 0 nil nil #\d nil))
+                (format-e-stream 3.14159d0 nil 4 nil 0 nil nil #\d nil))
   (assert-equal "0.5d+1"
-                (lisp::format-e 5d0 nil 1 nil 0 nil nil #\d nil)))
+                (format-e-stream 5d0 nil 1 nil 0 nil nil #\d nil)))
 
 (define-test format-e.k-negative
   (:tag :format-e)
   ;; k < 0: 0.0...0DDDD with |k| leading zeros after the dot.
   (assert-equal "0.0001d+5"
-                (lisp::format-e 10d0 nil 4 nil -3 nil nil #\d nil))
+                (format-e-stream 10d0 nil 4 nil -3 nil nil #\d nil))
   (assert-equal "0.0314d+2"
-                (lisp::format-e 3.14d0 nil 4 nil -1 nil nil #\d nil)))
+                (format-e-stream 3.14d0 nil 4 nil -1 nil nil #\d nil)))
 
 (define-test format-e.padding-and-at-sign
   (:tag :format-e)
   ;; Default padchar is space.  @ forces + on the mantissa.
   (assert-equal "    3.14d+0"
-                (lisp::format-e 3.14d0 11 2 nil 1 nil nil #\d nil))
+                (format-e-stream 3.14d0 11 2 nil 1 nil nil #\d nil))
   (assert-equal "   +3.14d+0"
-                (lisp::format-e 3.14d0 11 2 nil 1 nil nil #\d t))
+                (format-e-stream 3.14d0 11 2 nil 1 nil nil #\d t))
   ;; Custom padchar.
   (assert-equal "****3.14d+0"
-                (lisp::format-e 3.14d0 11 2 nil 1 nil #\* #\d nil))
+                (format-e-stream 3.14d0 11 2 nil 1 nil #\* #\d nil))
   ;; Negative value always gets the sign.
   (assert-equal "   -3.14d+0"
-                (lisp::format-e -3.14d0 11 2 nil 1 nil nil #\d nil)))
+                (format-e-stream -3.14d0 11 2 nil 1 nil nil #\d nil)))
 
 (define-test format-e.exponent-marker
   (:tag :format-e)
@@ -142,19 +155,19 @@
   ;; explicit markers everywhere; CL chooses 'e' / 'f' / 'd' based on
   ;; *read-default-float-format*, but that's the dispatcher's job, not
   ;; format-e's.
-  (assert-equal "3.14e+0"  (lisp::format-e 3.14d0 nil 2 nil 1 nil nil #\e nil))
-  (assert-equal "3.14d+0"  (lisp::format-e 3.14d0 nil 2 nil 1 nil nil #\d nil))
-  (assert-equal "3.14E+0"  (lisp::format-e 3.14d0 nil 2 nil 1 nil nil #\E nil)))
+  (assert-equal "3.14e+0"  (format-e-stream 3.14d0 nil 2 nil 1 nil nil #\e nil))
+  (assert-equal "3.14d+0"  (format-e-stream 3.14d0 nil 2 nil 1 nil nil #\d nil))
+  (assert-equal "3.14E+0"  (format-e-stream 3.14d0 nil 2 nil 1 nil nil #\E nil)))
 
 (define-test format-e.boundary-values
   (:tag :format-e)
   ;; Most positive and most negative doubles.
-  (let ((big (lisp::format-e most-positive-double-float nil nil nil 1 nil nil #\d nil)))
+  (let ((big (format-e-stream most-positive-double-float nil nil nil 1 nil nil #\d nil)))
     (assert-true (search "d+308" big) big))
-  (let ((tiny (lisp::format-e least-positive-double-float nil nil nil 1 nil nil #\d nil)))
+  (let ((tiny (format-e-stream least-positive-double-float nil nil nil 1 nil nil #\d nil)))
     (assert-true (search "d-324" tiny) tiny))
   ;; Smallest positive normal.
-  (let ((norm (lisp::format-e least-positive-normalized-double-float
+  (let ((norm (format-e-stream least-positive-normalized-double-float
                               nil nil nil 1 nil nil #\d nil)))
     (assert-true (search "d-308" norm) norm)))
 
@@ -164,7 +177,7 @@
   ;; ending in ...902, not the naive ...901 from fixed-width-17.
   ;; Free-format ~E must emit ...902.
   (assert-equal "6.189700196426902d+26"
-                (lisp::format-e (scale-float 1d0 89)
+                (format-e-stream (scale-float 1d0 89)
                                 nil nil nil 1 nil nil #\d nil)))
 
 (define-test format-e.shrink-rounds-correctly
@@ -173,19 +186,19 @@
   ;; is correct (not just truncation).
   ;; pi to 5 sig digits is "3.1416", not "3.1415".
   (assert-equal "3.1416d+0"
-                (lisp::format-e 3.14159265358979d0 9 nil nil 1 nil nil #\d nil))
+                (format-e-stream 3.14159265358979d0 9 nil nil 1 nil nil #\d nil))
   ;; pi to 4 sig digits is "3.142".
   (assert-equal "3.142d+0"
-                (lisp::format-e 3.14159265358979d0 8 nil nil 1 nil nil #\d nil))
+                (format-e-stream 3.14159265358979d0 8 nil nil 1 nil nil #\d nil))
   ;; 9.999... at low precision carries into a new binade.
   (assert-equal "1.00d+1"
-                (lisp::format-e 9.999d0 7 2 nil 1 nil nil #\d nil)))
+                (format-e-stream 9.999d0 7 2 nil 1 nil nil #\d nil)))
 
 (define-test format-e.width-fits-without-shrink
   (:tag :format-e)
   ;; If w is generous, no shrink happens -- emit shortest.
   (assert-equal " 3.14159265358979d+0"
-                (lisp::format-e 3.14159265358979d0 20 nil nil 1 nil nil #\d nil)))
+                (format-e-stream 3.14159265358979d0 20 nil nil 1 nil nil #\d nil)))
 
 (define-test format-e.overflow-with-overflowchar
   (:tag :format-e)
@@ -193,10 +206,10 @@
   ;; 3.14d100 at full precision needs ~10 chars; w=3 with overflowchar
   ;; fills.
   (assert-equal "***"
-                (lisp::format-e 3.14d100 3 nil nil 1 #\* nil #\d nil))
+                (format-e-stream 3.14d100 3 nil nil 1 #\* nil #\d nil))
   ;; w too small even after shrink: same outcome.
   (assert-equal "*****"
-                (lisp::format-e 3.14159265358979d0 5 nil nil 1 #\* nil #\d nil)))
+                (format-e-stream 3.14159265358979d0 5 nil nil 1 #\* nil #\d nil)))
 
 (define-test format-e.overflow-no-overflowchar
   (:tag :format-e)
@@ -204,12 +217,12 @@
   ;; form "d.e+exp" (overflowing W), per CLHS 22.3.3.2 "single zero
   ;; digit ... if the width w permits" (here it does not).
   (assert-equal "3.d+100"
-                (lisp::format-e 3.14d100 3 nil nil 1 nil nil #\d nil))
+                (format-e-stream 3.14d100 3 nil nil 1 nil nil #\d nil))
   ;; Free-format too long for w with no overflowchar -- same rule:
   ;; drop to no-fractional-digit form rather than emitting the full
   ;; multi-digit shortest representation.
   (assert-equal "3.d+0"
-                (lisp::format-e 3.14159265358979d0 5 nil nil 1 nil nil #\d nil)))
+                (format-e-stream 3.14159265358979d0 5 nil nil 1 nil nil #\d nil)))
 
 (define-test format-e.overflow-exponent-too-wide
   (:tag :format-e)
@@ -217,10 +230,10 @@
   ;; CLHS says this triggers overflow: the field grows to fit the
   ;; exponent, and if overflowchar is given, the field is overflowed.
   (assert-equal "***"
-                (lisp::format-e 3.14d100 3 2 2 1 #\* nil #\d nil))
+                (format-e-stream 3.14d100 3 2 2 1 #\* nil #\d nil))
   ;; Without overflowchar, field grows.
   (assert-equal "3.14d+100"
-                (lisp::format-e 3.14d100 nil 2 2 1 nil nil #\d nil)))
+                (format-e-stream 3.14d100 nil 2 2 1 nil nil #\d nil)))
 
 (define-test format-e.overflow-bumped-exponent
   (:tag :format-e)
@@ -228,31 +241,31 @@
   ;; 9.999d99 at d=2 rounds to "1.00e+100", which has 3 exponent
   ;; digits.  With e=2 given, this is overflow.
   (assert-equal "*******"
-                (lisp::format-e 9.999d99 7 2 2 1 #\* nil #\d nil))
+                (format-e-stream 9.999d99 7 2 2 1 #\* nil #\d nil))
   ;; Without overflowchar: field grows by one to accommodate.
   (assert-equal "1.00d+100"
-                (lisp::format-e 9.999d99 nil 2 2 1 nil nil #\d nil)))
+                (format-e-stream 9.999d99 nil 2 2 1 nil nil #\d nil)))
 
 (define-test format-e.overflow-shrink-exhausts
   (:tag :format-e)
   ;; w forces shrinking down to d_fit = nil (not even d=0 fits).
   ;; With an overflow char, the field is filled.
   (assert-equal "****"
-                (lisp::format-e 3.14159265358979d0 4 nil nil 1 #\* nil #\d nil))
+                (format-e-stream 3.14159265358979d0 4 nil nil 1 #\* nil #\d nil))
   ;; Without overflowchar, emit the no-fractional-digit form
   ;; "d.e+exp" (overflowing W) rather than the full multi-digit
   ;; shortest representation.
   (assert-equal "3.d+0"
-                (lisp::format-e 3.14159265358979d0 4 nil nil 1 nil nil #\d nil)))
+                (format-e-stream 3.14159265358979d0 4 nil nil 1 nil nil #\d nil)))
 
 (define-test format-e.overflow-with-padchar
   (:tag :format-e)
   ;; padchar doesn't affect overflow detection -- it only matters when
   ;; the field fits.
   (assert-equal "PPPP3.14d+0"
-                (lisp::format-e 3.14d0 11 2 nil 1 #\* #\P #\d nil))
+                (format-e-stream 3.14d0 11 2 nil 1 #\* #\P #\d nil))
   (assert-equal "***"
-                (lisp::format-e 3.14d100 3 nil nil 1 #\* #\P #\d nil)))
+                (format-e-stream 3.14d100 3 nil nil 1 #\* #\P #\d nil)))
 
 (define-test format-e.large-exponent
   (:tag :format-e)
@@ -260,38 +273,38 @@
   ;; lets the field grow to accommodate (no truncation of the
   ;; exponent digits).
   (assert-equal "3.14d+250"
-                (lisp::format-e 3.14d250 nil 2 2 1 nil nil #\d nil)))
+                (format-e-stream 3.14d250 nil 2 2 1 nil nil #\d nil)))
 
 (define-test format-e.tiny-d-and-shortest
   (:tag :format-e)
   ;; Values whose shortest representation is just 1 digit, with d=nil.
   ;; Must force ".0" since CL ~E always shows the dot.
   (assert-equal "1.0d+0"
-                (lisp::format-e 1d0 nil nil nil 1 nil nil #\d nil))
+                (format-e-stream 1d0 nil nil nil 1 nil nil #\d nil))
   (assert-equal "2.0d+0"
-                (lisp::format-e 2d0 nil nil nil 1 nil nil #\d nil))
+                (format-e-stream 2d0 nil nil nil 1 nil nil #\d nil))
   (assert-equal "5.0d-1"
-                (lisp::format-e 0.5d0 nil nil nil 1 nil nil #\d nil)))
+                (format-e-stream 0.5d0 nil nil nil 1 nil nil #\d nil)))
 
 (define-test format-e.signed-zero
   (:tag :format-e)
   ;; -0.0 preserves its sign through ~E.  This is the IEEE-754 default
   ;; and what SBCL/CMUCL/CCL all do.
   (assert-equal "-0.0d+0"
-                (lisp::format-e (- 0d0) nil nil nil 1 nil nil #\d nil))
+                (format-e-stream (- 0d0) nil nil nil 1 nil nil #\d nil))
   (assert-equal "-0.00d+0"
-                (lisp::format-e (- 0d0) nil 2 nil 1 nil nil #\d nil))
+                (format-e-stream (- 0d0) nil 2 nil 1 nil nil #\d nil))
   ;; @ modifier emits the existing minus, not a plus.
   (assert-equal "-0.0d+0"
-                (lisp::format-e (- 0d0) nil nil nil 1 nil nil #\d t))
+                (format-e-stream (- 0d0) nil nil nil 1 nil nil #\d t))
   ;; +0.0 with @ modifier emits an explicit "+".
   (assert-equal "+0.0d+0"
-                (lisp::format-e 0d0 nil nil nil 1 nil nil #\d t))
+                (format-e-stream 0d0 nil nil nil 1 nil nil #\d t))
   (assert-equal "+0.00d+0"
-                (lisp::format-e 0d0 nil 2 nil 1 nil nil #\d t))
+                (format-e-stream 0d0 nil 2 nil 1 nil nil #\d t))
   ;; Without @, no sign on positive zero.
   (assert-equal "0.0d+0"
-                (lisp::format-e 0d0 nil nil nil 1 nil nil #\d nil)))
+                (format-e-stream 0d0 nil nil nil 1 nil nil #\d nil)))
 
 (define-test format-e.tight-width-no-fraction
   (:tag :format-e)
@@ -301,15 +314,15 @@
   ;; form is wider).  CLHS 22.3.3.2 "single zero digit ... if the
   ;; width w permits" -- here it does not.
   (assert-equal "1.e+0"
-                (lisp::format-e 1.0f0 5 nil nil 1 nil nil #\e nil))
+                (format-e-stream 1.0f0 5 nil nil 1 nil nil #\e nil))
   (assert-equal "1.e+0"
-                (lisp::format-e 1.0f0 4 nil nil 1 nil nil #\e nil))
+                (format-e-stream 1.0f0 4 nil nil 1 nil nil #\e nil))
   (assert-equal "+1.e+0"
-                (lisp::format-e 1.0f0 6 nil nil 1 nil nil #\e t))
+                (format-e-stream 1.0f0 6 nil nil 1 nil nil #\e t))
   (assert-equal "+1.e+0"
-                (lisp::format-e 1.0f0 5 nil nil 1 nil nil #\e t))
+                (format-e-stream 1.0f0 5 nil nil 1 nil nil #\e t))
   (assert-equal "-1.e+0"
-                (lisp::format-e -1.0f0 6 nil nil 1 nil nil #\e nil)))
+                (format-e-stream -1.0f0 6 nil nil 1 nil nil #\e nil)))
 
 (define-test format-e.d-given-k-consumes-fraction
   (:tag :format-e)
@@ -319,94 +332,94 @@
   ;; d=2, k=3, value 0.05 -> "5.00E-2" rounded by d2exp -> "500.e-4"
   ;; after the k-shift consumes the fractional digits.
   (assert-equal "500.e-4"
-                (lisp::format-e 0.05f0 nil 2 nil 3 nil nil #\e nil))
+                (format-e-stream 0.05f0 nil 2 nil 3 nil nil #\e nil))
   (assert-equal "500.e-4"
-                (lisp::format-e 0.05d0 nil 2 nil 3 nil nil #\e nil))
+                (format-e-stream 0.05d0 nil 2 nil 3 nil nil #\e nil))
   ;; Negated: leading "-" sign included.
   (assert-equal "-500.e-4"
-                (lisp::format-e -0.05d0 nil 2 nil 3 nil nil #\e nil))
+                (format-e-stream -0.05d0 nil 2 nil 3 nil nil #\e nil))
   ;; At-sign: explicit "+".
   (assert-equal "+500.e-4"
-                (lisp::format-e 0.05d0 nil 2 nil 3 nil nil #\e t)))
+                (format-e-stream 0.05d0 nil 2 nil 3 nil nil #\e t)))
 
 ;;; ~F tests
 (define-test format-f.basic
   (:tag :format-f)
   ;; Common case, no width, d=2: plain d2fixed-via-d-given path.
   (assert-equal "3.14"
-                (lisp::format-f  3.14159d0  nil  2 0 nil nil nil))
+                (format-f-stream  3.14159d0  nil  2 0 nil nil nil))
   (assert-equal "-3.14"
-                (lisp::format-f -3.14159d0  nil  2 0 nil nil nil))
+                (format-f-stream -3.14159d0  nil  2 0 nil nil nil))
   (assert-equal "0.10"
-                (lisp::format-f  0.1d0      nil  2 0 nil nil nil)))
+                (format-f-stream  0.1d0      nil  2 0 nil nil nil)))
 
 (define-test format-f.d-given-zero-precision
   (:tag :format-f)
   ;; d=0 must append a trailing dot (CL ~F always shows the dot).
   (assert-equal "3."
-                (lisp::format-f  3.14d0     nil  0 0 nil nil nil))
+                (format-f-stream  3.14d0     nil  0 0 nil nil nil))
   (assert-equal "4."
-                (lisp::format-f  3.5d0      nil  0 0 nil nil nil))   ; round half to even -> 4
+                (format-f-stream  3.5d0      nil  0 0 nil nil nil))   ; round half to even -> 4
   (assert-equal "4."
-                (lisp::format-f  4.5d0      nil  0 0 nil nil nil))   ; same
+                (format-f-stream  4.5d0      nil  0 0 nil nil nil))   ; same
   (assert-equal "0."
-                (lisp::format-f  0.49d0     nil  0 0 nil nil nil))
+                (format-f-stream  0.49d0     nil  0 0 nil nil nil))
   (assert-equal "0."
-                (lisp::format-f  0.5d0      nil  0 0 nil nil nil))   ; round half to even -> 0? actually 0
+                (format-f-stream  0.5d0      nil  0 0 nil nil nil))   ; round half to even -> 0? actually 0
   )
 
 (define-test format-f.d-given-rounding-carry
   (:tag :format-f)
   ;; Rounding that carries across the decimal point.
   (assert-equal "9.9"
-                (lisp::format-f  9.95d0     nil  1 0 nil nil nil))
+                (format-f-stream  9.95d0     nil  1 0 nil nil nil))
   (assert-equal "1.00"
-                (lisp::format-f  0.999d0    nil  2 0 nil nil nil))
+                (format-f-stream  0.999d0    nil  2 0 nil nil nil))
   (assert-equal "100.00"
-                (lisp::format-f 99.999d0    nil  2 0 nil nil nil)))
+                (format-f-stream 99.999d0    nil  2 0 nil nil nil)))
 
 (define-test format-f.d-given-with-trailing-zeros
   (:tag :format-f)
   ;; d2fixed must emit trailing zeros when the value uses fewer digits
   ;; than d.  This is CL's required behavior for ~,dF.
   (assert-equal "1.00000"
-                (lisp::format-f  1d0        nil  5 0 nil nil nil))
+                (format-f-stream  1d0        nil  5 0 nil nil nil))
   (assert-equal "0.30000"
-                (lisp::format-f  0.3d0      nil  5 0 nil nil nil))
+                (format-f-stream  0.3d0      nil  5 0 nil nil nil))
   (assert-equal "1234.50000"
-                (lisp::format-f  1234.5d0   nil  5 0 nil nil nil)))
+                (format-f-stream  1234.5d0   nil  5 0 nil nil nil)))
 
 (define-test format-f.d-nil-free-format
   (:tag :format-f)
   ;; d = nil: d2s + reshape, no d2fixed.
   (assert-equal "3.14"
-                (lisp::format-f  3.14d0     nil nil 0 nil nil nil))
+                (format-f-stream  3.14d0     nil nil 0 nil nil nil))
   (assert-equal "3.141592653589793"
 
-                (lisp::format-f  3.141592653589793d0 nil nil 0 nil nil nil))
+                (format-f-stream  3.141592653589793d0 nil nil 0 nil nil nil))
   ;; Integer-valued doubles get a forced ".0" since ~F always shows the dot.
   (assert-equal "1.0"
-                (lisp::format-f  1d0        nil nil 0 nil nil nil))
+                (format-f-stream  1d0        nil nil 0 nil nil nil))
   (assert-equal "1000000000000.0"
 
-                (lisp::format-f  1d12       nil nil 0 nil nil nil))
+                (format-f-stream  1d12       nil nil 0 nil nil nil))
   ;; Tiny values: leading zeros after the dot.
   (assert-equal "0.001"
-                (lisp::format-f  0.001d0    nil nil 0 nil nil nil))
+                (format-f-stream  0.001d0    nil nil 0 nil nil nil))
   (assert-equal "0.0001234"
-                (lisp::format-f  1.234d-4   nil nil 0 nil nil nil)))
+                (format-f-stream  1.234d-4   nil nil 0 nil nil nil)))
 
 (define-test format-f.d-nil-with-w-fits
   (:tag :format-f)
   ;; d=nil with width: shortest fits, no shrink, just left-pad.
   (assert-equal "      3.14"
-                (lisp::format-f  3.14d0     10 nil 0 nil nil nil))
+                (format-f-stream  3.14d0     10 nil 0 nil nil nil))
   (assert-equal "  123456.7"
-                (lisp::format-f  123456.7d0 10 nil 0 nil nil nil))
+                (format-f-stream  123456.7d0 10 nil 0 nil nil nil))
   (assert-equal " -123456.7"
-                (lisp::format-f -123456.7d0 10 nil 0 nil nil nil))
+                (format-f-stream -123456.7d0 10 nil 0 nil nil nil))
   (assert-equal "       1.0"
-                (lisp::format-f  1d0        10 nil 0 nil nil nil)))
+                (format-f-stream  1d0        10 nil 0 nil nil nil)))
 
 (define-test format-f.d-nil-with-w-shrinks
   (:tag :format-f)
@@ -415,11 +428,11 @@
   ;; reference output).  3.141592653589793 shrinks to fit; 1.234567
   ;; with w=6 rounds to "1.2346".
   (assert-equal "1.2346"
-                (lisp::format-f  1.234567d0   6 nil 0 nil nil nil))
+                (format-f-stream  1.234567d0   6 nil 0 nil nil nil))
   (assert-equal "3.14159265"
-                (lisp::format-f  3.141592653589793d0 10 nil 0 nil nil nil))
+                (format-f-stream  3.141592653589793d0 10 nil 0 nil nil nil))
   (assert-equal "3.141593"
-                (lisp::format-f  3.141592653589793d0  8 nil 0 nil nil nil)))
+                (format-f-stream  3.141592653589793d0  8 nil 0 nil nil nil)))
 
 (define-test format-f.d-nil-with-w-overflow
   (:tag :format-f)
@@ -427,44 +440,44 @@
   ;; With overflowchar, fill the field.
   ;; 123456789d0 has int-len 9, plus dot and at least one fractional = 11.
   (assert-equal "123456789.0"
-                (lisp::format-f  123456789d0  8 nil 0 nil    nil nil))
+                (format-f-stream  123456789d0  8 nil 0 nil    nil nil))
   (assert-equal "********"
-                (lisp::format-f  123456789d0  8 nil 0 #\*    nil nil))
+                (format-f-stream  123456789d0  8 nil 0 #\*    nil nil))
   ;; Sign costs a char too.
   (assert-equal "*******"
-                (lisp::format-f -123456789d0  7 nil 0 #\*    nil nil)))
+                (format-f-stream -123456789d0  7 nil 0 #\*    nil nil)))
 
 (define-test format-f.d-given-too-wide
   (:tag :format-f)
   ;; d given AND too long for w: CL never shrinks d.  Emit as-is or
   ;; fill with overflowchar.
   (assert-equal "1.23456700"
-                (lisp::format-f  1.234567d0  6  8 0 nil nil nil))
+                (format-f-stream  1.234567d0  6  8 0 nil nil nil))
   (assert-equal "******"
-                (lisp::format-f  1.234567d0  6  8 0 #\* nil nil)))
+                (format-f-stream  1.234567d0  6  8 0 #\* nil nil)))
 
 (define-test format-f.padding
   (:tag :format-f)
   ;; padchar choices.
   (assert-equal "**3.14"
-                (lisp::format-f  3.14d0      6  2 0 nil #\* nil))
+                (format-f-stream  3.14d0      6  2 0 nil #\* nil))
   (assert-equal "003.14"
-                (lisp::format-f  3.14d0      6  2 0 nil #\0 nil))
+                (format-f-stream  3.14d0      6  2 0 nil #\0 nil))
   (assert-equal "  3.14"
-                (lisp::format-f  3.14d0      6  2 0 nil nil nil)))
+                (format-f-stream  3.14d0      6  2 0 nil nil nil)))
 
 (define-test format-f.at-sign
   (:tag :format-f)
   ;; @ modifier forces + on positive values.
   (assert-equal "+3.14"
-                (lisp::format-f  3.14d0      nil 2 0 nil nil t))
+                (format-f-stream  3.14d0      nil 2 0 nil nil t))
   (assert-equal "-3.14"
-                (lisp::format-f -3.14d0      nil 2 0 nil nil t))
+                (format-f-stream -3.14d0      nil 2 0 nil nil t))
   (assert-equal " +3.14"
-                (lisp::format-f  3.14d0      6   2 0 nil nil t))
+                (format-f-stream  3.14d0      6   2 0 nil nil t))
   ;; The @ sign eats one char of width.
   (assert-equal "+3.14"
-                (lisp::format-f  3.14d0      5   2 0 nil nil t)))
+                (format-f-stream  3.14d0      5   2 0 nil nil t)))
 
 (define-test format-f.boundary-values
   (:tag :format-f)
@@ -473,10 +486,10 @@
   (assert-equal (concatenate 'string
                              "0." (make-string 323 :initial-element #\0) "5")
 
-                (lisp::format-f least-positive-double-float nil nil 0 nil nil nil))
+                (format-f-stream least-positive-double-float nil nil 0 nil nil nil))
   ;; Max positive double: ~1.8e308.  Should print all 309 integer digits.
   (let ((s
-                (lisp::format-f most-positive-double-float nil nil 0 nil nil nil)))
+                (format-f-stream most-positive-double-float nil nil 0 nil nil nil)))
     (assert-true (> (length s) 300))
     (assert-true (find #\. s))))
 
@@ -486,11 +499,11 @@
   (:tag :format-f)
   ;; Round half to even: d2fixed's rounding mode.
   (assert-equal "0."
-                (lisp::format-f  0.5d0      nil 0 0 nil nil nil))
+                (format-f-stream  0.5d0      nil 0 0 nil nil nil))
   (assert-equal "2."
-                (lisp::format-f  2.5d0      nil 0 0 nil nil nil))
+                (format-f-stream  2.5d0      nil 0 0 nil nil nil))
   (assert-equal "2."
-                (lisp::format-f  1.5d0      nil 0 0 nil nil nil)))
+                (format-f-stream  1.5d0      nil 0 0 nil nil nil)))
 
 
 (define-test format-f.overflow-no-overflowchar
@@ -503,32 +516,32 @@
   ;; The Burger & Dybvig implementation says:
   ;; (format nil "~8,f" 123456789d0) => "123456800."
   (assert-equal "123456789.0"
-                (lisp::format-f 123456789d0  8 nil 0 nil nil nil))
+                (format-f-stream 123456789d0  8 nil 0 nil nil nil))
   ;; The Burger & Dybvig implementation says:
   ;; (format nil "~8,f" -123456789d0) => "-123457000."
   (assert-equal "-123456789.0"
-                (lisp::format-f -123456789d0 8 nil 0 nil nil nil)))
+                (format-f-stream -123456789d0 8 nil 0 nil nil nil)))
 
 (define-test format-f.signed-zero
   (:tag :format-f)
   (assert-equal "-0.0"
-                (lisp::format-f (- 0d0) nil nil 0 nil nil nil))
+                (format-f-stream (- 0d0) nil nil 0 nil nil nil))
   (assert-equal "-0.00"
-                (lisp::format-f (- 0d0) nil 2 0 nil nil nil))
+                (format-f-stream (- 0d0) nil 2 0 nil nil nil))
   (assert-equal "-0."
-                (lisp::format-f (- 0d0) nil 0 0 nil nil nil))
+                (format-f-stream (- 0d0) nil 0 0 nil nil nil))
   ;; @ doesn't override the existing minus.
   (assert-equal "-0.0"
-                (lisp::format-f (- 0d0) nil nil 0 nil nil t))
+                (format-f-stream (- 0d0) nil nil 0 nil nil t))
   (assert-equal "+0.0"
-                (lisp::format-f 0d0 nil nil 0 nil nil t))
+                (format-f-stream 0d0 nil nil 0 nil nil t))
   (assert-equal "+0.00"
-                (lisp::format-f 0d0 nil 2 0 nil nil t))
+                (format-f-stream 0d0 nil 2 0 nil nil t))
   (assert-equal "+0."
-                (lisp::format-f 0d0 nil 0 0 nil nil t))
+                (format-f-stream 0d0 nil 0 0 nil nil t))
   ;; Without @, no sign on positive zero.
   (assert-equal "0.0"
-                (lisp::format-f 0d0 nil nil 0 nil nil nil)))
+                (format-f-stream 0d0 nil nil 0 nil nil nil)))
 
 ;;; ~G tests
 
@@ -537,21 +550,21 @@
   ;; Values that fit the ~F-like range (n in [1, 7]).  Should produce
   ;; ~F-form output with trailing spaces.  Default ee = 4.
   (assert-equal "3.14    "
-                (lisp::format-g 3.14d0 nil nil nil 1 nil nil #\d nil))
+                (format-g-stream 3.14d0 nil nil nil 1 nil nil #\d nil))
   (assert-equal "10.    "
-                (lisp::format-g 10d0 nil nil nil 1 nil nil #\d nil))
+                (format-g-stream 10d0 nil nil nil 1 nil nil #\d nil))
   (assert-equal "1000.    "
-                (lisp::format-g 1000d0 nil nil nil 1 nil nil #\d nil)))
+                (format-g-stream 1000d0 nil nil nil 1 nil nil #\d nil)))
 
 (define-test format-g.zero
   (:tag :format-g)
   ;; Zero falls into the ~F path with the d-from-d2s shortcut.
   ;; CMUCL emits "0." (d=0 form), then 4 trailing spaces.
   (assert-equal "0.    "
-                (lisp::format-g 0d0 nil nil nil 1 nil nil #\d nil))
+                (format-g-stream 0d0 nil nil nil 1 nil nil #\d nil))
   ;; Negative zero preserves the sign.
   (assert-equal "-0.    "
-                (lisp::format-g (- 0d0) nil nil nil 1 nil nil #\d nil)))
+                (format-g-stream (- 0d0) nil nil nil 1 nil nil #\d nil)))
 
 (define-test format-g.large-uses-e
   (:tag :format-g)
@@ -560,9 +573,9 @@
   ;; D unspecified, so ~E uses free-format (shortest) output rather
   ;; than fixed precision.
   (assert-equal "1.0d+10"
-                (lisp::format-g 1d10 nil nil nil 1 nil nil #\d nil))
+                (format-g-stream 1d10 nil nil nil 1 nil nil #\d nil))
   (assert-equal "1.0d+100"
-                (lisp::format-g 1d100 nil nil nil 1 nil nil #\d nil)))
+                (format-g-stream 1d100 nil nil nil 1 nil nil #\d nil)))
 
 (define-test format-g.small-uses-e
   (:tag :format-g)
@@ -570,33 +583,33 @@
   ;; with n <= 0 means effective-d = q, dd = q - n which is > q for
   ;; negative n.  Falls into ~E.
   (assert-equal "1.0d-5"
-                (lisp::format-g 1d-5 nil nil nil 1 nil nil #\d nil))
+                (format-g-stream 1d-5 nil nil nil 1 nil nil #\d nil))
   (assert-equal "1.0d-300"
-                (lisp::format-g 1d-300 nil nil nil 1 nil nil #\d nil)))
+                (format-g-stream 1d-300 nil nil nil 1 nil nil #\d nil)))
 
 (define-test format-g.d-given-f-form
   (:tag :format-g)
   ;; d given, value in ~F range.
   ;; pi to d=5 sig digits: ~F form with dd = 5-1 = 4 fractional.
   (assert-equal "3.1416    "
-                (lisp::format-g 3.14159265d0 nil 5 nil 1 nil nil #\d nil))
+                (format-g-stream 3.14159265d0 nil 5 nil 1 nil nil #\d nil))
   ;; d=2 for 3.14: dd = 2-1 = 1 -> "3.1" + 4 spaces.
   (assert-equal "3.1    "
-                (lisp::format-g 3.14d0 nil 2 nil 1 nil nil #\d nil)))
+                (format-g-stream 3.14d0 nil 2 nil 1 nil nil #\d nil)))
 
 (define-test format-g.d-given-e-form
   (:tag :format-g)
   ;; d given, value in ~E range.
   ;; 1d10 with d=4: dd = 4-11 = -7 -> ~E.
   (assert-equal "1.0000d+10"
-                (lisp::format-g 1d10 nil 4 nil 1 nil nil #\d nil)))
+                (format-g-stream 1d10 nil 4 nil 1 nil nil #\d nil)))
 
 (define-test format-g.width-fits
   (:tag :format-g)
   ;; w is generous enough that no shrinking is needed.
   ;; ~F path: format-f gets ww = w - ee.
   (assert-equal "      3.14    "
-                (lisp::format-g 3.14d0 14 nil nil 1 nil nil #\d nil)))
+                (format-g-stream 3.14d0 14 nil nil 1 nil nil #\d nil)))
 
 (define-test format-g.e-parameter
   (:tag :format-g)
@@ -605,20 +618,20 @@
   ;; 1d10 with e=3: ~E with 3-digit exponent.  D is unspecified so
   ;; ~E uses free-format, giving "1.0d+010".
   (assert-equal "1.0d+010"
-                (lisp::format-g 1d10 nil nil 3 1 nil nil #\d nil))
+                (format-g-stream 1d10 nil nil 3 1 nil nil #\d nil))
   ;; 3.14 with e=3: ~F branch, ee = 5 trailing spaces.
   (assert-equal "3.14     "
-                (lisp::format-g 3.14d0 nil nil 3 1 nil nil #\d nil)))
+                (format-g-stream 3.14d0 nil nil 3 1 nil nil #\d nil)))
 
 (define-test format-g.at-sign
   (:tag :format-g)
   ;; @ modifier forces + on positive values, passed through to ~F or ~E.
   (assert-equal "+3.14    "
-                (lisp::format-g 3.14d0 nil nil nil 1 nil nil #\d t))
+                (format-g-stream 3.14d0 nil nil nil 1 nil nil #\d t))
   (assert-equal "-3.14    "
-                (lisp::format-g -3.14d0 nil nil nil 1 nil nil #\d t))
+                (format-g-stream -3.14d0 nil nil nil 1 nil nil #\d t))
   (assert-equal "+1.0d+10"
-                (lisp::format-g 1d10 nil nil nil 1 nil nil #\d t)))
+                (format-g-stream 1d10 nil nil nil 1 nil nil #\d t)))
 
 (define-test format-g.boundary-n-7
   (:tag :format-g)
@@ -626,11 +639,11 @@
   ;; 1d6 has n=7, q=1, effective-d = max(1, 7) = 7, dd = 7-7 = 0.
   ;; dd = 0 is in [0, d] so ~F path with d=0.  Output: "1000000." + 4 sp.
   (assert-equal "1000000.    "
-                (lisp::format-g 1d6 nil nil nil 1 nil nil #\d nil))
+                (format-g-stream 1d6 nil nil nil 1 nil nil #\d nil))
   ;; 1d7 has n=8, dd = 7-8 = -1, falls into ~E.  D is unspecified so
   ;; ~E uses free-format.
   (assert-equal "1.0d+7"
-                (lisp::format-g 1d7 nil nil nil 1 nil nil #\d nil)))
+                (format-g-stream 1d7 nil nil nil 1 nil nil #\d nil)))
 
 (define-test format-g.d-nil-routes-to-e-with-d-nil
   (:tag :format-g)
@@ -642,16 +655,16 @@
   ;; output rather than the longer fixed-precision form.
   ;; 1.5d-10 has n=-9, q=2, effective-d=2, dd=11 -> ~E with D=nil.
   (assert-equal "1.5d-10"
-                (lisp::format-g 1.5d-10 nil nil nil 1 nil nil #\d nil))
+                (format-g-stream 1.5d-10 nil nil nil 1 nil nil #\d nil))
   ;; If we passed effective-d=2 to ~E we'd get "1.50d-10" instead.
   (assert-false (equal "1.50d-10"
-                       (lisp::format-g 1.5d-10 nil nil nil 1 nil nil #\d nil))))
+                       (format-g-stream 1.5d-10 nil nil nil 1 nil nil #\d nil))))
 
 (define-test format-g.padchar
   (:tag :format-g)
   ;; padchar passed through to whichever sub-formatter fires.
   (assert-equal "PPPPPP3.14    "
-                (lisp::format-g 3.14d0 14 nil nil 1 nil #\P #\d nil)))
+                (format-g-stream 3.14d0 14 nil nil 1 nil #\P #\d nil)))
 
 (define-test format-g.overflow-tight-w
   (:tag :format-g)
@@ -660,7 +673,7 @@
   ;; CMUCL extends this with overflowchar in the trailing chars; we
   ;; follow CLHS literally.
   (assert-equal "3.14    "
-                (lisp::format-g 3.14d0 3 nil nil 1 #\* nil #\d nil)))
+                (format-g-stream 3.14d0 3 nil nil 1 #\* nil #\d nil)))
 
 
 ;;;; Single-float tests for format-e, format-f, format-g.
@@ -676,13 +689,13 @@
   ;; Default ~E exponent marker for single-floats is 'f' (matches
   ;; CL's single-float-format default).
   (assert-equal "3.1415927f+0"
-                (lisp::format-e 3.1415927f0 nil nil nil 1 nil nil #\f nil))
+                (format-e-stream 3.1415927f0 nil nil nil 1 nil nil #\f nil))
   (assert-equal "-3.1415927f+0"
-                (lisp::format-e -3.1415927f0 nil nil nil 1 nil nil #\f nil))
+                (format-e-stream -3.1415927f0 nil nil nil 1 nil nil #\f nil))
   (assert-equal "1.0f+0"
-                (lisp::format-e 1f0 nil nil nil 1 nil nil #\f nil))
+                (format-e-stream 1f0 nil nil nil 1 nil nil #\f nil))
   (assert-equal "1.0f-1"
-                (lisp::format-e 0.1f0 nil nil nil 1 nil nil #\f nil)))
+                (format-e-stream 0.1f0 nil nil nil 1 nil nil #\f nil)))
 
 (define-test format-e.single-d-given
   (:tag :format-e :single-float)
@@ -690,9 +703,9 @@
   ;; matches what d2exp produces for the exact double representation
   ;; of the single value.
   (assert-equal "3.14159f+0"
-                (lisp::format-e 3.1415927f0 nil 5 nil 1 nil nil #\f nil))
+                (format-e-stream 3.1415927f0 nil 5 nil 1 nil nil #\f nil))
   (assert-equal "5.00000f-1"
-                (lisp::format-e 0.5f0 nil 5 nil 1 nil nil #\f nil)))
+                (format-e-stream 0.5f0 nil 5 nil 1 nil nil #\f nil)))
 
 (define-test format-e.single-shortest-differs-from-double
   (:tag :format-e :single-float)
@@ -701,28 +714,28 @@
   ;; produce a different (longer) shortest form because the widened
   ;; value 0.10000000149011612d0 is not the same as 0.1d0.
   (assert-equal "1.0f-1"
-                (lisp::format-e 0.1f0 nil nil nil 1 nil nil #\f nil))
+                (format-e-stream 0.1f0 nil nil nil 1 nil nil #\f nil))
   ;; Confirm: if you widened first, d2s on the result would give:
   (assert-equal "1.0000000149011612f-1"
-                (lisp::format-e 0.10000000149011612d0 nil nil nil 1 nil nil #\f nil)))
+                (format-e-stream 0.10000000149011612d0 nil nil nil 1 nil nil #\f nil)))
 
 
 (define-test format-e.single-boundary
   (:tag :format-e :single-float)
   ;; Single-float bounds.
-  (let ((maxs (lisp::format-e most-positive-single-float
+  (let ((maxs (format-e-stream most-positive-single-float
                               nil nil nil 1 nil nil #\f nil)))
     (assert-true (search "f+38" maxs) maxs))
-  (let ((mins (lisp::format-e least-positive-single-float
+  (let ((mins (format-e-stream least-positive-single-float
                               nil nil nil 1 nil nil #\f nil)))
     (assert-true (search "f-45" mins) mins)))
 
 (define-test format-e.single-negative-zero
   (:tag :format-e :single-float)
   (assert-equal "-0.0f+0"
-                (lisp::format-e (- 0f0) nil nil nil 1 nil nil #\f nil))
+                (format-e-stream (- 0f0) nil nil nil 1 nil nil #\f nil))
   (assert-equal "+0.0f+0"
-                (lisp::format-e 0f0 nil nil nil 1 nil nil #\f t)))
+                (format-e-stream 0f0 nil nil nil 1 nil nil #\f t)))
 
 ;;; ----------------------------------------------------------------------
 ;;; ~F single-float
@@ -730,24 +743,24 @@
 (define-test format-f.single-basic
   (:tag :format-f :single-float)
   (assert-equal "3.14"
-                (lisp::format-f 3.14159f0 nil 2 0 nil nil nil))
+                (format-f-stream 3.14159f0 nil 2 0 nil nil nil))
   (assert-equal "-3.14"
-                (lisp::format-f -3.14159f0 nil 2 0 nil nil nil))
+                (format-f-stream -3.14159f0 nil 2 0 nil nil nil))
   (assert-equal "1.00000"
-                (lisp::format-f 1f0 nil 5 0 nil nil nil)))
+                (format-f-stream 1f0 nil 5 0 nil nil nil)))
 
 (define-test format-f.single-d-nil
   (:tag :format-f :single-float)
   ;; Shortest path: f2s output for single-floats is shorter than
   ;; d2s would be for the widened value.
   (assert-equal "3.1415927"
-                (lisp::format-f 3.1415927f0 nil nil 0 nil nil nil))
+                (format-f-stream 3.1415927f0 nil nil 0 nil nil nil))
   (assert-equal "1.0"
-                (lisp::format-f 1f0 nil nil 0 nil nil nil))
+                (format-f-stream 1f0 nil nil 0 nil nil nil))
   (assert-equal "0.1"
-                (lisp::format-f 0.1f0 nil nil 0 nil nil nil))
+                (format-f-stream 0.1f0 nil nil 0 nil nil nil))
   (assert-equal "0.5"
-                (lisp::format-f 0.5f0 nil nil 0 nil nil nil)))
+                (format-f-stream 0.5f0 nil nil 0 nil nil nil)))
 
 (define-test format-f.single-d-nil-vs-double
   (:tag :format-f :single-float)
@@ -756,40 +769,40 @@
   ;; is "0.1".  If we widened first, d2s on the resulting double
   ;; would give a longer shortest form.
   (assert-equal "0.1"
-                (lisp::format-f 0.1f0 nil nil 0 nil nil nil))
+                (format-f-stream 0.1f0 nil nil 0 nil nil nil))
   ;; Same numeric value, but as a double-float literal -- d2s gives
   ;; the long shortest form that round-trips through double.
   (assert-equal "0.10000000149011612"
-                (lisp::format-f 0.10000000149011612d0 nil nil 0 nil nil nil))
+                (format-f-stream 0.10000000149011612d0 nil nil 0 nil nil nil))
   ;; And 0.1d0 (the double literal nearest to 0.1) has its own
   ;; shortest form, which IS "0.1" since 0.1d0 is the canonical
   ;; double for that decimal.
   (assert-equal "0.1"
-                (lisp::format-f 0.1d0 nil nil 0 nil nil nil)))
+                (format-f-stream 0.1d0 nil nil 0 nil nil nil)))
 
 
 (define-test format-f.single-leading-zeros
   (:tag :format-f :single-float)
   ;; Small singles still need leading-zero handling.
   (assert-equal "0.001"
-                (lisp::format-f 0.001f0 nil nil 0 nil nil nil))
+                (format-f-stream 0.001f0 nil nil 0 nil nil nil))
   (assert-equal "0.00001"
-                (lisp::format-f 0.00001f0 nil nil 0 nil nil nil)))
+                (format-f-stream 0.00001f0 nil nil 0 nil nil nil)))
 
 (define-test format-f.single-integer-valued
   (:tag :format-f :single-float)
   ;; Integer-valued singles get ".0" forced.
   (assert-equal "1.0"
-                (lisp::format-f 1f0 nil nil 0 nil nil nil))
+                (format-f-stream 1f0 nil nil 0 nil nil nil))
   (assert-equal "100.0"
-                (lisp::format-f 100f0 nil nil 0 nil nil nil))
+                (format-f-stream 100f0 nil nil 0 nil nil nil))
   (assert-equal "1000000.0"
-                (lisp::format-f 1000000f0 nil nil 0 nil nil nil)))
+                (format-f-stream 1000000f0 nil nil 0 nil nil nil)))
 
 (define-test format-f.single-width-fits
   (:tag :format-f :single-float)
   (assert-equal "      3.14"
-                (lisp::format-f 3.14f0 10 nil 0 nil nil nil)))
+                (format-f-stream 3.14f0 10 nil 0 nil nil nil)))
 
 (define-test format-f.single-narrow-width-no-overflow-char
   (:tag :format-f :single-float)
@@ -799,12 +812,12 @@
   ;; no overflow char the field expands when even that minimum
   ;; doesn't fit.  1.0 -> "1.0".
   (assert-equal "1.0"
-                (lisp::format-f 1.0f0 2 nil 0 nil nil nil))
+                (format-f-stream 1.0f0 2 nil 0 nil nil nil))
   (assert-equal "1.0"
-                (lisp::format-f 1.0f0 1 nil 0 nil nil nil))
+                (format-f-stream 1.0f0 1 nil 0 nil nil nil))
   ;; Same for double-floats.
   (assert-equal "1.0"
-                (lisp::format-f 1.0d0 2 nil 0 nil nil nil)))
+                (format-f-stream 1.0d0 2 nil 0 nil nil nil)))
 
 (define-test format-f.d-nil-rounds-to-width-with-forced-zero
   (:tag :format-f)
@@ -815,26 +828,26 @@
   ;; would overflow W.
   ;; ~2f of 1.1 and 1.9 round to integers, forced ".0", overflow to 3
   ;; (FORMAT.F.45).
-  (assert-equal "1.0" (lisp::format-f 1.1f0 2 nil 0 nil nil nil))
-  (assert-equal "2.0" (lisp::format-f 1.9f0 2 nil 0 nil nil nil))
+  (assert-equal "1.0" (format-f-stream 1.1f0 2 nil 0 nil nil nil))
+  (assert-equal "2.0" (format-f-stream 1.9f0 2 nil 0 nil nil nil))
   ;; ~3f of 1e-6: "0.0" fits w=3 exactly, leading zero kept
   ;; (FORMAT.F.47).
-  (assert-equal "0.0" (lisp::format-f 1.0f-6 3 nil 0 nil nil nil))
+  (assert-equal "0.0" (format-f-stream 1.0f-6 3 nil 0 nil nil nil))
   ;; ~4f of 1e-6: "0.00" fits w=4 exactly.
-  (assert-equal "0.00" (lisp::format-f 1.0f-6 4 nil 0 nil nil nil))
+  (assert-equal "0.00" (format-f-stream 1.0f-6 4 nil 0 nil nil nil))
   ;; ~2f, ~1f, ~0f of 0.01: leading zero dropped to ".0" (FORMAT.F.46).
-  (assert-equal ".0" (lisp::format-f 0.01f0 2 nil 0 nil nil nil))
-  (assert-equal ".0" (lisp::format-f 0.01f0 1 nil 0 nil nil nil))
-  (assert-equal ".0" (lisp::format-f 0.01f0 0 nil 0 nil nil nil)))
+  (assert-equal ".0" (format-f-stream 0.01f0 2 nil 0 nil nil nil))
+  (assert-equal ".0" (format-f-stream 0.01f0 1 nil 0 nil nil nil))
+  (assert-equal ".0" (format-f-stream 0.01f0 0 nil 0 nil nil nil)))
 
 (define-test format-f.single-narrow-width-with-overflow-char
   (:tag :format-f :single-float)
   ;; With overflowchar supplied, the field is filled with the overflow
   ;; character when the shortest form does not fit.
   (assert-equal "**"
-                (lisp::format-f 1.0f0 2 nil 0 #\* nil nil))
+                (format-f-stream 1.0f0 2 nil 0 #\* nil nil))
   (assert-equal "***"
-                (lisp::format-f 1234.5f0 3 nil 0 #\* nil nil)))
+                (format-f-stream 1234.5f0 3 nil 0 #\* nil nil)))
 
 (define-test format-f.optional-leading-zero
   (:tag :format-f :single-float :double-float)
@@ -844,43 +857,43 @@
   ;; ANSI tests FORMAT.F.13-16.
   ;;
   ;; ~3,2F of 0.5 -> ".50"
-  (assert-equal ".50" (lisp::format-f 0.5f0 3 2 0 nil nil nil))
-  (assert-equal ".50" (lisp::format-f 0.5d0 3 2 0 nil nil nil))
+  (assert-equal ".50" (format-f-stream 0.5f0 3 2 0 nil nil nil))
+  (assert-equal ".50" (format-f-stream 0.5d0 3 2 0 nil nil nil))
   ;; ~2,1F of 0.5 -> ".5"
-  (assert-equal ".5"  (lisp::format-f 0.5f0 2 1 0 nil nil nil))
-  (assert-equal ".5"  (lisp::format-f 0.5d0 2 1 0 nil nil nil))
+  (assert-equal ".5"  (format-f-stream 0.5f0 2 1 0 nil nil nil))
+  (assert-equal ".5"  (format-f-stream 0.5d0 2 1 0 nil nil nil))
   ;; ~4,2@F of 0.5 -> "+.50"
-  (assert-equal "+.50" (lisp::format-f 0.5f0 4 2 0 nil nil t))
-  (assert-equal "+.50" (lisp::format-f 0.5d0 4 2 0 nil nil t))
+  (assert-equal "+.50" (format-f-stream 0.5f0 4 2 0 nil nil t))
+  (assert-equal "+.50" (format-f-stream 0.5d0 4 2 0 nil nil t))
   ;; ~2,2F of 0.5 -> ".50" (field expands beyond w=2 since no overflowchar)
-  (assert-equal ".50" (lisp::format-f 0.5f0 2 2 0 nil nil nil))
-  (assert-equal ".50" (lisp::format-f 0.5d0 2 2 0 nil nil nil))
+  (assert-equal ".50" (format-f-stream 0.5f0 2 2 0 nil nil nil))
+  (assert-equal ".50" (format-f-stream 0.5d0 2 2 0 nil nil nil))
   ;; Negative values: ~3,2F of -0.5 -> "-.50" (field expands past w=3).
-  (assert-equal "-.50" (lisp::format-f -0.5d0 3 2 0 nil nil nil))
+  (assert-equal "-.50" (format-f-stream -0.5d0 3 2 0 nil nil nil))
   ;; -0.5 in width 4: drops the zero, fits exactly.
-  (assert-equal "-.50" (lisp::format-f -0.5d0 4 2 0 nil nil nil)))
+  (assert-equal "-.50" (format-f-stream -0.5d0 4 2 0 nil nil nil)))
 
 (define-test format-f.leading-zero-kept-when-room
   (:tag :format-f :single-float :double-float)
   ;; When there is room for the leading zero, it must be printed.
-  (assert-equal " 0.50" (lisp::format-f 0.5d0 5 2 0 nil nil nil))
-  (assert-equal "0.50"  (lisp::format-f 0.5d0 4 2 0 nil nil nil))
-  (assert-equal "0.50"  (lisp::format-f 0.5d0 nil 2 0 nil nil nil)))
+  (assert-equal " 0.50" (format-f-stream 0.5d0 5 2 0 nil nil nil))
+  (assert-equal "0.50"  (format-f-stream 0.5d0 4 2 0 nil nil nil))
+  (assert-equal "0.50"  (format-f-stream 0.5d0 nil 2 0 nil nil nil)))
 
 (define-test format-f.leading-zero-required-for-exact-zero
   (:tag :format-f :single-float :double-float)
   ;; CLHS 22.3.3.1: "If the magnitude is exactly zero, a single zero
   ;; digit is printed before the decimal point."  Don't drop it even
   ;; if the field would overflow.
-  (assert-equal "0.00" (lisp::format-f 0.0d0 3 2 0 nil nil nil))
-  (assert-equal "0.00" (lisp::format-f 0.0f0 3 2 0 nil nil nil)))
+  (assert-equal "0.00" (format-f-stream 0.0d0 3 2 0 nil nil nil))
+  (assert-equal "0.00" (format-f-stream 0.0f0 3 2 0 nil nil nil)))
 
 (define-test format-f.single-negative-zero
   (:tag :format-f :single-float)
   (assert-equal "-0.0"
-                (lisp::format-f (- 0f0) nil nil 0 nil nil nil))
+                (format-f-stream (- 0f0) nil nil 0 nil nil nil))
   (assert-equal "+0.0"
-                (lisp::format-f 0f0 nil nil 0 nil nil t)))
+                (format-f-stream 0f0 nil nil 0 nil nil t)))
 
 ;;; ----------------------------------------------------------------------
 ;;; ~G single-float
@@ -889,30 +902,30 @@
   (:tag :format-g :single-float)
   ;; ~F-form path for value in normal range.
   (assert-equal "3.1415927    "
-                (lisp::format-g 3.1415927f0 nil nil nil 1 nil nil #\f nil))
+                (format-g-stream 3.1415927f0 nil nil nil 1 nil nil #\f nil))
   (assert-equal "0.    "
-                (lisp::format-g 0f0 nil nil nil 1 nil nil #\f nil))
+                (format-g-stream 0f0 nil nil nil 1 nil nil #\f nil))
   (assert-equal "-0.    "
-                (lisp::format-g (- 0f0) nil nil nil 1 nil nil #\f nil)))
+                (format-g-stream (- 0f0) nil nil nil 1 nil nil #\f nil)))
 
 (define-test format-g.single-large-uses-e
   (:tag :format-g :single-float)
   ;; Large values fall to ~E form.  effective-d for f2s shortest
   ;; depends on the digit count, but for 1e10f0 it's small.
   ;; 1e10f0 has n=11, q small, dd negative -> ~E form.
-  (let ((s (lisp::format-g 1f10 nil nil nil 1 nil nil #\f nil)))
+  (let ((s (format-g-stream 1f10 nil nil nil 1 nil nil #\f nil)))
     (assert-true (search "f+10" s) s)))
 
 (define-test format-g.single-small-uses-e
   (:tag :format-g :single-float)
-  (let ((s (lisp::format-g 1f-5 nil nil nil 1 nil nil #\f nil)))
+  (let ((s (format-g-stream 1f-5 nil nil nil 1 nil nil #\f nil)))
     (assert-true (search "f-5" s) s)))
 
 (define-test format-g.single-d-given
   (:tag :format-g :single-float)
   ;; d-given uses the double path internally.
   (assert-equal "3.1416    "
-                (lisp::format-g 3.1415927f0 nil 5 nil 1 nil nil #\f nil)))
+                (format-g-stream 3.1415927f0 nil 5 nil 1 nil nil #\f nil)))
 
 ;;; ----------------------------------------------------------------------
 ;;; Mixed-type sanity checks
@@ -921,8 +934,8 @@
   (:tag :format-e :single-float)
   ;; Same nominal value, different float types -- should produce
   ;; different shortest forms.
-  (let ((single-out (lisp::format-e 3.14f0 nil nil nil 1 nil nil #\f nil))
-        (double-out (lisp::format-e 3.14d0 nil nil nil 1 nil nil #\d nil)))
+  (let ((single-out (format-e-stream 3.14f0 nil nil nil 1 nil nil #\f nil))
+        (double-out (format-e-stream 3.14d0 nil nil nil 1 nil nil #\d nil)))
     (assert-true (search "f" single-out) single-out)
     (assert-true (search "d" double-out) double-out)))
 
@@ -938,9 +951,9 @@
   (:tag :format-e :dispatch)
   ;; With *use-ryu-printer* T, FORMAT "~E" must agree with LISP::FORMAT-E.
   (let ((lisp::*use-ryu-printer* t))
-    (assert-equal (lisp::format-e 3.14d0 nil nil nil 1 nil nil #\d nil)
+    (assert-equal (format-e-stream 3.14d0 nil nil nil 1 nil nil #\d nil)
                   (format nil "~E" 3.14d0))
-    (assert-equal (lisp::format-e -1.23456789d12 17 nil 4 1 #\* #\P #\z t)
+    (assert-equal (format-e-stream -1.23456789d12 17 nil 4 1 #\* #\P #\z t)
                   (format nil "~17,,4,1,'*,'P,'zE" -1.23456789d12))))
 
 (define-test format-e.dispatch-via-use-ryu-printer.nil
@@ -990,9 +1003,9 @@
   (:tag :format-e :dispatch)
   ;; With *use-ryu-printer* T, FORMAT "~E" must agree with LISP::FORMAT-E.
   (let ((lisp::*use-ryu-printer* t))
-    (assert-equal (lisp::format-e 3.14d0 nil nil nil 1 nil nil #\d nil)
+    (assert-equal (format-e-stream 3.14d0 nil nil nil 1 nil nil #\d nil)
                   (format nil "~E" 3.14d0))
-    (assert-equal (lisp::format-e -1.23456789d12 17 nil 4 1 #\* #\P #\z t)
+    (assert-equal (format-e-stream -1.23456789d12 17 nil 4 1 #\* #\P #\z t)
                   (format nil "~17,,4,1,'*,'P,'zE" -1.23456789d12))))
 
 (define-test format-e.dispatch-via-use-ryu-printer.nil
@@ -1043,10 +1056,10 @@
   ;; With *use-ryu-printer* T, FORMAT "~F" must agree with LISP::FORMAT-F.
   (let ((lisp::*use-ryu-printer* t))
     ;; Default ~F: no width, no fdigits, k = 0.
-    (assert-equal (lisp::format-f 3.14d0 nil nil 0 nil nil nil)
+    (assert-equal (format-f-stream 3.14d0 nil nil 0 nil nil nil)
                   (format nil "~F" 3.14d0))
     ;; With width and fdigits.
-    (assert-equal (lisp::format-f 3.14d0 10 4 0 nil #\space nil)
+    (assert-equal (format-f-stream 3.14d0 10 4 0 nil #\space nil)
                   (format nil "~10,4F" 3.14d0))))
 
 (define-test format-f.dispatch-via-use-ryu-printer.nil
@@ -1099,9 +1112,9 @@
   (:tag :format-g :dispatch)
   ;; With *use-ryu-printer* T, FORMAT "~G" must agree with LISP::FORMAT-G.
   (let ((lisp::*use-ryu-printer* t))
-    (assert-equal (lisp::format-g 3.14d0 nil nil nil 1 nil nil #\d nil)
+    (assert-equal (format-g-stream 3.14d0 nil nil nil 1 nil nil #\d nil)
                   (format nil "~G" 3.14d0))
-    (assert-equal (lisp::format-g 12345.6789d0 12 4 nil 1 nil #\space #\d nil)
+    (assert-equal (format-g-stream 12345.6789d0 12 4 nil 1 nil #\space #\d nil)
                   (format nil "~12,4,,1G" 12345.6789d0))))
 
 (define-test format-g.dispatch-via-use-ryu-printer.nil

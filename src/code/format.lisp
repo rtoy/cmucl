@@ -1599,7 +1599,7 @@
      (prin1 number stream)
      nil)
     (t
-     (write-string (lisp::format-f number w d (or k 0) ovf pad atsign) stream)))
+     (lisp::format-f stream number w d (or k 0) ovf pad atsign) stream)))
   nil)
 
 (defun format-fixed-aux-bd (stream number w d k ovf pad atsign)
@@ -1898,10 +1898,9 @@
      ;; chooses the marker based on the value's type and
      ;; *READ-DEFAULT-FLOAT-FORMAT* (see FORMAT-EXPONENT-MARKER).
      ;; Resolve the default here so the same rule applies.
-     (write-string (lisp::format-e number w d e k ovf pad
-				   (or marker (format-exponent-marker number))
-				   atsign)
-		   stream)))
+     (lisp::format-e stream number w d e k ovf pad
+		     (or marker (format-exponent-marker number))
+		     atsign)))
   (values))
 
 (defun format-exp-aux (stream number w d e k ovf pad marker atsign)
@@ -1978,10 +1977,9 @@
     (prin1 number stream)
     nil)
    (t
-    (write-string (lisp::format-g number w d e (or k 1) ovf pad
-				  (or marker (format-exponent-marker number))
-				  atsign)
-		  stream)))
+    (lisp::format-g stream number w d e (or k 1) ovf pad
+		    (or marker (format-exponent-marker number))
+		    atsign)))
   (values))
 
 (defun format-general-aux-bd (stream number w d e k ovf pad marker atsign)

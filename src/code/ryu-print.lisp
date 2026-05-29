@@ -406,83 +406,82 @@
       (declare (dynamic-extent #'write-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 
-(defun format-e (value w d e k overflowchar padchar exponentchar at-sign-p)
+(defun format-e (stream value w d e k overflowchar padchar exponentchar at-sign-p)
   (declare (type (or single-float double-float) value)
            (fixnum k)
            (type (or null (and unsigned-byte fixnum)) w d e)
            (optimize (speed 3)))
   (multiple-value-bind (is-negative-p abs-value)
       (get-sign-and-absolute-value value)
-    (with-output-to-string (stream)
-      (cond
-        (d
-         (multiple-value-bind (mantissa exponent)
-             (parsed-exp-form (d2exp abs-value
-				     (d2exp-precision d k)))
-	   (cond
-	     ;; CLHS 22.3.3.2: with D specified, exactly d-(k-1)
-	     ;; fractional digits appear after the dot.  When that is 0
-	     ;; (k >= d+1, plusp k), emit "[int].e[exp]" directly with
-	     ;; no forced ".0" -- the d2exp result has been rounded to
-	     ;; exactly the digits we need to show.  The k=1, d=0 case
-	     ;; is excluded: cmucl has always emitted "D.0eN" there and
-	     ;; existing tests rely on it.
-	     ((and (>= k 2) (>= k (1+ d)))
-	      (emit-exp-no-fraction stream mantissa
-				    (- exponent (1- k))
-				    k is-negative-p at-sign-p
-				    w e overflowchar padchar exponentchar))
-	     (t
-	      (format-e-string stream mantissa exponent is-negative-p
-			       w e k overflowchar padchar exponentchar at-sign-p nil)))))
-        (t
-         (multiple-value-bind (mantissa exponent)
-             (parsed-exp-form (float-to-string value))
-           (let* ((actual-exp (- exponent (1- k)))
-                  (full-len (compute-exp-output-length mantissa actual-exp k e
-                                                       is-negative-p at-sign-p
-                                                       nil)))
-             (cond
-               ((or (null w)
-		    (<= full-len w))
-                (format-e-string stream mantissa exponent is-negative-p
-                                 w e k overflowchar padchar exponentchar at-sign-p
-                                 (not (plusp k))))
-               (t
-                (let* ((d-fit (compute-d-for-width w e k actual-exp is-negative-p at-sign-p))
-                       (drop-zero-p (and d-fit (<= k 0))))
-                  (cond
-                    (d-fit
-                     (multiple-value-bind (mantissa exponent)
-                         (parsed-exp-form (d2exp abs-value
-						  (d2exp-precision d-fit k)))
-                       (format-e-string stream mantissa exponent is-negative-p
-                                        w e k overflowchar padchar exponentchar at-sign-p
-                                        drop-zero-p)))
-                    (overflowchar
-                     ;; Not even the no-fractional-digit form fits and
-                     ;; an overflow char was supplied: fill W.
-                     (loop repeat w do (write-char overflowchar stream)))
-                    ((= k 1)
-                     ;; No fractional digit fits.  Emit "[d].e[exp]"
-                     ;; directly -- no forced ".0".  CLHS 22.3.3.2
-                     ;; "single zero digit ... if the width w permits";
-                     ;; here it does not, so the field overflows W.
-                     ;; Handled only for k=1 (default); other k values
-                     ;; fall through to the old format-e-string path.
-                     (multiple-value-bind (one-digit shown-exp)
-                         (parsed-exp-form (d2exp abs-value 0))
-                       (emit-exp-no-fraction stream one-digit shown-exp 1
-					     is-negative-p at-sign-p
-					     w e overflowchar padchar
-					     exponentchar)))
-                    (t
-                     ;; k != 1 and no width fits: fall back to the
-                     ;; shortest form (may still emit a forced ".0";
-                     ;; rare, not yet handled).
+    (cond
+      (d
+       (multiple-value-bind (mantissa exponent)
+           (parsed-exp-form (d2exp abs-value
+				   (d2exp-precision d k)))
+	 (cond
+	   ;; CLHS 22.3.3.2: with D specified, exactly d-(k-1)
+	   ;; fractional digits appear after the dot.  When that is 0
+	   ;; (k >= d+1, plusp k), emit "[int].e[exp]" directly with
+	   ;; no forced ".0" -- the d2exp result has been rounded to
+	   ;; exactly the digits we need to show.  The k=1, d=0 case
+	   ;; is excluded: cmucl has always emitted "D.0eN" there and
+	   ;; existing tests rely on it.
+	   ((and (>= k 2) (>= k (1+ d)))
+	    (emit-exp-no-fraction stream mantissa
+				  (- exponent (1- k))
+				  k is-negative-p at-sign-p
+				  w e overflowchar padchar exponentchar))
+	   (t
+	    (format-e-string stream mantissa exponent is-negative-p
+			     w e k overflowchar padchar exponentchar at-sign-p nil)))))
+      (t
+       (multiple-value-bind (mantissa exponent)
+           (parsed-exp-form (float-to-string value))
+         (let* ((actual-exp (- exponent (1- k)))
+                (full-len (compute-exp-output-length mantissa actual-exp k e
+                                                     is-negative-p at-sign-p
+                                                     nil)))
+           (cond
+             ((or (null w)
+		  (<= full-len w))
+              (format-e-string stream mantissa exponent is-negative-p
+                               w e k overflowchar padchar exponentchar at-sign-p
+                               (not (plusp k))))
+             (t
+              (let* ((d-fit (compute-d-for-width w e k actual-exp is-negative-p at-sign-p))
+                     (drop-zero-p (and d-fit (<= k 0))))
+                (cond
+                  (d-fit
+                   (multiple-value-bind (mantissa exponent)
+                       (parsed-exp-form (d2exp abs-value
+					       (d2exp-precision d-fit k)))
                      (format-e-string stream mantissa exponent is-negative-p
                                       w e k overflowchar padchar exponentchar at-sign-p
-                                      nil)))))))))))))
+                                      drop-zero-p)))
+                  (overflowchar
+                   ;; Not even the no-fractional-digit form fits and
+                   ;; an overflow char was supplied: fill W.
+                   (loop repeat w do (write-char overflowchar stream)))
+                  ((= k 1)
+                   ;; No fractional digit fits.  Emit "[d].e[exp]"
+                   ;; directly -- no forced ".0".  CLHS 22.3.3.2
+                   ;; "single zero digit ... if the width w permits";
+                   ;; here it does not, so the field overflows W.
+                   ;; Handled only for k=1 (default); other k values
+                   ;; fall through to the old format-e-string path.
+                   (multiple-value-bind (one-digit shown-exp)
+                       (parsed-exp-form (d2exp abs-value 0))
+                     (emit-exp-no-fraction stream one-digit shown-exp 1
+					   is-negative-p at-sign-p
+					   w e overflowchar padchar
+					   exponentchar)))
+                  (t
+                   ;; k != 1 and no width fits: fall back to the
+                   ;; shortest form (may still emit a forced ".0";
+                   ;; rare, not yet handled).
+                   (format-e-string stream mantissa exponent is-negative-p
+                                    w e k overflowchar padchar exponentchar at-sign-p
+                                    nil))))))))))))
 
 ;;; Ryu ~F
 (defun format-f-fixed (stream value w d
@@ -653,27 +652,26 @@
 				  is-negative-p w
 				  overflowchar padchar at-sign-p)))))))
 
-(defun format-f (value w d k overflowchar padchar at-sign-p)
+(defun format-f (stream value w d k overflowchar padchar at-sign-p)
   (declare (type (or single-float double-float) value)
 	   (fixnum k)
 	   (type (or null (and unsigned-byte fixnum)) w d))
-  (with-output-to-string (s)
-    (cond ((not (zerop k))
-	   ;;  Complex case that doesn't fit with what d2s and d2fixed
-	   ;;  returns.  Especially when d+k is negative so that some
-	   ;;  digits are shifted right past the desired precision.
-	   ;;  We'd have to round the result.  Just use our existing
-	   ;;  code to handle this case with the correct rounding.
-	   (format::format-fixed-aux s value w d k overflowchar padchar at-sign-p))
-	  (d
-	   (format-f-fixed s value w d overflowchar padchar at-sign-p))
-	  (t
-	   ;; No d, so use d2s to get the shortest digits; convert by
-	   ;; placing the decimal poin at the right spot.
-	   (format-f-free s value  w overflowchar padchar at-sign-p)))))
+  (cond ((not (zerop k))
+	 ;;  Complex case that doesn't fit with what d2s and d2fixed
+	 ;;  returns.  Especially when d+k is negative so that some
+	 ;;  digits are shifted right past the desired precision.
+	 ;;  We'd have to round the result.  Just use our existing
+	 ;;  code to handle this case with the correct rounding.
+	 (format::format-fixed-aux stream value w d k overflowchar padchar at-sign-p))
+	(d
+	 (format-f-fixed stream value w d overflowchar padchar at-sign-p))
+	(t
+	 ;; No d, so use d2s to get the shortest digits; convert by
+	 ;; placing the decimal poin at the right spot.
+	 (format-f-free stream value w overflowchar padchar at-sign-p)))))
 
 ;;; Ryu ~G
-(defun format-g (value w d e k overflowchar padchar exponentchar at-sign-p)
+(defun format-g (stream value w d e k overflowchar padchar exponentchar at-sign-p)
   (declare (type (or single-float double-float) value)
 	   (fixnum k)
 	   (type (or null (and unsigned-byte fixnum)) w d e))
@@ -692,14 +690,14 @@
 	   (dd (- effective-d n)))
       (cond
 	((<= 0 dd effective-d)
-	 (concatenate 'string
-		      (format-f value ww dd 0 overflowchar padchar at-sign-p)
-		      (make-string ee :initial-element #\space)))
+	 (format-f stream value ww dd 0 overflowchar padchar at-sign-p)
+	 (loop for c from 0 below ee
+	       do (write-char #\space stream)))
 	(t
 	 ;; ~E form.  CLHS 22.3.3.3 specifies the resulting call as
 	 ;; "~w,d,e,k,...,E" -- using the user's original D, not the
 	 ;; EFFECTIVE-D computed for the ~F-vs-~E decision.  When D is
 	 ;; NIL this lets format-e produce its free-format (shortest)
 	 ;; output rather than fixed-precision.
-	 (format-e value w d e k overflowchar padchar exponentchar at-sign-p))))))
+	 (format-e stream value w d e k overflowchar padchar exponentchar at-sign-p))))))
 
