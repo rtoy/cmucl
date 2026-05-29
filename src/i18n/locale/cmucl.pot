@@ -7489,6 +7489,13 @@ msgstr ""
 
 #: src/code/ryu-print.lisp
 msgid ""
+"Number of decimal digits needed to display the ACTUAL-EXP in a width\n"
+"  of E.  If E is NIL, the actual number of digits is returned.\n"
+"  Otherwise, the max of E and the number of digits is returned."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
 "Find the largest d (precision) value that fits in width W given the\n"
 "  actual exponent (adjusted by k), and whether signs are printed or\n"
 "  not.\n"

@@ -1583,23 +1583,31 @@
   ;; DOUBLE-DOUBLE-FLOAT) always falls through to the B&D path.
   (cond
     ((and lisp::*use-ryu-printer*
-	  (or (null k) (zerop k))
 	  (typep number '(or single-float double-float)))
      (format-fixed-ryu stream number w d k ovf pad atsign))
     (t
      (format-fixed-aux-bd stream number w d k ovf pad atsign))))
 
-(defun format-fixed-ryu (stream number w d k ovf pad atsign)
+(defmacro def-format-ryu (name (stream number &rest args) &body body)
+  (multiple-value-bind (docstring forms)
+      (if (and (stringp (first body)) (rest body))
+	  (values (list (first body)) (rest body))
+	  (values nil body))
+    `(defun ,name (,stream ,number ,@args)
+       ,@docstring
+       (cond
+	 ((and (floatp ,number)
+	       (or (float-infinity-p ,number)
+		   (float-nan-p ,number)))
+	  (prin1 number ,stream))
+	 (t
+	  ,@forms)
+	 (values)))))
+	 
+(def-format-ryu format-fixed-ryu (stream number w d k ovf pad atsign)
   "Ryu-based implementation of the ~F directive.  Delegates to
   LISP::FORMAT-F, which returns the formatted field as a string."
-  (cond
-    ((and (floatp number)
-	  (or (float-infinity-p number)
-	      (float-nan-p number)))
-     (prin1 number stream))
-    (t
-     (lisp::format-f stream number w d (or k 0) ovf pad atsign)))
-  nil)
+  (lisp::format-f stream number w d (or k 0) ovf pad atsign))
 
 (defun format-fixed-aux-bd (stream number w d k ovf pad atsign)
   "Burger and Dybvig based implementation of the ~F directive."
@@ -1883,24 +1891,17 @@
 			 (write-string estr stream))))))))
   (values))
 
-(defun format-exp-ryu (stream number w d e k ovf pad marker atsign)
+(def-format-ryu format-exp-ryu (stream number w d e k ovf pad marker atsign)
   "Ryu-based implementation of the ~E directive.  Delegates to
   LISP::FORMAT-E, which returns the formatted field as a string."
-  (cond
-    ((and (floatp number)
-	  (or (float-infinity-p number)
-	      (float-nan-p number)))
-     (prin1 number stream))
-    (t
-     ;; LISP::FORMAT-E uses a literal #\d as the default exponent
-     ;; marker when EXPONENTCHAR is NIL, but the CL ~E directive
-     ;; chooses the marker based on the value's type and
-     ;; *READ-DEFAULT-FLOAT-FORMAT* (see FORMAT-EXPONENT-MARKER).
-     ;; Resolve the default here so the same rule applies.
-     (lisp::format-e stream number w d e k ovf pad
-		     (or marker (format-exponent-marker number))
-		     atsign)))
-  (values))
+  ;; LISP::FORMAT-E uses a literal #\d as the default exponent
+  ;; marker when EXPONENTCHAR is NIL, but the CL ~E directive
+  ;; chooses the marker based on the value's type and
+  ;; *READ-DEFAULT-FLOAT-FORMAT* (see FORMAT-EXPONENT-MARKER).
+  ;; Resolve the default here so the same rule applies.
+  (lisp::format-e stream number w d e k ovf pad
+		  (or marker (format-exponent-marker number))
+		  atsign))
 
 (defun format-exp-aux (stream number w d e k ovf pad marker atsign)
   ;; Dispatch to either the Burger and Dybvig implementation or the
@@ -1966,20 +1967,12 @@
     (t
      (format-general-aux-bd stream number w d e k ovf pad marker atsign))))
 
-(defun format-general-ryu (stream number w d e k ovf pad marker atsign)
+(def-format-ryu format-general-ryu (stream number w d e k ovf pad marker atsign)
   "Ryu-based implementation of the ~G directive.  Delegates to
   LISP::FORMAT-G, which returns the formatted field as a string."
-  (cond
-   ((and (floatp number)
-	 (or (float-infinity-p number)
-	     (float-nan-p number)))
-    (prin1 number stream)
-    nil)
-   (t
-    (lisp::format-g stream number w d e (or k 1) ovf pad
-		    (or marker (format-exponent-marker number))
-		    atsign)))
-  (values))
+  (lisp::format-g stream number w d e (or k 1) ovf pad
+		  (or marker (format-exponent-marker number))
+		  atsign))  
 
 (defun format-general-aux-bd (stream number w d e k ovf pad marker atsign)
   "Burger and Dybvig based implementation of the ~G directive."

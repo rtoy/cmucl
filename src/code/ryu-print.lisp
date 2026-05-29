@@ -635,13 +635,13 @@
   (declare (type (or single-float double-float) value)
 	   (fixnum k)
 	   (type (or null (and unsigned-byte fixnum)) w d))
-  (cond ((not (zerop k))
-	 ;;  Complex case that doesn't fit with what d2s and d2fixed
-	 ;;  returns.  Especially when d+k is negative so that some
-	 ;;  digits are shifted right past the desired precision.
-	 ;;  We'd have to round the result.  Just use our existing
-	 ;;  code to handle this case with the correct rounding.
-	 (format::format-fixed-aux stream value w d k overflowchar padchar at-sign-p))
+  (cond ((and k (not (zerop k)))
+	 ;; Complex case that doesn't fit with what d2s and d2fixed
+	 ;; returns.  Especially when d+k is negative so that some
+	 ;; digits are shifted right past the desired precision.  We'd
+	 ;; have to round the result.  Just use our existing code to
+	 ;; handle this case with the correct rounding.
+	 (format::format-fixed-aux-bd stream value w d k overflowchar padchar at-sign-p))
 	(d
 	 (format-f-fixed stream value w d overflowchar padchar at-sign-p))
 	(t
