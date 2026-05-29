@@ -1572,22 +1572,6 @@
       (format-princ stream number nil nil w 1 0 pad)))
 
 
-;;; We return true if we overflowed, so that ~G can output the overflow char
-;;; instead of spaces.
-;;;
-(defun format-fixed-aux (stream number w d k ovf pad atsign)
-  (declare (type float number))
-  ;; Dispatch to either the Burger and Dybvig implementation or the
-  ;; Ryu-based implementation.  The Ryu code only handles single- and
-  ;; double-float values, so any other float type (notably
-  ;; DOUBLE-DOUBLE-FLOAT) always falls through to the B&D path.
-  (cond
-    ((and lisp::*use-ryu-printer*
-	  (typep number '(or single-float double-float)))
-     (format-fixed-ryu stream number w d k ovf pad atsign))
-    (t
-     (format-fixed-aux-bd stream number w d k ovf pad atsign))))
-
 (defmacro def-format-ryu (name (stream number &rest args) &body body)
   (multiple-value-bind (docstring forms)
       (if (and (stringp (first body)) (rest body))
@@ -1604,6 +1588,28 @@
 	  ,@forms)
 	 (values)))))
 	 
+(defmacro def-format-aux (base-name (stream number &rest args) &body body)
+  (let ((docstring 
+	  (if (and (stringp (first body)) (rest body))
+	      (list (first body))
+	      nil)))
+    (let ((defun-name (symbolicate base-name "-AUX"))
+	  (name-ryu (symbolicate base-name "-RYU"))
+	  (name-bd (symbolicate base-name "-AUX-BD")))
+      `(defun ,defun-name (,stream ,number ,@args)
+	 ,@docstring
+	 (cond
+	   ((and lisp::*use-ryu-printer*
+		 (typep ,number '(or single-float double-float)))
+	    (,name-ryu ,stream ,number ,@args))
+	   (t
+	    (,name-bd ,stream, number ,@args)))))))
+
+;;; We return true if we overflowed, so that ~G can output the overflow char
+;;; instead of spaces.
+;;;
+(def-format-aux format-fixed (stream number w d k ovf pad atsign))
+
 (def-format-ryu format-fixed-ryu (stream number w d k ovf pad atsign)
   "Ryu-based implementation of the ~F directive.  Delegates to
   LISP::FORMAT-F, which returns the formatted field as a string."
@@ -1903,21 +1909,7 @@
 		  (or marker (format-exponent-marker number))
 		  atsign))
 
-(defun format-exp-aux (stream number w d e k ovf pad marker atsign)
-  ;; Dispatch to either the Burger and Dybvig implementation or the
-  ;; Ryu-based implementation.  The Ryu code only handles single- and
-  ;; double-float values, so any other float type (notably
-  ;; DOUBLE-DOUBLE-FLOAT) always falls through to the B&D path.
-  (cond
-    ((and lisp::*use-ryu-printer*
-	  (floatp number)
-	  (typep number '(or single-float double-float))
-	  (not (or (float-infinity-p number)
-		   (float-nan-p number))))
-     (format-exp-ryu stream number w d e k ovf pad marker atsign))
-    (t
-     (format-exp-aux-bd stream number w d e k ovf pad marker atsign))))
-
+(def-format-aux format-exp (stream number w d e k ovf pad marker atsign))
 
 (def-format-directive #\G (colonp atsignp params)
   (when colonp
@@ -1954,18 +1946,7 @@
 
 
 ;;; toy@rtp.ericsson.se:  Same change as for format-exp-aux.
-(defun format-general-aux (stream number w d e k ovf pad marker atsign)
-  ;; Dispatch to either the Burger and Dybvig implementation or the
-  ;; Ryu-based implementation.  The Ryu code only handles single- and
-  ;; double-float values, so any other float type (notably
-  ;; DOUBLE-DOUBLE-FLOAT) always falls through to the B&D path.
-  (cond
-    ((and lisp::*use-ryu-printer*
-	  (floatp number)
-	  (typep number '(or single-float double-float)))
-     (format-general-ryu stream number w d e k ovf pad marker atsign))
-    (t
-     (format-general-aux-bd stream number w d e k ovf pad marker atsign))))
+(def-format-aux format-general (stream number w d e k ovf pad marker atsign))
 
 (def-format-ryu format-general-ryu (stream number w d e k ovf pad marker atsign)
   "Ryu-based implementation of the ~G directive.  Delegates to
