@@ -1596,10 +1596,9 @@
     ((and (floatp number)
 	  (or (float-infinity-p number)
 	      (float-nan-p number)))
-     (prin1 number stream)
-     nil)
+     (prin1 number stream))
     (t
-     (lisp::format-f stream number w d (or k 0) ovf pad atsign) stream)))
+     (lisp::format-f stream number w d (or k 0) ovf pad atsign)))
   nil)
 
 (defun format-fixed-aux-bd (stream number w d k ovf pad atsign)
