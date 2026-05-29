@@ -147,6 +147,16 @@
         ((< n 100) 2)
         (t         3)))
 
+(declaim (inline exponent-digit-count))
+(defun exponent-digit-count (e actual-exp)
+  "Number of decimal digits needed to display the ACTUAL-EXP in a width
+  of E.  If E is NIL, the actual number of digits is returned.
+  Otherwise, the max of E and the number of digits is returned."
+  (declare (type (or fixnum null) e)
+	   (fixnum actual-exp))
+  (max (or e 1)
+       (count-decimal-digits (abs actual-exp))))
+
 (defun compute-d-for-width (w e k actual-exp is-negative-p at-sign-p)
   "Find the largest d (precision) value that fits in width W given the
   actual exponent (adjusted by k), and whether signs are printed or
@@ -155,8 +165,7 @@
   Returns NIL if no width d can fit in a field of length w."
   (declare (fixnum k actual-exp))
   (let* ((sign-len (if (or is-negative-p at-sign-p) 1 0))
-	 (exp-digits (max (or e 1)
-			  (count-decimal-digits (abs actual-exp))))
+	 (exp-digits (exponent-digit-count e actual-exp))
 	 ;; The min output includes the leading sign, and the length
 	 ;; of the exponent.  If k > 0, we have a leading digit, a
 	 ;; dot, the exponent marker and exponent sign for 4 extra.
@@ -187,8 +196,7 @@
 	   (fixnum actual-exp k)
 	   (type (or null fixnum) e))
   (let* ((sign-len (if (or is-negative-p at-sign-p) 1 0))
-         (exp-digits (max (or e 1)
-                          (count-decimal-digits (abs actual-exp))))
+         (exp-digits (exponent-digit-count e actual-exp))
          (raw-digits (mantissa-digit-count mantissa))
          (mantissa-len
            (cond
@@ -328,6 +336,21 @@
 	 ;; d - |k| - 1 digits after the decimal point.
 	 (max (+ d k -1) 0))))
 		  
+(defun write-exponent (stream shown-exp e exponentchar)
+  "Write the ~E exponent tail \"[marker][sign][digits]\" to STREAM.
+   E is the minimum exponent-digit count (zero-padded if shorter);
+   EXPONENTCHAR overrides the marker (default #\\d)."
+  (declare (fixnum shown-exp)
+	   (type (or null fixnum) e))
+  (let* ((exp-abs    (abs shown-exp))
+	 (exp-digits (count-decimal-digits exp-abs))
+	 (exp-width  (max (or e 1) exp-digits)))
+    (write-char (or exponentchar #\d) stream)
+    (write-char (if (minusp shown-exp) #\- #\+) stream)
+    (loop repeat (- exp-width exp-digits)
+	  do (write-char #\0 stream))
+    (princ exp-abs stream)))
+
 (defun format-e-string (stream mantissa exponent is-negative-p w e k
                         overflowchar padchar exponentchar at-sign-p
                         drop-leading-zero-p)
@@ -342,32 +365,14 @@
   (declare (type simple-string mantissa)
            (fixnum exponent k))
   (let* ((shown-exp (- exponent (1- k)))
-         (exp-sign (if (minusp shown-exp)
-		       #\- #\+))
-         (exp-abs (abs shown-exp))
-         (exp-marker (or exponentchar #\d))
-         (exp-digits (count-decimal-digits exp-abs))
-         (exp-width (max (or e 1)
-			 exp-digits))
-         ;; Full output length: sign + reshaped + marker + exp-sign +
-         ;; exp-width.  compute-exp-output-length gives reshape + exp
-         ;; body (marker + exp-sign + max(e, exp-digits)), but it also
-         ;; includes sign, so use it directly.  Wait, it doesn't
-         ;; account for drop-leading-zero, so we use it carefully.
          (field-len (compute-exp-output-length mantissa shown-exp k e
                                                is-negative-p at-sign-p
                                                drop-leading-zero-p)))
     (flet ((write-field ()
-             (cond (is-negative-p
-		    (write-char #\- stream))
-                   (at-sign-p
-		    (write-char #\+ stream)))
+             (cond (is-negative-p (write-char #\- stream))
+                   (at-sign-p     (write-char #\+ stream)))
              (scale-mantissa stream mantissa k drop-leading-zero-p)
-             (write-char exp-marker stream)
-             (write-char exp-sign stream)
-             (loop repeat (- exp-width exp-digits)
-		   do (write-char #\0 stream))
-             (princ exp-abs stream)))
+	     (write-exponent stream shown-exp e exponentchar)))
       (declare (dynamic-extent #'write-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 
@@ -385,11 +390,7 @@
   (let* ((dotpos     (position #\. mantissa))
 	 (mant-len   (length mantissa))
 	 (sig-digits (mantissa-digit-count mantissa))
-	 (exp-sign   (if (minusp shown-exp) #\- #\+))
-	 (exp-abs    (abs shown-exp))
-	 (exp-digits (count-decimal-digits exp-abs))
-	 (exp-width  (max (or e 1) exp-digits))
-	 (exp-marker (or exponentchar #\d))
+	 (exp-width  (exponent-digit-count e shown-exp))
 	 (sign-len   (if (or is-negative-p at-sign-p) 1 0))
 	 ;; sign + int + dot + marker + exp-sign + exp-width
 	 (field-len  (+ sign-len int-digits 3 exp-width)))
@@ -411,11 +412,7 @@
 	     (loop repeat (- int-digits sig-digits)
 		   do (write-char #\0 stream))
 	     (write-char #\. stream)
-	     (write-char exp-marker stream)
-	     (write-char exp-sign stream)
-	     (loop repeat (- exp-width exp-digits)
-		   do (write-char #\0 stream))
-	     (princ exp-abs stream)))
+	     (write-exponent stream shown-exp e exponentchar)))
       (declare (dynamic-extent #'write-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 

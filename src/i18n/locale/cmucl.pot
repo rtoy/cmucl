@@ -7535,6 +7535,13 @@ msgstr ""
 
 #: src/code/ryu-print.lisp
 msgid ""
+"Write the ~E exponent tail \"[marker][sign][digits]\" to STREAM.\n"
+"   E is the minimum exponent-digit count (zero-padded if shorter);\n"
+"   EXPONENTCHAR overrides the marker (default #\\d)."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
 "Write the ~E representation of MANTISSA * 10^EXPONENT to STREAM,\n"
 "  right-justified in a field of width W.  If specified, the PADCHAR is\n"
 "  inserted.  If OVERFLOWCHAR is given and the result won't fit in the\n"
