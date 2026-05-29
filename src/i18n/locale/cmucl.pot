@@ -7432,21 +7432,46 @@ msgid "Buffer size for d2fixed."
 msgstr ""
 
 #: src/code/ryu-print.lisp
-msgid "Lisp interface to Ryu d2fixed routine (specically d2fixed_buffered)"
+msgid ""
+"Lisp interface to Ryu d2fixed routine (specically d2fixed_buffered).\n"
+"  D is the number to convert and PRECISION is the number of digits\n"
+"  after the decimal point.  The total number of digits could be more."
 msgstr ""
 
 #: src/code/ryu-print.lisp
-msgid "Lisp interface to Ryu d2exp (specifically d2exp-buffered)."
+msgid ""
+"Lisp interface to Ryu d2exp (specifically d2exp-buffered).  D is the\n"
+"  number to convert and PRECISION is the number of digits after the\n"
+"  decimal point.  The result is of the form \"d.ddddEeee\"."
 msgstr ""
 
 #: src/code/ryu-print.lisp
-msgid "Lisp interface to Ryu d2s (specifically d2s_buffered"
+msgid ""
+"Lisp interface to Ryu d2s (specifically d2s_buffered.  D is the number\n"
+"  to convert and the result is the shortest string that reproduces the\n"
+"  value when read back in."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
+"Lisp interface to Ryu f2s (specifically f2s_buffered.  D is the number\n"
+"  to convert and the result is the shortest string that reproduces the\n"
+"  value when read back in."
 msgstr ""
 
 #: src/code/ryu-print.lisp
 msgid ""
 "Convert F, a single-float or double-float, to a string of the shortest\n"
 "  form."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
+"Parse RAW-STRING which is a number in exponential form and return the\n"
+"  mantissa part as a string and the exponent part as an integer.\n"
+"\n"
+"  RAW-STRING is of the form \"d.ddddEeee\" where the exponent marker\n"
+"  must exist and must be \"e\" or \"E\"."
 msgstr ""
 
 #: src/code/ryu-print.lisp
@@ -7460,6 +7485,24 @@ msgstr ""
 msgid ""
 "Number of decimal digits in N.  N is the absolute value of a\n"
 "   double-float's exponent, so 0 <= n <= 324."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
+"Find the largest d (precision) value that fits in width W given the\n"
+"  actual exponent (adjusted by k), and whether signs are printed or\n"
+"  not.\n"
+"\n"
+"  Returns NIL if no width d can fit in a field of length w."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
+"Compute length of the ~E result with the given parameters, but don't\n"
+"  build the string.  MANTISSA is \"d[.dddd]\" from d2exp or\n"
+"  d2s. ACTUAL-EXP is the exponent with scaling factor applied.  If\n"
+"  DROP-LEADING-ZERO-P is non-NIL, the leading \"0\" before the dot (in\n"
+"  the K <= 0 form) is omitted from the length."
 msgstr ""
 
 #: src/code/ryu-print.lisp
@@ -7486,6 +7529,24 @@ msgstr ""
 
 #: src/code/ryu-print.lisp
 msgid ""
+"Compute precision for d2exp when CL requests D digits and the\n"
+"  scale factor is K."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
+"Write the ~E representation of MANTISSA * 10^EXPONENT to STREAM,\n"
+"  right-justified in a field of width W.  If specified, the PADCHAR is\n"
+"  inserted.  If OVERFLOWCHAR is given and the result won't fit in the\n"
+"  field, OVERFLOWCHAR replaces the result.\n"
+"\n"
+"  K is the scale factor causing the decimal point to be placed K\n"
+"  digits in from the start and the displayed exponent is adjusted\n"
+"  appropriately."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
 "Emit \"[sign][INT-DIGITS].[marker][exp-sign][exp]\" with no\n"
 "   fractional digits, right-justified in width W.  MANTISSA is a\n"
 "   string of significant digits from d2s/d2exp, with or without an\n"
@@ -7495,15 +7556,21 @@ msgstr ""
 
 #: src/code/ryu-print.lisp
 msgid ""
-"Round (the magnitude of) VALUE to FRAC fractional digits with\n"
-"   d2fixed and write it right-justified in a field of width W.  At\n"
-"   least one fractional digit is always shown: if FRAC is 0 the\n"
-"   rounded value is integral and a single \"0\" is appended after the\n"
-"   decimal point (CLHS 22.3.3.1).  The leading zero before the\n"
-"   decimal point is kept when the field fits in W (FORMAT.F.47) and\n"
-"   dropped when keeping it would overflow W (FORMAT.F.46).  Used by\n"
-"   the free-format ~F path when the shortest representation does not\n"
-"   fit in W."
+"Write a d2fixed result ROUNDED right-justified in W with the usual\n"
+"   ~F padding and overflow rules.  FORCE-TRAILING-ZERO-P appends a\n"
+"   single \"0\" after the dot when no fractional digits remain.\n"
+"   VALUE-IS-NONZERO-P enables the leading-\"0\" drop when the field\n"
+"   would otherwise overflow W."
+msgstr ""
+
+#: src/code/ryu-print.lisp
+msgid ""
+"Write the ~F representation of VALUE rounded to exactly D digits\n"
+"   after the decimal point, right-justified in a field of width W.\n"
+"   This is the explicit-D path: no \"single zero\" rule applies, so\n"
+"   D=0 yields \"d.\" with nothing after the dot.  The optional\n"
+"   leading zero before the decimal point is dropped when keeping it\n"
+"   would overflow W (CLHS 22.3.3.1; FORMAT.F.13)."
 msgstr ""
 
 #: src/code/print.lisp

@@ -497,48 +497,65 @@
                                     nil))))))))))))
 
 ;;; Ryu ~F
+(defun emit-fixed (stream rounded is-negative-p w
+		   overflowchar padchar at-sign-p
+		   force-trailing-zero-p value-is-nonzero-p)
+  "Write a d2fixed result ROUNDED right-justified in W with the usual
+   ~F padding and overflow rules.  FORCE-TRAILING-ZERO-P appends a
+   single \"0\" after the dot when no fractional digits remain.
+   VALUE-IS-NONZERO-P enables the leading-\"0\" drop when the field
+   would otherwise overflow W."
+  (declare (type simple-string rounded))
+  (let* ((len           (length rounded))
+	 (dot           (position #\. rounded))
+	 (int-end       (or dot len))
+	 (frac-start    (if dot (1+ dot) len))
+	 (frac-len      (- len frac-start))
+	 (frac-out-len  (cond ((plusp frac-len) frac-len)
+			      (force-trailing-zero-p 1)
+			      (t 0)))
+	 (sign-len      (if (or is-negative-p at-sign-p) 1 0))
+	 ;; CLHS 22.3.3.1: the leading "0" before the dot is optional
+	 ;; when the magnitude is < 1 (integer part is exactly "0")
+	 ;; and the original value is nonzero.  Require something to be
+	 ;; written after the dot so we never drop down to just ".".
+	 (leading-zero-droppable
+	   (and (= int-end 1)
+		(char= (char rounded 0) #\0)
+		value-is-nonzero-p
+		(plusp frac-out-len)))
+	 (full-len  (+ sign-len int-end 1 frac-out-len))
+	 (drop-leading-zero-p
+	   (and leading-zero-droppable w (> full-len w)))
+	 (field-len (if drop-leading-zero-p (1- full-len) full-len)))
+    (flet ((write-field ()
+	     (cond (is-negative-p (write-char #\- stream))
+		   (at-sign-p     (write-char #\+ stream)))
+	     (unless drop-leading-zero-p
+	       (write-string rounded stream :start 0 :end int-end))
+	     (write-char #\. stream)
+	     (cond ((plusp frac-len)
+		    (write-string rounded stream :start frac-start :end len))
+		   (force-trailing-zero-p
+		    (write-char #\0 stream)))))
+      (declare (dynamic-extent #'write-field))
+      (pad-overflow stream field-len w overflowchar padchar #'write-field))))
+
 (defun format-f-fixed (stream value w d
                        overflowchar padchar at-sign-p)
-  "Write the ~F representation of VALUE rounded to D digits after the
-  decimal point, right-justified in a field of width W."
-  (declare (type (or single-float double-float) value))
+  "Write the ~F representation of VALUE rounded to exactly D digits
+   after the decimal point, right-justified in a field of width W.
+   This is the explicit-D path: no \"single zero\" rule applies, so
+   D=0 yields \"d.\" with nothing after the dot.  The optional
+   leading zero before the decimal point is dropped when keeping it
+   would overflow W (CLHS 22.3.3.1; FORMAT.F.13)."
+  (declare (type (or single-float double-float) value)
+	   (type (integer 0 *) d))
   (multiple-value-bind (is-negative-p abs-value)
       (get-sign-and-absolute-value value)
-    (let* ((raw-string (d2fixed abs-value d))
-           (raw-len    (length raw-string))
-           (sign-len   (if (or is-negative-p at-sign-p) 1 0))
-           (need-dot   (zerop d))
-	   (full-field-len (+ sign-len raw-len (if need-dot 1 0)))
-	   ;; CLHS 22.3.3.1: the leading zero before the decimal point
-	   ;; is optional when the magnitude is nonzero and less than 1.
-	   ;; d2fixed always emits it (e.g. "0.50" for 0.5), so detect
-	   ;; that case here and drop the zero if the field would not
-	   ;; otherwise fit in W.  For exact zero the leading digit is
-	   ;; required, so PLUSP ABS-VALUE gates the dropping.
-	   (leading-zero-droppable
-	     (and (plusp abs-value)
-		  (>= raw-len 2)
-		  (char= (char raw-string 0) #\0)
-		  (char= (char raw-string 1) #\.)))
-	   ;; Drop the leading zero if we it's droppable and W is
-	   ;; given and the number won't fit in width W field.
-	   (drop-leading-zero-p
-	     (and leading-zero-droppable
-		  w
-		  (> full-field-len w)))
-           (field-len (if drop-leading-zero-p
-			  (1- full-field-len)
-			  full-field-len)))
-      (flet ((write-field ()
-               (cond (is-negative-p (write-char #\- stream))
-                     (at-sign-p     (write-char #\+ stream)))
-	       (cond (drop-leading-zero-p
-		      (write-string raw-string stream :start 1))
-		     (t
-		      (write-string raw-string stream)))
-               (when need-dot (write-char #\. stream))))
-	(declare (dynamic-extent #'write-field))
-	(pad-overflow stream field-len w overflowchar padchar #'write-field)))))
+    (emit-fixed stream (d2fixed abs-value d) is-negative-p w
+		overflowchar padchar at-sign-p nil
+		(plusp abs-value))))
 
 (defun reshape-fixed-length (digit-count exponent)
   ;; DIGIT-COUNT is the number of digits returned by d2s/f2s.  That no
@@ -583,62 +600,11 @@
       (declare (dynamic-extent #'write-field))
       (pad-overflow stream field-len w overflowchar padchar #'write-field))))
 	 
-(defun emit-rounded-to-width (stream value frac is-negative-p w
-			      overflowchar padchar at-sign-p)
-  "Round (the magnitude of) VALUE to FRAC fractional digits with
-   d2fixed and write it right-justified in a field of width W.  At
-   least one fractional digit is always shown: if FRAC is 0 the
-   rounded value is integral and a single \"0\" is appended after the
-   decimal point (CLHS 22.3.3.1).  The leading zero before the
-   decimal point is kept when the field fits in W (FORMAT.F.47) and
-   dropped when keeping it would overflow W (FORMAT.F.46).  Used by
-   the free-format ~F path when the shortest representation does not
-   fit in W."
-  (declare (type (or single-float double-float) value)
-	   (type (integer 0 *) frac))
-  (let* ((rounded   (d2fixed (float (abs value) 1d0) frac))
-	 (len       (length rounded))
-	 ;; ROUNDED is "ddd" (frac=0) or "ddd.ddd" (frac>0).  Locate the
-	 ;; decimal point and the integer/fractional digit spans without
-	 ;; allocating substrings.
-	 (dot        (position #\. rounded))
-	 (int-end    (or dot len))
-	 (frac-start (if dot (1+ dot) len))
-	 (frac-len   (- len frac-start))
-	 ;; At least one fractional digit is always shown; when there are
-	 ;; none a single "0" is emitted instead.
-	 (frac-out-len (max 1 frac-len))
-	 (sign-len   (if (or is-negative-p at-sign-p) 1 0))
-	 ;; The leading "0." may be shortened to "." when the magnitude
-	 ;; is < 1 (integer part is the single digit "0") and nonzero,
-	 ;; and only when the full field would not fit in W.
-	 (leading-zero-droppable
-	   (and (= int-end 1)
-		(char= (char rounded 0) #\0)
-		(not (zerop value))))
-	 (full-len   (+ sign-len int-end 1 frac-out-len))
-	 (drop-leading-zero-p
-	   (and leading-zero-droppable w (> full-len w)))
-	 (field-len  (if drop-leading-zero-p (1- full-len) full-len)))
-    (flet ((write-field ()
-	     (cond (is-negative-p (write-char #\- stream))
-		   (at-sign-p     (write-char #\+ stream)))
-	     (unless drop-leading-zero-p
-	       (write-string rounded stream :start 0 :end int-end))
-	     (write-char #\. stream)
-	     (cond ((zerop frac-len)
-		    (write-char #\0 stream))
-		   (t
-		    (write-string rounded stream :start frac-start :end len)))))
-      (declare (dynamic-extent #'write-field))
-      (pad-overflow stream field-len w overflowchar padchar #'write-field))))
-
 (defun format-f-free (stream value w
                       overflowchar padchar at-sign-p)
   (declare (type (or single-float double-float) value))
   (multiple-value-bind (is-negative-p abs-value)
       (get-sign-and-absolute-value value)
-    (declare (ignore abs-value))
     (multiple-value-bind (mantissa exponent)
 	(parsed-exp-form (float-to-string value))
       (let* ((digit-count (mantissa-digit-count mantissa))
@@ -658,16 +624,15 @@
 	   (loop repeat w
 		 do (write-char overflowchar stream)))
 	  (t
-	   ;; The shortest form does not fit in W.  D was not specified,
-	   ;; so round the value to the largest number of fractional
-	   ;; digits D-FIT that fits, then display it.  Per CLHS 22.3.3.1,
-	   ;; if the fraction rounds away to nothing a single zero digit
-	   ;; must still appear after the decimal point.  EMIT-ROUNDED-TO-
-	   ;; WIDTH may drop the leading "0" before the dot if keeping it
-	   ;; would still overflow W.
-	   (emit-rounded-to-width stream value (max 0 d-fit)
-				  is-negative-p w
-				  overflowchar padchar at-sign-p)))))))
+	   ;; The shortest form does not fit in W.  Round to the largest
+	   ;; number of fractional digits D-FIT that fits and emit via
+	   ;; EMIT-FIXED, forcing a trailing "0" if the fraction rounds
+	   ;; away (CLHS 22.3.3.1; FORMAT.F.46 may drop the leading "0"
+	   ;; before the dot if keeping it would still overflow W).
+	   (emit-fixed stream
+		       (d2fixed abs-value (max 0 d-fit))
+		       is-negative-p w overflowchar padchar at-sign-p
+		       t (plusp abs-value))))))))
 
 (defun format-f (stream value w d k overflowchar padchar at-sign-p)
   (declare (type (or single-float double-float) value)
