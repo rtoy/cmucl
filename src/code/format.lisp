@@ -1583,10 +1583,10 @@
 	 ((and (floatp ,number)
 	       (or (float-infinity-p ,number)
 		   (float-nan-p ,number)))
-	  (prin1 number ,stream))
+	  (prin1 ,number ,stream))
 	 (t
-	  ,@forms)
-	 (values)))))
+	  ,@forms))
+       (values))))
 	 
 (defmacro def-format-aux (base-name (stream number &rest args) &body body)
   (let ((docstring 
