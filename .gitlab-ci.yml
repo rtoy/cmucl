@@ -7,7 +7,8 @@ variables:
   download_url: "https://common-lisp.net/project/cmucl/downloads/release/$release"
   version: "$release-x86"
   tar_ext: "xz"
-  bootstrap: "-B boot-2026-06-1"
+  bootstrap_name: "boot-2026-06-1"
+  bootstrap: "-B $bootstrap_name"
 
 workflow:
   rules:
@@ -229,7 +230,7 @@ linux:cross-build:
   script:
     - bin/create-target.sh xtarget $CONFIG
     - bin/create-target.sh xcross $CONFIG
-    - bin/cross-build-world.sh -crl xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
+    - bin/cross-build-world.sh -B src/bootfiles/21f/$bootstrap_name -crl xtarget xcross src/tools/cross-scripts/cross-x86-x86.lisp snapshot/bin/lisp
     - bin/build.sh -b xlinux $bootstrap -R -C $CONFIG -o "xtarget/lisp/lisp -lib xtarget/lisp"
     - bin/make-dist.sh -I xdist xlinux-4
 
