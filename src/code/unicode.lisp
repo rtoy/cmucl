@@ -200,39 +200,12 @@
      (string-downcase-full string :start start :end end))))
 
 
-;;;
-;;; This is a Lisp translation of the Scheme code from William
-;;; D. Clinger that implements the word-breaking algorithm.  This is
-;;; used with permission.
-;;;
-;;; This version is modified from the original at
-;;; http://www.ccs.neu.edu/home/will/R6RS/ to conform to CMUCL's
-;;; implementation of the word break properties.
-;;;
-;;;
-;;; Copyright statement and original comments:
-;;;
-;;;--------------------------------------------------------------------------------
-
-;; Copyright 2006 William D Clinger.
-;;
-;; Permission to copy this software, in whole or in part, to use this
-;; software for any lawful purpose, and to redistribute this software
-;; is granted subject to the restriction that all copies made of this
-;; software must include this copyright and permission notice in full.
-;;
-;; I also request that you send me a copy of any improvements that you
-;; make to this software so that they may be incorporated within it to
-;; the benefit of the Scheme community.
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Word-breaking as defined by Unicode Standard Annex #29.
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Implementation notes.
-;;
 ;; The string-foldcase, string-downcase, and string-titlecase
 ;; procedures rely on the notion of a word, which is defined
 ;; by Unicode Standard Annex 29.
@@ -247,64 +220,11 @@
 ;;
 ;; Hence the performance of the word-breaking algorithm should
 ;; not matter too much for this reference implementation.
-;; Word-breaking is more generally useful, however, so I tried
-;; to make this implementation reasonably efficient.
+;; Word-breaking is more generally useful, however.
 ;;
-;; Word boundaries are defined by 14 different rules in
-;; Unicode Standard Annex #29, and by GraphemeBreakProperty.txt
-;; and WordBreakProperty.txt.  See also WordBreakTest.html.
-;;
-;; My original implementation of those specifications failed
-;; 6 of the 494 tests in auxiliary/WordBreakTest.txt, but it
-;; appeared to me that those tests were inconsistent with the
-;; word-breaking rules in UAX #29.  John Cowan forwarded my
-;; bug report to the Unicode experts, and Mark Davis responded
-;; on 29 May 2007:
-;;
-;;   Thanks for following up on this. I think you have found a problem in the
-;;   formulation of word break, not the test. The intention was to break after a
-;;   Sep character, as is done in Sentence break. So my previous suggestion was
-;;   incorrect; instead, what we need is a new rule:
-;; 
-;;   *Break after paragraph separators.*
-;;    WB3a. Sep
-;;   I'll make a propose to the UTC for this.
-;;
-;; Here is Will's translation of those rules (including WB3a)
-;; into a finite state machine that searches forward within a
-;; string, looking for the next position at which a word break
-;; is allowed.  The current state consists of an index i into
-;; the string and a summary of the left context whose rightmost
-;; character is at index i.  The left context is usually
-;; determined by the character at index i, but there are three
-;; complications:
-;;
-;;     Extend and Format characters are ignored unless they
-;;         follow a separator or the beginning of the text.
-;;     ALetter followed by MidLetter is treated specially.
-;;     Numeric followed by MidNum is treated specially.
-;;
-;; In the implementation below, the left context ending at i
-;; is encoded by the following symbols:
-;;
-;;     CR
-;;     Sep (excluding CR)
-;;     ALetter
-;;     MidLetter
-;;     ALetterMidLetter (ALetter followed by MidLetter)
-;;     Numeric
-;;     MidNum
-;;     NumericMidNum (Numeric followed by MidNum)
-;;     Katakana
-;;     ExtendNumLet
-;;     other (none of the above)
-;;
-;; Given a string s and an exact integer i (which need not be
-;; a valid index into s), returns the index of the next character
-;; that is not part of the word containing the character at i,
-;; or the length of s if the word containing the character at i
-;; extends through the end of s.  If i is negative or a valid
-;; index into s, then the returned value will be greater than i.
+;; Word boundaries are defined by different rules in Unicode Standard
+;; Annex #29, and by GraphemeBreakProperty.txt and
+;; WordBreakProperty.txt.  See also WordBreakTest.html.
 ;;
 ;;;--------------------------------------------------------------------------------
 
