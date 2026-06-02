@@ -1190,11 +1190,21 @@
 	 (gethash (composition-table-key c1 c2) *composition-pair-table* nil))))
 
 (defun unicode-word-break-code (code)
+  ;; Low 5 bits hold the word-break class index; bit 5 is the
+  ;; Extended_Pictographic flag (see unicode-extended-pictographic-p).
   (unless (unidata-word-break *unicode-data*)
     (load-word-break))
   (let* ((data (unidata-word-break *unicode-data*))
 	 (n (qref8 data code)))
-    n))
+    (logand n #x1F)))
+
+(defun unicode-extended-pictographic-p (code)
+  ;; The Extended_Pictographic property (from emoji-data.txt) is packed
+  ;; into bit 5 of the word-break table value.  Needed for word-break
+  ;; rule WB3c.
+  (unless (unidata-word-break *unicode-data*)
+    (load-word-break))
+  (logbitp 5 (qref8 (unidata-word-break *unicode-data*) code)))
 
 (defun unicode-word-break (code)
   ;; The order of the array here MUST match the order used in

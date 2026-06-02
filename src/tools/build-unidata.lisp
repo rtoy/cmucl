@@ -663,6 +663,7 @@
   case-fold-full
   case-fold-simple
   word-break
+  ext-pictographic
   ;; ...
   )
 
@@ -874,6 +875,18 @@
 		  as ent = (find-ucd i) do
 		  (when ent
 		    (setf (ucdent-word-break ent) code))))))
+
+      ;; Extended_Pictographic (from emoji-data.txt) is needed for
+      ;; word-break rule WB3c.  It is the only emoji property we use;
+      ;; ignore the others in the file.
+      (foreach-ucd "emoji-data"
+	  ucd-directory
+	(lambda (min max prop)
+	  (when (string= prop "Extended_Pictographic")
+	    (loop for i from min to max
+		  as ent = (find-ucd i) do
+		  (when ent
+		    (setf (ucdent-ext-pictographic ent) t))))))
       (values vec (make-range :codes range)))))
 
 
@@ -1008,17 +1021,20 @@
 (defun pack-word-break (ucdent)
   ;; The code is the index in the list.  :OTHER is a dummy value and
   ;; used to represent the default case.
-  (or (position (ucdent-word-break ucdent)
-		'(:other :cr :lf :newline :extend :format
-		  :katakana :aletter :midnumlet :midletter :midnum
-		  :numeric :extendnumlet :regional_indicator
-		  ;; Classes added since Unicode 6.2 (6.3: hebrew_letter,
-		  ;; single_quote, double_quote; 9.0: zwj; 11.0: wsegspace).
-		  ;; Appended so existing indices are preserved; the array in
-		  ;; unicode-word-break MUST match this order.
-		  :hebrew_letter :single_quote :double_quote
-		  :zwj :wsegspace))
-      0))
+  ;; Low 5 bits: word-break class index (the array in unicode-word-break
+  ;; MUST match this order).  Bit 5 (#x20): Extended_Pictographic, for
+  ;; word-break rule WB3c.
+  (logior
+   (or (position (ucdent-word-break ucdent)
+		 '(:other :cr :lf :newline :extend :format
+		   :katakana :aletter :midnumlet :midletter :midnum
+		   :numeric :extendnumlet :regional_indicator
+		   ;; Classes added since Unicode 6.2 (6.3: hebrew_letter,
+		   ;; single_quote, double_quote; 9.0: zwj; 11.0: wsegspace).
+		   :hebrew_letter :single_quote :double_quote
+		   :zwj :wsegspace))
+       0)
+   (if (ucdent-ext-pictographic ucdent) #x20 0)))
 
 ;; ucd-directory should be the directory where UnicodeData.txt is
 ;; located.
