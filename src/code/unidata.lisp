@@ -65,12 +65,12 @@
 (defconstant +unicode-magic-number+ #x2A554344)
 
 ;; The format version for the unidata.bin file.
-(defconstant +unicode-format-version+ 0)
+(defconstant +unicode-format-version+ 1)
 
 ;; The expected Unicode version.  This needs to be synced with
 ;; build-unidata.lisp.
-(defconstant +unicode-major-version+ 6)
-(defconstant +unicode-minor-version+ 2)
+(defconstant +unicode-major-version+ 17)
+(defconstant +unicode-minor-version+ 0)
 (defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with tools/build-unidata.lisp
@@ -209,8 +209,14 @@
 	:type (simple-array (unsigned-byte 8) (*)))
   (codev (ext:required-argument) :read-only t
 	 :type (simple-array (signed-byte 32) (*)))
+  ;; NEXTV holds the children base offset directly.  The key offset
+  ;; (index into KEYV/KEYL) that used to occupy the high bits of NEXTV
+  ;; now lives in KEYPV; the key-offset space outgrew the 14 bits that
+  ;; were available here.
   (nextv (ext:required-argument) :read-only t
 	 :type (simple-array (unsigned-byte 32) (*)))
+  (keypv (ext:required-argument) :read-only t
+	 :type (simple-array (unsigned-byte 16) (*)))
   (namev (ext:required-argument) :read-only t
 	 :type (simple-array (unsigned-byte 32) (*))))
 
@@ -265,6 +271,14 @@
   (lvec (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 32) (*))))
 
+;; Numeric table: an ntrie32 whose word is mostly inline, plus NUMTAB
+;; holding values that don't fit inline -- numerator over 17 bits or
+;; denominator over 3 bits (flagged by bit 22) -- as three 32-bit words
+;; per entry: numerator low, numerator high, denominator.
+(defstruct (numeric (:include ntrie32))
+  (numtab (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 32) (*))))
+
 
 (defstruct (scase (:include ntrie32))
   (svec (ext:required-argument) :read-only t
@@ -289,7 +303,10 @@
 
 (defconstant +bidi-class+
   #("L" "LRE" "LRO" "R" "AL" "RLE" "RLO" "PDF" "EN" "ES" "ET" "AN" "CS"
-    "NSM" "BN" "B" "S" "WS" "ON"))
+    "NSM" "BN" "B" "S" "WS" "ON"
+    ;; Isolate formatting classes added in Unicode 6.3.  Appended (not
+    ;; reordered) so existing class indices are preserved.
+    "LRI" "RLI" "FSI" "PDI"))
 
 
 (defconstant +hangul-choseong+		; U+1100..U+1112
@@ -322,7 +339,7 @@
   (let* ((codebook (dictionary-cdbk dictionary))
 	 (stack '()))
     (loop
-       (let ((keyv (ash (aref (dictionary-nextv dictionary) current) -18)))
+       (let ((keyv (aref (dictionary-keypv dictionary) current)))
 	 (dotimes (i (aref (dictionary-keyl dictionary) keyv)
 		   (if stack
 		       (let ((next (pop stack)))
@@ -335,8 +352,7 @@
 	     (cond ((and (>= (length string) (+ posn len))
 			 (string= string str :start1 posn :end1 (+ posn len)))
 		    (setq current
-			  (+ (logand (aref (dictionary-nextv dictionary) current)
-				     #x3FFFF)
+			  (+ (aref (dictionary-nextv dictionary) current)
 			     i))
 		    (when (= (incf posn len) (length string))
 		      (return-from search-dictionary (values current posn)))
@@ -346,9 +362,8 @@
 		    (return-from search-dictionary (values current posn))))
 	     (when (or (string= str " ") (string= str "-"))
 	       (push (cons posn
-			   (+ (logand (aref (dictionary-nextv dictionary)
-					    current)
-				      #x3FFFF)
+			   (+ (aref (dictionary-nextv dictionary)
+				    current)
 			      i))
 		     stack))))))))
 
@@ -364,7 +379,7 @@
 	 (stack '()))
     (declare (type (unsigned-byte 32) current) (type lisp::index posn))
     (loop
-      (let ((keyv (ash (aref (dictionary-nextv dictionary) current) -18)))
+      (let ((keyv (aref (dictionary-keypv dictionary) current)))
 	(dotimes (i (aref (dictionary-keyl dictionary) keyv)
 		    (if stack
 			(let ((next (pop stack)))
@@ -377,17 +392,15 @@
 	    (when (and (>= (length string) (+ posn len))
 		       (string= string str :start1 posn :end1 (+ posn len)))
 	      (setq current
-		  (+ (logand (aref (dictionary-nextv dictionary) current)
-			     #x3FFFF)
+		  (+ (aref (dictionary-nextv dictionary) current)
 		     i))
 	      (when (= (incf posn len) (length string))
 		(return-from exact-match-dictionary current))
 	      (return))			; from DOTIMES - loop again
 	    (when (or (string= str " ") (string= str "-"))
 	      (push (cons posn
-			  (+ (logand (aref (dictionary-nextv dictionary)
-					   current)
-				     #x3FFFF)
+			  (+ (aref (dictionary-nextv dictionary)
+				   current)
 			     i))
 		    stack))))))))
 
@@ -535,6 +548,7 @@
 	 (keyl (make-array kv :element-type '(unsigned-byte 8)))
 	 (codev (make-array cv :element-type '(signed-byte 32)))
 	 (nextv (make-array cv :element-type '(unsigned-byte 32)))
+	 (keypv (make-array cv :element-type '(unsigned-byte 16)))
 	 (namev (make-array cv :element-type '(unsigned-byte 32))))
     (dotimes (i cb)
       (let* ((n (read-byte stm))
@@ -545,10 +559,11 @@
     (read-vector keyl stm :endian-swap :network-order)
     (read-vector codev stm :endian-swap :network-order)
     (read-vector nextv stm :endian-swap :network-order)
+    (read-vector keypv stm :endian-swap :network-order)
     (read-vector namev stm :endian-swap :network-order)
     (setf (unidata-name+ *unicode-data*)
 	(make-dictionary :cdbk codebook :keyv keyv :keyl keyl
-			 :codev codev :nextv nextv :namev namev))))
+			 :codev codev :nextv nextv :keypv keypv :namev namev))))
 
 (defloader load-name (stm 2)
   (multiple-value-bind (split hvec mvec lvec) (read-ntrie 32 stm)
@@ -571,8 +586,12 @@
 
 (defloader load-numerics (stm 5)
   (multiple-value-bind (split hvec mvec lvec) (read-ntrie 32 stm)
-    (setf (unidata-numeric *unicode-data*)
-	(make-ntrie32 :split split :hvec hvec :mvec mvec :lvec lvec))))
+    (let* ((tlen (read16 stm))
+	   (numtab (make-array tlen :element-type '(unsigned-byte 32))))
+      (read-vector numtab stm :endian-swap :network-order)
+      (setf (unidata-numeric *unicode-data*)
+	  (make-numeric :split split :hvec hvec :mvec mvec :lvec lvec
+			:numtab numtab)))))
 
 (defloader load-decomp (stm 6)
   (multiple-value-bind (split hvec mvec lvec) (read-ntrie 32 stm)
@@ -606,6 +625,7 @@
 	 (keyl (make-array kv :element-type '(unsigned-byte 8)))
 	 (codev (make-array cv :element-type '(signed-byte 32)))
 	 (nextv (make-array cv :element-type '(unsigned-byte 32)))
+	 (keypv (make-array cv :element-type '(unsigned-byte 16)))
 	 (namev (make-array cv :element-type '(unsigned-byte 32))))
     (dotimes (i cb)
       (let* ((n (read-byte stm))
@@ -616,10 +636,11 @@
     (read-vector keyl stm :endian-swap :network-order)
     (read-vector codev stm :endian-swap :network-order)
     (read-vector nextv stm :endian-swap :network-order)
+    (read-vector keypv stm :endian-swap :network-order)
     (read-vector namev stm :endian-swap :network-order)
     (setf (unidata-name1+ *unicode-data*)
 	(make-dictionary :cdbk codebook :keyv keyv :keyl keyl
-			 :codev codev :nextv nextv :namev namev))))
+			 :codev codev :nextv nextv :keypv keypv :namev namev))))
 
 (defloader load-1.0-name (stm 10)
   (multiple-value-bind (split hvec mvec lvec) (read-ntrie 32 stm)
@@ -809,15 +830,15 @@
       (let* ((codebook (dictionary-cdbk dict))
 	     (namev (dictionary-namev dict))
 	     (nextv (dictionary-nextv dict))
+	     (keypv (dictionary-keypv dict))
 	     (keyv (dictionary-keyv dict))
 	     (p (ash (aref namev n) -18))
 	     (s (make-string p)))
 	(loop while (plusp n) do
 	  (let* ((prev (logand (aref namev n) #x3FFFF))
-		 (temp (aref nextv prev))
-		 (base (logand temp #x3FFFF))
+		 (base (aref nextv prev))
 		 (str (aref codebook
-			    (aref keyv (+ (ash temp -18) (- n base))))))
+			    (aref keyv (+ (aref keypv prev) (- n base))))))
 	    (declare (type simple-base-string str))
 	    (setq p (- p (length str)) n prev)
 	    (replace s str :start1 p)))
@@ -925,10 +946,18 @@
 (defun unicode-num3 (code)
   (declare (type codepoint code))
   (unless (unidata-numeric *unicode-data*) (load-numerics))
-  (let ((n (qref32 (unidata-numeric *unicode-data*) code)))
+  (let* ((numeric (unidata-numeric *unicode-data*))
+	 (n (qref32 numeric code)))
     (if (logbitp 23 n)
-	(let ((num (/ (logand (ash n -3) #x1FFFF) (1+ (logand n 7)))))
-	  (if (logbitp 20 n) (- num) num))
+	(multiple-value-bind (numer denom)
+	    (if (logbitp 22 n)
+		(let ((tab (numeric-numtab numeric))
+		      (off (logand (ash n -3) #x1FFFF)))
+		  (values (logior (aref tab off) (ash (aref tab (1+ off)) 32))
+			  (aref tab (+ off 2))))
+		(values (logand (ash n -3) #x1FFFF) (1+ (logand n 7))))
+	  (let ((num (/ numer denom)))
+	    (if (logbitp 20 n) (- num) num)))
 	nil)))
 
 (defun unicode-decomp (code &optional (compatibility t))
@@ -1400,9 +1429,8 @@
     (subseq first 0 posn)))
 
 (defun node-next (i &optional (dict (unidata-name+ *unicode-data*)))
-  (let* ((j (aref (dictionary-nextv dict) i))
-	 (x (ldb (byte 14 18) j))
-	 (y (ldb (byte 18 0) j)))
+  (let* ((x (aref (dictionary-keypv dict) i))
+	 (y (aref (dictionary-nextv dict) i)))
     (loop for i from 0 below (aref (dictionary-keyl dict) x)
        collect (close-node (cons (aref (dictionary-cdbk dict)
 				       (aref (dictionary-keyv dict) (+ x i)))
@@ -1413,9 +1441,8 @@
   (loop
      (if (> (aref (dictionary-codev dict) (cdr i)) -1)
 	 (return i)
-	 (let* ((j (aref (dictionary-nextv dict) (cdr i)))
-		(x (ldb (byte 14 18) j))
-		(y (ldb (byte 18 0) j)))
+	 (let* ((x (aref (dictionary-keypv dict) (cdr i)))
+		(y (aref (dictionary-nextv dict) (cdr i))))
 	   (if (> (aref (dictionary-keyl dict) x) 1)
 	       (return i)
 	       (let ((k (aref (dictionary-cdbk dict)
@@ -1482,7 +1509,7 @@
 	(top 0)
 	(keyl (make-array 0 :element-type '(unsigned-byte 8)))
 	(keyv (make-array 0 :element-type '(unsigned-byte 8)))
-	vec1 vec2 vec3)
+	vec1 vec2 vec3 vec4)
     (labels ((add-to-trie (trie name codepoint)
 	       (loop for ch across (encode-name name codebook) do
 		 (let ((sub (cdr (assoc ch (rest trie)))))
@@ -1506,9 +1533,8 @@
 	       (let* ((x (gethash (gethash trie thash) thash))
 		      (n (car x)))
 		 (setf (aref vec1 n) (if (first trie) (first trie) -1)
-		       (aref vec2 n) (logior (ash (gethash (key trie) khash)
-						  18)
-					     (cdr x))))
+		       (aref vec2 n) (cdr x)
+		       (aref vec4 n) (gethash (key trie) khash)))
 	       (mapc (lambda (x) (pass2 (cdr x))) (rest trie))))
       (format t "~&  Initializing...~%")
       (let ((trie (cons nil nil)))
@@ -1544,27 +1570,28 @@
 	  do (setf (gethash key thash) (cons i off) off (+ off (third key))))
 	(setq vec1 (make-array top :element-type '(signed-byte 32))
 	      vec2 (make-array top :element-type '(unsigned-byte 32))
-	      vec3 (make-array top :element-type '(unsigned-byte 32)))
+	      vec3 (make-array top :element-type '(unsigned-byte 32))
+	      vec4 (make-array top :element-type '(unsigned-byte 16)))
 	(format t "~&  Pass 2...~%")
 	(pass2 trie)
 	(format t "~&  Finalizing~%")
 	(dotimes (i top)
-	  (let ((xxx (aref vec2 i)))
-	    (dotimes (j (aref keyl (ash xxx -18)))
-	      (setf (aref vec3 (+ (logand xxx #x3FFFF) j)) i))))
+	  (let ((base (aref vec2 i)))
+	    (dotimes (j (aref keyl (aref vec4 i)))
+	      (setf (aref vec3 (+ base j)) i))))
 	(loop for (name . code) in entries do
-	  (let ((n (name-lookup name codebook keyv keyl vec2)))
+	  (let ((n (name-lookup name codebook keyv keyl vec2 vec4)))
 	    (unless n (error "Codepoint not found for ~S." name))
 	    (setf (ldb (byte 14 18) (aref vec3 n)) (length name))))))
     (make-dictionary :cdbk codebook
 		   :keyv keyv :keyl keyl
-		   :codev vec1 :nextv vec2 :namev vec3)))
+		   :codev vec1 :nextv vec2 :keypv vec4 :namev vec3)))
 
-(defun name-lookup (name codebook keyv keyl nextv)
+(defun name-lookup (name codebook keyv keyl nextv keypv)
   (let* ((current 0)
 	 (posn 0))
     (loop
-      (let ((keyp (ash (aref nextv current) -18)))
+      (let ((keyp (aref keypv current)))
 	(dotimes (i (aref keyl keyp)
 		    (return-from name-lookup nil))  ; shouldn't happen
 	  (let* ((str (aref codebook (aref keyv (+ keyp i))))
@@ -1572,7 +1599,7 @@
 	    (when (and (>= (length name) (+ posn len))
 		       (string= name str :start1 posn :end1 (+ posn len)))
 	      (setq current
-		  (+ (logand (aref nextv current) #x3FFFF) i))
+		  (+ (aref nextv current) i))
 	      (if (= (incf posn len) (length name))
 		  (return-from name-lookup current)
 		  (return)))))))))

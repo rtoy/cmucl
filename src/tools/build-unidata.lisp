@@ -53,8 +53,8 @@
 (defconstant +unicode-magic-number+ #x2A554344)
 
 ;; The expected Unicode version
-(defconstant +unicode-major-version+ 6)
-(defconstant +unicode-minor-version+ 2)
+(defconstant +unicode-major-version+ 17)
+(defconstant +unicode-minor-version+ 0)
 (defconstant +unicode-update-version+ 0)
 
 ;;; These need to be synched with code/unidata.lisp
@@ -67,8 +67,17 @@
 	:type (simple-array (unsigned-byte 8) (*)))
   (codev (ext:required-argument) :read-only t
 	 :type (simple-array (signed-byte 32) (*)))
+  ;; NEXTV holds the children base offset directly.  The key offset
+  ;; (index into KEYV/KEYL) that used to be packed into the high bits
+  ;; of NEXTV now lives in its own array, KEYPV.  See KEYPV below.
   (nextv (ext:required-argument) :read-only t
 	 :type (simple-array (unsigned-byte 32) (*)))
+  ;; Index into KEYV/KEYL for each node.  Was the top 14 bits of NEXTV,
+  ;; but the key-offset space outgrew 14 bits, so it is stored
+  ;; separately.  16 bits is ample (offsets are well under 65535); widen
+  ;; to (unsigned-byte 32) if KEYV ever approaches that.
+  (keypv (ext:required-argument) :read-only t
+	 :type (simple-array (unsigned-byte 16) (*)))
   (namev (ext:required-argument) :read-only t
 	 :type (simple-array (unsigned-byte 32) (*))))
 
@@ -108,6 +117,16 @@
   (lvec (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 32) (*))))
 
+;; Numeric table.  Most numeric values fit inline in the 32-bit LVEC
+;; word, but a few (e.g. Pahawh Hmong, Indic Siyaq) have numerators up
+;; to 10^12, too big for the 17-bit inline field.  Those are flagged by
+;; bit 22 and stored in NUMTAB as three 32-bit words (numerator low,
+;; numerator high, denominator) at the offset kept inline.  This also
+;; covers denominators over 8 (Tamil/Malayalam fractions, up to 320).
+(defstruct (numeric (:include ntrie32))
+  (numtab (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 32) (*))))
+
 
 (defstruct (scase (:include ntrie32))
   (svec (ext:required-argument) :read-only t
@@ -138,7 +157,10 @@
 
 (defconstant +bidi-class+
   '("L" "LRE" "LRO" "R" "AL" "RLE" "RLO" "PDF" "EN" "ES" "ET" "AN" "CS"
-    "NSM" "BN" "B" "S" "WS" "ON"))
+    "NSM" "BN" "B" "S" "WS" "ON"
+    ;; Isolate formatting classes added in Unicode 6.3.  Appended (not
+    ;; reordered) so existing class indices are preserved.
+    "LRI" "RLI" "FSI" "PDI"))
 
 
 ;; Codebooks for encoding names.  These are fairly arbitrary.  Order isn't
@@ -229,11 +251,11 @@
 	    (return)))))
     (nreverse (coerce res 'vector))))
 
-(defun name-lookup (name codebook keyv keyl nextv)
+(defun name-lookup (name codebook keyv keyl nextv keypv)
   (let* ((current 0)
 	 (posn 0))
     (loop
-      (let ((keyp (ash (aref nextv current) -18)))
+      (let ((keyp (aref keypv current)))
 	(dotimes (i (aref keyl keyp)
 		    (return-from name-lookup nil))  ; shouldn't happen
 	  (let* ((str (aref codebook (aref keyv (+ keyp i))))
@@ -241,10 +263,18 @@
 	    (when (and (>= (length name) (+ posn len))
 		       (string= name str :start1 posn :end1 (+ posn len)))
 	      (setq current
-		  (+ (logand (aref nextv current) #x3FFFF) i))
+		  (+ (aref nextv current) i))
 	      (if (= (incf posn len) (length name))
 		  (return-from name-lookup current)
 		  (return)))))))))	; from DOTIMES - do outer LOOP again
+
+;; Diagnostics for the name-dictionary field widths.  BUILD-DICTIONARY
+;; records the largest key offset and child base so they can be checked
+;; against the widths of KEYPV (16 bits), NEXTV (32 bits), and the
+;; 18-bit node-index field still packed into NAMEV.  A future Unicode
+;; version that outgrows one of those will show up here.
+(defvar *dict-max-keyoff* 0)
+(defvar *dict-max-base* 0)
 
 (defun build-dictionary (codebook entries)
   (let ((khash (make-hash-table :test 'equalp))
@@ -252,7 +282,7 @@
 	(top 0)
 	(keyl (make-array 0 :element-type '(unsigned-byte 8)))
 	(keyv (make-array 0 :element-type '(unsigned-byte 8)))
-	vec1 vec2 vec3)
+	vec1 vec2 vec3 vec4)
     (labels ((add-to-trie (trie name codepoint)
 	       (loop for ch across (encode-name name codebook) do
 		 (let ((sub (cdr (assoc ch (rest trie)))))
@@ -276,10 +306,15 @@
 	       (let* ((x (gethash (gethash trie thash) thash))
 		      (n (car x)))
 		 (setf (aref vec1 n) (if (first trie) (first trie) -1)
-		       (aref vec2 n) (logior (ash (gethash (key trie) khash)
-						  18)
-					     (cdr x))))
-	       (mapc (lambda (x) (pass2 (cdr x))) (rest trie))))
+		       (aref vec2 n) (cdr x)
+		       (aref vec4 n) (gethash (key trie) khash)))
+	       (mapc (lambda (x) (pass2 (cdr x))) (rest trie)))
+	     (measure (trie)
+	       (let ((keyoff (gethash (key trie) khash))
+		     (base (cdr (gethash (gethash trie thash) thash))))
+		 (setf *dict-max-keyoff* (max *dict-max-keyoff* keyoff)
+		       *dict-max-base*   (max *dict-max-base* base)))
+	       (mapc (lambda (x) (measure (cdr x))) (rest trie))))
       (format t "~&  Initializing...~%")
       (force-output)
       (let ((trie (cons nil nil)))
@@ -315,25 +350,37 @@
 						 (< (first a) (first b)))))
 	      as i upfrom 0
 	  do (setf (gethash key thash) (cons i off) off (+ off (third key))))
+	;; Report the field widths actually needed by this data set.
+	(setf *dict-max-keyoff* 0 *dict-max-base* 0)
+	(measure trie)
+	(format t "~&  keyv length     = ~D~%" (length keyv))
+	(format t "~&  node count top  = ~D (namev packs this in 18 bits, max ~D)~%"
+		top (1- (ash 1 18)))
+	(format t "~&  max key offset  = ~D (keypv is 16 bits, max ~D)~%"
+		*dict-max-keyoff* (1- (ash 1 16)))
+	(format t "~&  max child base  = ~D (nextv is 32 bits, max ~D)~%"
+		*dict-max-base* (1- (ash 1 32)))
+	(force-output)
 	(setq vec1 (make-array top :element-type '(signed-byte 32))
 	      vec2 (make-array top :element-type '(unsigned-byte 32))
-	      vec3 (make-array top :element-type '(unsigned-byte 32)))
+	      vec3 (make-array top :element-type '(unsigned-byte 32))
+	      vec4 (make-array top :element-type '(unsigned-byte 16)))
 	(format t "~&  Pass 2...~%")
 	(force-output)
 	(pass2 trie)
 	(format t "~&  Finalizing~%")
 	(force-output)
 	(dotimes (i top)
-	  (let ((xxx (aref vec2 i)))
-	    (dotimes (j (aref keyl (ash xxx -18)))
-	      (setf (aref vec3 (+ (logand xxx #x3FFFF) j)) i))))
+	  (let ((base (aref vec2 i)))
+	    (dotimes (j (aref keyl (aref vec4 i)))
+	      (setf (aref vec3 (+ base j)) i))))
 	(loop for (name . code) in entries do
-	  (let ((n (name-lookup name codebook keyv keyl vec2)))
+	  (let ((n (name-lookup name codebook keyv keyl vec2 vec4)))
 	    (unless n (error "Codepoint not found for ~S." name))
 	    (setf (ldb (byte 14 18) (aref vec3 n)) (length name))))))
     (make-dictionary :cdbk codebook
 		   :keyv keyv :keyl keyl
-		   :codev vec1 :nextv vec2 :namev vec3)))
+		   :codev vec1 :nextv vec2 :keypv vec4 :namev vec3)))
 
 (defun pack (ucd range fn default bits split)
   (let* ((lbits (1+ (logand split 15)))
@@ -478,6 +525,7 @@
 	     (write-vector (dictionary-keyl data) stm :endian-swap :network-order)
 	     (write-vector (dictionary-codev data) stm :endian-swap :network-order)
 	     (write-vector (dictionary-nextv data) stm :endian-swap :network-order)
+	     (write-vector (dictionary-keypv data) stm :endian-swap :network-order)
 	     (write-vector (dictionary-namev data) stm :endian-swap :network-order))
 	   (update-index (val array)
 	     (let ((result (vector-push val array)))
@@ -490,8 +538,8 @@
       (let ((index (make-array 19 :fill-pointer 0)))
 	;; File header
 	(write32 +unicode-magic-number+ stm)	; identification "magic"
-	;; File format version 
-	(write-byte 0 stm)
+	;; File format version (1: dictionary nextv de-packed, keypv added)
+	(write-byte 1 stm)
 	;; Unicode version
 	(write-byte +unicode-major-version+ stm)
 	(write-byte +unicode-minor-version+ stm)
@@ -524,7 +572,9 @@
 	;; 5. Numeric data
 	(let ((data (unidata-numeric *unicode-data*)))
 	  (update-index (file-position stm) index)
-	  (write-ntrie32 data stm))
+	  (write-ntrie32 data stm)
+	  (write16 (length (numeric-numtab data)) stm)
+	  (write-vector (numeric-numtab data) stm :endian-swap :network-order))
 	;; 6. Decomposition data
 	(let ((data (unidata-decomp *unicode-data*)))
 	  (update-index (file-position stm) index)
@@ -620,9 +670,11 @@
 ;; located.
 (defun foreach-ucd (name ucd-directory fn)
   (format t "~&  ~A~%" name)
+  (force-output)
   (with-open-file (s (make-pathname :name name :type "txt"
 				    :defaults ucd-directory))
     (format t "file = ~s~%" s)
+    (force-output)
     (cond
       ((string= name "Unihan")
        (loop for line = (read-line s nil) while line do
@@ -831,8 +883,9 @@
 	 (keyv (dictionary-keyv dictionary))
 	 (keyl (dictionary-keyl dictionary))
 	 (nextv (dictionary-nextv dictionary))
+	 (keypv (dictionary-keypv dictionary))
 	 (name (if name1 (ucdent-name1 ucdent) (ucdent-name ucdent))))
-    (or (and name (name-lookup name cdbk keyv keyl nextv)) 0)))
+    (or (and name (name-lookup name cdbk keyv keyl nextv keypv)) 0)))
 
 (defun pack-case (ucdent svec)
   (let* ((uo (if (ucdent-upper ucdent)
@@ -858,16 +911,26 @@
 	    (ash (if (minusp lo) (logior 128 pl) pl) 8)
 	    (if (minusp uo) (logior 128 pu) pu))))
 
-(defun pack-numeric (ucdent)
+(defun pack-numeric (ucdent numtab)
   (let* ((n3 (ucdent-num3 ucdent))
 	 (fl (cond ((ucdent-num1 ucdent) #x3800000)
 		   ((ucdent-num2 ucdent) #x1800000)
 		   (n3 #x800000)
 		   (t 0)))
 	 (neg (if (and n3 (minusp n3)) #x900000 0))
-	 (num (if n3 (ash (abs (numerator n3)) 3) 0))
-	 (den (if n3 (1- (denominator n3)) 0)))
-    (logior fl neg num den)))
+	 (den (if n3 (denominator n3) 1))
+	 (absnum (if n3 (abs (numerator n3)) 0)))
+    (if (or (> absnum #x1FFFF) (> den 8))
+	;; Doesn't fit inline -- numerator exceeds the 17-bit field, or
+	;; denominator exceeds the 3-bit field.  Stash numerator (two
+	;; 32-bit words) and denominator in NUMTAB at the inline offset,
+	;; marked by bit 22 (#x400000).
+	(let ((off (fill-pointer numtab)))
+	  (vector-push-extend (ldb (byte 32 0) absnum) numtab)
+	  (vector-push-extend (ldb (byte 32 32) absnum) numtab)
+	  (vector-push-extend den numtab)
+	  (logior fl neg #x400000 (ash off 3)))
+	(logior fl neg (ash absnum 3) (1- den)))))
 
 (defun pack-decomp (ucdent tabl)
   (if (not (ucdent-decomp ucdent))
@@ -1006,10 +1069,13 @@
 
     (format t "~&Building numeric-values table~%")
     (force-output)
-    (multiple-value-bind (hvec mvec lvec)
-	(pack ucd range #'pack-numeric 0 32 #x63)
-      (setf (unidata-numeric *unicode-data*)
-	  (make-ntrie32 :split #x63 :hvec hvec :mvec mvec :lvec lvec)))
+    (let ((numtab (make-array 64 :element-type '(unsigned-byte 32)
+			      :fill-pointer 0 :adjustable t)))
+      (multiple-value-bind (hvec mvec lvec)
+	  (pack ucd range (lambda (x) (pack-numeric x numtab)) 0 32 #x63)
+	(setf (unidata-numeric *unicode-data*)
+	    (make-numeric :split #x63 :hvec hvec :mvec mvec :lvec lvec
+			  :numtab (copy-seq numtab)))))
 
     (format t "~&Building decomposition table~%")
     (force-output)

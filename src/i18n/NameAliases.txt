@@ -1,36 +1,47 @@
-# NameAliases-6.2.0.txt
-# Date: 2012-05-15, 18:44:00 GMT [KW]
+# NameAliases-17.0.0.txt
+# Date: 2025-04-23
+# © 2025 Unicode®, Inc.
+# Unicode and the Unicode Logo are registered trademarks of Unicode, Inc. in the U.S. and other countries.
+# For terms of use and license, see https://www.unicode.org/terms_of_use.html
+#
+# Unicode Character Database
+# For documentation, see https://www.unicode.org/reports/tr44/
 #
 # This file is a normative contributory data file in the
 # Unicode Character Database.
 #
-# Copyright (c) 2005-2012 Unicode, Inc.
-# For terms of use, see http://www.unicode.org/terms_of_use.html
-#
 # This file defines the formal name aliases for Unicode characters.
 #
-# For informative aliases see NamesList.txt
+# For informative aliases, see NamesList.txt
 #
-# The formal name aliases are divided into five types.
+# The formal name aliases are divided into five types, each with a distinct label.
 #
-# 1. Corrections for serious problems in the character names
-# 2. ISO 6429 names for C0 and C1 control functions, and other
-#    commonly occurring names for control codes
-# 3. A few widely used alternate names for format characters
-# 4. Several documented labels for C1 control code points which
-#    were never actually approved in any standard
-# 5. Commonly occurring abbreviations (or acronyms) for control codes,
-#    format characters, spaces, and variation selectors
+# Type Labels:
+#
+# 1. correction
+#      Corrections for serious problems in the character names
+# 2. control
+#      ISO 6429 names for C0 and C1 control functions, and other
+#      commonly occurring names for control codes
+# 3. alternate
+#      A few widely used alternate names for format characters
+# 4. figment
+#      Several documented labels for C1 control code points which
+#      were never actually approved in any standard
+# 5. abbreviation
+#      Commonly occurring abbreviations (or acronyms) for control codes,
+#      format characters, spaces, and variation selectors
 #
 # The formal name aliases are part of the Unicode character namespace, which
 # includes the character names and the names of named character sequences.
 # The inclusion of ISO 6429 names and other commonly occurring names and
 # abbreviations for control codes and format characters as formal name aliases
-# is to help avoid name collisions between Unicode character names and the 
+# is to help avoid name collisions between Unicode character names and the
 # labels which commonly appear in text and/or in implementations such as regex, for
-# control codes (which have no Unicode character name) or for format characters.
+# control codes (which for historical reasons have no Unicode character name)
+# or for format characters.
 #
-# For documentation, see NamesList.html and http://www.unicode.org/reports/tr44/
+# For documentation, see NamesList.html and https://www.unicode.org/reports/tr44/
 #
 # FORMAT
 #
@@ -40,13 +51,21 @@
 # Second field: Alias
 # Third field:  Type
 #
-# The Type labels used are: correction, control, alternate, figment, abbreviation
+# The type labels used are defined above. As for property values, comparisons
+# of type labels should ignore case.
 #
-# Those Type labels can be mapped to other strings for display, if desired.
+# The type labels can be mapped to other strings for display, if desired.
 #
 # In case multiple aliases are assigned, additional aliases
 # are provided on separate lines. Parsers of this data file should
 # take note that the same code point can (and does) occur more than once.
+#
+# Note that currently the only instances of multiple aliases of the same
+# type for a single code point are either of type "control" or "abbreviation".
+# An alias of type "abbreviation" can, in principle, be added for any code
+# point, although currently aliases of type "correction" do not have
+# any additional aliases of type "abbreviation". Such relationships
+# are not enforced by stability policies.
 #
 #-----------------------------------------------------------------
 
@@ -71,6 +90,7 @@
 
 0007;ALERT;control
 0007;BEL;abbreviation
+
 0008;BACKSPACE;control
 0008;BS;abbreviation
 0009;CHARACTER TABULATION;control
@@ -116,6 +136,7 @@
 0018;CAN;abbreviation
 0019;END OF MEDIUM;control
 0019;EOM;abbreviation
+0019;EM;abbreviation
 001A;SUBSTITUTE;control
 001A;SUB;abbreviation
 001B;ESCAPE;control
@@ -135,10 +156,23 @@
 0020;SP;abbreviation
 007F;DELETE;control
 007F;DEL;abbreviation
+
+# PADDING CHARACTER and HIGH OCTET PRESET represent
+# architectural concepts initially proposed for early
+# drafts of ISO/IEC 10646-1. They were never actually
+# approved or standardized: hence their designation
+# here as the "figment" type. Formal name aliases
+# (and corresponding abbreviations) for these code
+# points are included here because these names leaked
+# out from the draft documents and were published in
+# at least one RFC whose names for code points were
+# implemented in Perl regex expressions.
+
 0080;PADDING CHARACTER;figment
 0080;PAD;abbreviation
 0081;HIGH OCTET PRESET;figment
 0081;HOP;abbreviation
+
 0082;BREAK PERMITTED HERE;control
 0082;BPH;abbreviation
 0083;NO BREAK HERE;control
@@ -197,8 +231,14 @@
 0097;EPA;abbreviation
 0098;START OF STRING;control
 0098;SOS;abbreviation
+
+# SINGLE GRAPHIC CHARACTER INTRODUCER is another
+# architectural concept from early drafts of ISO/IEC 10646-1
+# which was never approved and standardized.
+
 0099;SINGLE GRAPHIC CHARACTER INTRODUCER;figment
 0099;SGC;abbreviation
+
 009A;SINGLE CHARACTER INTRODUCER;control
 009A;SCI;abbreviation
 009B;CONTROL SEQUENCE INTRODUCER;control
@@ -216,6 +256,8 @@
 01A2;LATIN CAPITAL LETTER GHA;correction
 01A3;LATIN SMALL LETTER GHA;correction
 034F;CGJ;abbreviation
+0616;ARABIC SMALL HIGH LIGATURE ALEF WITH YEH BARREE;correction
+061C;ALM;abbreviation
 0709;SYRIAC SUBLINEAR COLON SKEWED LEFT;correction
 0CDE;KANNADA LETTER LLLA;correction
 0E9D;LAO LETTER FO FON;correction
@@ -223,10 +265,16 @@
 0EA3;LAO LETTER RO;correction
 0EA5;LAO LETTER LO;correction
 0FD0;TIBETAN MARK BKA- SHOG GI MGO RGYAN;correction
+11EC;HANGUL JONGSEONG YESIEUNG-KIYEOK;correction
+11ED;HANGUL JONGSEONG YESIEUNG-SSANGKIYEOK;correction
+11EE;HANGUL JONGSEONG SSANGYESIEUNG;correction
+11EF;HANGUL JONGSEONG YESIEUNG-KHIEUKH;correction
 180B;FVS1;abbreviation
 180C;FVS2;abbreviation
 180D;FVS3;abbreviation
 180E;MVS;abbreviation
+180F;FVS4;abbreviation
+1BBD;SUNDANESE LETTER ARCHAIC I;correction
 200B;ZWSP;abbreviation
 200C;ZWNJ;abbreviation
 200D;ZWJ;abbreviation
@@ -240,11 +288,17 @@
 202F;NNBSP;abbreviation
 205F;MMSP;abbreviation
 2060;WJ;abbreviation
+2066;LRI;abbreviation
+2067;RLI;abbreviation
+2068;FSI;abbreviation
+2069;PDI;abbreviation
 2118;WEIERSTRASS ELLIPTIC FUNCTION;correction
 2448;MICR ON US SYMBOL;correction
 2449;MICR DASH SYMBOL;correction
+2B7A;LEFTWARDS TRIANGLE-HEADED ARROW WITH DOUBLE VERTICAL STROKE;correction
+2B7C;RIGHTWARDS TRIANGLE-HEADED ARROW WITH DOUBLE VERTICAL STROKE;correction
 A015;YI SYLLABLE ITERATION MARK;correction
-FE18;PRESENTATION FORM FOR VERTICAL RIGHT WHITE LENTICULAR BRACKET;correction
+AA6E;MYANMAR LETTER KHAMTI LLA;correction
 FE00;VS1;abbreviation
 FE01;VS2;abbreviation
 FE02;VS3;abbreviation
@@ -261,10 +315,26 @@ FE0C;VS13;abbreviation
 FE0D;VS14;abbreviation
 FE0E;VS15;abbreviation
 FE0F;VS16;abbreviation
+FE18;PRESENTATION FORM FOR VERTICAL RIGHT WHITE LENTICULAR BRACKET;correction
 FEFF;BYTE ORDER MARK;alternate
 FEFF;BOM;abbreviation
 FEFF;ZWNBSP;abbreviation
+122D4;CUNEIFORM SIGN NU11 TENU;correction
+122D5;CUNEIFORM SIGN NU11 OVER NU11 BUR OVER BUR;correction
+12327;CUNEIFORM SIGN KALAM;correction
+1680B;BAMUM LETTER PHASE-A MAEMGBIEE;correction
+16881;BAMUM LETTER PHASE-B PUNGGAAM;correction
+1688E;BAMUM LETTER PHASE-B NGGOM;correction
+168DC;BAMUM LETTER PHASE-C SHETFON;correction
+1697D;BAMUM LETTER PHASE-E NGGOP;correction
+16E56;MEDEFAIDRIN CAPITAL LETTER H;correction
+16E57;MEDEFAIDRIN CAPITAL LETTER NG;correction
+16E76;MEDEFAIDRIN SMALL LETTER H;correction
+16E77;MEDEFAIDRIN SMALL LETTER NG;correction
+1B001;HENTAIGANA LETTER E-1;correction
 1D0C5;BYZANTINE MUSICAL SYMBOL FTHORA SKLIRON CHROMA VASIS;correction
+1E899;MENDE KIKAKUI SYLLABLE M172 MBO;correction
+1E89A;MENDE KIKAKUI SYLLABLE M174 MBOO;correction
 E0100;VS17;abbreviation
 E0101;VS18;abbreviation
 E0102;VS19;abbreviation
