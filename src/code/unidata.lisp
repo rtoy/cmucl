@@ -715,9 +715,9 @@
 
 (defloader load-word-break (stm 18)
   (multiple-value-bind (split hvec mvec lvec)
-      (read-ntrie 4 stm)
+      (read-ntrie 8 stm)
     (setf (unidata-word-break *unicode-data*)
-	  (make-ntrie4 :split split :hvec hvec :mvec mvec :lvec lvec))))
+	  (make-ntrie8 :split split :hvec hvec :mvec mvec :lvec lvec))))
 
 ;;; Accessor functions.
 
@@ -1193,7 +1193,7 @@
   (unless (unidata-word-break *unicode-data*)
     (load-word-break))
   (let* ((data (unidata-word-break *unicode-data*))
-	 (n (qref4 data code)))
+	 (n (qref8 data code)))
     n))
 
 (defun unicode-word-break (code)
@@ -1201,7 +1201,9 @@
   ;; pack-word-break in tools/build-unidata.lisp!
   (aref #(:other :cr :lf :newline :extend :format
 	  :katakana :aletter :midnumlet :midletter :midnum
-	  :numeric :extendnumlet :regional_indicator)
+	  :numeric :extendnumlet :regional_indicator
+	  :hebrew_letter :single_quote :double_quote
+	  :zwj :wsegspace)
 	(unicode-word-break-code code)))
 
 ;; Support for character name completion for slime.

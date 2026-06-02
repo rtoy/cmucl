@@ -637,7 +637,7 @@
 	;; 18. Word-break
 	(let ((data (unidata-word-break *unicode-data*)))
 	  (update-index (file-position stm) index)
-	  (write-ntrie4 data stm))
+	  (write-ntrie8 data stm))
 	;; All components saved. Patch up index table now.
 	(file-position stm 8)
 	(dotimes (i (length index))
@@ -1011,7 +1011,13 @@
   (or (position (ucdent-word-break ucdent)
 		'(:other :cr :lf :newline :extend :format
 		  :katakana :aletter :midnumlet :midletter :midnum
-		  :numeric :extendnumlet :regional_indicator))
+		  :numeric :extendnumlet :regional_indicator
+		  ;; Classes added since Unicode 6.2 (6.3: hebrew_letter,
+		  ;; single_quote, double_quote; 9.0: zwj; 11.0: wsegspace).
+		  ;; Appended so existing indices are preserved; the array in
+		  ;; unicode-word-break MUST match this order.
+		  :hebrew_letter :single_quote :double_quote
+		  :zwj :wsegspace))
       0))
 
 ;; ucd-directory should be the directory where UnicodeData.txt is
@@ -1213,7 +1219,7 @@
     (let ((split #x66))
       (multiple-value-bind (hvec mvec lvec)
 	  (pack ucd range (lambda (x) (pack-word-break x))
-		0 4 split)
+		0 8 split)
 	(setf (unidata-word-break *unicode-data*)
-	      (make-ntrie4 :split split :hvec hvec :mvec mvec :lvec lvec))))
+	      (make-ntrie8 :split split :hvec hvec :mvec mvec :lvec lvec))))
     nil))
