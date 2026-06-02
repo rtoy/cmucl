@@ -2019,8 +2019,8 @@ msgstr ""
 msgid "Vector of all callbacks."
 msgstr ""
 
-#: src/compiler/tn.lisp src/compiler/main.lisp src/code/describe.lisp
-#: src/code/debug-int.lisp src/code/debug-info.lisp
+#: src/compiler/tn.lisp src/compiler/main.lisp src/code/unicode.lisp
+#: src/code/describe.lisp src/code/debug-int.lisp src/code/debug-info.lisp
 #: src/code/foreign-linkage.lisp src/code/reader.lisp src/code/stream.lisp
 #: src/code/hash-new.lisp src/code/array.lisp src/code/alien-callback.lisp
 msgid "~S is not an array with a fill-pointer."

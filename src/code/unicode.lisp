@@ -315,178 +315,155 @@
   character extends to the end of S.  If the index is negative or
   valid index into S, the returned value will be strictly greater than
   the index."
+  ;; Implements the word-boundary rules of UAX #29 (Unicode 17.0).
+  ;;
+  ;; Decode S into codepoints (collapsing UTF-16 surrogate pairs),
+  ;; classify each by its word-break property, then scan boundaries
+  ;; left to right applying the WB rules, returning the first boundary
+  ;; whose string index is strictly greater than I.
+  ;;
+  ;; WB4 makes Extend, Format and ZWJ "ignorable": they attach to the
+  ;; preceding context, so most rules compare a candidate against the
+  ;; nearest non-ignorable element on each side rather than the literal
+  ;; neighbour.  ZWJ is also significant for WB3c, and Extend can sit
+  ;; between paired Regional_Indicators, so those rules look past
+  ;; ignorables explicitly.
+  (declare (type simple-string s))
   (let ((n (length s)))
-    (labels
-	((char-word-break-category (c)
-	   ;; Map our unicode word break property into what this
-	   ;; algorithm wants.
-	   (let ((cat (unicode-word-break c)))
-	     (case cat
-	       ((:lf :cr :newline)
-		:sep)
-	       ((:extend :format)
-		:extend-or-format)
-	       (otherwise cat))))
-	 (left-context (i)
-	   ;; Given a valid index i into s, returns the left context
-	   ;; at i.
-	   (multiple-value-bind (c widep)
-	       (codepoint s i n)
-	     (let* ((back
-		     ;; If we're at a regular character or a leading
-		     ;; surrogate, decrementing by 1 gets us the to
-		     ;; previous character.  But for a trailing
-		     ;; surrogate, we need to decrement by 2!
-		     (if (eql widep -1)
-			 2
-			 1))
-		    (cat (char-word-break-category c)))
-	       (case cat
-		 ((:sep)
-		  (if (= c (char-code #\return)) :cr cat))
-		 ((:midletter :midnumlet)
-		  (let ((i-1 (- i back)))
-		    (if (and (<= 0 i-1)
-			     (eq (left-context i-1) :aletter))
-			:aletter-midletter
-			cat)))
-		 ((:midnum :midnumlet)
-		  (let ((i-1 (- i back)))
-		    (if (and (<= 0 i-1)
-			     (eq (left-context i-1) :numeric))
-			:numeric-midnum
-			cat)))
-		 ((:extendorformat)
-		  (if (< 0 i)
-		      (left-context (- i back))
-		      :other))
-		 (otherwise cat)))))
-
-	 (index-of-previous-non-ignored (j)
-	   ;; Returns the index of the last non-Extend, non-Format
-	   ;; character within (substring s 0 j).  Should not be
-	   ;; called unless such a character exists.
-
-	   (let* ((j1 (- j 1)))
-	     (multiple-value-bind (c widep)
-		 (codepoint s j1)
-	       (when (eql widep -1)
-		 ;; Back up one more if we're at the trailing
-		 ;; surrogate.
-		 (decf j1))
-	       (let ((cat (char-word-break-category c)))
-		 (case cat
-		   ((:extend-or-format)
-		    (index-of-previous-non-ignored j1))
-		   (otherwise j1))))))
-
-	 (lookup (j context)
-	   ;; Given j and the context to the left of (not including) j,
-	   ;; returns the index at the start of the next word
-	   ;; (or before which a word break is permitted).
-
-	   (if (>= j n)
-	       (case context
-		 ((:aletter-midletter :numeric-midnum)
-		  (let ((j (index-of-previous-non-ignored n)))
-		    (if (< i j) j n)))
-		 (otherwise n))
-	       (multiple-value-bind (c widep)
-		   (codepoint s j)
-		 (let* ((next-j
-			 ;; The next character is either 1 or 2 code
-			 ;; units away.  For a leading surrogate, it's
-			 ;; 2; Otherwise just 1.
-			 (if (eql widep 1)
-			     2
-			     1))
-			(cat (char-word-break-category c)))
-		   (case cat
-		     ((:extend-or-format)
-		      (case context
-			((:cr :sep) j)
-			(otherwise (lookup (+ j next-j) context))))
-		     (otherwise
-		      (case context
-			((:cr)
-			 (if (= c (char-code #\linefeed))
-			     ;; Rule WB3:  Don't break CRLF, continue looking
-			     (lookup (+ j next-j) cat)
-			     j))
-			((:aletter)
-			 (case cat
-			   ((:aletter :numeric :extendnumlet)
-			    ;; Rules WB5, WB9, ?
-			    (lookup (+ j next-j) cat))
-			   ((:midletter :midnumlet)
-			    ;; Rule WB6, need to keep looking
-			    (lookup (+ j next-j) :aletter-midletter))
-			   (otherwise j)))
-			((:aletter-midletter)
-			 (case cat
-			   ((:aletter)
-			    ;; Rule WB7
-			    (lookup (+ j next-j) cat))
-			   (otherwise
-			    ;; Rule WB6 and WB7 were extended, but the
-			    ;; region didn't end with :aletter.  So
-			    ;; backup and break at that point.
-			    (let ((j2 (index-of-previous-non-ignored j)))
-			      (if (< i j2) j2 j)))))
-			((:numeric)
-			 (case cat
-			   ((:numeric :aletter :extendnumlet)
-			    ;; Rules WB8, WB10, ?
-			    (lookup (+ j next-j) cat))
-			   ((:midnum :midnumlet)
-			    ;; Rules WB11, need to keep looking
-			    (lookup (+ j next-j) :numeric-midnum))
-			   (otherwise j)))
-			((:numeric-midnum)
-			 (case cat
-			   ((:numeric)
-			    ;; Rule WB11, keep looking
-			    (lookup (+ j next-j) cat))
-			   (otherwise
-			    ;; Rule WB11, WB12 were extended, but the
-			    ;; region didn't end with :numeric, so
-			    ;; backup and break at that point.
-			    (let ((j2 (index-of-previous-non-ignored j)))
-			      (if (< i j2) j2 j)))))
-			((:midletter :midnum :midnumlet)
-			 ;; Rule WB14
-			 j)
-			((:katakana)
-			 (case cat
-			   ((:katakana :extendnumlet)
-			    ;; Rule WB13, WB13a
-			    (lookup (+ j next-j) cat))
-			   (otherwise j)))
-			((:extendnumlet)
-			 (case cat
-			   ((:extendnumlet :aletter :numeric :katakana)
-			    ;; Rule WB13a, WB13b
-			    (lookup (+ j next-j) cat))
-			   (otherwise j)))
-			((:regional_indicator)
-			 (case cat
-			   ((:regional_indicator)
-			    ;; Rule WB13c
-			    (lookup (+ j next-j) cat))
-			   (otherwise j)))
-			(otherwise j)))))))))
-      (declare (notinline lookup left-context))
-      (cond ((< i 0)
-	     ;; Rule WB1
-	     0)
-	    ((<= n i)
-	     ;; Rule WB2
-	     n)
-	    (t
-	     (multiple-value-bind (c widep)
-		 (codepoint s i)
-	       (declare (ignore c))
-	       (lookup (+ i (if (eql widep 1) 2 1)) (left-context i))))))))
+    (cond
+      ((< i 0) 0)                       ; Rule WB1 (start of text)
+      ((>= i n) n)                      ; Rule WB2 (end of text)
+      (t
+       (let ((cls (make-array 16 :fill-pointer 0 :adjustable t))
+             (idx (make-array 16 :fill-pointer 0 :adjustable t)))
+         ;; Decode codepoints and record the string index of each.
+         (let ((k 0))
+           (loop while (< k n) do
+             (multiple-value-bind (cp widep) (codepoint s k)
+               (vector-push-extend (unicode-word-break cp) cls)
+               (vector-push-extend k idx)
+               (incf k (if (eql widep 1) 2 1)))))
+         (let ((m (fill-pointer cls)))
+           (labels
+               ((class (j) (aref cls j))
+                (ah-letter-p (c) (or (eq c :aletter) (eq c :hebrew_letter)))
+                (mid-letter-q-p (c)     ; (MidLetter | MidNumLetQ)
+                  (or (eq c :midletter) (eq c :midnumlet) (eq c :single_quote)))
+                (mid-num-q-p (c)        ; (MidNum | MidNumLetQ)
+                  (or (eq c :midnum) (eq c :midnumlet) (eq c :single_quote)))
+                (ignorable (c)          ; WB4: Extend | Format | ZWJ
+                  (or (eq c :extend) (eq c :format) (eq c :zwj)))
+                (ext-pict-at (j)
+                  (unicode-extended-pictographic-p (codepoint s (aref idx j))))
+                (prev-significant (j)   ; last non-ignorable element < J, or -1
+                  (loop for p from (1- j) downto 0
+                        unless (ignorable (class p)) return p
+                        finally (return -1)))
+                (next-significant (j)   ; first non-ignorable element > J, or -1
+                  (loop for q from (1+ j) below m
+                        unless (ignorable (class q)) return q
+                        finally (return -1)))
+                (ri-count-left (j)
+                  ;; Number of significant Regional_Indicator elements
+                  ;; immediately to the left of J (stopping at the first
+                  ;; non-RI significant element; ignorables are skipped).
+                  (let ((count 0))
+                    (loop for p = (prev-significant j) then (prev-significant p)
+                          while (and (>= p 0) (eq (class p) :regional_indicator))
+                          do (incf count))
+                    count))
+                (break-before-p (j)
+                  ;; Does the algorithm allow a break immediately before
+                  ;; element J (1 <= J < M)?
+                  (let* ((c (class j))
+                         (lit (class (1- j)))   ; literal previous element
+                         (pj (prev-significant j)))
+                    (cond
+                      ;; WB3: CR x LF
+                      ((and (eq lit :cr) (eq c :lf)) nil)
+                      ;; WB3a: (Newline | CR | LF) div
+                      ((member lit '(:newline :cr :lf)) t)
+                      ;; WB3b: div (Newline | CR | LF)
+                      ((member c '(:newline :cr :lf)) t)
+                      ;; WB3c: ZWJ x \p{Extended_Pictographic}
+                      ((and (eq lit :zwj) (ext-pict-at j)) nil)
+                      ;; WB3d: WSegSpace x WSegSpace
+                      ((and (eq lit :wsegspace) (eq c :wsegspace)) nil)
+                      ;; WB4: x (Extend | Format | ZWJ): never break before
+                      ;; an ignorable (covers ignorables after sot or after
+                      ;; another ignorable too).
+                      ((ignorable c) nil)
+                      ;; Nothing significant to the left: break.
+                      ((< pj 0) t)
+                      (t
+                       (let ((p (class pj)))
+                         (cond
+                           ;; WB5: AHLetter x AHLetter
+                           ((and (ah-letter-p p) (ah-letter-p c)) nil)
+                           ;; WB6: AHLetter x (MidLetter|MidNumLetQ) AHLetter
+                           ((and (ah-letter-p p) (mid-letter-q-p c)
+                                 (let ((nx (next-significant j)))
+                                   (and (>= nx 0) (ah-letter-p (class nx)))))
+                            nil)
+                           ;; WB7: AHLetter (MidLetter|MidNumLetQ) x AHLetter
+                           ((and (ah-letter-p c) (mid-letter-q-p p)
+                                 (let ((pp (prev-significant pj)))
+                                   (and (>= pp 0) (ah-letter-p (class pp)))))
+                            nil)
+                           ;; WB7a: Hebrew_Letter x Single_Quote
+                           ((and (eq p :hebrew_letter) (eq c :single_quote)) nil)
+                           ;; WB7b: Hebrew_Letter x Double_Quote Hebrew_Letter
+                           ((and (eq p :hebrew_letter) (eq c :double_quote)
+                                 (let ((nx (next-significant j)))
+                                   (and (>= nx 0) (eq (class nx) :hebrew_letter))))
+                            nil)
+                           ;; WB7c: Hebrew_Letter Double_Quote x Hebrew_Letter
+                           ((and (eq c :hebrew_letter) (eq p :double_quote)
+                                 (let ((pp (prev-significant pj)))
+                                   (and (>= pp 0) (eq (class pp) :hebrew_letter))))
+                            nil)
+                           ;; WB8: Numeric x Numeric
+                           ((and (eq p :numeric) (eq c :numeric)) nil)
+                           ;; WB9: AHLetter x Numeric
+                           ((and (ah-letter-p p) (eq c :numeric)) nil)
+                           ;; WB10: Numeric x AHLetter
+                           ((and (eq p :numeric) (ah-letter-p c)) nil)
+                           ;; WB11: Numeric (MidNum|MidNumLetQ) x Numeric
+                           ((and (eq c :numeric) (mid-num-q-p p)
+                                 (let ((pp (prev-significant pj)))
+                                   (and (>= pp 0) (eq (class pp) :numeric))))
+                            nil)
+                           ;; WB12: Numeric x (MidNum|MidNumLetQ) Numeric
+                           ((and (eq p :numeric) (mid-num-q-p c)
+                                 (let ((nx (next-significant j)))
+                                   (and (>= nx 0) (eq (class nx) :numeric))))
+                            nil)
+                           ;; WB13: Katakana x Katakana
+                           ((and (eq p :katakana) (eq c :katakana)) nil)
+                           ;; WB13a: (AHLetter|Numeric|Katakana|ExtendNumLet) x ExtendNumLet
+                           ((and (member p '(:aletter :hebrew_letter :numeric
+                                             :katakana :extendnumlet))
+                                 (eq c :extendnumlet))
+                            nil)
+                           ;; WB13b: ExtendNumLet x (AHLetter|Numeric|Katakana)
+                           ((and (eq p :extendnumlet)
+                                 (or (ah-letter-p c)
+                                     (member c '(:numeric :katakana))))
+                            nil)
+                           ;; WB15/WB16: in a Regional_Indicator run, break
+                           ;; only between pairs: break before J iff an even
+                           ;; number of RIs precede it.
+                           ((and (eq p :regional_indicator)
+                                 (eq c :regional_indicator))
+                            (evenp (ri-count-left j)))
+                           ;; WB999: otherwise break.
+                           (t t))))))))
+             ;; Find the first allowed boundary whose string index is > I.
+             (loop for j from 1 below m
+                   when (and (> (aref idx j) i) (break-before-p j))
+                     do (return-from string-next-word-break (aref idx j)))
+             ;; WB2: otherwise the word extends to end of text.
+             n)))))))
 
 (defun char-titlecase (char)
   "Returns CHAR converted to title-case if that is possible."
