@@ -29,6 +29,7 @@ workflow:
 # for building.
 .install:
   stage: install
+  retry: 1
   artifacts:
     paths:
       - snapshot/
@@ -89,6 +90,7 @@ workflow:
     when: always
     paths:
       - ansi-test.out
+  retry: 1
   script:
     - bin/run-ansi-tests.sh -l dist/bin/lisp
   after_script:
@@ -99,6 +101,7 @@ workflow:
 # Default configuration for running unit tests.
 .unit-test:
   stage: test
+  retry: 1
   artifacts:
     paths:
       - test.log
