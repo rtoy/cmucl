@@ -55,6 +55,15 @@
   ;; of collation-elements.  Single characters and contractions share
   ;; this table; the key length distinguishes them.
   (map (make-hash-table :test 'equalp) :type hash-table)
+  ;; Fast paths derived from MAP at load time.  SINGLE maps a single
+  ;; codepoint (a fixnum) directly to its collation elements, avoiding an
+  ;; EQUALP probe with a one-element key for the common case.  STARTERS
+  ;; holds every codepoint that begins some multi-codepoint key; a
+  ;; codepoint not in STARTERS can neither begin a contraction nor be the
+  ;; base of a discontiguous match, so the contraction machinery is
+  ;; skipped for it entirely.
+  (single (make-hash-table :test 'eql) :type hash-table)
+  (starters (make-hash-table :test 'eql) :type hash-table)
   ;; Implicit-weight ranges, in file order.
   (implicit-ranges nil :type list)
   ;; Longest key (in codepoints) present in MAP; bounds the contraction
@@ -180,6 +189,13 @@ returning an IMPLICIT-RANGE, or NIL if it does not parse."
                            do (setf (ducet-max-variable-primary d)
                                     (ce-primary ce))))))))))))
     (setf (ducet-implicit-ranges d) (nreverse (ducet-implicit-ranges d)))
+    ;; Build the fast-path tables: SINGLE for one-codepoint keys, and
+    ;; STARTERS for the first codepoint of every multi-codepoint key.
+    (maphash (lambda (key ces)
+               (if (= (length key) 1)
+                   (setf (gethash (aref key 0) (ducet-single d)) ces)
+                   (setf (gethash (aref key 0) (ducet-starters d)) t)))
+             (ducet-map d))
     ;; Compute, for each base, the smallest range start sharing it, and
     ;; record it as the BBBB offset origin on every range with that base.
     (let ((origin (make-hash-table)))
@@ -298,74 +314,106 @@ the blocking threshold for later non-starters."
         (consumed (make-array (max 1 (length cps)) :initial-element nil))
         (i 0)
         (n (length cps))
-        (maxlen (ducet-max-key-length d)))
+        (maxlen (ducet-max-key-length d))
+        (map (ducet-map d))
+        (single (ducet-single d))
+        (starters (ducet-starters d)))
     (loop while (< i n) do
       (cond
         ((aref consumed i) (incf i))    ; folded in by a discontiguous match
         (t
-         (let ((best-key nil) (best-len 0) (best-ces nil))
-           ;; S2.1: longest contiguous match starting at I, over positions
-           ;; not already consumed by an earlier discontiguous fold.  A
-           ;; multi-codepoint key may only match an unbroken run of
-           ;; still-present codepoints, so a span containing a consumed
-           ;; position (a "hole" left by a fold) is rejected.
-           (loop for len from (min maxlen (- n i)) downto 1 do
-             (when (loop for j from i below (+ i len)
-                         never (aref consumed j))
-               (let* ((key (subseq cps i (+ i len)))
-                      (ces (gethash key (ducet-map d))))
-                 (when ces
-                   (setf best-key key best-len len best-ces ces)
-                   (return)))))
+         (let* ((cp (aref cps i))
+                (starter (gethash cp starters))
+                (best-key nil) (best-len 0) (best-ces nil))
+           ;; S2.1: longest contiguous match starting at I.  Only a
+           ;; codepoint that begins some multi-codepoint key (a STARTER)
+           ;; can match a contraction, so the multi-length scan is done
+           ;; only for those; every other codepoint takes the SINGLE
+           ;; fast path.  The scan rejects any span containing a position
+           ;; already consumed by an earlier discontiguous fold.
+           (when starter
+             (loop for len from (min maxlen (- n i)) downto 2 do
+               (when (loop for j from i below (+ i len)
+                           never (aref consumed j))
+                 (let* ((key (subseq cps i (+ i len)))
+                        (ces (gethash key map)))
+                   (when ces
+                     (setf best-key key best-len len best-ces ces)
+                     (return))))))
+           (unless best-ces
+             (let ((ces (gethash cp single)))
+               (when ces
+                 (setf best-ces ces best-len 1)
+                 ;; BEST-KEY is needed only to extend by discontiguous
+                 ;; folds, which apply only to starters.
+                 (when starter
+                   (setf best-key (make-array 1 :initial-element cp))))))
            (cond
-             (best-key
+             (best-ces
               ;; S2.1.1-S2.1.3: extend by unblocked following non-starters.
+              ;; A codepoint that is not a STARTER can begin no multi-key,
+              ;; so no fold is possible and the scan is skipped entirely.
               ;; MAXCCC is the highest combining class among still-present
               ;; codepoints passed since the end of the contiguous match.
-              (let ((maxccc 0))
-                (loop for k from (+ i best-len) below n do
-                  (unless (aref consumed k)
-                    (let ((ccc (lisp::unicode-combining-class (aref cps k))))
-                      (cond
-                        ((zerop ccc)
-                         (return))       ; starter blocks all further
-                        ((> ccc maxccc)  ; unblocked candidate
-                         (let* ((cand (collation-extend-key
-                                       best-key (aref cps k)))
-                                (ces (gethash cand (ducet-map d))))
-                           (if ces
-                               ;; Fold C in and remove it; MAXCCC unchanged
-                               ;; since C is no longer present.
-                               (setf best-key cand
-                                     best-ces ces
-                                     (aref consumed k) t)
-                               ;; No match: C stays and becomes a blocker.
-                               (setf maxccc ccc))))
-                        (t
-                         ;; Blocked (ccc <= maxccc): C stays; MAXCCC already
-                         ;; covers it.
-                         nil))))))
+              (when (and starter best-key)
+                (let ((maxccc 0))
+                  (loop for k from (+ i best-len) below n do
+                    (unless (aref consumed k)
+                      (let ((ccc (lisp::unicode-combining-class (aref cps k))))
+                        (cond
+                          ((zerop ccc)
+                           (return))      ; starter blocks all further
+                          ((> ccc maxccc) ; unblocked candidate
+                           (let* ((cand (collation-extend-key
+                                         best-key (aref cps k)))
+                                  (ces (gethash cand map)))
+                             (if ces
+                                 ;; Fold C in and remove it; MAXCCC
+                                 ;; unchanged since C is no longer present.
+                                 (setf best-key cand
+                                       best-ces ces
+                                       (aref consumed k) t)
+                                 ;; No match: C stays and becomes a blocker.
+                                 (setf maxccc ccc))))
+                          (t
+                           ;; Blocked (ccc <= maxccc): C stays; MAXCCC
+                           ;; already covers it.
+                           nil)))))))
               (loop for ce across best-ces do (push ce result))
               (incf i best-len))
              (t
               ;; No entry: derive implicit weights (Section 10.1).
-              (dolist (ce (derive-implicit-elements d (aref cps i)))
+              (dolist (ce (derive-implicit-elements d cp))
                 (push ce result))
               (incf i)))))))
     (nreverse result)))
 
-(defun collation-weights (d string)
+(defun collation-weights (d string &optional (variable-weighting :shifted))
   "Return four values -- the level-1, level-2, level-3 and level-4 weight
-lists for STRING under DUCET D, using the Shifted variable-weighting
-option (UTS #10 Section 4).  Under Shifted: a variable element con-
-tributes nothing at levels 1-3 and its primary at level 4; a non-
-variable element takes a level-4 weight of FFFF when it carries level-2
-or level-3 content, but none when it is a primary-only continuation
-element ([.XXXX.0000.0000], e.g. the second half of an implicit weight
-pair or an expansion tail); a completely ignorable element
-([.0000.0000.0000]) contributes nothing anywhere; and a primary-
-ignorable element that follows a variable element is shifted away
-entirely."
+lists for STRING under DUCET D.  VARIABLE-WEIGHTING selects the UTS #10
+Section 4 option:
+
+  :SHIFTED (the default) -- a variable element contributes nothing at
+    levels 1-3 and its primary at level 4; a non-variable element takes
+    a level-4 weight of FFFF when it carries level-2 or level-3 content,
+    but none when it is a primary-only continuation element
+    ([.XXXX.0000.0000], e.g. the second half of an implicit weight pair
+    or an expansion tail); a completely ignorable element
+    ([.0000.0000.0000]) contributes nothing anywhere; and a primary-
+    ignorable element that follows a variable element is shifted away
+    entirely.
+
+  :NON-IGNORABLE -- variable elements are not treated specially: every
+    element contributes its non-zero weights at levels 1-3 just like any
+    other element, and there is no fourth level (the returned L4 is
+    always NIL)."
+  (ecase variable-weighting
+    (:shifted (collation-weights-shifted d string))
+    (:non-ignorable (collation-weights-non-ignorable d string))))
+
+(defun collation-weights-shifted (d string)
+  "Compute the four weight levels for STRING under the Shifted option.
+See COLLATION-WEIGHTS."
   (let ((ces (ducet-element-array d (string-to-collation-codepoints string)))
         (l1 nil) (l2 nil) (l3 nil) (l4 nil)
         (after-variable nil))
@@ -402,14 +450,35 @@ entirely."
            (setf after-variable nil)))))
     (values (nreverse l1) (nreverse l2) (nreverse l3) (nreverse l4))))
 
-(defun collation-sort-key (d string)
-  "Compute the UTS #10 sort key for STRING under DUCET D (Shifted
-option).  Returns a (simple-array (unsigned-byte 16) (*)) holding the
-level-1 weights, a 0000 separator, the level-2 weights, 0000, the
-level-3 weights, 0000, and the level-4 weights.  Binary comparison of
-two such keys yields the collation order of their strings."
-  (multiple-value-bind (l1 l2 l3 l4) (collation-weights d string)
-    (let* ((weights (append l1 (list 0) l2 (list 0) l3 (list 0) l4))
+(defun collation-weights-non-ignorable (d string)
+  "Compute the weight levels for STRING under the Non-ignorable option.
+Variable elements are treated exactly like ordinary elements, and there
+is no fourth level.  See COLLATION-WEIGHTS."
+  (let ((ces (ducet-element-array d (string-to-collation-codepoints string)))
+        (l1 nil) (l2 nil) (l3 nil))
+    (dolist (ce ces)
+      (let ((p (ce-primary ce))
+            (s (ce-secondary ce))
+            (te (ce-tertiary ce)))
+        ;; Every element -- variable or not -- contributes its non-zero
+        ;; weights at each level; zero weights are passed over.
+        (unless (zerop p) (push p l1))
+        (unless (zerop s) (push s l2))
+        (unless (zerop te) (push te l3))))
+    (values (nreverse l1) (nreverse l2) (nreverse l3) nil)))
+
+(defun collation-sort-key (d string &optional (variable-weighting :shifted))
+  "Compute the UTS #10 sort key for STRING under DUCET D.  Returns a
+(simple-array (unsigned-byte 16) (*)) holding the level-1 weights, a 0000
+separator, the level-2 weights, 0000, the level-3 weights, and -- for the
+:SHIFTED option -- a further 0000 separator and the level-4 weights.
+Binary comparison of two such keys yields the collation order of their
+strings.  VARIABLE-WEIGHTING is as in COLLATION-WEIGHTS."
+  (multiple-value-bind (l1 l2 l3 l4)
+      (collation-weights d string variable-weighting)
+    (let* ((weights (if (eq variable-weighting :non-ignorable)
+                        (append l1 (list 0) l2 (list 0) l3)
+                        (append l1 (list 0) l2 (list 0) l3 (list 0) l4)))
            (key (make-array (length weights)
                             :element-type '(unsigned-byte 16))))
       (loop for w in weights
@@ -417,12 +486,12 @@ two such keys yields the collation order of their strings."
             do (setf (aref key k) w))
       key)))
 
-(defun collation-compare (d s1 s2)
+(defun collation-compare (d s1 s2 &optional (variable-weighting :shifted))
   "Compare strings S1 and S2 under DUCET D.  Returns -1, 0, or 1 like a
 three-way comparison: negative if S1 sorts before S2, zero if equal, 1
-if after."
-  (let ((k1 (collation-sort-key d s1))
-        (k2 (collation-sort-key d s2)))
+if after.  VARIABLE-WEIGHTING is as in COLLATION-WEIGHTS."
+  (let ((k1 (collation-sort-key d s1 variable-weighting))
+        (k2 (collation-sort-key d s2 variable-weighting)))
     (let ((n (min (length k1) (length k2))))
       (dotimes (i n)
         (let ((a (aref k1 i)) (b (aref k2 i)))

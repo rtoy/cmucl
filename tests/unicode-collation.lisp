@@ -12,6 +12,8 @@
 (defvar *collation-allkeys* "target:i18n/allkeys.txt")
 (defvar *collation-shifted-test*
   "target:i18n/CollationTest/CollationTest_SHIFTED.txt")
+(defvar *collation-non-ignorable-test*
+  "target:i18n/CollationTest/CollationTest_NON_IGNORABLE.txt")
 
 (defvar *ducet* nil
   "The Default Unicode Collation Element Table, loaded on first use.")
@@ -106,4 +108,27 @@ comment."
                        (lisp::collation-weights ducet (collation-test-string cps))
                      (assert-equalp (list e1 e2 e3 e4)
                                     (list g1 g2 g3 g4)
+                                    cps))))))))
+
+(define-test unicode.collation-non-ignorable
+  "Test UTS #10 collation sort keys against the UCA NON_IGNORABLE
+conformance data.  Under the Non-ignorable option variable elements keep
+their weights and there is no fourth level, so for each line the three
+weight levels produced by LISP::COLLATION-WEIGHTS with :NON-IGNORABLE
+must match the expected key in the line's comment."
+  (:tag :unicode)
+  (let ((ducet (ducet)))
+    (with-open-file (s *collation-non-ignorable-test* :direction :input
+                       :external-format :utf-8)
+      (loop for line = (read-line s nil nil)
+            while line
+            do
+               (multiple-value-bind (cps e1 e2 e3)
+                   (collation-parse-test-line line)
+                 (when cps
+                   (multiple-value-bind (g1 g2 g3)
+                       (lisp::collation-weights ducet (collation-test-string cps)
+                                                :non-ignorable)
+                     (assert-equalp (list e1 e2 e3)
+                                    (list g1 g2 g3)
                                     cps))))))))
