@@ -1,0 +1,109 @@
+;;; -*- Mode: Lisp; Package: UNICODE-COLLATION-TESTS -*-
+;;;
+;;; Conformance tests for the UTS #10 collation implementation in
+;;; code/unicode-collation.lisp, run against the UCA conformance data
+;;; file CollationTest_SHIFTED.txt.
+
+(defpackage :unicode-collation-tests
+  (:use :cl :lisp-unit))
+
+(in-package "UNICODE-COLLATION-TESTS")
+
+(defvar *collation-allkeys* "target:i18n/allkeys.txt")
+(defvar *collation-shifted-test*
+  "target:i18n/CollationTest/CollationTest_SHIFTED.txt")
+
+(defvar *ducet* nil
+  "The Default Unicode Collation Element Table, loaded on first use.")
+
+(defun ducet ()
+  "Return the DUCET, loading it from *COLLATION-ALLKEYS* the first time."
+  (or *ducet*
+      (setf *ducet* (lisp::load-ducet *collation-allkeys*))))
+
+(defun collation-hex-list (string)
+  "Parse all space-separated hexadecimal numbers in STRING into a list of
+integers, in order.  Non-hex runs are skipped."
+  (let ((result nil) (i 0) (n (length string)))
+    (loop
+      (loop while (and (< i n) (not (digit-char-p (char string i) 16)))
+            do (incf i))
+      (when (>= i n) (return))
+      (let ((j i))
+        (loop while (and (< j n) (digit-char-p (char string j) 16))
+              do (incf j))
+        (push (parse-integer string :start i :end j :radix 16) result)
+        (setf i j)))
+    (nreverse result)))
+
+(defun collation-split-on-bar (string)
+  "Split STRING into a list of substrings on the #\\| character."
+  (let ((result nil) (start 0))
+    (loop
+      (let ((pos (position #\| string :start start)))
+        (push (subseq string start (or pos (length string))) result)
+        (if pos (setf start (1+ pos)) (return))))
+    (nreverse result)))
+
+(defun collation-parse-expected-key (comment)
+  "Parse the trailing [L1 | L2 | L3 | L4 |] sort key from the comment
+portion of a CollationTest line.  Returns four values: the L1, L2, L3
+and L4 weight lists."
+  (let ((lb (position #\[ comment :from-end t))
+        (rb (position #\] comment :from-end t)))
+    (if (and lb rb (< lb rb))
+        (let* ((inner (subseq comment (1+ lb) rb))
+               (parts (collation-split-on-bar inner)))
+          (values (collation-hex-list (or (nth 0 parts) ""))
+                  (collation-hex-list (or (nth 1 parts) ""))
+                  (collation-hex-list (or (nth 2 parts) ""))
+                  (collation-hex-list (or (nth 3 parts) ""))))
+        (values nil nil nil nil))))
+
+(defun collation-parse-test-line (line)
+  "Parse a CollationTest data LINE.  Returns five values -- the codepoint
+list and the four expected weight levels -- or NIL for comment or blank
+lines."
+  (when (and (plusp (length line))
+             (not (char= (char line 0) #\#))
+             (not (char= (char line 0) #\@)))
+    (let ((semi (position #\; line)))
+      (when semi
+        (let ((cps (collation-hex-list (subseq line 0 semi))))
+          (when cps
+            (multiple-value-bind (l1 l2 l3 l4)
+                (collation-parse-expected-key (subseq line (1+ semi)))
+              (values cps l1 l2 l3 l4))))))))
+
+(defun collation-test-string (codepoints)
+  "Build a string from a list of CODEPOINTS, encoding codepoints outside
+the BMP as UTF-16 surrogate pairs."
+  (let ((out (make-array 10 :fill-pointer 0 :element-type 'character)))
+    (dolist (cp codepoints)
+      (if (> cp #xffff)
+          (let ((s (lisp::codepoints-string (list cp))))
+            (vector-push-extend (aref s 0) out)
+            (vector-push-extend (aref s 1) out))
+          (vector-push-extend (code-char cp) out)))
+    (coerce out 'simple-string)))
+
+(define-test unicode.collation-shifted
+  "Test UTS #10 collation sort keys against the UCA SHIFTED conformance
+data.  For each line, the four sort-key levels produced by
+LISP::COLLATION-WEIGHTS must match the expected key in the line's
+comment."
+  (:tag :unicode)
+  (let ((ducet (ducet)))
+    (with-open-file (s *collation-shifted-test* :direction :input
+                       :external-format :utf-8)
+      (loop for line = (read-line s nil nil)
+            while line
+            do
+               (multiple-value-bind (cps e1 e2 e3 e4)
+                   (collation-parse-test-line line)
+                 (when cps
+                   (multiple-value-bind (g1 g2 g3 g4)
+                       (lisp::collation-weights ducet (collation-test-string cps))
+                     (assert-equalp (list e1 e2 e3 e4)
+                                    (list g1 g2 g3 g4)
+                                    cps))))))))
