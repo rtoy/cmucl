@@ -195,7 +195,8 @@
 	    '("target:code/multi-proc"))
     "target:code/intl-tramp"
     ,@(when (c::backend-featurep :unicode)
-	'("target:code/unicode"))
+	'("target:code/unicode"
+	  "target:code/unicode-collation"))
     ))
 
 (setf *genesis-core-name* "target:lisp/kernel.core")

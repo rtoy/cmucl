@@ -337,7 +337,8 @@
 (comf "target:code/intl")
 
 (when (c:backend-featurep :unicode)
-  (comf "target:code/unicode"))
+  (comf "target:code/unicode")
+  (comf "target:code/unicode-collation"))
 ); let *byte-compile-top-level*
 
 ); with-compiler-log-file
