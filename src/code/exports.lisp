@@ -2307,7 +2307,13 @@
   (:use "COMMON-LISP")
   (:shadow "STRING-CAPITALIZE"
 	   "STRING-DOWNCASE"
-	   "STRING-UPCASE")
+	   "STRING-UPCASE"
+	   "STRING<"
+	   "STRING<="
+	   "STRING="
+	   "STRING/="
+	   "STRING>"
+	   "STRING>=")
   (:import-from "LISP"
 		"CODEPOINT"
 		"SURROGATES"
@@ -2325,6 +2331,12 @@
   (:export "STRING-CAPITALIZE"
 	   "STRING-DOWNCASE"
 	   "STRING-UPCASE"
-	   "STRING-NEXT-WORD-BREAK"))
+	   "STRING-NEXT-WORD-BREAK"
+	   "STRING<"
+	   "STRING<="
+	   "STRING="
+	   "STRING/="
+	   "STRING>"
+	   "STRING>="))
 
 

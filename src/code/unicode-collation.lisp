@@ -500,3 +500,93 @@ if after.  VARIABLE-WEIGHTING is as in COLLATION-WEIGHTS."
       (cond ((< (length k1) (length k2)) -1)
             ((> (length k1) (length k2)) 1)
             (t 0)))))
+
+
+;;; -------------------------------------------------------------------
+;;; Public collation API (UNICODE package): the Unicode-aware
+;;; equivalents of the COMMON-LISP string comparison functions.
+;;;
+;;; These compare strings by the Unicode Collation Algorithm rather than
+;;; by code-point order, so the result reflects linguistic sort order
+;;; (after NFD normalization, with contractions, expansions and the
+;;; chosen variable-weighting option).  The Default Unicode Collation
+;;; Element Table is loaded lazily on first use.
+;;;
+;;; Unlike the COMMON-LISP functions, these return a generalized boolean
+;;; (T or NIL) rather than a mismatch index: the comparison is performed
+;;; on sort keys derived from the whole normalized string, so there is
+;;; no meaningful character index of the first difference to return.
+;;; -------------------------------------------------------------------
+
+(in-package "UNICODE")
+
+(defvar *collation-table-path* "ext-formats:allkeys.txt"
+  "Pathname of the DUCET data file (allkeys.txt) from which the default
+collation table is loaded on first use.")
+
+(defvar *collation-table* nil
+  "The default Unicode collation table, or NIL if it has not yet been
+loaded.  Loaded lazily from *COLLATION-TABLE-PATH* the first time a
+collation function needs it.  Set to NIL to force a reload.")
+
+(defun collation-table ()
+  "Return the default Unicode collation table, loading it from
+*COLLATION-TABLE-PATH* on first use."
+  (or *collation-table*
+      (setf *collation-table* (lisp::load-ducet *collation-table-path*))))
+
+(defun %collation-compare (string1 string2 start1 end1 start2 end2
+                           variable-weighting)
+  "Three-way collation comparison of the designated substrings of
+STRING1 and STRING2: returns a negative integer, zero, or a positive
+integer as the first sorts before, equal to, or after the second."
+  (let ((s1 (string string1))
+        (s2 (string string2)))
+    (when (or (/= start1 0) end1)
+      (setf s1 (subseq s1 start1 end1)))
+    (when (or (/= start2 0) end2)
+      (setf s2 (subseq s2 start2 end2)))
+    (lisp::collation-compare (collation-table) s1 s2 variable-weighting)))
+
+(defmacro %def-collation-predicate (name test docstring)
+  "Define a collation comparison predicate NAME whose result is (TEST c)
+where c is the three-way comparison of the two string arguments."
+  `(defun ,name (string1 string2 &key (start1 0) end1 (start2 0) end2
+                                      (variable-weighting :shifted))
+     ,docstring
+     (let ((c (%collation-compare string1 string2
+                                  start1 end1 start2 end2
+                                  variable-weighting)))
+       (,test c))))
+
+(%def-collation-predicate string= zerop
+  "Return true if STRING1 and STRING2 collate as equal under the Unicode
+Collation Algorithm.  Note that this is collation equality, not
+code-point identity: canonically equivalent strings, and strings that
+differ only in collation-ignorable ways, compare equal.  START1, END1,
+START2 and END2 bound the substrings compared; VARIABLE-WEIGHTING is
+:SHIFTED (the default) or :NON-IGNORABLE.")
+
+(%def-collation-predicate string/= (lambda (c) (not (zerop c)))
+  "Return true if STRING1 and STRING2 do not collate as equal.  See
+UNICODE:STRING= for the meaning of the keyword arguments.")
+
+(%def-collation-predicate string< minusp
+  "Return true if STRING1 collates before STRING2 under the Unicode
+Collation Algorithm.  See UNICODE:STRING= for the meaning of the keyword
+arguments.")
+
+(%def-collation-predicate string> plusp
+  "Return true if STRING1 collates after STRING2 under the Unicode
+Collation Algorithm.  See UNICODE:STRING= for the meaning of the keyword
+arguments.")
+
+(%def-collation-predicate string<= (lambda (c) (not (plusp c)))
+  "Return true if STRING1 collates before or equal to STRING2 under the
+Unicode Collation Algorithm.  See UNICODE:STRING= for the meaning of the
+keyword arguments.")
+
+(%def-collation-predicate string>= (lambda (c) (not (minusp c)))
+  "Return true if STRING1 collates after or equal to STRING2 under the
+Unicode Collation Algorithm.  See UNICODE:STRING= for the meaning of the
+keyword arguments.")
