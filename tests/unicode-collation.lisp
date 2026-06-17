@@ -26,16 +26,26 @@
 (defun collation-hex-list (string)
   "Parse all space-separated hexadecimal numbers in STRING into a list of
 integers, in order.  Non-hex runs are skipped."
-  (let ((result nil) (i 0) (n (length string)))
+  (let ((result nil)
+        (i 0)
+        (n (length string)))
     (loop
-      (loop while (and (< i n) (not (digit-char-p (char string i) 16)))
+      ;; Skip any non-hexadecimal characters.
+      (loop while (and (< i n)
+                       (null (digit-char-p (char string i) 16)))
             do (incf i))
       (when (>= i n) (return))
-      (let ((j i))
-        (loop while (and (< j n) (digit-char-p (char string j) 16))
-              do (incf j))
-        (push (parse-integer string :start i :end j :radix 16) result)
-        (setf i j)))
+      ;; Accumulate one hexadecimal number.  PARSE-INTEGER is avoided
+      ;; here because it conses, and this runs several times per line
+      ;; over hundreds of thousands of conformance lines; the values are
+      ;; 16-bit and fit in a fixnum.
+      (let ((val 0)
+            (d nil))
+        (loop while (and (< i n)
+                         (setf d (digit-char-p (char string i) 16)))
+              do (setf val (+ (* val 16) d))
+                 (incf i))
+        (push val result)))
     (nreverse result)))
 
 (defun collation-split-on-bar (string)
@@ -133,3 +143,18 @@ must match the expected key in the line's comment."
   (:tag :unicode)
   (run-collation-conformance (ducet) *collation-non-ignorable-test*
                              :non-ignorable))
+
+;; A DEFINE-TEST body is stored as source and run interpreted, and the
+;; test runner (tests/run-tests.lisp) loads this file as source, so its
+;; functions would otherwise run interpreted.  The per-line parsing and
+;; string building run on every one of several hundred thousand
+;; conformance lines, so interpreted they make the suite about ten times
+;; slower.  Compile the hot functions on load.
+(eval-when (:load-toplevel :execute)
+  (dolist (name '(collation-hex-list
+                  collation-split-on-bar
+                  collation-parse-expected-key
+                  collation-parse-test-line
+                  collation-test-string
+                  run-collation-conformance))
+    (compile name)))
