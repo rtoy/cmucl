@@ -89,26 +89,40 @@ the BMP as UTF-16 surrogate pairs."
           (vector-push-extend (code-char cp) out)))
     (coerce out 'simple-string)))
 
+(defun run-collation-conformance (ducet file weighting)
+  "Check every line of the UCA conformance FILE: the four sort-key levels
+produced by LISP::COLLATION-WEIGHTS under WEIGHTING must match the
+expected key parsed from the line's comment.  Each line is a separate
+LISP-UNIT assertion.
+
+This is a plain function rather than inline in the DEFINE-TESTs below
+because a DEFINE-TEST body is stored as source and run interpreted; the
+per-line work over a quarter-million lines must run compiled, so it
+lives here and the tests just call it."
+  (with-open-file (s file :direction :input :external-format :utf-8)
+    (loop for line = (read-line s nil nil)
+          while line
+          do
+             (multiple-value-bind (cps e1 e2 e3 e4)
+                 (collation-parse-test-line line)
+               (when cps
+                 (multiple-value-bind (g1 g2 g3 g4)
+                     (lisp::collation-weights ducet (collation-test-string cps)
+                                              weighting)
+                   ;; For :NON-IGNORABLE the comment has no fourth level
+                   ;; and COLLATION-WEIGHTS returns NIL for L4, so the
+                   ;; same four-level comparison serves both options.
+                   (assert-equalp (list e1 e2 e3 e4)
+                                  (list g1 g2 g3 g4)
+                                  cps)))))))
+
 (define-test unicode.collation-shifted
   "Test UTS #10 collation sort keys against the UCA SHIFTED conformance
 data.  For each line, the four sort-key levels produced by
 LISP::COLLATION-WEIGHTS must match the expected key in the line's
 comment."
   (:tag :unicode)
-  (let ((ducet (ducet)))
-    (with-open-file (s *collation-shifted-test* :direction :input
-                       :external-format :utf-8)
-      (loop for line = (read-line s nil nil)
-            while line
-            do
-               (multiple-value-bind (cps e1 e2 e3 e4)
-                   (collation-parse-test-line line)
-                 (when cps
-                   (multiple-value-bind (g1 g2 g3 g4)
-                       (lisp::collation-weights ducet (collation-test-string cps))
-                     (assert-equalp (list e1 e2 e3 e4)
-                                    (list g1 g2 g3 g4)
-                                    cps))))))))
+  (run-collation-conformance (ducet) *collation-shifted-test* :shifted))
 
 (define-test unicode.collation-non-ignorable
   "Test UTS #10 collation sort keys against the UCA NON_IGNORABLE
@@ -117,18 +131,5 @@ their weights and there is no fourth level, so for each line the three
 weight levels produced by LISP::COLLATION-WEIGHTS with :NON-IGNORABLE
 must match the expected key in the line's comment."
   (:tag :unicode)
-  (let ((ducet (ducet)))
-    (with-open-file (s *collation-non-ignorable-test* :direction :input
-                       :external-format :utf-8)
-      (loop for line = (read-line s nil nil)
-            while line
-            do
-               (multiple-value-bind (cps e1 e2 e3)
-                   (collation-parse-test-line line)
-                 (when cps
-                   (multiple-value-bind (g1 g2 g3)
-                       (lisp::collation-weights ducet (collation-test-string cps)
-                                                :non-ignorable)
-                     (assert-equalp (list e1 e2 e3)
-                                    (list g1 g2 g3)
-                                    cps))))))))
+  (run-collation-conformance (ducet) *collation-non-ignorable-test*
+                             :non-ignorable))
