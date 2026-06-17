@@ -145,6 +145,83 @@ must match the expected key in the line's comment."
   (run-collation-conformance (ducet) *collation-non-ignorable-test*
                              :non-ignorable))
 
+;;; Tests for the public UNICODE comparison functions.  The conformance
+;;; tests above already validate the collation weights themselves; these
+;;; check the thin wrappers -- that each predicate maps the comparison to
+;;; the right boolean, and that the STRENGTH and VARIABLE-WEIGHTING
+;;; options and the case-insensitive variants behave as documented.
+
+(define-test unicode.string-predicates
+  "The six case-sensitive comparison predicates map the collation order
+of a known pair to the correct boolean, including the reflexive case."
+  (:tag :unicode)
+  (assert-true (unicode:string< "a" "b"))
+  (assert-false (unicode:string< "b" "a"))
+  (assert-false (unicode:string< "a" "a"))
+  (assert-true (unicode:string> "b" "a"))
+  (assert-false (unicode:string> "a" "b"))
+  (assert-true (unicode:string<= "a" "b"))
+  (assert-true (unicode:string<= "a" "a"))
+  (assert-false (unicode:string<= "b" "a"))
+  (assert-true (unicode:string>= "b" "a"))
+  (assert-true (unicode:string>= "a" "a"))
+  (assert-false (unicode:string>= "a" "b"))
+  (assert-true (unicode:string= "a" "a"))
+  (assert-false (unicode:string= "a" "b"))
+  (assert-true (unicode:string/= "a" "b"))
+  (assert-false (unicode:string/= "a" "a")))
+
+(define-test unicode.string-designators-and-bounds
+  "Comparison accepts string designators (characters, symbols) like the
+COMMON-LISP functions, and honors START/END substring bounds."
+  (:tag :unicode)
+  (assert-true (unicode:string= #\a #\a))
+  (assert-true (unicode:string= 'abc "ABC"))
+  (assert-true (unicode:string= "xab" "yab" :start1 1 :start2 1))
+  (assert-false (unicode:string= "xab" "yzb" :start1 1 :start2 1)))
+
+(define-test unicode.string-strength
+  "STRENGTH bounds the distinctions made: case is a tertiary difference,
+an accent a secondary one."
+  (:tag :unicode)
+  ;; Default (tertiary): case matters.  Lowercase sorts before uppercase.
+  (assert-true (unicode:string< "abc" "ABC"))
+  (assert-false (unicode:string< "ABC" "abc"))
+  (assert-false (unicode:string= "ABC" "abc"))
+  ;; Secondary: case ignored, but accents still distinguish.
+  (assert-true (unicode:string= "ABC" "abc" :strength :secondary))
+  (assert-false (unicode:string= "café" "cafe" :strength :secondary))
+  ;; Primary: accents ignored too.
+  (assert-true (unicode:string= "café" "cafe" :strength :primary))
+  ;; Quaternary: under the default :SHIFTED option the level-4 weights
+  ;; make variable elements (here the hyphen) break an otherwise equal
+  ;; comparison, where :TERTIARY ignores them.
+  (assert-true (unicode:string= "co-op" "coop"))
+  (assert-false (unicode:string= "co-op" "coop" :strength :quaternary)))
+
+(define-test unicode.string-case-insensitive
+  "The case-insensitive family ignores case (secondary strength) while
+remaining sensitive to accents."
+  (:tag :unicode)
+  (assert-true (unicode:string-equal "ABC" "abc"))
+  (assert-false (unicode:string-not-equal "ABC" "abc"))
+  (assert-false (unicode:string-lessp "ABC" "abc"))
+  (assert-false (unicode:string-greaterp "ABC" "abc"))
+  (assert-true (unicode:string-not-greaterp "ABC" "abc"))
+  (assert-true (unicode:string-not-lessp "ABC" "abc"))
+  ;; An accent is a secondary difference, so it still distinguishes.
+  (assert-false (unicode:string-equal "café" "cafe")))
+
+(define-test unicode.string-variable-weighting
+  "Under the default :SHIFTED option variable elements (punctuation) are
+ignored; under :NON-IGNORABLE they are significant."
+  (:tag :unicode)
+  ;; Shifted (default): the hyphen is ignored, so the strings collate equal.
+  (assert-true (unicode:string= "co-op" "coop"))
+  ;; Non-ignorable: the hyphen counts, so they are not equal.
+  (assert-false (unicode:string= "co-op" "coop"
+                                     :variable-weighting :non-ignorable)))
+
 ;; A DEFINE-TEST body is stored as source and run interpreted, and the
 ;; test runner (tests/run-tests.lisp) loads this file as source, so its
 ;; functions would otherwise run interpreted.  The per-line parsing and

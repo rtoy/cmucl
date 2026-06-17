@@ -467,18 +467,28 @@ is no fourth level.  See COLLATION-WEIGHTS."
         (unless (zerop te) (push te l3))))
     (values (nreverse l1) (nreverse l2) (nreverse l3) nil)))
 
-(defun collation-sort-key (d string &optional (variable-weighting :shifted))
+(defun collation-sort-key (d string &optional (variable-weighting :shifted)
+                                              (strength :tertiary))
   "Compute the UTS #10 sort key for STRING under DUCET D.  Returns a
-(simple-array (unsigned-byte 16) (*)) holding the level-1 weights, a 0000
-separator, the level-2 weights, 0000, the level-3 weights, and -- for the
-:SHIFTED option -- a further 0000 separator and the level-4 weights.
-Binary comparison of two such keys yields the collation order of their
-strings.  VARIABLE-WEIGHTING is as in COLLATION-WEIGHTS."
+(simple-array (unsigned-byte 16) (*)) holding the weight levels separated
+by 0000: level 1, level 2, level 3, and -- under the :SHIFTED option --
+level 4.  Binary comparison of two such keys yields the collation order
+of their strings.  VARIABLE-WEIGHTING is as in COLLATION-WEIGHTS.
+
+STRENGTH bounds the levels included in the key, and hence the
+distinctions the comparison makes: :PRIMARY (base letters only),
+:SECONDARY (also accents), :TERTIARY (also case; the default), or
+:QUATERNARY (also the level-4 weights, which exist only under the
+:SHIFTED option and otherwise add nothing).  A lower strength makes
+more strings compare equal; for example :SECONDARY ignores case."
   (multiple-value-bind (l1 l2 l3 l4)
       (collation-weights d string variable-weighting)
-    (let* ((weights (if (eq variable-weighting :non-ignorable)
-                        (append l1 (list 0) l2 (list 0) l3)
-                        (append l1 (list 0) l2 (list 0) l3 (list 0) l4)))
+    (let* ((weights (ecase strength
+                      (:primary l1)
+                      (:secondary (append l1 (list 0) l2))
+                      (:tertiary (append l1 (list 0) l2 (list 0) l3))
+                      (:quaternary
+                       (append l1 (list 0) l2 (list 0) l3 (list 0) l4))))
            (key (make-array (length weights)
                             :element-type '(unsigned-byte 16))))
       (loop for w in weights
@@ -486,12 +496,13 @@ strings.  VARIABLE-WEIGHTING is as in COLLATION-WEIGHTS."
             do (setf (aref key k) w))
       key)))
 
-(defun collation-compare (d s1 s2 &optional (variable-weighting :shifted))
+(defun collation-compare (d s1 s2 &optional (variable-weighting :shifted)
+                                            (strength :tertiary))
   "Compare strings S1 and S2 under DUCET D.  Returns -1, 0, or 1 like a
 three-way comparison: negative if S1 sorts before S2, zero if equal, 1
-if after.  VARIABLE-WEIGHTING is as in COLLATION-WEIGHTS."
-  (let ((k1 (collation-sort-key d s1 variable-weighting))
-        (k2 (collation-sort-key d s2 variable-weighting)))
+if after.  VARIABLE-WEIGHTING and STRENGTH are as in COLLATION-SORT-KEY."
+  (let ((k1 (collation-sort-key d s1 variable-weighting strength))
+        (k2 (collation-sort-key d s2 variable-weighting strength)))
     (let ((n (min (length k1) (length k2))))
       (dotimes (i n)
         (let ((a (aref k1 i)) (b (aref k2 i)))
@@ -615,7 +626,7 @@ collation section of unidata.bin on first use."
       (setf *collation-table* (lisp::unidata-ducet))))
 
 (defun %collation-compare (string1 string2 start1 end1 start2 end2
-                           variable-weighting)
+                           variable-weighting strength)
   "Three-way collation comparison of the designated substrings of
 STRING1 and STRING2: returns a negative integer, zero, or a positive
 integer as the first sorts before, equal to, or after the second."
@@ -625,47 +636,87 @@ integer as the first sorts before, equal to, or after the second."
       (setf s1 (subseq s1 start1 end1)))
     (when (or (/= start2 0) end2)
       (setf s2 (subseq s2 start2 end2)))
-    (lisp::collation-compare (collation-table) s1 s2 variable-weighting)))
+    (lisp::collation-compare (collation-table) s1 s2
+                             variable-weighting strength)))
 
-(defmacro %def-collation-predicate (name test docstring)
+(defmacro %def-collation-predicate (name test default-strength docstring)
   "Define a collation comparison predicate NAME whose result is (TEST c)
-where c is the three-way comparison of the two string arguments."
+where c is the three-way comparison of the two string arguments.
+DEFAULT-STRENGTH is the default value of the STRENGTH keyword."
   `(defun ,name (string1 string2 &key (start1 0) end1 (start2 0) end2
-                                      (variable-weighting :shifted))
+                                      (variable-weighting :shifted)
+                                      (strength ,default-strength))
      ,docstring
      (let ((c (%collation-compare string1 string2
                                   start1 end1 start2 end2
-                                  variable-weighting)))
+                                  variable-weighting strength)))
        (,test c))))
 
-(%def-collation-predicate string= zerop
+(%def-collation-predicate string= zerop :tertiary
   "Return true if STRING1 and STRING2 collate as equal under the Unicode
 Collation Algorithm.  Note that this is collation equality, not
 code-point identity: canonically equivalent strings, and strings that
 differ only in collation-ignorable ways, compare equal.  START1, END1,
-START2 and END2 bound the substrings compared; VARIABLE-WEIGHTING is
-:SHIFTED (the default) or :NON-IGNORABLE.")
+START2 and END2 bound the substrings compared.  VARIABLE-WEIGHTING is
+:SHIFTED (the default) or :NON-IGNORABLE.  STRENGTH is :PRIMARY,
+:SECONDARY, :TERTIARY (the default), or :QUATERNARY, as in
+LISP::COLLATION-SORT-KEY; a lower strength makes more strings compare
+equal -- :SECONDARY, for instance, ignores case.")
 
-(%def-collation-predicate string/= (lambda (c) (not (zerop c)))
+(%def-collation-predicate string/= (lambda (c) (not (zerop c))) :tertiary
   "Return true if STRING1 and STRING2 do not collate as equal.  See
 UNICODE:STRING= for the meaning of the keyword arguments.")
 
-(%def-collation-predicate string< minusp
+(%def-collation-predicate string< minusp :tertiary
   "Return true if STRING1 collates before STRING2 under the Unicode
 Collation Algorithm.  See UNICODE:STRING= for the meaning of the keyword
 arguments.")
 
-(%def-collation-predicate string> plusp
+(%def-collation-predicate string> plusp :tertiary
   "Return true if STRING1 collates after STRING2 under the Unicode
 Collation Algorithm.  See UNICODE:STRING= for the meaning of the keyword
 arguments.")
 
-(%def-collation-predicate string<= (lambda (c) (not (plusp c)))
+(%def-collation-predicate string<= (lambda (c) (not (plusp c))) :tertiary
   "Return true if STRING1 collates before or equal to STRING2 under the
 Unicode Collation Algorithm.  See UNICODE:STRING= for the meaning of the
 keyword arguments.")
 
-(%def-collation-predicate string>= (lambda (c) (not (minusp c)))
+(%def-collation-predicate string>= (lambda (c) (not (minusp c))) :tertiary
   "Return true if STRING1 collates after or equal to STRING2 under the
 Unicode Collation Algorithm.  See UNICODE:STRING= for the meaning of the
 keyword arguments.")
+
+;;; The case-insensitive comparison functions, the Unicode analogs of
+;;; the COMMON-LISP -EQUAL/-LESSP/... family.  They default to :SECONDARY
+;;; strength, which drops the tertiary level where case is encoded, so
+;;; they ignore case (and other tertiary distinctions, such as width)
+;;; while remaining sensitive to base letters and accents.  This is the
+;;; closest collation analog of case-folded comparison; the Unicode
+;;; Collation Algorithm has no operation that folds case alone.
+
+(%def-collation-predicate string-equal zerop :secondary
+  "Return true if STRING1 and STRING2 collate as equal ignoring case,
+under the Unicode Collation Algorithm.  Like UNICODE:STRING= but
+defaulting to :SECONDARY strength; see it for the keyword arguments.")
+
+(%def-collation-predicate string-not-equal (lambda (c) (not (zerop c))) :secondary
+  "Return true if STRING1 and STRING2 do not collate as equal ignoring
+case.  See UNICODE:STRING-EQUAL for the keyword arguments.")
+
+(%def-collation-predicate string-lessp minusp :secondary
+  "Return true if STRING1 collates before STRING2 ignoring case, under
+the Unicode Collation Algorithm.  See UNICODE:STRING-EQUAL for the
+keyword arguments.")
+
+(%def-collation-predicate string-greaterp plusp :secondary
+  "Return true if STRING1 collates after STRING2 ignoring case.  See
+UNICODE:STRING-EQUAL for the keyword arguments.")
+
+(%def-collation-predicate string-not-greaterp (lambda (c) (not (plusp c))) :secondary
+  "Return true if STRING1 collates before or equal to STRING2 ignoring
+case.  See UNICODE:STRING-EQUAL for the keyword arguments.")
+
+(%def-collation-predicate string-not-lessp (lambda (c) (not (minusp c))) :secondary
+  "Return true if STRING1 collates after or equal to STRING2 ignoring
+case.  See UNICODE:STRING-EQUAL for the keyword arguments.")

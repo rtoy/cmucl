@@ -2313,7 +2313,13 @@
 	   "STRING="
 	   "STRING/="
 	   "STRING>"
-	   "STRING>=")
+	   "STRING>="
+	   "STRING-EQUAL"
+	   "STRING-NOT-EQUAL"
+	   "STRING-LESSP"
+	   "STRING-GREATERP"
+	   "STRING-NOT-GREATERP"
+	   "STRING-NOT-LESSP")
   (:import-from "LISP"
 		"CODEPOINT"
 		"SURROGATES"
@@ -2337,6 +2343,12 @@
 	   "STRING="
 	   "STRING/="
 	   "STRING>"
-	   "STRING>="))
+	   "STRING>="
+	   "STRING-EQUAL"
+	   "STRING-NOT-EQUAL"
+	   "STRING-LESSP"
+	   "STRING-GREATERP"
+	   "STRING-NOT-GREATERP"
+	   "STRING-NOT-LESSP"))
 
 
