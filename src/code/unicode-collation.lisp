@@ -518,6 +518,85 @@ if after.  VARIABLE-WEIGHTING is as in COLLATION-WEIGHTS."
 ;;; no meaningful character index of the first difference to return.
 ;;; -------------------------------------------------------------------
 
+
+;;; -------------------------------------------------------------------
+;;; Building the runtime DUCET from the collation section of
+;;; unidata.bin.  The resulting table is structurally identical to one
+;;; built by LOAD-DUCET from allkeys.txt -- the same MAP / SINGLE /
+;;; STARTERS hashes and implicit ranges -- so the sort-key construction
+;;; code uses it unchanged.  This replaces the runtime use of LOAD-DUCET
+;;; (which is kept for regenerating data and for cross-checking).
+;;; -------------------------------------------------------------------
+
+(defun unidata-ducet ()
+  "Build a DUCET from the collation section of unidata.bin, loading the
+section first if necessary."
+  (unless (unidata-collation *unicode-data*)
+    (load-collation))
+  (let* ((c (unidata-collation *unicode-data*))
+	 (primv (collation-primv c))
+	 (secv (collation-secv c))
+	 (terv (collation-terv c))
+	 (contractions (collation-contractions c))
+	 (ranges (collation-ranges c))
+	 (d (make-ducet :version (format nil "~D.~D.~D"
+					 +unicode-major-version+
+					 +unicode-minor-version+
+					 +unicode-update-version+)))
+	 (maxvar 0)
+	 (maxkey 1))
+    (flet ((ces-at (packed)
+	     ;; Slice the parallel arrays into a simple-vector of
+	     ;; collation-elements for the packed (offset << 6) | count.
+	     (let* ((off (ash packed -6))
+		    (n (logand packed #x3f))
+		    (v (make-array n)))
+	       (dotimes (i n)
+		 (let* ((j (+ off i))
+			(te (aref terv j))
+			(var (logbitp 7 te))
+			(p (aref primv j)))
+		   (when (and var (> p maxvar))
+		     (setf maxvar p))
+		   (setf (aref v i)
+			 (make-ce p (aref secv j) (logand te #x7f) var))))
+	       v)))
+      ;; Single-codepoint entries: walk the codepoint space and pull the
+      ;; non-zero values out of the index trie.  (Many keys are astral,
+      ;; so the walk must cover the full range, not just the BMP.)
+      (dotimes (cp #x110000)
+	(let ((packed (qref32 c cp)))
+	  (unless (zerop packed)
+	    (let ((ces (ces-at packed)))
+	      (setf (gethash cp (ducet-single d)) ces)
+	      (setf (gethash (make-array 1 :initial-element cp) (ducet-map d))
+		    ces)))))
+      ;; Contractions: four 32-bit words each.
+      (loop for i from 0 below (length contractions) by 4 do
+	(let* ((cp1 (aref contractions i))
+	       (cp2 (aref contractions (+ i 1)))
+	       (cp3 (aref contractions (+ i 2)))
+	       (packed (aref contractions (+ i 3)))
+	       (key (if (= cp3 #xFFFFFFFF)
+			(make-array 2 :initial-contents (list cp1 cp2))
+			(make-array 3 :initial-contents (list cp1 cp2 cp3)))))
+	  (setf (gethash key (ducet-map d)) (ces-at packed))
+	  (setf (gethash cp1 (ducet-starters d)) t)
+	  (setf maxkey (max maxkey (length key)))))
+      ;; Implicit-weight ranges: four 32-bit words each (start, end,
+      ;; base, base-origin).
+      (let ((rl nil))
+	(loop for i from 0 below (length ranges) by 4 do
+	  (let ((r (make-implicit-range (aref ranges i)
+					(aref ranges (+ i 1))
+					(aref ranges (+ i 2)))))
+	    (setf (implicit-range-base-origin r) (aref ranges (+ i 3)))
+	    (push r rl)))
+	(setf (ducet-implicit-ranges d) (nreverse rl)))
+      (setf (ducet-max-key-length d) maxkey
+	    (ducet-max-variable-primary d) maxvar)
+      d)))
+
 (in-package "UNICODE")
 
 (defvar *collation-table-path* "ext-formats:allkeys.txt"
@@ -530,10 +609,10 @@ loaded.  Loaded lazily from *COLLATION-TABLE-PATH* the first time a
 collation function needs it.  Set to NIL to force a reload.")
 
 (defun collation-table ()
-  "Return the default Unicode collation table, loading it from
-*COLLATION-TABLE-PATH* on first use."
+  "Return the default Unicode collation table, building it from the
+collation section of unidata.bin on first use."
   (or *collation-table*
-      (setf *collation-table* (lisp::load-ducet *collation-table-path*))))
+      (setf *collation-table* (lisp::unidata-ducet))))
 
 (defun %collation-compare (string1 string2 start1 end1 start2 end2
                            variable-weighting)

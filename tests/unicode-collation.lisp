@@ -19,9 +19,10 @@
   "The Default Unicode Collation Element Table, loaded on first use.")
 
 (defun ducet ()
-  "Return the DUCET, loading it from *COLLATION-ALLKEYS* the first time."
+  "Return the DUCET, built from the collation section of unidata.bin on
+first use."
   (or *ducet*
-      (setf *ducet* (lisp::load-ducet *collation-allkeys*))))
+      (setf *ducet* (lisp::unidata-ducet))))
 
 (defun collation-hex-list (string)
   "Parse all space-separated hexadecimal numbers in STRING into a list of

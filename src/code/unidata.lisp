@@ -56,6 +56,7 @@
   case-fold-simple
   case-fold-full
   word-break
+  collation
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -65,7 +66,7 @@
 (defconstant +unicode-magic-number+ #x2A554344)
 
 ;; The format version for the unidata.bin file.
-(defconstant +unicode-format-version+ 1)
+(defconstant +unicode-format-version+ 2)
 
 ;; The expected Unicode version.  This needs to be synced with
 ;; build-unidata.lisp.
@@ -291,6 +292,27 @@
   (tabl (ext:required-argument) :read-only t :type simple-string))
 
 (defstruct (case-fold-full (:include decomp)))
+
+(defstruct (collation (:include ntrie32))
+  ;; Parallel collation-element arrays shared by the single-codepoint
+  ;; index (whose LVEC packs (offset << 6) | count into these) and the
+  ;; contraction table.  TERV holds the tertiary weight in its low 7
+  ;; bits and the variable flag in bit 7.
+  (primv (ext:required-argument) :read-only t
+	 :type (simple-array (unsigned-byte 16) (*)))
+  (secv (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 16) (*)))
+  (terv (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 8) (*)))
+  ;; Contraction table: four 32-bit words per entry -- cp1, cp2, cp3
+  ;; (or #xFFFFFFFF when the key has only two codepoints), and the
+  ;; packed (offset << 6) | count into the collation-element arrays.
+  (contractions (ext:required-argument) :read-only t
+		:type (simple-array (unsigned-byte 32) (*)))
+  ;; @implicitweights ranges: four 32-bit words per entry -- start,
+  ;; end, base, and base-origin (smallest start sharing the base).
+  (ranges (ext:required-argument) :read-only t
+	  :type (simple-array (unsigned-byte 32) (*))))
 
 (defstruct (bidi (:include ntrie16))
   (tabl (ext:required-argument) :read-only t
@@ -718,6 +740,29 @@
       (read-ntrie 4 stm)
     (setf (unidata-word-break *unicode-data*)
 	  (make-ntrie4 :split split :hvec hvec :mvec mvec :lvec lvec))))
+(defloader load-collation (stm 19)
+  (multiple-value-bind (split hvec mvec lvec)
+      (read-ntrie 32 stm)
+    (let* ((nce (read32 stm))
+	   (primv (make-array nce :element-type '(unsigned-byte 16)))
+	   (secv (make-array nce :element-type '(unsigned-byte 16)))
+	   (terv (make-array nce :element-type '(unsigned-byte 8))))
+      (read-vector primv stm :endian-swap :network-order)
+      (read-vector secv stm :endian-swap :network-order)
+      (read-vector terv stm :endian-swap :network-order)
+      (let* ((ncontr (read32 stm))
+	     (contractions (make-array (* 4 ncontr)
+				       :element-type '(unsigned-byte 32))))
+	(read-vector contractions stm :endian-swap :network-order)
+	(let* ((nrange (read-byte stm))
+	       (ranges (make-array (* 4 nrange)
+				   :element-type '(unsigned-byte 32))))
+	  (read-vector ranges stm :endian-swap :network-order)
+	  (setf (unidata-collation *unicode-data*)
+		(make-collation :split split :hvec hvec :mvec mvec :lvec lvec
+				:primv primv :secv secv :terv terv
+				:contractions contractions
+				:ranges ranges)))))))
 
 ;;; Accessor functions.
 
@@ -1657,4 +1702,5 @@ unidata.bin."
        (unidata-case-fold-simple *unicode-data*)
        (unidata-case-fold-full *unicode-data*)
        (unidata-word-break *unicode-data*)
+       (unidata-collation *unicode-data*)
        t))
