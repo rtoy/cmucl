@@ -44,6 +44,7 @@
   case-fold-full
   case-fold-simple
   word-break
+  collation
   )
 
 (defvar *unicode-data* (make-unidata))
@@ -145,6 +146,27 @@
 (defstruct (case-folding (:include ntrie32))
   (tabl (ext:required-argument) :read-only t
 	:type (simple-array (unsigned-byte 16) (*))))
+
+(defstruct (collation (:include ntrie32))
+  ;; Parallel collation-element arrays shared by the single-codepoint
+  ;; index (whose LVEC packs (offset << 6) | count into these) and the
+  ;; contraction table.  TERV holds the tertiary weight in its low 7
+  ;; bits and the variable flag in bit 7.
+  (primv (ext:required-argument) :read-only t
+	 :type (simple-array (unsigned-byte 16) (*)))
+  (secv (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 16) (*)))
+  (terv (ext:required-argument) :read-only t
+	:type (simple-array (unsigned-byte 8) (*)))
+  ;; Contraction table: four 32-bit words per entry -- cp1, cp2, cp3
+  ;; (or #xFFFFFFFF when the key has only two codepoints), and the
+  ;; packed (offset << 6) | count into the collation-element arrays.
+  (contractions (ext:required-argument) :read-only t
+		:type (simple-array (unsigned-byte 32) (*)))
+  ;; @implicitweights ranges: four 32-bit words per entry -- start,
+  ;; end, base, and base-origin (smallest start sharing the base).
+  (ranges (ext:required-argument) :read-only t
+	  :type (simple-array (unsigned-byte 32) (*))))
 
 (defstruct (bidi (:include ntrie16))
   (tabl (ext:required-argument) :read-only t
@@ -535,11 +557,11 @@
 			 :element-type '(unsigned-byte 8))
       ;; The length of the index array is the number of sections to be
       ;; written.  See below for each section.
-      (let ((index (make-array 19 :fill-pointer 0)))
+      (let ((index (make-array 20 :fill-pointer 0)))
 	;; File header
 	(write32 +unicode-magic-number+ stm)	; identification "magic"
-	;; File format version (1: dictionary nextv de-packed, keypv added)
-	(write-byte 1 stm)
+	;; File format version (2: collation/DUCET section added)
+	(write-byte 2 stm)
 	;; Unicode version
 	(write-byte +unicode-major-version+ stm)
 	(write-byte +unicode-minor-version+ stm)
@@ -638,6 +660,18 @@
 	(let ((data (unidata-word-break *unicode-data*)))
 	  (update-index (file-position stm) index)
 	  (write-ntrie4 data stm))
+	;; 19. Collation (DUCET)
+	(let ((data (unidata-collation *unicode-data*)))
+	  (update-index (file-position stm) index)
+	  (write-ntrie32 data stm)
+	  (write32 (length (collation-primv data)) stm)
+	  (write-vector (collation-primv data) stm :endian-swap :network-order)
+	  (write-vector (collation-secv data) stm :endian-swap :network-order)
+	  (write-vector (collation-terv data) stm :endian-swap :network-order)
+	  (write32 (truncate (length (collation-contractions data)) 4) stm)
+	  (write-vector (collation-contractions data) stm :endian-swap :network-order)
+	  (write-byte (truncate (length (collation-ranges data)) 4) stm)
+	  (write-vector (collation-ranges data) stm :endian-swap :network-order))
 	;; All components saved. Patch up index table now.
 	(file-position stm 8)
 	(dotimes (i (length index))
@@ -1016,6 +1050,140 @@
 
 ;; ucd-directory should be the directory where UnicodeData.txt is
 ;; located.
+(defun parse-collation-key (string)
+  "Parse the space-separated hexadecimal codepoints in STRING (the part
+of an allkeys.txt line before the semicolon) into a list of integers."
+  (let ((result nil) (i 0) (n (length string)))
+    (loop
+      (loop while (and (< i n) (not (digit-char-p (char string i) 16)))
+	    do (incf i))
+      (when (>= i n) (return))
+      (let ((j i))
+	(loop while (and (< j n) (digit-char-p (char string j) 16))
+	      do (incf j))
+	(push (parse-integer string :start i :end j :radix 16) result)
+	(setf i j)))
+    (nreverse result)))
+
+(defun parse-collation-elements (string)
+  "Parse the collation elements [.pppp.ssss.tttt] (or [*pppp...] for a
+variable element) from STRING into a list of (primary secondary tertiary
+variablep) lists."
+  (let ((result nil) (i 0))
+    (loop
+      (let ((open (position #\[ string :start i)))
+	(unless open (return))
+	(let* ((var (char= (char string (1+ open)) #\*))
+	       (close (position #\] string :start open))
+	       (body (subseq string (+ open 2) close))
+	       (d1 (position #\. body))
+	       (d2 (position #\. body :start (1+ d1))))
+	  (push (list (parse-integer body :end d1 :radix 16)
+		      (parse-integer body :start (1+ d1) :end d2 :radix 16)
+		      (parse-integer body :start (1+ d2) :radix 16)
+		      var)
+		result)
+	  (setf i (1+ close)))))
+    (nreverse result)))
+
+(defun build-collation (ucd range ucd-directory)
+  "Read allkeys.txt (the DUCET) from UCD-DIRECTORY and build the
+collation section: the parallel collation-element arrays, the
+single-codepoint index (an ntrie32 mapping a codepoint to a packed
+(offset << 6) | count into those arrays), the contraction table, and the
+@implicitweights ranges."
+  (let ((path (make-pathname :name "allkeys" :type "txt" :defaults ucd-directory))
+	(primv (make-array 65536 :element-type '(unsigned-byte 16)
+			   :adjustable t :fill-pointer 0))
+	(secv (make-array 65536 :element-type '(unsigned-byte 16)
+			  :adjustable t :fill-pointer 0))
+	(terv (make-array 65536 :element-type '(unsigned-byte 8)
+			  :adjustable t :fill-pointer 0))
+	(single (make-hash-table))
+	(contractions nil)
+	(raw-ranges nil))
+    (flet ((emit (ces)
+	     ;; Append CES to the parallel arrays; return the packed
+	     ;; (offset << 6) | count referring to them.
+	     (let ((offset (fill-pointer primv))
+		   (count (length ces)))
+	       (dolist (ce ces)
+		 (destructuring-bind (p s te var) ce
+		   (vector-push-extend p primv)
+		   (vector-push-extend s secv)
+		   (vector-push-extend (logior te (if var #x80 0)) terv)))
+	       (logior (ash offset 6) count))))
+      (with-open-file (s path :direction :input :external-format :utf-8)
+	(loop for line = (read-line s nil) while line do
+	  (cond
+	    ((zerop (length line)))
+	    ((char= (char line 0) #\#))
+	    ((eql 0 (search "@implicitweights" line))
+	     (let* ((semi (position #\; line))
+		    (dd (search ".." line))
+		    (start (parse-integer line :start (length "@implicitweights")
+					  :end dd :radix 16 :junk-allowed t))
+		    (end (parse-integer line :start (+ dd 2) :end semi
+					 :radix 16 :junk-allowed t))
+		    (base (parse-integer line :start (1+ semi)
+					 :radix 16 :junk-allowed t)))
+	       (push (list start end base) raw-ranges)))
+	    ((char= (char line 0) #\@))
+	    (t
+	     (let ((semi (position #\; line)))
+	       (when semi
+		 (let* ((hash (position #\# line))
+			(key (parse-collation-key (subseq line 0 semi)))
+			(ces (parse-collation-elements
+			      (subseq line (1+ semi) hash)))
+			(packed (emit ces)))
+		   (if (= (length key) 1)
+		       (setf (gethash (first key) single) packed)
+		       (push (list (first key) (second key) (third key) packed)
+			     contractions))))))))))
+    ;; base-origin: smallest start among ranges sharing a base.
+    (let ((origin (make-hash-table)))
+      (dolist (r raw-ranges)
+	(destructuring-bind (start end base) r
+	  (declare (ignore end))
+	  (when (or (null (gethash base origin))
+		    (< start (gethash base origin)))
+	    (setf (gethash base origin) start))))
+      (let* ((rl (nreverse raw-ranges))
+	     (rvec (make-array (* 4 (length rl)) :element-type '(unsigned-byte 32)))
+	     (cl (nreverse contractions))
+	     (cvec (make-array (* 4 (length cl)) :element-type '(unsigned-byte 32)))
+	     (i 0))
+	(dolist (r rl)
+	  (destructuring-bind (start end base) r
+	    (setf (aref rvec i) start
+		  (aref rvec (+ i 1)) end
+		  (aref rvec (+ i 2)) base
+		  (aref rvec (+ i 3)) (gethash base origin))
+	    (incf i 4)))
+	(setf i 0)
+	(dolist (c cl)
+	  (destructuring-bind (cp1 cp2 cp3 packed) c
+	    (setf (aref cvec i) cp1
+		  (aref cvec (+ i 1)) cp2
+		  (aref cvec (+ i 2)) (or cp3 #xFFFFFFFF)
+		  (aref cvec (+ i 3)) packed)
+	    (incf i 4)))
+	(multiple-value-bind (hvec mvec lvec)
+	    (pack ucd range
+		  (lambda (ent) (gethash (ucdent-code ent) single 0))
+		  0 32 #x54)
+	  (make-collation
+	   :split #x54 :hvec hvec :mvec mvec :lvec lvec
+	   :primv (make-array (length primv) :element-type '(unsigned-byte 16)
+			      :initial-contents primv)
+	   :secv (make-array (length secv) :element-type '(unsigned-byte 16)
+			     :initial-contents secv)
+	   :terv (make-array (length terv) :element-type '(unsigned-byte 8)
+			     :initial-contents terv)
+	   :contractions cvec
+	   :ranges rvec))))))
+
 (defun build-unidata (&optional (ucd-directory "target:i18n/"))
   (format t "~&Reading data from ~S~%" (probe-file ucd-directory))
   (force-output)
@@ -1216,4 +1384,9 @@
 		0 4 split)
 	(setf (unidata-word-break *unicode-data*)
 	      (make-ntrie4 :split split :hvec hvec :mvec mvec :lvec lvec))))
+
+    (format t "~&Building collation table~%")
+    (force-output)
+    (setf (unidata-collation *unicode-data*)
+	  (build-collation ucd range ucd-directory))
     nil))
