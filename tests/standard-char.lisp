@@ -10,7 +10,7 @@
 ;; sure we test the intersection and union methods for standard-char.
 
 (define-test standard-char.typep
-    (:tag :issues)
+  (:tag :issues)
   (assert-true (typep #\a 'standard-char))
   (assert-false (typep #\tab 'standard-char))
   (assert-true (typep #\Z 'standard-char))
@@ -24,8 +24,12 @@
 
   (assert-equal (values t t)
 		(subtypep 'standard-char 'character))
+  (assert-equal (values nil t)
+		(subtypep 'character 'standard-char))
   (assert-equal (values t t)
-		(subtypep 'standard-char 'base-char)))
+		(subtypep 'standard-char 'base-char))
+  (assert-equal (values nil t)
+		(subtypep 'base-char 'standard-char)))
 
 (define-test standard-char.etypecase-15
     (:tag :issues)
