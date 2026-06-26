@@ -3347,7 +3347,9 @@
 	 (values t t))
 	((member-type-p type2)
 	 ;; If TYPE2 is a member-type, check whether it contains all standard-chars
-	 (values (subsetp +standard-chars+ (member-type-members type2))
+	 (values (every #'(lambda (c)
+			    (member c (member-type-members type2)))
+			+standard-chars+)
 		 t))
 	(t
 	 (values nil t))))
@@ -3358,7 +3360,9 @@
   (cond ((member-type-p type1)
 	 ;; If TYPE1 is a member-type, check whether it contains all
 	 ;; standard-chars.
-	 (values (subsetp (member-type-members type1) +standard-chars+)
+	 (values (every #'(lambda (c)
+			    (member c +standard-chars+))
+			(member-type-members type1))
 		 t))
 	(t
 	 (values nil t))))
