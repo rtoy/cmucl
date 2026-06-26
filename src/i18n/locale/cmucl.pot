@@ -8196,20 +8196,20 @@ msgstr ""
 msgid "~&~@<Attempt to modify the locked package ~A, by ~3i~:_~?~:>"
 msgstr ""
 
-#: src/code/package.lisp
-msgid "redefining function ~A"
-msgstr ""
-
-#: src/code/macros.lisp src/code/defstruct.lisp src/code/package.lisp
+#: src/code/macros.lisp src/code/package.lisp
 msgid "Ignore the lock and continue"
 msgstr ""
 
-#: src/code/package.lisp
-msgid "Disable package's definition-lock, then continue"
+#: src/code/macros.lisp src/code/package.lisp
+msgid "Disable the package's definition-lock then continue"
+msgstr ""
+
+#: src/code/macros.lisp src/code/package.lisp
+msgid "Unlock all packages, then continue"
 msgstr ""
 
 #: src/code/package.lisp
-msgid "Disable all package locks, then continue"
+msgid "redefining function ~A"
 msgstr ""
 
 #: src/code/package.lisp
@@ -8457,14 +8457,6 @@ msgstr ""
 
 #: src/code/package.lisp
 msgid "uninterning symbol ~A"
-msgstr ""
-
-#: src/code/package.lisp
-msgid "Disable package's lock then continue"
-msgstr ""
-
-#: src/code/macros.lisp src/code/defstruct.lisp src/code/package.lisp
-msgid "Unlock all packages, then continue"
 msgstr ""
 
 #: src/code/package.lisp
@@ -14473,10 +14465,6 @@ msgid "defining structure ~A"
 msgstr ""
 
 #: src/code/defstruct.lisp
-msgid "Disable package's definition lock then continue"
-msgstr ""
-
-#: src/code/defstruct.lisp
 msgid "Defstruct already names a declaration: ~S."
 msgstr ""
 
@@ -14833,10 +14821,6 @@ msgid "defining macro ~A"
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "Disable the package's definition-lock then continue"
-msgstr ""
-
-#: src/code/macros.lisp
 msgid "Define a compiler-macro for NAME."
 msgstr ""
 
@@ -14866,10 +14850,6 @@ msgstr ""
 
 #: src/code/macros.lisp
 msgid "defining type ~A"
-msgstr ""
-
-#: src/code/macros.lisp
-msgid "Disable package's definition-lock then continue"
 msgstr ""
 
 #: src/code/macros.lisp
