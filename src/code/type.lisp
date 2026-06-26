@@ -3347,9 +3347,10 @@
 	 (values t t))
 	((member-type-p type2)
 	 ;; If TYPE2 is a member-type, check whether it contains all standard-chars
-	 (values (every #'(lambda (c)
-			    (member c (member-type-members type2)))
-			+standard-chars+)
+	 (values (let ((members (member-type-members type2)))
+		   (every #'(lambda (c)
+			    (member c members))
+			+standard-chars+))
 		 t))
 	(t
 	 (values nil t))))
@@ -3378,8 +3379,10 @@
       ((csubtypep (specifier-type 'character) other)
        other)
       ((and (member-type-p other)
-            (subsetp (member-type-members other)
-		     +standard-chars+))
+	    ;; Check to see every member of OTHER is a STANDARD-CHAR.
+	    (every #'(lambda (c)
+		       (member c +standard-chars+))
+		   (member-type-members other)))
        sc)
       (t nil))))
 
