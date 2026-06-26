@@ -29,6 +29,7 @@ workflow:
 # for building.
 .install:
   stage: install
+  retry: 1
   artifacts:
     paths:
       - snapshot/
@@ -85,15 +86,22 @@ workflow:
 .ansi-test:
   stage: ansi-test
   artifacts:
+    # Always save artifacts even when the job fails.
+    when: always
     paths:
       - ansi-test.out
+  retry: 1
   script:
     - bin/run-ansi-tests.sh -l dist/bin/lisp
+  after_script:
+    # This after_script always runs to save the log file even if
+    # run-ansi-tests.sh fails.
     - cp ../ansi-test/test.out ansi-test.out
 
 # Default configuration for running unit tests.
 .unit-test:
   stage: test
+  retry: 1
   artifacts:
     paths:
       - test.log
