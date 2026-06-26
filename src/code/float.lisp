@@ -887,7 +887,7 @@
 (defun scale-float-maybe-underflow (x exp)
   (declare (type (or single-float double-float) x)
 	   (fixnum exp))
-  (multiple-value-bind (sig old-exp)
+  (multiple-value-bind (sig old-exp float-sign)
       (integer-decode-float x)
     (let* ((digits (float-digits x))
 	   (1+digits (1+ digits))
@@ -895,7 +895,7 @@
 		       (etypecase x
 			 (single-float vm:single-float-bias)
 			 (double-float vm:double-float-bias))))
-	   (sign (if (minusp (float-sign x)) 1 0)))
+	   (sign (if (minusp float-sign) 1 0)))
       (cond
 	((< new-exp
 	    (etypecase x
