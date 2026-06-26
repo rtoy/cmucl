@@ -421,7 +421,7 @@
 
 (defun char-equal (character &rest more-characters)
   "Returns T if all of its arguments are the same character.
-   Case is ignored."
+  Case is ignored."
   (do ((clist more-characters (cdr clist)))
       ((atom clist) T)
     (unless (= (equal-char-code (car clist))
@@ -431,7 +431,7 @@
 
 (defun char-not-equal (character &rest more-characters)
   "Returns T if no two of its arguments are the same character.
-   Case is ignored."
+  Case is ignored."
   (do* ((head character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -445,7 +445,7 @@
 
 (defun char-lessp (character &rest more-characters)
   "Returns T if its arguments are in strictly increasing alphabetic order.
-   Case is ignored."
+  Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -456,7 +456,7 @@
 
 (defun char-greaterp (character &rest more-characters)
   "Returns T if its arguments are in strictly decreasing alphabetic order.
-   Case is ignored."
+  Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -467,7 +467,7 @@
 
 (defun char-not-greaterp (character &rest more-characters)
   "Returns T if its arguments are in strictly non-decreasing alphabetic order.
-   Case is ignored."
+  Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -478,7 +478,7 @@
 
 (defun char-not-lessp (character &rest more-characters)
   "Returns T if its arguments are in strictly non-increasing alphabetic order.
-   Case is ignored."
+  Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)

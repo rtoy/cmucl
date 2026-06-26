@@ -2191,6 +2191,10 @@
 
 	   "%IEEE754-REM-PI/2"
 	   "%SINCOS"
+	   "STANDARD-CHAR-TYPE"
+	   "MAKE-STANDARD-CHAR-TYPE"
+	   "STANDARD-CHAR-TYPE-P")
+
 	   ;; Single-float functions
 	   "%ACOSF"
 	   "%ACOSHF"
