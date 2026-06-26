@@ -1225,11 +1225,11 @@ msgid "Array dimensions is not a list, integer or *:~%  ~S"
 msgstr ""
 
 #: src/code/type.lisp
-msgid "Type of characters that aren't base-char's.  None in CMU CL."
+msgid "The set of characters in the STANDARD-CHAR type"
 msgstr ""
 
 #: src/code/type.lisp
-msgid "Type corresponding to the charaters required by the standard."
+msgid "Type of characters that aren't base-char's.  None in CMU CL."
 msgstr ""
 
 #: src/code/type.lisp
@@ -5644,37 +5644,37 @@ msgstr ""
 #: src/code/char.lisp
 msgid ""
 "Returns T if all of its arguments are the same character.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if no two of its arguments are the same character.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly increasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly decreasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly non-decreasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly non-increasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
