@@ -2193,7 +2193,7 @@
 	   "%SINCOS"
 	   "STANDARD-CHAR-TYPE"
 	   "MAKE-STANDARD-CHAR-TYPE"
-	   "STANDARD-CHAR-TYPE-P")
+	   "STANDARD-CHAR-TYPE-P"
 
 	   ;; Single-float functions
 	   "%ACOSF"
