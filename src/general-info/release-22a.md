@@ -59,6 +59,8 @@ public domain.
             between `double-double-float` and `double-float`
     * #474: Add functions to print and parse C-style hex floats.
     * #495: Describe for deftype returns more information.
+    * #504: Do correct rounding in `scale-float-maybe-underflow`.
+            This was causing some denormals to be read incorrectly.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:
