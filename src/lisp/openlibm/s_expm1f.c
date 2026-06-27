@@ -38,7 +38,7 @@ Q1 = -3.3333212137e-2,		/* -0x888868.0p-28 */
 Q2 =  1.5807170421e-3;		/*  0xcf3010.0p-33 */
 
 OLM_DLLEXPORT float
-expm1f(float x)
+openlibm_expm1f(float x)
 {
 	float y,hi,lo,c,t,e,hxs,hfx,r1,twopk;
 	int32_t k,xsb;

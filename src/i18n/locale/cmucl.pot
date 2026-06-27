@@ -1225,11 +1225,11 @@ msgid "Array dimensions is not a list, integer or *:~%  ~S"
 msgstr ""
 
 #: src/code/type.lisp
-msgid "Type of characters that aren't base-char's.  None in CMU CL."
+msgid "The set of characters in the STANDARD-CHAR type"
 msgstr ""
 
 #: src/code/type.lisp
-msgid "Type corresponding to the charaters required by the standard."
+msgid "Type of characters that aren't base-char's.  None in CMU CL."
 msgstr ""
 
 #: src/code/type.lisp
@@ -5644,37 +5644,37 @@ msgstr ""
 #: src/code/char.lisp
 msgid ""
 "Returns T if all of its arguments are the same character.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if no two of its arguments are the same character.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly increasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly decreasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly non-decreasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
 msgid ""
 "Returns T if its arguments are in strictly non-increasing alphabetic order.\n"
-"   Case is ignored."
+"  Case is ignored."
 msgstr ""
 
 #: src/code/char.lisp
@@ -6031,10 +6031,10 @@ msgstr ""
 #: src/code/extensions.lisp
 msgid ""
 "Creates a temporary file with a name bound to Filename which a\n"
-" namestring.  If Directory is not provided, the temporary file is created\n"
-" in a OS-dependent location.  The Prefix is a prefix to the file name\n"
-" to be created.  If not provided a default prefix is used.\n"
-" On completion, the file is automatically removed."
+"  namestring.  If Directory is not provided, the temporary file is created\n"
+"  in a OS-dependent location.  The Prefix is a prefix to the file name\n"
+"  to be created.  If not provided a default prefix is used.\n"
+"  On completion, the file is automatically removed."
 msgstr ""
 
 #: src/code/extensions.lisp
@@ -6053,11 +6053,11 @@ msgstr ""
 #: src/code/extensions.lisp
 msgid ""
 "Return a namestring to a temporary directory.  If Directory is not\n"
-" provided, the directory is created in an OS-dependent location.  The\n"
-" Prefix is a string that is used as a prefix for the name of the\n"
-" temporary directory.  If Prefix is not given, a default prefix is\n"
-" used.  The directory and all its contents are automatically removed\n"
-" afterward."
+"  provided, the directory is created in an OS-dependent location.  The\n"
+"  Prefix is a string that is used as a prefix for the name of the\n"
+"  temporary directory.  If Prefix is not given, a default prefix is\n"
+"  used.  The directory and all its contents are automatically removed\n"
+"  afterward."
 msgstr ""
 
 #: src/code/ext-code.lisp
@@ -8243,20 +8243,20 @@ msgstr ""
 msgid "~&~@<Attempt to modify the locked package ~A, by ~3i~:_~?~:>"
 msgstr ""
 
-#: src/code/package.lisp
-msgid "redefining function ~A"
-msgstr ""
-
-#: src/code/macros.lisp src/code/defstruct.lisp src/code/package.lisp
+#: src/code/macros.lisp src/code/package.lisp
 msgid "Ignore the lock and continue"
 msgstr ""
 
-#: src/code/package.lisp
-msgid "Disable package's definition-lock, then continue"
+#: src/code/macros.lisp src/code/package.lisp
+msgid "Disable the package's definition-lock then continue"
+msgstr ""
+
+#: src/code/macros.lisp src/code/package.lisp
+msgid "Unlock all packages, then continue"
 msgstr ""
 
 #: src/code/package.lisp
-msgid "Disable all package locks, then continue"
+msgid "redefining function ~A"
 msgstr ""
 
 #: src/code/package.lisp
@@ -8504,14 +8504,6 @@ msgstr ""
 
 #: src/code/package.lisp
 msgid "uninterning symbol ~A"
-msgstr ""
-
-#: src/code/package.lisp
-msgid "Disable package's lock then continue"
-msgstr ""
-
-#: src/code/macros.lisp src/code/defstruct.lisp src/code/package.lisp
-msgid "Unlock all packages, then continue"
 msgstr ""
 
 #: src/code/package.lisp
@@ -14520,10 +14512,6 @@ msgid "defining structure ~A"
 msgstr ""
 
 #: src/code/defstruct.lisp
-msgid "Disable package's definition lock then continue"
-msgstr ""
-
-#: src/code/defstruct.lisp
 msgid "Defstruct already names a declaration: ~S."
 msgstr ""
 
@@ -14880,10 +14868,6 @@ msgid "defining macro ~A"
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "Disable the package's definition-lock then continue"
-msgstr ""
-
-#: src/code/macros.lisp
 msgid "Define a compiler-macro for NAME."
 msgstr ""
 
@@ -14913,10 +14897,6 @@ msgstr ""
 
 #: src/code/macros.lisp
 msgid "defining type ~A"
-msgstr ""
-
-#: src/code/macros.lisp
-msgid "Disable package's definition-lock then continue"
 msgstr ""
 
 #: src/code/macros.lisp
@@ -19902,6 +19882,24 @@ msgid "Return the Nth VOP in the IR2-Block pointed to by Thing."
 msgstr ""
 
 #: src/compiler/xref.lisp
+msgid ""
+"Return the name slot of an xref-context, identifying the program\n"
+"site that originated the cross-reference."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return the source file truename of an xref-context, or NIL if\n"
+"the code was not compiled from a file."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return the source-path of an xref-context, a list of positive\n"
+"integers identifying the form that contains the cross-reference."
+msgstr ""
+
+#: src/compiler/xref.lisp
 msgid "Reinitialize the cross-reference database."
 msgstr ""
 
@@ -19919,14 +19917,74 @@ msgstr ""
 
 #: src/compiler/xref.lisp
 msgid ""
-"Return a list of those program contexts where GLOBAL-VARIABLE may\n"
-"be bound at runtime."
+"Return a list of those program contexts where GLOBAL-VARIABLE may be bound "
+"at runtime.\n"
+"\n"
+"  A binding is recorded whenever the compiler emits a special binding\n"
+" for the form -- including cases that look lexical in source, such as (LET "
+"(FOO)\n"
+" ...), if FOO has been proclaimed special earlier in the compiling\n"
+" image.  WHO-BINDS reflects what the compiler did, not what the source\n"
+" text appears to say."
 msgstr ""
 
 #: src/compiler/xref.lisp
 msgid ""
-"Return a list of those program contexts where GLOBAL-VARIABLE may\n"
-"be set at runtime."
+"Return a list of those program contexts where GLOBAL-VARIABLE may be\n"
+"  set at runtime."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return a list of those program contexts where MACRO may be expanded at\n"
+"  compile time.  The caller name in each context is the form whose\n"
+"  compilation triggered the macroexpansion (a function, a method, or\n"
+"  the string \"Top-Level Form\")."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return the list of direct subclasses of CLASS.  Only direct subclasses\n"
+"  are returned; transitive subclasses are not.  CLASS is a class\n"
+"  metaobject, not a class-name symbol; use FIND-CLASS to convert a\n"
+"  name."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return the list of direct superclasses of CLASS.  Only direct\n"
+"  superclasses are returned; transitive superclasses are not.  CLASS\n"
+"  is a class metaobject, not a class-name symbol; use FIND-CLASS to\n"
+"  convert a name."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return the list of methods that specialize directly on CLASS. CLASS is\n"
+"  a class metaobject, not a class-name symbol; use FIND-CLASS to\n"
+"  convert a name."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Remove from every cross-reference database all xref-contexts whose\n"
+"  source file is NAMESTRING.  Used to clear stale entries before\n"
+"  recompiling a file."
+msgstr ""
+
+#: src/compiler/xref.lisp
+msgid ""
+"Return entries from cross-reference database DB whose source file\n"
+"  matches PATHNAME.  DB is one of :CALLS, :CALLED, :REFERENCES,\n"
+"  :BINDS, :SETS, or :MACROEXPANDS.\n"
+"\n"
+"  Each entry is a two-element list (TARGET CONTEXTS), where TARGET is\n"
+" the the symbol (or (SETF foo) form for setf functions) being\n"
+" cross-referenced ? a function name for :CALLS, :CALLED, and\n"
+" :MACROEXPANDS, a variable name for :REFERENCES, :BINDS, and :SETS.\n"
+" and CONTEXTS is the list of xref-contexts (the program sites\n"
+" originating the cross-reference) for TARGET whose file slot matches\n"
+" PATHNAME."
 msgstr ""
 
 #: src/compiler/dyncount.lisp

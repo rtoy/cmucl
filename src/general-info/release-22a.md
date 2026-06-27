@@ -60,7 +60,9 @@ public domain.
     * #474: Add functions to print and parse C-style hex floats.
     * #477: Support reading and writing double-double-float in hex
 	    format.  "w" is the suffix used to denote
-	    double-double-floats. 
+	    double-double-floats.
+    * #504: Do correct rounding in `scale-float-maybe-underflow`.
+            This was causing some denormals to be read incorrectly.
   * Other changes:
   * Improvements to the PCL implementation of CLOS:
   * Changes to building procedure:

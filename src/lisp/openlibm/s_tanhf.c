@@ -22,7 +22,7 @@
 
 static const float one=1.0, two=2.0, tiny = 1.0e-30, huge = 1.0e30;
 OLM_DLLEXPORT float
-tanhf(float x)
+openlibm_tanhf(float x)
 {
 	float t,z;
 	int32_t jx,ix;

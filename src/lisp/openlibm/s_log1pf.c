@@ -36,7 +36,7 @@ Lp7 = 1.4798198640e-01; /* 3E178897 */
 static const float zero = 0.0;
 
 OLM_DLLEXPORT float
-log1pf(float x)
+openlibm_log1pf(float x)
 {
 	float hfsq,f,c,s,z,R,u;
 	int32_t k,hx,hu,ax;

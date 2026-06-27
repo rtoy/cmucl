@@ -66,8 +66,25 @@
 (defstruct (xref-context
              (:print-function %print-xref-context)
              (:make-load-form-fun :just-dump-it-normally))
+  ;; The name identifies the program site that originated the
+  ;; cross-reference and is one of: a symbol naming a global
+  ;; function; a list (SETF foo); a list (:MACRO foo) for a macro;
+  ;; a list (:INTERNAL outer inner) for an inner function (FLET,
+  ;; LABELS, or anonymous lambda); a list (:METHOD foo (specializer
+  ;; ...)) for a method; the string "Top-Level Form" for a reference
+  ;; from a top-level form; or a string such as "defun foo" or
+  ;; "DEFSTRUCT FOO" identifying a reference from compiler-generated
+  ;; code.
   name
+  ;; The truename (in the sense of *COMPILE-FILE-TRUENAME*) of the
+  ;; source file the referencing forms were compiled from, or NIL
+  ;; if compiled from a stream or interactively.
   (file *compile-file-truename*)
+  ;; A list of positive integers identifying the form that contains
+  ;; the cross-reference.  The first integer is the number of the
+  ;; top-level form in the source file (1-based); subsequent
+  ;; integers identify nested subforms.  Always NIL when FILE is
+  ;; NIL.
   (source-path nil))
 
 (defun %print-xref-context (s stream d)
@@ -81,6 +98,18 @@
          (format stream "#<xref-context ~S~@[ in ~S~]>"
                  (xref-context-name s)
                  (xref-context-file s)))))
+
+(setf (documentation 'xref-context-name 'function)
+  _N"Return the name slot of an xref-context, identifying the program
+site that originated the cross-reference.")
+
+(setf (documentation 'xref-context-file 'function)
+  _N"Return the source file truename of an xref-context, or NIL if
+the code was not compiled from a file.")
+
+(setf (documentation 'xref-context-source-path 'function)
+  _N"Return the source-path of an xref-context, a list of positive
+integers identifying the form that contains the cross-reference.")
 
 
 ;; program contexts where a globally-defined function may be called at runtime
@@ -153,21 +182,30 @@ may be referenced at runtime."
 ;; WHO-BINDS -- interface
 ;;
 (defun who-binds (global-variable)
-  "Return a list of those program contexts where GLOBAL-VARIABLE may
-be bound at runtime."
+  "Return a list of those program contexts where GLOBAL-VARIABLE may be bound at runtime.
+
+  A binding is recorded whenever the compiler emits a special binding
+ for the form -- including cases that look lexical in source, such as (LET (FOO)
+ ...), if FOO has been proclaimed special earlier in the compiling
+ image.  WHO-BINDS reflects what the compiler did, not what the source
+ text appears to say."
   (declare (type symbol global-variable))
   (gethash global-variable *who-binds*))
 
 ;; WHO-SETS -- interface
 ;;
 (defun who-sets (global-variable)
-  "Return a list of those program contexts where GLOBAL-VARIABLE may
-be set at runtime."
+  "Return a list of those program contexts where GLOBAL-VARIABLE may be
+  set at runtime."
   (declare (type symbol global-variable))
   (gethash global-variable *who-sets*))
 
 
 (defun who-macroexpands (macro)
+  "Return a list of those program contexts where MACRO may be expanded at
+  compile time.  The caller name in each context is the form whose
+  compilation triggered the macroexpansion (a function, a method, or
+  the string \"Top-Level Form\")."
   (declare (type symbol macro))
   (gethash macro *who-macroexpands*))
 
@@ -177,22 +215,35 @@ be set at runtime."
 ;; WHO-SUBCLASSES -- interface
 ;;
 (defun who-subclasses (class)
+  "Return the list of direct subclasses of CLASS.  Only direct subclasses
+  are returned; transitive subclasses are not.  CLASS is a class
+  metaobject, not a class-name symbol; use FIND-CLASS to convert a
+  name."
   (pcl::class-direct-subclasses class))
 
 ;; WHO-SUPERCLASSES -- interface
 ;;
 (defun who-superclasses (class)
+  "Return the list of direct superclasses of CLASS.  Only direct
+  superclasses are returned; transitive superclasses are not.  CLASS
+  is a class metaobject, not a class-name symbol; use FIND-CLASS to
+  convert a name."
   (pcl::class-direct-superclasses class))
 
 ;; WHO-SPECIALIZES -- interface
 ;;
-;; generic functions defined for this class
 (defun who-specializes (class)
+  "Return the list of methods that specialize directly on CLASS. CLASS is
+  a class metaobject, not a class-name symbol; use FIND-CLASS to
+  convert a name."
   (pcl::specializer-direct-methods class))
 
 ;; Go through all the databases and remove entries from that that
 ;; reference the given Namestring.
 (defun invalidate-xrefs-for-namestring (namestring)
+  "Remove from every cross-reference database all xref-contexts whose
+  source file is NAMESTRING.  Used to clear stale entries before
+  recompiling a file."
   (labels ((matching-context (ctx)
 	     (equal namestring (if (pathnamep (xref-context-file ctx))
 				   (namestring (xref-context-file ctx))
@@ -212,6 +263,17 @@ be set at runtime."
 ;; return a list of all the matches.  Each element of the list is a
 ;; list of the target followed by the entries.
 (defun find-xrefs-for-pathname (db pathname)
+  "Return entries from cross-reference database DB whose source file
+  matches PATHNAME.  DB is one of :CALLS, :CALLED, :REFERENCES,
+  :BINDS, :SETS, or :MACROEXPANDS.
+
+  Each entry is a two-element list (TARGET CONTEXTS), where TARGET is
+ the the symbol (or (SETF foo) form for setf functions) being
+ cross-referenced — a function name for :CALLS, :CALLED, and
+ :MACROEXPANDS, a variable name for :REFERENCES, :BINDS, and :SETS.
+ and CONTEXTS is the list of xref-contexts (the program sites
+ originating the cross-reference) for TARGET whose file slot matches
+ PATHNAME."
   (let ((entries '()))
     (maphash #'(lambda (target contexts)
 		 (let ((matches '()))

@@ -47,7 +47,7 @@ one   = 1.0,
 huge   = 1.0e30;
 
 OLM_DLLEXPORT float
-atanf(float x)
+openlibm_atanf(float x)
 {
 	float w,s1,s2,z;
 	int32_t ix,hx,id;

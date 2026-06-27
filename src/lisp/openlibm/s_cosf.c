@@ -36,7 +36,7 @@ c3pio2 = 3*M_PI_2,			/* 0x4012D97C, 0x7F3321D2 */
 c4pio2 = 4*M_PI_2;			/* 0x401921FB, 0x54442D18 */
 
 OLM_DLLEXPORT float
-cosf(float x)
+openlibm_cosf(float x)
 {
 	double y;
 	int32_t n, hx, ix;
