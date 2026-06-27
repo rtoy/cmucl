@@ -1373,8 +1373,8 @@
   (:export "FLOAT-TO-HEX-STRING"
 	   "WRITE-HEX-FLOAT"
 	   "FORMAT-HEX-FLOAT"
-	   "HEX-PARSE-ERROR"
-	   "PARSE-HEX-FLOAT"))
+	   "HEX-FLOAT-PARSE-ERROR"
+	   "READ-HEX-FLOAT"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
