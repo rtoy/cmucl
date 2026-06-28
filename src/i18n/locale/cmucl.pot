@@ -185,9 +185,9 @@ msgid ""
 "  setf."
 msgstr ""
 
-#: src/code/format.lisp src/code/print.lisp src/code/irrat-dd.lisp
-#: src/code/irrat.lisp src/code/float.lisp src/code/numbers.lisp
-#: src/code/kernel.lisp
+#: src/code/format.lisp src/code/print.lisp src/code/ext-code.lisp
+#: src/code/irrat-dd.lisp src/code/irrat.lisp src/code/float.lisp
+#: src/code/numbers.lisp src/code/kernel.lisp
 msgid "Argument ~A is not a ~S: ~S."
 msgstr ""
 
@@ -1225,11 +1225,11 @@ msgid "Array dimensions is not a list, integer or *:~%  ~S"
 msgstr ""
 
 #: src/code/type.lisp
-msgid "Type of characters that aren't base-char's.  None in CMU CL."
+msgid "The set of characters in the STANDARD-CHAR type"
 msgstr ""
 
 #: src/code/type.lisp
-msgid "Type corresponding to the charaters required by the standard."
+msgid "Type of characters that aren't base-char's.  None in CMU CL."
 msgstr ""
 
 #: src/code/type.lisp
@@ -6062,34 +6062,81 @@ msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Prints a single or double float in bit-perfect C-style hex.\n"
-"   If AT-P is true, prepends '+' for non-negative finite values."
+"Remove trailing zero characters from string S, preserving internal zeros."
 msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Convert FLOAT to C-style hex string and write it to STREAM.\n"
-"  Infinities are printed as \"-inf\" and \"inf\".  NaN is printed as\n"
-"  \"nan\"."
+"Print a single- or double-float in hex format onto STREAM.\n"
+"  Float type and mantissa width are derived from the type of X."
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid "Print a double-double-float in hex format onto STREAM."
 msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Formatter for ~/ext:format-hex-float/. \n"
-"   Uses AT-SIGN-P (@) to force the sign. COLON-P (:) is currently ignored."
+"Write float X to STREAM in C-style hex format. STREAM defaults to\n"
+"  *standard-output*.\n"
+"\n"
+"   single-float        => 0x<mantissa>p<exp>f\n"
+"   double-float        => 0x<mantissa>p<exp>\n"
+"   double-double-float => 0x<mantissa>p<exp>w\n"
+"\n"
+"  Negative zero is printed with a leading minus sign."
 msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Reads a C-style hex float number from STREAM.  A single-float or\n"
-"  double-float number is returned.  A HEX-PARSE-ERROR is signaled for\n"
-"  an invalid format."
+"Return a string containing the C-style hex float representation of X.\n"
+"   single-float        => \"0x<mantissa>p<exp>f\"\n"
+"   double-float        => \"0x<mantissa>p<exp>\"\n"
+"   double-double-float => \"0x<mantissa>p<exp>w\""
 msgstr ""
 
 #: src/code/ext-code.lisp
 msgid ""
-"Parse a C-style hex float number from OBJ which is either a string or a "
-"stream."
+"Format function for use with ~/ext:format-hex-float/.\n"
+"  Ignores colon modifier.  At-sign modifier forces a leading + sign on\n"
+"  non-negative values.\n"
+"\n"
+"  Example: (format t \"~@/ext:format-hex-float/\" 3.0d0) => +0x1.8p+1"
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid "Execution of a form compiled with errors:~% ~S"
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
+"Read a C-style hex float from STREAM and return a float value.\n"
+"  Format: [sign] 0x <hex-mantissa> [. <hex-fraction>] p <exp> [f|w]\n"
+"   'f' suffix => single-float\n"
+"   'w' suffix => double-double-float\n"
+"   no suffix  => double-float\n"
+"  The binary exponent (p or P) is required.\n"
+"  Signals HEX-FLOAT-PARSE-ERROR on malformed input."
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
+"Read a C-style hex float from string S.\n"
+"  START and END bound the region to read (default: entire string).\n"
+"  Signals HEX-FLOAT-PARSE-ERROR on malformed input.\n"
+"\n"
+"  Returns two values: the float and the index of the first character\n"
+" not consumed."
+msgstr ""
+
+#: src/code/ext-code.lisp
+msgid ""
+"Read a C-style hex float from STREAM-OR-STRING.\n"
+"  If a string, START and END bound the region to read.  When reading\n"
+"  from a string, returns two values: the float and the index of the\n"
+"  first character not consumed.  When reading from a stream, returns\n"
+"  one value: the float.  Signals HEX-FLOAT-PARSE-ERROR on malformed\n"
+"  input."
 msgstr ""
 
 #: src/code/commandline.lisp
@@ -8196,20 +8243,20 @@ msgstr ""
 msgid "~&~@<Attempt to modify the locked package ~A, by ~3i~:_~?~:>"
 msgstr ""
 
-#: src/code/package.lisp
-msgid "redefining function ~A"
-msgstr ""
-
-#: src/code/macros.lisp src/code/defstruct.lisp src/code/package.lisp
+#: src/code/macros.lisp src/code/package.lisp
 msgid "Ignore the lock and continue"
 msgstr ""
 
-#: src/code/package.lisp
-msgid "Disable package's definition-lock, then continue"
+#: src/code/macros.lisp src/code/package.lisp
+msgid "Disable the package's definition-lock then continue"
+msgstr ""
+
+#: src/code/macros.lisp src/code/package.lisp
+msgid "Unlock all packages, then continue"
 msgstr ""
 
 #: src/code/package.lisp
-msgid "Disable all package locks, then continue"
+msgid "redefining function ~A"
 msgstr ""
 
 #: src/code/package.lisp
@@ -8457,14 +8504,6 @@ msgstr ""
 
 #: src/code/package.lisp
 msgid "uninterning symbol ~A"
-msgstr ""
-
-#: src/code/package.lisp
-msgid "Disable package's lock then continue"
-msgstr ""
-
-#: src/code/macros.lisp src/code/defstruct.lisp src/code/package.lisp
-msgid "Unlock all packages, then continue"
 msgstr ""
 
 #: src/code/package.lisp
@@ -14473,10 +14512,6 @@ msgid "defining structure ~A"
 msgstr ""
 
 #: src/code/defstruct.lisp
-msgid "Disable package's definition lock then continue"
-msgstr ""
-
-#: src/code/defstruct.lisp
 msgid "Defstruct already names a declaration: ~S."
 msgstr ""
 
@@ -14833,10 +14868,6 @@ msgid "defining macro ~A"
 msgstr ""
 
 #: src/code/macros.lisp
-msgid "Disable the package's definition-lock then continue"
-msgstr ""
-
-#: src/code/macros.lisp
 msgid "Define a compiler-macro for NAME."
 msgstr ""
 
@@ -14866,10 +14897,6 @@ msgstr ""
 
 #: src/code/macros.lisp
 msgid "defining type ~A"
-msgstr ""
-
-#: src/code/macros.lisp
-msgid "Disable package's definition-lock then continue"
 msgstr ""
 
 #: src/code/macros.lisp

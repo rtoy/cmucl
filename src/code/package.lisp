@@ -189,8 +189,46 @@
        (ext:compiler-let ((*enable-package-locked-errors* nil))
 	 ,@body))))
 
+;;; SIGNAL-PACKAGE-LOCKED-ERROR -- Internal
+;;;
+;;;   This encapsulates signaling of package locked errors.  LOCK-KIND
+;;; should be one of the following which will clear the corresponding
+;;; lock when the UNLOCK-PACKAGE restart is selected.
+;;;
+;;;   :definition - resets package-definition-lock
+;;;   :namespace  - resets package-lock
+;;;
+;;; Error is signaled only if *ENABLE-PACKAGE-LOCKED-ERRORS* is non-NIL.
+(defun signal-package-locked-error (package lock-kind message-control &rest message-args)
+  (declare (type (member :definition :namespace) lock-kind))
+  ;; During bootstrap, *ENABLE-PACKAGE-LOCKED-ERRORS* may not be
+  ;; bound.  Treat that is if it were NIL, so nothing is signaled.
+  (when (and (boundp '*enable-package-locked-errors*)
+	     *enable-package-locked-errors*)
+    (restart-case
+          (error 'lisp::package-locked-error
+                 :package package
+                 :format-control message-control
+                 :format-arguments message-args)
+        (continue ()
+          :report (lambda (stream)
+		    (write-string (intl:gettext "Ignore the lock and continue")
+				  stream)))
+        (unlock-package ()
+          :report (lambda (stream)
+		    (write-string (intl:gettext "Disable the package's definition-lock then continue")
+				  stream))
+	  (ecase lock-kind
+	    (:definition
+             (setf (ext:package-definition-lock package) nil))
+	    (:namespace
+	     (setf (ext:package-lock package) nil))))
+        (unlock-all ()
+          :report (lambda (stream)
+		    (write-string (intl:gettext "Unlock all packages, then continue") stream))
+          (unlock-all-packages)))))
 
-;; trap attempts to redefine a function in a locked package, and
+;; Trap attempts to redefine a function in a locked package, and
 ;; signal a continuable error.
 (defun redefining-function (function replacement)
   (declare (ignore replacement))
@@ -201,30 +239,16 @@
       (let ((package (symbol-package block-name)))
         (when package
           (when (package-definition-lock package)
-            (when (and (consp function)
-                       (member (first function)
-                               '(pcl::slot-accessor
-                                 pcl::method
-                                 pcl::fast-method
-                                 pcl::effective-method
-                                 pcl::ctor)))
-              (return-from redefining-function nil))
-            (restart-case
-                (error 'package-locked-error
-                       :package package
-                       :format-control (intl:gettext "redefining function ~A")
-                       :format-arguments (list function))
-              (continue ()
-                :report (lambda (stream)
-			  (write-string (intl:gettext "Ignore the lock and continue") stream)))
-              (unlock-package ()
-                :report (lambda (stream)
-			  (write-string (intl:gettext "Disable package's definition-lock, then continue") stream))
-                (setf (ext:package-definition-lock package) nil))
-              (unlock-all ()
-                :report (lambda (stream)
-			  (write-string (intl:gettext "Disable all package locks, then continue") stream))
-                (unlock-all-packages)))))))))
+            (unless (and (consp function)
+			 (member (first function)
+				 '(pcl::slot-accessor
+                                   pcl::method
+                                   pcl::fast-method
+                                   pcl::effective-method
+                                   pcl::ctor)))
+	      (signal-package-locked-error package :definition
+					   (intl:gettext "redefining function ~A")
+					   function))))))))
 
 
 ;;; This magical variable is T during initialization so Use-Package's of packages
@@ -1438,24 +1462,10 @@
 	 (name (symbol-name symbol))
 	 (shadowing-symbols (package-%shadowing-symbols package)))
     (declare (list shadowing-symbols) (simple-string name))
-    (when *enable-package-locked-errors*
-      (when (ext:package-lock package)
-        (restart-case
-            (error 'package-locked-error
-                   :package package
-                   :format-control (intl:gettext "uninterning symbol ~A")
-                   :format-arguments (list name))
-          (continue ()
-            :report (lambda (stream)
-		      (write-string (intl:gettext "Ignore the lock and continue") stream)))
-          (unlock-package ()
-            :report (lambda (stream)
-		      (write-string (intl:gettext "Disable package's lock then continue") stream))
-            (setf (ext:package-lock package) nil))
-          (unlock-all ()
-            :report (lambda (stream)
-		      (write-string (intl:gettext "Unlock all packages, then continue") stream))
-            (unlock-all-packages)))))
+    (when (ext:package-lock package)
+      (signal-package-locked-error package :namespace
+				 (intl:gettext "uninterning symbol ~A")
+				 name))
     ;;
     ;; If a name conflict is revealed, give use a chance to shadowing-import
     ;; one of the accessible symbols.
@@ -1620,24 +1630,11 @@
   "Makes SYMBOLS no longer exported from PACKAGE."
   (let ((package (package-or-lose package))
 	(syms ()))
-    (when *enable-package-locked-errors*
-      (when (ext:package-lock package)
-        (restart-case
-            (error 'package-locked-error
-                   :package package
-                   :format-control (intl:gettext "unexporting symbols ~A")
-                   :format-arguments (list symbols))
-          (continue ()
-            :report (lambda (stream)
-		      (write-string (intl:gettext "Ignore the lock and continue") stream)))
-          (unlock-package ()
-            :report (lambda (stream)
-		      (write-string (intl:gettext "Disable package's lock then continue") stream))
-            (setf (ext:package-lock package) nil))
-          (unlock-all ()
-            :report (lambda (stream)
-		      (write-string (intl:gettext "Unlock all packages, then continue") stream))
-            (unlock-all-packages)))))
+    (when (ext:package-lock package)
+      (signal-package-locked-error package :namespace
+				   (intl:gettext "unexporting symbols ~A")
+				   symbols))
+
     (dolist (sym (symbol-listify symbols))
       (multiple-value-bind (s w) (find-symbol (symbol-name sym) package)
 	(cond ((or (not w) (not (eq s sym)))

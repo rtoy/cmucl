@@ -885,40 +885,57 @@
 ;;; denormalized or underflows to 0.
 ;;;
 (defun scale-float-maybe-underflow (x exp)
-  (multiple-value-bind (sig old-exp)
-		       (integer-decode-float x)
+  (declare (type (or single-float double-float) x)
+	   (fixnum exp))
+  (multiple-value-bind (sig old-exp float-sign)
+      (integer-decode-float x)
     (let* ((digits (float-digits x))
+	   (1+digits (1+ digits))
 	   (new-exp (+ exp old-exp digits
 		       (etypecase x
 			 (single-float vm:single-float-bias)
 			 (double-float vm:double-float-bias))))
-	   (sign (if (minusp (float-sign x)) 1 0)))
+	   (sign (if (minusp float-sign) 1 0)))
       (cond
-       ((< new-exp
-	   (etypecase x
-	     (single-float vm:single-float-normal-exponent-min)
-	     (double-float vm:double-float-normal-exponent-min)))
-	(when (vm:current-float-trap :inexact)
-	  (error 'floating-point-inexact :operation 'scale-float
-		 :operands (list x exp)))
-	(when (vm:current-float-trap :underflow)
-	  (error 'floating-point-underflow :operation 'scale-float
-		 :operands (list x exp)))
-	(let ((shift (1- new-exp)))
-	  ;; Is it necessary to have this IF here?  Is there any case
-	  ;; where (ash sig shift) won't return 0 when
-	  ;; shift < -(digits-1)?
-	  (if (< shift (- (1- digits)))
+	((< new-exp
+	    (etypecase x
+	      (single-float vm:single-float-normal-exponent-min)
+	      (double-float vm:double-float-normal-exponent-min)))
+	 (when (vm:current-float-trap :inexact)
+	   (error 'floating-point-inexact :operation 'scale-float
+		  :operands (list x exp)))
+	 (when (vm:current-float-trap :underflow)
+	   (error 'floating-point-underflow :operation 'scale-float
+		  :operands (list x exp)))
+	 ;; To round correctly, let the hardware multiplier do the
+	 ;; rounding: build a normal float whose stored exponent is
+	 ;; bumped up by 1+DIGITS (which puts it safely in the normal
+	 ;; range), then multiply by 2^-(1+DIGITS).  The multiplier is
+	 ;; an exact power of two, so the multiplication is exact
+	 ;; apart from the unavoidable rounding step that expresses
+	 ;; the product as a denormal, which the FPU performs in the
+	 ;; current rounding mode.  If the bumped exponent is zero or
+	 ;; negative the bumped float would itself be a denormal --
+	 ;; losing the implicit 1 bit of SIG -- so handle that case
+	 ;; explicitly by returning signed zero.
+	 (let ((bumped-exp (+ new-exp 1+digits)))
+	   (cond
+	     ((<= bumped-exp 0)
 	      (etypecase x
 		(single-float (single-from-bits sign 0 0))
-		(double-float (double-from-bits sign 0 0)))
+		(double-float (double-from-bits sign 0 0))))
+	     (t
 	      (etypecase x
-		(single-float (single-from-bits sign 0 (ash sig shift)))
-		(double-float (double-from-bits sign 0 (ash sig shift)))))))
-       (t
-	(etypecase x
-	  (single-float (single-from-bits sign new-exp sig))
-	  (double-float (double-from-bits sign new-exp sig))))))))
+		(single-float
+		 (* (single-from-bits sign bumped-exp sig)
+		    (scale-float 1f0 (- 1+digits))))
+		(double-float
+		 (* (double-from-bits sign bumped-exp sig)
+		    (scale-float 1d0 (- 1+digits)))))))))
+	(t
+	 (etypecase x
+	   (single-float (single-from-bits sign new-exp sig))
+	   (double-float (double-from-bits sign new-exp sig))))))))
 
 
 ;;; SCALE-FLOAT-MAYBE-OVERFLOW  --  Internal
@@ -1135,42 +1152,74 @@
 			  (assert (= len (the fixnum (1+ digits))))
 			  (multiple-value-bind (f0)
 			      (floatit (ash bits -1))
-			    #+nil
-			    (progn
-                              (format t "x = ~A~%" x)
-			      (format t "1: f0, f1 = ~A~%" f0)
-			      (format t "   scale = ~A~%" (1+ scale)))
-			    
 			    (scale-float f0 (1+ scale))))
 			 (t
 			  (multiple-value-bind (f0)
 			      (floatit bits)
-			    #+nil
-			    (progn
-			      (format t "2: f0, f1 = ~A~%" f0)
-			      (format t "   scale = ~A~%" scale)
-			      (format t "scale-float f0 = ~A~%" (scale-float f0 scale)))
-                            (let ((min-exponent
-                                    ;; Compute the min (unbiased) exponent
-                                    (ecase format
-                                      (single-float
-                                       (- vm:single-float-normal-exponent-min
-                                          vm:single-float-bias
-                                          vm:single-float-digits))
-                                      (double-float
-                                       (- vm:double-float-normal-exponent-min
-                                          vm:double-float-bias
-                                          vm:double-float-digits)))))
-                              ;; F0 is always between 0.5 and 1.  If
-                              ;; SCALE is the min exponent, we have a
-                              ;; denormal number just less than the
-                              ;; least-positive float.  We want to
-                              ;; return the least-positive-float so
-                              ;; multiply F0 by 2 (without adjusting
-                              ;; SCALE) to get the nearest float.
-                              (if (= scale min-exponent)
-                                  (scale-float (* 2 f0) scale)
-			          (scale-float f0 scale))))))))
+			    (scale-float f0 scale))))))
+	       (denormal-excess ()
+		 ;; How many bits of precision the result loses by being
+		 ;; denormal instead of normal.  A normal-precision return
+		 ;; would be BITS*2^(SCALE-DIGITS) with BITS having DIGITS
+		 ;; bits.  Once it's known that this representation will
+		 ;; produce a denormal -- equivalently, that SCALE-FLOAT-
+		 ;; MAYBE-UNDERFLOW would take the underflow branch --
+		 ;; (1 - BIAS) - SCALE bits of the mantissa fall below the
+		 ;; denormal's narrower storage and must be rounded off.
+		 ;; Zero in the normal range.
+		 (let ((bias
+			(ecase format
+			  (single-float vm:single-float-bias)
+			  (double-float vm:double-float-bias))))
+		   (declare (fixnum bias))
+		   (max 0 (the fixnum
+				(- (the fixnum (- 1 bias))
+				   scale)))))
+	       (round-denormal (fraction-and-guard rem excess)
+		 ;; FRACTION-AND-GUARD has (1+ DIGITS) bits with one guard
+		 ;; bit; round it to (- DIGITS EXCESS) bits using round-to-
+		 ;; nearest, ties to even, with REM as the sticky tail.
+		 ;; Drops EXCESS+1 low bits in a single step.  This is the
+		 ;; one rounding the denormal result undergoes; no
+		 ;; subsequent SCALE-FLOAT call is needed, so there is no
+		 ;; double rounding.
+		 (declare (type unsigned-byte fraction-and-guard rem)
+			  (fixnum excess))
+		 (let* ((shift (1+ excess))
+			(low (ldb (byte shift 0) fraction-and-guard))
+			(quot (ash fraction-and-guard (- shift)))
+			(halfway (ash 1 excess)))
+		   (declare (fixnum shift))
+		   (cond ((< low halfway) quot)
+			 ((> low halfway) (1+ quot))
+			 ((not (zerop rem)) (1+ quot))
+			 ((oddp quot) (1+ quot))
+			 (t quot))))
+	       (denormal-from-bits (mantissa excess)
+		 ;; MANTISSA has at most (- DIGITS EXCESS) bits and is the
+		 ;; stored significand of a denormal result.  Denormal
+		 ;; storage holds (1- DIGITS) bits, so rounding can carry
+		 ;; into the smallest normal only when EXCESS = 1, in
+		 ;; which case MANTISSA can be exactly (ASH 1 (1- DIGITS)).
+		 (declare (fixnum excess))
+		 (let ((sign (if plusp 0 1)))
+		   (case format
+		     (single-float
+		      (cond ((and (= excess 1)
+				  (= mantissa
+				     (ash 1 (1- vm:single-float-digits))))
+			     (single-from-bits
+			      sign vm:single-float-normal-exponent-min 0))
+			    (t
+			     (single-from-bits sign 0 mantissa))))
+		     (double-float
+		      (cond ((and (= excess 1)
+				  (= mantissa
+				     (ash 1 (1- vm:double-float-digits))))
+			     (double-from-bits
+			      sign vm:double-float-normal-exponent-min 0))
+			    (t
+			     (double-from-bits sign 0 mantissa)))))))
 	       (floatit (bits)
 		 (let ((sign (if plusp 0 1)))
 		   (case format
@@ -1188,16 +1237,36 @@
 	      (declare (fixnum extra))
 	      (cond ((/= extra 1)
 		     (assert (> extra 1)))
-		    ((oddp fraction-and-guard)
-		     (return
-		      (if (zerop rem)
-			  (float-and-scale
-			   (if (zerop (logand fraction-and-guard 2))
-			       fraction-and-guard
-			       (1+ fraction-and-guard)))
-			  (float-and-scale (1+ fraction-and-guard)))))
 		    (t
-		     (return (float-and-scale fraction-and-guard)))))
+		     (return
+		      (let ((excess (denormal-excess)))
+			(cond
+			  ((zerop excess)
+			   ;; Normal result: original odd/even tie-break.
+			   (cond ((oddp fraction-and-guard)
+				  (if (zerop rem)
+				      (float-and-scale
+				       (if (zerop
+					    (logand fraction-and-guard 2))
+					   fraction-and-guard
+					   (1+ fraction-and-guard)))
+				      (float-and-scale
+				       (1+ fraction-and-guard))))
+				 (t
+				  (float-and-scale fraction-and-guard))))
+			  (t
+			   ;; Denormal result: re-round directly to the
+			   ;; denormal's narrower precision so the only
+			   ;; rounding step happens here.  Rounding to
+			   ;; DIGITS first and re-rounding via
+			   ;; SCALE-FLOAT-MAYBE-UNDERFLOW would double-
+			   ;; round (e.g. 7.290983e-39 would land on an
+			   ;; artifical tie at the 24-bit boundary).
+			   (let ((mantissa
+				  (round-denormal fraction-and-guard rem
+						  excess)))
+			     (declare (type unsigned-byte mantissa))
+			     (denormal-from-bits mantissa excess)))))))))
 	    (setq shifted-num (ash shifted-num -1))
 	    (incf scale)))))))
 
