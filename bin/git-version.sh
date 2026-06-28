@@ -8,7 +8,7 @@ git-version.sh [-hfv]
     -f    The version is printed as a C file #define expression.
           Otherwise, the version is just printed to stdout
 
-    -v    Use this as the version instead of using `git describe`, which
+    -v    Use this as the version instead of using 'git describe', which
           is the default
 
 Determine the version of cmucl.  By
@@ -36,25 +36,60 @@ if [ -n "$VERSION" ]; then
     GIT_HASH="$VERSION"
     DEFAULT_VERSION="$VERSION"
 else
-    GIT_HASH="`(git describe --dirty 2>/dev/null || git describe 2>/dev/null)`"
+    # Get the current branch.
+    BRANCH="`git branch --show-current`"
+    if [ "$BRANCH" = "master" ]; then
+	# On the master branch, use simple git describe --dirty for the version
+	DEFAULT_VERSION="`git describe --dirty || git describe 2>/dev/null`"
+    elif [ -n "$BRANCH" ]; then
+	# We're on some branch.  Just use the branch name.
+	DEFAULT_VERSION="$BRANCH"
+    else
+	# We're not on a branch.  We need to do something different.
+	# The option --all allows use to use the the branch name or
+	# tag name as appropriate.  This is much more informative.
+	# However, we have to remove everything before the first slash
+	# which contains things like "tags/", "head/", or "pipelines/"
+	# (from CI).
+	GIT_DESC="`git describe --dirty || git describe 2>/dev/null`"
+	GIT_HASH="`echo ${GIT_DESC} | sed 's;^[^/]*/;;' 2>/dev/null`"
 
-    if [ `expr "X$GIT_HASH" : 'Xsnapshot-[0-9][0-9][0-9][0-9]-[01][0-9]'` != 0 ]; then
-	# The git hash looks like snapshot-yyyy-mm-<stuff>.  Remove the
-	# "snapshot-" part.
-	DEFAULT_VERSION=`expr "$GIT_HASH" : "snapshot-\(.*\)"`
-    elif [ `expr "X$GIT_HASH" : 'X[0-9][0-9][a-f]'` != 0 ]; then
-	# The git hash looks like a release which is 3 hex digits.  Use it as is.
-	DEFAULT_VERSION="${GIT_HASH}"
+	case "$GIT_HASH" in
+	    snapshot-[0-9][0-9][0-9][0-9]-[01][0-9])
+		# The git hash looks like snapshot-yyyy-mm-<stuff>.  Remove the
+		# "snapshot-" part.
+		DEFAULT_VERSION=`expr "$GIT_HASH" : "snapshot-\(.*\)"`
+		;;
+	    [0-9][0-9][a-f])
+		# The git hash looks like a release which is 3 hex digits.
+		# Use it as is.
+		DEFAULT_VERSION="${GIT_HASH}"
+		;;
+	    [0-9][0-9][0-9][0-9][0-9]*)
+		# Assuming this is CI which seems to produce a githash like
+		# "pipeline/<digits>".  Make the version include "ci-" so we
+		# know this was done via CI.
+		DEFAULT_VERSION="ci-${GIT_HASH}"
+		;;
+	    *)
+		# Use whatever we have.  This handles the case where
+		# we're checked on some git hash.  In that we we have
+		# "head/closest-branch-nn-gxxxxxx" where nn is the
+		# number of commits after the closest branch and
+		# xxxxxx is the git hash.
+		DEFAULT_VERSION="${GIT_HASH}"
+		;;
+	esac
     fi
 
     if [ -z "$DEFAULT_VERSION" ]; then
-	echo "Unable to determine a default version from hash $GIT_HASH"
+	echo "Unable to determine a default version from git describe: $GIT_DESC"
 	exit 1;
     fi
 fi
 
 if [ -z "$FILE" ]; then
-    echo $DEFAULT_VERSION
+    echo "$DEFAULT_VERSION"
 else
     cat <<EOF
 /*
