@@ -74,6 +74,7 @@ extern void openlibm_sincosf(float, float*, float*);
 extern float __ieee754_acosf(float);
 extern float __ieee754_acoshf(float);
 extern float __ieee754_logf(float);
+extern float __ieee754_log2f(float);
 extern float __ieee754_atanhf(float);
 extern float __ieee754_asinf(float);
 extern float __ieee754_atan2f(float, float);
@@ -610,6 +611,6 @@ lisp_log2f(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_log2f(x);
 #else
-    return log2f(x);
+    return __ieee754_log2f(x);
 #endif
 }
