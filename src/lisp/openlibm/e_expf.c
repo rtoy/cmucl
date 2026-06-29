@@ -58,6 +58,11 @@ __ieee754_expf(float x)
 		 return x+x;	 		/* NaN */
             if(hx==0x7f800000)
 		return (xsb==0)? x:0.0;		/* exp(+-inf)={inf,0} */
+	    /*
+	     * Signal overflow.  This keeps the compiler from
+	     * constant-folding the result that then no longer signals
+	     * an overflow.
+	     */
 	    if(x > o_threshold) {
 		volatile float fhuge = huge;
 		return fhuge*fhuge; /* overflow */
