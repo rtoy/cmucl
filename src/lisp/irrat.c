@@ -105,7 +105,8 @@ extern float __ieee754_hypotf(float, float);
             return fdlibm_setexception(x, FDLIBM_OVERFLOW); \
         }						    \
     } while (0)
-    
+
+
 double
 lisp_sin(double x)
 {
