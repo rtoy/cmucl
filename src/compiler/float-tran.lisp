@@ -711,15 +711,15 @@
     (single-float) (values null single-float single-float)
     (movable foldable flushable))
 
-(deftransform cis ((x) (single-float) * :when :both)
-  `(multiple-value-bind (ign s c)
-       (kernel::%%sincosf x)
-     (declare (ignore ign))
-     (complex c s)))
-
 (deftransform cis ((x) (double-float) * :when :both)
   `(multiple-value-bind (ign s c)
        (kernel::%%sincos x)
+     (declare (ignore ign))
+     (complex c s)))
+
+(deftransform cis ((x) (single-float) * :when :both)
+  `(multiple-value-bind (ign s c)
+       (kernel::%%sincosf x)
      (declare (ignore ign))
      (complex c s)))
 
