@@ -40,33 +40,31 @@
 ;;; call, and saves number consing to boot.
 ;;;
 (defmacro def-math-rtn (name num-args)
-  (multiple-value-bind (c-name lisp-name)
-      (if (listp name)
-	  (values (first name) (second name))
-	  (values name
-		  (intern (concatenate 'simple-string
-				       "%"
-				       (string-upcase name)))))
-    `(progn
-       (declaim (inline ,lisp-name))
-       (export ',lisp-name)
-       (alien:def-alien-routine (,c-name ,lisp-name) double-float
-	 ,@(let ((results nil))
-	     (dotimes (i num-args (nreverse results))
-	       (push (list (intern (format nil "ARG-~D" i))
-			   'double-float)
-		     results))))
-       ;; The C99 convention is for the float version to have the same
-       ;; name as the double version but with an "f" appended.  We do
-       ;; the same here and append an "F" to the lisp name too.
-       (alien:def-alien-routine (,(concatenate 'string c-name "f")
-				 ,(symbolicate lisp-name "F"))
-	 single-float
-	 ,@(let ((results nil))
-	     (dotimes (i num-args (nreverse results))
-	       (push (list (intern (format nil "ARG-~D" i))
-			   'single-float)
-		     results)))))))
+  (flet ((def-rtn (c-name lisp-name type)
+	   `(progn
+	      (declaim (inline ,lisp-name))
+	      (export ',lisp-name)
+	      (alien:def-alien-routine (,c-name ,lisp-name) ,type
+		,@(let ((results nil))
+		    (dotimes (i num-args (nreverse results))
+		      (push (list (intern (format nil "ARG-~D" i))
+				  type)
+			    results)))))))
+    (multiple-value-bind (c-name lisp-name)
+	(if (listp name)
+	    (values (first name) (second name))
+	    (values name
+		    (intern (concatenate 'simple-string
+					 "%"
+					 (string-upcase name)))))
+      `(progn
+	 ,(def-rtn c-name lisp-name 'double-float)
+	 ;; The C99 convention is for the float version to have the same
+	 ;; name as the double version but with an "f" appended.  We do
+	 ;; the same here and append an "F" to the lisp name too.
+	 ,(def-rtn (concatenate 'string c-name "f")
+	           (symbolicate lisp-name "F")
+	           'single-float)))))
 
 (eval-when (compile load eval)
 
