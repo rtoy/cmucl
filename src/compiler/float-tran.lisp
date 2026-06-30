@@ -688,12 +688,9 @@
     (let ((primf (intern (string (symbolicate prim "F"))
 			 "KERNEL")))
     (deftransform name ((x) '(single-float) rtype :eval-name t)
-      #-core-math
-      `(coerce (,prim (coerce x 'double-float)) 'single-float)
-      #+core-math
       `(,primf x))
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
-		  `(,prim x)))))
+      `(,prim x)))))
 
 #-core-math
 (dolist (stuff '((sqrt %sqrt float)))
