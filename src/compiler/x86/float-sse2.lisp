@@ -844,20 +844,6 @@
   (frob %fsqrt/single-float %sqrtf single-reg single-float sqrtss)
   (frob %fsqrt/double-float %sqrt double-reg double-float sqrtsd))
   
-#+nil
-(define-vop (fsqrt)
-  (:args (x :scs (double-reg)))
-  (:results (y :scs (double-reg)))
-  (:translate %sqrt)
-  (:policy :fast-safe)
-  (:arg-types double-float)
-  (:result-types double-float)
-  (:note _N"inline float arithmetic")
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:generator 1
-    (note-this-location vop :internal-error)
-    (inst sqrtsd y x)))
 
 (macrolet ((frob ((name translate mov sc type) &body body)
              `(define-vop (,name)
