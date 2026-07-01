@@ -645,10 +645,10 @@
 (defmacro with-temporary-file ((filename &key directory (prefix "cmucl-temp-file-"))
 			       &parse-body (forms decls))
   _N"Creates a temporary file with a name bound to Filename which a
- namestring.  If Directory is not provided, the temporary file is created
- in a OS-dependent location.  The Prefix is a prefix to the file name
- to be created.  If not provided a default prefix is used.
- On completion, the file is automatically removed."
+  namestring.  If Directory is not provided, the temporary file is created
+  in a OS-dependent location.  The Prefix is a prefix to the file name
+  to be created.  If not provided a default prefix is used.
+  On completion, the file is automatically removed."
   (let ((fd (gensym "FD-"))
 	(file-template (gensym "TEMP-PATH-"))
 	(unique-filename (gensym "UNIQUE-FILENAME-")))
@@ -701,11 +701,11 @@
 (defmacro with-temporary-directory ((dirname &key directory (prefix  "cmucl-temp-dir-"))
 				    &parse-body (forms decls))
  _N"Return a namestring to a temporary directory.  If Directory is not
- provided, the directory is created in an OS-dependent location.  The
- Prefix is a string that is used as a prefix for the name of the
- temporary directory.  If Prefix is not given, a default prefix is
- used.  The directory and all its contents are automatically removed
- afterward."
+  provided, the directory is created in an OS-dependent location.  The
+  Prefix is a string that is used as a prefix for the name of the
+  temporary directory.  If Prefix is not given, a default prefix is
+  used.  The directory and all its contents are automatically removed
+  afterward."
   (let ((err (gensym "ERR-"))
 	(dir-template (gensym "DIR-TEMPLATE-")))
     `(let ((,dir-template (create-template ,directory ,prefix))

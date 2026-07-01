@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: src/code/extensions.lisp $")
+  "$Header: src/code/ext-code.lisp $")
 ;;;
 ;;;
 ;;; **********************************************************************
@@ -21,164 +21,399 @@
 (intl:textdomain "cmucl")
 
 
+;;;; **********************************************************************
 ;;;; C-style hex float printer and parser
+
+;;; **********************************************************************
+;;; Write float in C-style hex float literal
+
+(defun trim-trailing-zeros (s)
+  "Remove trailing zero characters from string S, preserving internal zeros."
+  (let ((last-nonzero (position #\0 s :test #'char/= :from-end t)))
+    (if last-nonzero
+        (subseq s 0 (1+ last-nonzero))
+        "")))
+
+(defun write-hex-float-double (x stream)
+  "Print a single- or double-float in hex format onto STREAM.
+  Float type and mantissa width are derived from the type of X."
+  (multiple-value-bind (mantissa-bits suffix-char min-c-exp)
+      (etypecase x
+        (single-float (values (1- (float-digits 1f0)) #\f (- vm:single-float-bias)))
+        (double-float (values (1- (float-digits 1d0)) nil (- vm:double-float-bias))))
+    ;; Print the sign, but not for NaN since float-sign is unreliable there.
+    (when (and (not (float-nan-p x)) (minusp (float-sign x)))
+      (write-char #\- stream))
+    (let ((x (abs x)))
+      (cond
+        ((float-nan-p x)
+         (write-string "0x0.0p+nan" stream)
+         (when suffix-char (write-char suffix-char stream)))
+
+        ((float-infinity-p x)
+         (write-string "0x1.0p+inf" stream)
+         (when suffix-char (write-char suffix-char stream)))
+
+        ((zerop x)
+         (write-string "0x0p+0" stream)
+         (when suffix-char (write-char suffix-char stream)))
+
+        (t
+         ;; integer-decode-float returns (significand exponent sign) where
+         ;; x = significand * 2^exponent.  The significand has mantissa-bits+1
+         ;; bits for normal numbers (including the implicit leading 1 bit) and
+         ;; fewer for denormals, which CMUCL normalizes so that the significand
+         ;; always has exactly mantissa-bits+1 bits, adjusting the exponent
+         ;; accordingly.
+         (multiple-value-bind (significand exponent sign)
+             (integer-decode-float x)
+           (declare (ignore sign))
+           ;; c-exp is the C-style binary exponent, i.e. the exponent of the
+           ;; leading 1 bit.  For a normal number with a (mantissa-bits+1)-bit
+           ;; significand, c-exp = exponent + mantissa-bits.
+           (let* ((c-exp      (+ exponent mantissa-bits))
+                  ;; A number is denormal if its c-exp is below the minimum
+                  ;; normal exponent.  We cannot detect this by checking the
+                  ;; significand bit width because CMUCL normalizes denormals.
+                  (denormalp  (< c-exp min-c-exp))
+                  ;; We print the fraction in hex, rounding up the number of
+                  ;; mantissa bits to a multiple of 4.
+                  (hex-digits (ceiling mantissa-bits 4))
+                  ;; frac-shift aligns the mantissa-bits fraction bits to the
+                  ;; hex-digits*4 grid.
+                  (frac-shift (- (* 4 hex-digits) mantissa-bits))
+                  ;; For a normal number, mask off the implicit leading 1 bit
+                  ;; to get just the fraction, then shift to align to hex grid.
+                  ;; For a denormal, the leading bit is 0 so there is nothing
+                  ;; to mask; instead shift right to account for the reduced
+                  ;; exponent.
+                  (frac       (if denormalp
+                                  (ash significand
+                                       (+ (- c-exp min-c-exp) frac-shift))
+                                  (ash (logand significand
+                                               (1- (ash 1 mantissa-bits)))
+                                       frac-shift)))
+                  ;; Denormals are printed with exponent min-c-exp and a
+                  ;; leading 0 digit rather than 1.
+                  (out-exp    (if denormalp min-c-exp c-exp))
+                  (frac-str   (trim-trailing-zeros
+                                (format nil "~v,'0X" hex-digits frac))))
+             (write-string "0x" stream)
+             (write-char (if denormalp #\0 #\1) stream)
+             (unless (zerop (length frac-str))
+               (write-char #\. stream)
+               (write-string frac-str stream))
+             (write-char #\p stream)
+             (when (>= out-exp 0) (write-char #\+ stream))
+             (format stream "~D" out-exp)
+             (when suffix-char (write-char suffix-char stream)))))))
+    (values)))
+
+#+double-double
+(defun write-hex-float-double-double (x stream)
+  "Print a double-double-float in hex format onto STREAM."
+  (let* ((hi  (kernel:double-double-hi x))
+         (lo  (kernel:double-double-lo x)))
+    ;; Print the sign, but not for NaN since float-sign is unreliable there.
+    (when (and (not (float-nan-p x)) (minusp (float-sign hi)))
+      (write-char #\- stream))
+    (let ((hi (abs hi)))
+      (cond
+        ((float-nan-p x)
+         (write-string "0x0.0p+nanw" stream))
+
+        ((float-infinity-p x)
+         (write-string "0x1.0p+infw" stream))
+
+        ((zerop hi)
+         (write-string "0x0p+0w" stream))
+
+        (t
+         (multiple-value-bind (sig-hi exp-hi sign-hi)
+             (integer-decode-float hi)
+           (declare (ignore sign-hi))
+           (multiple-value-bind (sig-lo exp-lo sign-lo)
+               (integer-decode-float lo)
+             (let* ((double-mant-bits  (1- (float-digits 1d0)))
+                    (min-c-exp         (- vm:double-float-bias))
+                    ;; Preserve the sign of lo when combining with hi.
+                    (signed-sig-lo     (* sign-lo sig-lo))
+                    ;; Reconstruct the full integer significand by shifting
+                    ;; sig-hi up to align with sig-lo's exponent, then adding.
+                    ;; If lo is zero there is nothing to add.
+                    (combined-sig      (if (zerop lo)
+                                           sig-hi
+                                           (+ (ash sig-hi (- exp-hi exp-lo))
+                                              signed-sig-lo)))
+                    ;; The combined significand is at the scale of lo's exponent
+                    ;; (or hi's if lo is zero).
+                    (combined-exp      (if (zerop lo) exp-hi exp-lo))
+                    (total-bits        (integer-length combined-sig))
+                    ;; c-exp is the exponent of the leading 1 bit, i.e. the
+                    ;; C-style binary exponent.
+                    (c-exp             (+ combined-exp total-bits -1))
+                    (denormalp         (< c-exp min-c-exp))
+                    ;; The number of fraction bits we need to print spans from
+                    ;; the leading bit of hi down to the last bit of lo.  When
+                    ;; lo is zero we only need double-mant-bits fraction bits.
+                    ;; We round up to a multiple of 4 for clean hex output.
+                    (raw-frac-bits     (if (zerop lo)
+                                           double-mant-bits
+                                           (+ (- exp-hi exp-lo) double-mant-bits)))
+                    (frac-bits         (* 4 (ceiling raw-frac-bits 4)))
+                    (hex-digits        (/ frac-bits 4))
+                    ;; Shift the combined significand so the fraction bits are
+                    ;; left-aligned in a frac-bits-wide field.  For denormals,
+                    ;; adjust the shift to account for the reduced exponent.
+                    (shift             (if denormalp
+                                           (+ (- frac-bits (1- total-bits))
+                                              (- c-exp min-c-exp))
+                                           (- frac-bits (1- total-bits))))
+                    ;; For normal numbers mask off the leading 1 bit; for
+                    ;; denormals the leading bit is already 0 so no mask needed.
+                    (frac              (if denormalp
+                                           (ash combined-sig shift)
+                                           (logand (ash combined-sig shift)
+                                                   (1- (ash 1 frac-bits)))))
+                    (out-exp           (if denormalp min-c-exp c-exp))
+                    (frac-str          (trim-trailing-zeros
+                                         (format nil "~v,'0X" hex-digits frac))))
+               (write-string "0x" stream)
+               (write-char (if denormalp #\0 #\1) stream)
+               (unless (zerop (length frac-str))
+                 (write-char #\. stream)
+                 (write-string frac-str stream))
+               (write-char #\p stream)
+               (when (>= out-exp 0) (write-char #\+ stream))
+               (format stream "~D" out-exp)
+               (write-char #\w stream))))))
+      (values))))
+
+;;; WRITE-HEX-FLOAT  -- Public
+;;;
+;;; Writes a float value (single, double, or double-double) in hex
+;;; format to a stream, defaulting to *standard-output*.
+(defun write-hex-float (x &optional (stream *standard-output*))
+  "Write float X to STREAM in C-style hex format. STREAM defaults to
+  *standard-output*.
+
+   single-float        => 0x<mantissa>p<exp>f
+   double-float        => 0x<mantissa>p<exp>
+   double-double-float => 0x<mantissa>p<exp>w
+
+  Negative zero is printed with a leading minus sign."
+  (let ((*print-case* :downcase))
+    (etypecase x
+      (single-float
+       (write-hex-float-double x stream))
+      (double-float
+       (write-hex-float-double x stream))
+      #+double-double
+      (double-double-float
+       (write-hex-float-double-double x stream))))
+  (values))
 
 ;;; FLOAT-TO-HEX-STRING  -- Public
 ;;;
 ;;; Return a string representing a single and double-floats in C-style
 ;;; hex format.
-(defun float-to-hex-string (val &optional at-p)
-  "Prints a single or double float in bit-perfect C-style hex.
-   If AT-P is true, prepends '+' for non-negative finite values."
-  (cond ((ext:float-nan-p val)
-	 "0x0.0p+nan")
-        ((ext:float-infinity-p val) 
-         (if (plusp val)
-	     (if at-p
-		 "+0x1.0p+inf" "0x1.0p+inf")
-	     "-0x1.0p+inf"))
-        (t
-         (multiple-value-bind (sign exp-bits mantissa bias precision suffix)
-             (typecase val
-               (single-float
-                (let ((bits (ldb (byte 32 0) (kernel:single-float-bits val))))
-                  (values (ldb (byte 1 31) bits)
-                          (ldb (byte 8 23) bits)
-                          (ash (ldb (byte 23 0) bits) 1) ; Align 23 to 6 hex digits
-                          127 6 "f")))
-               (double-float
-                (multiple-value-bind (hi lo) (kernel:double-float-bits val)
-                  (values (ldb (byte 1 31) hi)
-                          (ldb (byte 11 20) hi)
-                          (logior (ash (ldb (byte 20 0) hi) 32) (ldb (byte 32 0) lo))
-                          1023 13 "")))
-               (t (error "Unsupported float type: ~S" (type-of val))))
-           
-           (let ((sign-str (cond ((= sign 1) "-")
-                                 (at-p "+")
-                                 (t ""))))
-             (if (and (zerop exp-bits) (zerop mantissa))
-                 (format nil "~A0x0.0p+0~A" sign-str suffix)
-                 (format nil "~A0x~A.~V,'0Xp~A~A"
-                         sign-str
-                         (if (zerop exp-bits) "0" "1")
-                         precision
-                         mantissa
-                         (if (zerop exp-bits) (1+ (- bias)) (- exp-bits bias))
-                         suffix)))))))
-
-;;; WRITE-HEX-FLOAT -- Public
-;;;
-;;; Writes a float number in C-style hex format to the given stream.
-(defun write-hex-float (float &optional (stream *standard-output*))
-  "Convert FLOAT to C-style hex string and write it to STREAM.
-  Infinities are printed as \"-inf\" and \"inf\".  NaN is printed as
-  \"nan\"."
-  (declare (float float))
-  (write-string (float-to-hex-string float)
-		stream))
+(defun float-to-hex-string (x)
+  "Return a string containing the C-style hex float representation of X.
+   single-float        => \"0x<mantissa>p<exp>f\"
+   double-float        => \"0x<mantissa>p<exp>\"
+   double-double-float => \"0x<mantissa>p<exp>w\""
+  (with-output-to-string (s)
+    (write-hex-float x s)))
 
 ;;; FORMAT-HEX-FLOAT -- Public
 ;;;
 ;;; Function that can be used in a FORMAT ~/
-(defun format-hex-float (stream arg colon-p at-sign-p &optional width)
-  "Formatter for ~/ext:format-hex-float/. 
-   Uses AT-SIGN-P (@) to force the sign. COLON-P (:) is currently ignored."
-  (declare (ignore width colon-p))
-  (write-string (float-to-hex-string arg at-sign-p)
-                stream))
+(defun format-hex-float (stream x colonp atsignp &rest args)
+  "Format function for use with ~/ext:format-hex-float/.
+  Ignores colon modifier.  At-sign modifier forces a leading + sign on
+  non-negative values.
 
-(define-condition hex-parse-error (parse-error)
-  ((text :initarg :text :reader hex-parse-error-text)
-   (message :initarg :message :reader hex-parse-error-message))
+  Example: (format t \"~@/ext:format-hex-float/\" 3.0d0) => +0x1.8p+1"
+  (declare (ignore colonp args))
+  (when (and atsignp
+             (not (float-nan-p x))
+             (not (minusp (float-sign x))))
+    (write-char #\+ stream))
+  (write-hex-float x stream))
+
+;;; **********************************************************************
+;;; Read C-style hex float literal
+
+
+(define-condition hex-float-parse-error (parse-error)
+  ((input    :initarg :input    :reader hex-float-parse-error-input)
+   (position :initarg :position :reader hex-float-parse-error-position)
+   (message  :initarg :message  :reader hex-float-parse-error-message))
   (:report (lambda (c s)
-             (format s "Hex float parse error in ~S: ~A" 
-                     (hex-parse-error-text c) (hex-parse-error-message c)))))
+             (format s "Hex float parse error~@[ at position ~D~]: ~A~@[ (input: ~S)~]"
+                     (hex-float-parse-error-position c)
+                     (hex-float-parse-error-message c)
+                     (hex-float-parse-error-input c)))))
 
-;;; PARSE-HEX-FLOAT-FROM-STREAM -- Public
+(defun read-hex-float-from-stream (stream)
+  "Read a C-style hex float from STREAM and return a float value.
+  Format: [sign] 0x <hex-mantissa> [. <hex-fraction>] p <exp> [f|w]
+   'f' suffix => single-float
+   'w' suffix => double-double-float
+   no suffix  => double-float
+  The binary exponent (p or P) is required.
+  Signals HEX-FLOAT-PARSE-ERROR on malformed input."
+  (flet ((parse-error (pos msg &rest args)
+           (error 'ext:hex-float-parse-error
+                  :position pos
+                  :message  (apply #'format nil msg args)
+                  :input    nil))
+         (pos ()
+           (file-position stream))
+         (accumulate-digits (radix &optional (initial 0))
+           ;; Read digits of RADIX from STREAM, accumulating into an
+           ;; integer starting from INITIAL.  Returns two values: the
+           ;; accumulated value and the number of digits read.
+           (let ((value initial)
+                 (count 0))
+             (loop for c = (peek-char nil stream nil nil)
+                   while (and c (digit-char-p c radix))
+                   do (setf value (+ (* value radix)
+                                     (digit-char-p (read-char stream) radix)))
+                      (incf count))
+             (values value count))))
+
+    (let ((sign 1)
+          (significand 0)
+          (n-frac 0)
+          (exponent 0)
+          (suffix nil))
+
+      ;; Optional sign
+      (let ((c (peek-char nil stream nil nil)))
+        (cond ((null c)
+               (parse-error (pos) "Unexpected end of input, expected hex float"))
+              ((char= c #\-)
+	       (setf sign -1)
+	       (read-char stream))
+              ((char= c #\+)
+	       (read-char stream))))
+
+      ;; Expect "0"
+      (let ((c (read-char stream nil nil)))
+        (unless (and c (char= c #\0))
+          (parse-error (pos) "Expected '0' to begin hex float prefix '0x', got ~S" c)))
+
+      ;; Expect "x" or "X"
+      (let ((c (read-char stream nil nil)))
+        (unless (and c (member c '(#\x #\X)))
+          (parse-error (pos) "Expected 'x' or 'X' after '0', got ~S" c)))
+
+      ;; Hex digits before optional decimal point
+      (multiple-value-bind (value count)
+          (accumulate-digits 16)
+        (setf significand value)
+        (let ((mantissa-digitsp (plusp count)))
+
+          ;; Optional fractional part — continue accumulating into significand
+          (when (and (peek-char nil stream nil nil)
+                     (char= (peek-char nil stream nil nil) #\.))
+            (read-char stream)
+            (let ((frac-start (pos)))
+              (multiple-value-bind (value count)
+                  (accumulate-digits 16 significand)
+                (setf significand value
+                      n-frac count)
+                (when (and (zerop count)
+                           (peek-char nil stream nil nil)
+                           (not (member (peek-char nil stream nil nil)
+					'(#\p #\P))))
+                  (parse-error frac-start "Expected hex digits after decimal point")))))
+
+          ;; Mantissa must have at least one hex digit total
+          (unless (or mantissa-digitsp (plusp n-frac))
+            (parse-error (pos) "Expected at least one hex digit in mantissa"))))
+
+      ;; Required binary exponent (p or P)
+      (let ((c (read-char stream nil nil)))
+        (unless (and c (member c '(#\p #\P)))
+          (parse-error (pos) "Expected 'p' or 'P' exponent marker, got ~S" c)))
+
+      ;; Exponent sign and digits
+      (let ((exp-sign 1))
+        (when (member (peek-char nil stream nil nil)
+		      '(#\+ #\-))
+          (when (char= (read-char stream)
+		       #\-)
+	    (setf exp-sign -1)))
+        (let ((exp-start (pos)))
+          (multiple-value-bind (value count)
+              (accumulate-digits 10)
+            (when (zerop count)
+              (parse-error exp-start "Expected decimal digits for exponent"))
+            (setf exponent (* exp-sign value)))))
+
+      ;; Optional suffix: 'f'/'F' => single, 'w'/'W' => double-double, none => double
+      (when (peek-char nil stream nil nil)
+        (let ((c (peek-char nil stream nil nil)))
+          (cond ((member c '(#\f #\F))
+		 (read-char stream)
+		 (setf suffix :single))
+                ((member c '(#\w #\W))
+		 (read-char stream)
+		 (setf suffix :double-double))
+                ((not (or (member c '(#\space #\tab #\newline #\return
+                                     #\) #\] #\} #\,))
+                          (digit-char-p c 10)))
+                 (parse-error (pos) "Unexpected character ~S after exponent" c)))))
+
+      ;; Adjust exponent for fractional hex digits.
+      ;; Convert significand to float before multiplying by sign so that
+      ;; (* -1 0.0d0) = -0.0d0, preserving negative zero.
+      (let ((adjusted-exp (- exponent (* 4 n-frac))))
+        (ecase suffix
+          ((nil)
+           (scale-float (* sign (float significand 1.0d0)) adjusted-exp))
+
+          (:single
+           (scale-float (* sign (float significand 1.0f0))
+			adjusted-exp))
+
+          (:double-double
+           (let* ((sig-bits    (integer-length significand))
+                  (split-shift (max 0 (- sig-bits 53)))
+                  (sig-hi      (ash significand (- split-shift)))
+                  (sig-lo      (- significand (ash sig-hi split-shift)))
+                  (exp-hi      (+ adjusted-exp split-shift))
+                  (hi          (scale-float (* sign (float sig-hi 1.0d0)) exp-hi))
+                  (lo          (scale-float (* sign (float sig-lo 1.0d0)) adjusted-exp)))
+             (kernel:make-double-double-float hi lo))))))))
+
+
+(defun read-hex-float-from-string (s &key (start 0) end)
+  "Read a C-style hex float from string S.
+  START and END bound the region to read (default: entire string).
+  Signals HEX-FLOAT-PARSE-ERROR on malformed input.
+
+  Returns two values: the float and the index of the first character
+ not consumed."
+  (with-input-from-string (stream s :start start :end end)
+    (values (read-hex-float-from-stream stream)
+            (file-position stream))))
+
+
+;;; READ-HEX-FLOAT -- Public
 ;;;
-;;; Parse a C-style float hex string from a stream.  Invalid formats
-;;; signal an error.  A single-float or double-float may be returned.
-(defun parse-hex-float-from-stream (stream)
-  "Reads a C-style hex float number from STREAM.  A single-float or
-  double-float number is returned.  A HEX-PARSE-ERROR is signaled for
-  an invalid format."
-  (let* ((sign 1.0d0)
-         (char (peek-char t stream))) ; Skip whitespace
-    
-    ;; 1. Handle Sign
-    (when (member char '(#\+ #\-))
-      (when (char= (read-char stream) #\-) (setf sign -1.0d0))
-      (setf char (peek-char nil stream)))
-
-    ;; 2. Verify '0x' Prefix
-    (unless (and (char-equal (read-char stream) #\0)
-                 (char-equal (read-char stream) #\x))
-      (error 'hex-parse-error :text "Stream" :message "Missing '0x' prefix"))
-
-    ;; 3. Read Significand
-    (let ((val 0.0d0)
-          (digits-read 0))
-      ;; Integer part loop
-      (loop for c = (peek-char nil stream nil nil)
-            for digit = (and c (digit-char-p c 16))
-            while digit
-            do (read-char stream)
-               (setf val (+ (* val 16.0d0) digit))
-               (incf digits-read))
-      
-      ;; Fractional part loop
-      (when (eql (peek-char nil stream nil nil) #\.)
-        (read-char stream) ; Consume #\.
-        (loop with weight = (/ 1.0d0 16.0d0)
-              for c = (peek-char nil stream nil nil)
-              for digit = (and c (digit-char-p c 16))
-              while digit
-              do (read-char stream)
-                 (setf val (+ val (* digit weight)))
-                 (setf weight (/ weight 16.0d0))
-                 (incf digits-read)))
-
-      (unless (plusp digits-read)
-        (error 'hex-parse-error :text "Stream" :message "No hex digits in significand"))
-
-      ;; 4. Handle Exponent 'p'
-      (let ((p-char (read-char stream nil)))
-        (unless (and p-char (char-equal p-char #\p))
-          (error 'hex-parse-error :text "Stream" :message "Missing exponent 'p'"))
-        
-        ;; Size 6 handles sign + 3-4 digits + buffer
-        (let ((exp-str (make-array 6 :element-type 'character 
-                                     :fill-pointer 0 
-                                     :adjustable t)))
-          (loop for c = (peek-char nil stream nil nil)
-                while (and c (find c "+-0123456789"))
-                do (vector-push-extend (read-char stream) exp-str))
-          
-          (when (zerop (length exp-str))
-            (error 'hex-parse-error :text "Stream" :message "Invalid or missing exponent"))
-
-          (let* ((raw-exp (parse-integer exp-str))
-                 (suffix (peek-char nil stream nil #\Space))
-                 (is-single (char-equal suffix #\f))
-                 ;; Final Construction
-                 (result (* sign (scale-float val raw-exp))))
-            
-            (when is-single (read-char stream)) ; Consume 'f'
-            
-            (if is-single 
-                (float result 1.0f0) 
-                result)))))))
-
-;;; PARSE-HEX-FLOAT -- Public
-;;;
-;;; Parse a C-style hex float number from either a string or a stream.
-(defun parse-hex-float (obj)
-  "Parse a C-style hex float number from OBJ which is either a string or a stream."
-  (declare (type (or string stream) obj))
-  (etypecase obj
-    (string
-     (with-input-from-string (s obj)
-       (parse-hex-float-from-stream s)))
+;;; Read a C-style hex float number from either a string or a stream.
+(defun read-hex-float (stream-or-string &key (start 0) end)
+  "Read a C-style hex float from STREAM-OR-STRING.
+  If a string, START and END bound the region to read.  When reading
+  from a string, returns two values: the float and the index of the
+  first character not consumed.  When reading from a stream, returns
+  one value: the float.  Signals HEX-FLOAT-PARSE-ERROR on malformed
+  input."
+  (etypecase stream-or-string
     (stream
-     (parse-hex-float-from-stream obj))))
+     (read-hex-float-from-stream stream-or-string))
+    (string
+     (read-hex-float-from-string stream-or-string :start start :end end))))

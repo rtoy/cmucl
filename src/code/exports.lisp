@@ -1373,8 +1373,8 @@
   (:export "FLOAT-TO-HEX-STRING"
 	   "WRITE-HEX-FLOAT"
 	   "FORMAT-HEX-FLOAT"
-	   "HEX-PARSE-ERROR"
-	   "PARSE-HEX-FLOAT"))
+	   "HEX-FLOAT-PARSE-ERROR"
+	   "READ-HEX-FLOAT"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
@@ -2190,7 +2190,34 @@
 	   "STANDARD-PPRINT-DISPATCH-TABLE-MODIFIED-ERROR"
 
 	   "%IEEE754-REM-PI/2"
-	   "%SINCOS")
+	   "%SINCOS"
+	   "STANDARD-CHAR-TYPE"
+	   "MAKE-STANDARD-CHAR-TYPE"
+	   "STANDARD-CHAR-TYPE-P"
+
+	   ;; Single-float functions
+	   "%ACOSF"
+	   "%ACOSHF"
+	   "%ASINF"
+	   "%ASINHF"
+	   "%ATAN2F"
+	   "%ATANF"
+	   "%ATANHF"
+	   "%COSF"
+	   "%COSHF"
+	   "%EXPF"
+	   "%EXPM1F"
+	   "%HYPOTF"
+	   "%LOG10F"
+	   "%LOG1PF"
+	   "%LOG2F"
+	   "%LOGF"
+	   "%POWF"
+	   "%SINF"
+	   "%SINHF"
+	   "%TANF"
+	   "%TANHF"
+	   )
   #+heap-overflow-check
   (:export "DYNAMIC-SPACE-OVERFLOW-WARNING-HIT"
 	   "DYNAMIC-SPACE-OVERFLOW-ERROR-HIT"

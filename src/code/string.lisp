@@ -280,37 +280,11 @@
 		    ,(if lessp
 			 `nil
 			 `(- (the fixnum index) ,offset1)))
-		   #-unicode
 		   ((,(if lessp 'char< 'char>)
 		     (schar string1 index)
 		     (schar string2 (+ (the fixnum index) (- start2 start1))))
 		    (- (the fixnum index) ,offset1))
-		   #-unicode
-		   (t nil)
-		   #+unicode
-		   (t
-		    ;; Compare in code point order.  See
-		    ;; http://icu-project.org/docs/papers/utf16_code_point_order.html
-		    (flet ((fixup (code)
-			     (if (>= code #xe000)
-				 (- code #x800)
-				 (+ code #x2000))))
-		      (declare (inline fixup))
-		      (let* ((c1 (char-code (schar string1 index)))
-			     (c2 (char-code (schar string2
-						   (+ (the fixnum index)
-						      (- start2 start1))))))
-			(cond ((and (>= c1 #xd800)
-				    (>= c2 #xd800))
-			       (let ((fix-c1 (fixup c1))
-				     (fix-c2 (fixup c2)))
-				 (if (,(if lessp '< '>) fix-c1 fix-c2)
-				     (- (the fixnum index) ,offset1)
-				     nil)))
-			      (t
-			       (if (,(if lessp '< '>) c1 c2)
-				   (- (the fixnum index) ,offset1)
-				   nil)))))))
+		   (t nil))
 	     ,(if equalp `(- (the fixnum end1) ,offset1) 'nil))))))
 ) ; eval-when
 
