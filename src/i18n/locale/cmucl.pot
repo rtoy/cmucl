@@ -6105,10 +6105,6 @@ msgid ""
 msgstr ""
 
 #: src/code/ext-code.lisp
-msgid "Execution of a form compiled with errors:~% ~S"
-msgstr ""
-
-#: src/code/ext-code.lisp
 msgid ""
 "Read a C-style hex float from STREAM and return a float value.\n"
 "  Format: [sign] 0x <hex-mantissa> [. <hex-fraction>] p <exp> [f|w]\n"
