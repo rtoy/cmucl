@@ -8239,15 +8239,15 @@ msgstr ""
 msgid "~&~@<Attempt to modify the locked package ~A, by ~3i~:_~?~:>"
 msgstr ""
 
-#: src/code/macros.lisp src/code/package.lisp
+#: src/code/package.lisp
 msgid "Ignore the lock and continue"
 msgstr ""
 
-#: src/code/macros.lisp src/code/package.lisp
+#: src/code/package.lisp
 msgid "Disable the package's definition-lock then continue"
 msgstr ""
 
-#: src/code/macros.lisp src/code/package.lisp
+#: src/code/package.lisp
 msgid "Unlock all packages, then continue"
 msgstr ""
 
