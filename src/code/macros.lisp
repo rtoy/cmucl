@@ -122,11 +122,10 @@
         (ext:valid-function-name-p name)
       (declare (ignore valid))
       (let ((package (symbol-package block-name)))
-        (when package
-          (when (ext:package-definition-lock package)
-	    (signal-package-locked-error package :definition
-					 (intl:gettext "defining macro ~A")
-					 name))))))
+        (when (and package (ext:package-definition-lock package))
+	  (signal-package-locked-error package :definition
+				       (intl:gettext "defining macro ~A")
+				       name)))))
   (clear-info function where-from name)
   (setf (macro-function name) definition)
   (setf (documentation name 'function) doc)
