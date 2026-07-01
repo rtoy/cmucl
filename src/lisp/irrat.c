@@ -32,6 +32,7 @@ extern double cr_hypot(double, double);
 extern double cr_log1p(double);
 extern double cr_expm1(double);
 extern void cr_sincos(double, double *, double *);
+extern double cr_log2(double);
 
 extern float cr_sinf(float);
 extern float cr_cosf(float);
@@ -54,6 +55,7 @@ extern float cr_hypotf(float, float);
 extern float cr_log1pf(float);
 extern float cr_expm1f(float);
 extern void cr_sincosf(float, float *, float *);
+extern float cr_log2f(float);
 #else
 #include "openlibm_math.h"
 /*
@@ -72,6 +74,7 @@ extern void openlibm_sincosf(float, float*, float*);
 extern float __ieee754_acosf(float);
 extern float __ieee754_acoshf(float);
 extern float __ieee754_logf(float);
+extern float __ieee754_log2f(float);
 extern float __ieee754_atanhf(float);
 extern float __ieee754_asinf(float);
 extern float __ieee754_atan2f(float, float);
@@ -102,7 +105,7 @@ extern float __ieee754_hypotf(float, float);
             return fdlibm_setexception(x, FDLIBM_OVERFLOW); \
         }						    \
     } while (0)
-    
+
 
 double
 lisp_sin(double x)
@@ -363,6 +366,16 @@ lisp_sincos(double x, double *s, double *c)
 #endif
 }
 
+double
+lisp_log2(double x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_log2(x);
+#else
+    return fdlibm_log2(x);
+#endif
+}
+
 /*
  * The single-float versions of the special functions.  When core-math
  * is set, we use the single-float core-math functions.  Otherwise, we
@@ -590,5 +603,15 @@ lisp_sincosf(float x, float *s, float *c)
     extern void openlibm_sincosf(float x, float *s, float *c);
 
     openlibm_sincosf(x, s, c);
+#endif
+}
+
+float
+lisp_log2f(float x)
+{
+#ifdef FEATURE_CORE_MATH
+    return cr_log2f(x);
+#else
+    return __ieee754_log2f(x);
 #endif
 }
