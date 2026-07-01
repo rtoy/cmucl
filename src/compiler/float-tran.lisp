@@ -640,7 +640,7 @@
     (double-float) (double-float 0.0d0)
     (movable foldable flushable))
 
-#+x86
+#+(and x86 sse2)
 (defknown (%sqrtf)
     (single-float) (single-float 0f0)
     (movable foldable flushable))
