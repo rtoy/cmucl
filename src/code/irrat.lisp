@@ -211,6 +211,12 @@
     (%sqrt x))
   )
 
+#+(and x86 sse2)
+(defun %sqrtf (x)
+  (declare (single-float x)
+	   (values single-float))
+  (%sqrtf x))
+
 ;; Slightly simplified interface to __ieee754_rem_pio2, but instead of
 ;; needing to pass an array in, the output array is broken up into two
 ;; output values instead.  This is easier for the user, and we don't

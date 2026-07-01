@@ -2232,7 +2232,8 @@
            "ATOMIC-POP-SYMBOL-VALUE"
            "ATOMIC-PUSHA"
            "ATOMIC-PUSHD"
-	   "%UNARY-FROUND")
+	   "%UNARY-FROUND"
+	   "%SQRTF")
   #+x87
   (:export "%COS-QUICK" "%SIN-QUICK" "%TAN-QUICK")
   ;;#+double-double

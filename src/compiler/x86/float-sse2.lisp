@@ -826,6 +826,25 @@
   (frob * mulss */single-float 4 mulsd */double-float 5 t)
   (frob / divss //single-float 12 divsd //double-float 19 nil))
 
+(macrolet
+    ((frob (name translate sc type inst)
+       `(define-vop (fsqrt)
+	  (:args (x :scs (,sc)))
+	  (:results (y :scs (,sc)))
+	  (:translate ,translate)
+	  (:policy :fast-safe)
+	  (:arg-types ,type)
+	  (:result-types ,type)
+	  (:note _N"inline float arithmetic")
+	  (:vop-var vop)
+	  (:save-p :compute-only)
+	  (:generator 1
+	    (note-this-location vop :internal-error)
+	    (inst ,inst y x)))))
+  (frob %fsqrt/single-float %sqrtf single-reg single-float sqrtss)
+  (frob %fsqrt/double-float %sqrt double-reg double-float sqrtsd))
+  
+#+nil
 (define-vop (fsqrt)
   (:args (x :scs (double-reg)))
   (:results (y :scs (double-reg)))
@@ -837,8 +856,8 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 1
-     (note-this-location vop :internal-error)
-     (inst sqrtsd y x)))
+    (note-this-location vop :internal-error)
+    (inst sqrtsd y x)))
 
 (macrolet ((frob ((name translate mov sc type) &body body)
              `(define-vop (,name)
