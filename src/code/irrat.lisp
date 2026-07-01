@@ -40,28 +40,37 @@
 ;;; call, and saves number consing to boot.
 ;;;
 (defmacro def-math-rtn (name num-args)
-  (multiple-value-bind (c-name lisp-name)
-      (if (listp name)
-	  (values (first name) (second name))
-	  (values name
-		  (intern (concatenate 'simple-string
-				       "%"
-				       (string-upcase name)))))
-    `(progn
-       (declaim (inline ,lisp-name))
-       (export ',lisp-name)
-       (alien:def-alien-routine (,c-name ,lisp-name) double-float
-	 ,@(let ((results nil))
-	     (dotimes (i num-args (nreverse results))
-	       (push (list (intern (format nil "ARG-~D" i))
-			   'double-float)
-		     results)))))))
+  (flet ((def-rtn (c-name lisp-name type)
+	   `(progn
+	      (declaim (inline ,lisp-name))
+	      (export ',lisp-name)
+	      (alien:def-alien-routine (,c-name ,lisp-name) ,type
+		,@(let ((results nil))
+		    (dotimes (i num-args (nreverse results))
+		      (push (list (intern (format nil "ARG-~D" i))
+				  type)
+			    results)))))))
+    (multiple-value-bind (c-name lisp-name)
+	(if (listp name)
+	    (values (first name) (second name))
+	    (values name
+		    (intern (concatenate 'simple-string
+					 "%"
+					 (string-upcase name)))))
+      `(progn
+	 ,(def-rtn c-name lisp-name 'double-float)
+	 ;; The C99 convention is for the float version to have the same
+	 ;; name as the double version but with an "f" appended.  We do
+	 ;; the same here and append an "F" to the lisp name too.
+	 ,(def-rtn (concatenate 'string c-name "f")
+	           (symbolicate lisp-name "F")
+	           'single-float)))))
 
 (eval-when (compile load eval)
 
 (defun handle-reals (function var)
   `((((foreach fixnum single-float bignum ratio))
-     (coerce (,function (coerce ,var 'double-float)) 'single-float))
+     (,(symbolicate function "F") (coerce ,var 'single-float)))
     ((double-float)
      (,function ,var))
     #+double-double
@@ -213,21 +222,34 @@
   (y0 double-float :out)
   (y1 double-float :out))
 
-(declaim (inline %%sincos))
+(declaim (inline %%sincos %%sincosf))
 (alien:def-alien-routine ("lisp_sincos" %%sincos)
   c-call:void
   (x double-float)
   (s double-float :out)
   (c double-float :out))
 
+(alien:def-alien-routine ("lisp_sincosf" %%sincosf)
+  c-call:void
+  (x single-float)
+  (s single-float :out)
+  (c single-float :out))
+
 (declaim (inline %sincos))
 (export '%sincos)
 (defun %sincos (x)
-  (declare (double-float x))
-  (multiple-value-bind (ign s c)
-      (%%sincos x)
-    (declare (ignore ign))
-    (values s c)))
+  (declare (float x))
+  (etypecase x
+    (single-float
+     (multiple-value-bind (ign s c)
+	 (%%sincosf x)
+       (declare (ignore ign))
+       (values s c)))
+    (double-float
+     (multiple-value-bind (ign s c)
+	 (%%sincos x)
+       (declare (ignore ign))
+       (values s c)))))
 
 
 ;;;; Power functions.
@@ -993,17 +1015,17 @@
   (if (complexp theta)
       (error (intl:gettext "Argument to CIS is complex: ~S") theta)
       (number-dispatch ((theta real))
-	((rational)
-	 (let ((arg (coerce theta 'double-float)))
-	   (multiple-value-bind (s c)
-	       (%sincos arg)
-	     (complex (coerce c 'single-float)
-		      (coerce s 'single-float)))))
-	(((foreach single-float double-float))
-	 (multiple-value-bind (s c)
-	     (%sincos (coerce theta 'double-float))
-	   (complex (coerce c '(dispatch-type theta))
-		    (coerce s '(dispatch-type theta)))))
+	(((foreach rational single-float))
+	 (let ((arg (coerce theta 'single-float)))
+	   (multiple-value-bind (ign s c)
+	       (%%sincosf arg)
+	     (declare (ignore ign))
+	     (complex c s))))
+	((double-float)
+	 (multiple-value-bind (ign s c)
+	     (%%sincos theta)
+	     (declare (ignore ign))
+	   (complex c s)))
 	#+double-double
 	((double-double-float)
 	 (multiple-value-bind (s c)
@@ -1016,14 +1038,19 @@
     ((rational)
      (if (or (> number 1) (< number -1))
 	 (complex-asin number)
-	 (coerce (%asin (coerce number 'double-float)) 'single-float)))
-    (((foreach single-float double-float))
+	 (%asinf (coerce number 'single-float))))
+    ((single-float)
      (if (or (float-nan-p number)
 	     (and (<= number (coerce 1 '(dispatch-type number)))
 		  (>= number (coerce -1 '(dispatch-type number)))))
-	 (coerce (%asin (coerce number 'double-float))
-		 '(dispatch-type number))
+	 (%asinf number)
 	 (complex-asin number)))
+    ((double-float)
+     (if (or (float-nan-p number)
+	     (and (<= number (coerce 1 '(dispatch-type number)))
+		  (>= number (coerce -1 '(dispatch-type number)))))
+	 (%asin number))
+     (complex-asin number))
     #+double-double
     ((double-double-float)
      (if (or (float-nan-p number)
@@ -1040,13 +1067,18 @@
     ((rational)
      (if (or (> number 1) (< number -1))
 	 (complex-acos number)
-	 (coerce (%acos (coerce number 'double-float)) 'single-float)))
-    (((foreach single-float double-float))
+	 (%acosf (coerce number 'single-float))))
+    ((single-float)
      (if (or (float-nan-p number)
 	     (and (<= number (coerce 1 '(dispatch-type number)))
 		  (>= number (coerce -1 '(dispatch-type number)))))
-	 (coerce (%acos (coerce number 'double-float))
-		 '(dispatch-type number))
+	 (%acosf number)
+	 (complex-acos number)))
+    ((double-float)
+     (if (or (float-nan-p number)
+	     (and (<= number (coerce 1 '(dispatch-type number)))
+		  (>= number (coerce -1 '(dispatch-type number)))))
+	 (%acos number)
 	 (complex-acos number)))
     #+double-double
     ((double-double-float)
@@ -1138,12 +1170,15 @@
      ;; acosh is complex if number < 1
      (if (< number 1)
 	 (complex-acosh number)
-	 (coerce (%acosh (coerce number 'double-float)) 'single-float)))
-    (((foreach single-float double-float))
+	 (%acoshf (coerce number 'single-float))))
+    ((single-float)
      (if (< number (coerce 1 '(dispatch-type number)))
 	 (complex-acosh number)
-	 (coerce (%acosh (coerce number 'double-float))
-		 '(dispatch-type number))))
+	 (%acoshf number)))
+    ((double-float)
+     (if (< number (coerce 1 '(dispatch-type number)))
+	 (complex-acosh number)
+	 (%acosh number)))
     #+double-double
     ((double-double-float)
      (if (< number 1w0)
@@ -1159,13 +1194,17 @@
      ;; atanh is complex if |number| > 1
      (if (or (> number 1) (< number -1))
 	 (complex-atanh number)
-	 (coerce (%atanh (coerce number 'double-float)) 'single-float)))
-    (((foreach single-float double-float))
+	 (%atanhf (coerce number 'single-float))))
+    ((single-float)
      (if (or (> number (coerce 1 '(dispatch-type number)))
 	     (< number (coerce -1 '(dispatch-type number))))
 	 (complex-atanh number)
-	 (coerce (%atanh (coerce number 'double-float))
-		 '(dispatch-type number))))
+	 (%atanhf number)))
+    ((double-float)
+     (if (or (> number (coerce 1 '(dispatch-type number)))
+	     (< number (coerce -1 '(dispatch-type number))))
+	 (complex-atanh number)
+	 (%atanh number)))
     #+double-double
     ((double-double-float)
      (if (or (> number 1w0)
