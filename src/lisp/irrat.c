@@ -173,6 +173,8 @@ double
 lisp_cosh(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_OVERFLOW(fabs(x));
+
     return cr_cosh(x);
 #else    
     return cosh(x);
@@ -456,6 +458,8 @@ float
 lisp_sinhf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_OVERFLOW(x);
+
     return cr_sinhf(x);
 #else    
     return sinhf(x);
@@ -466,6 +470,8 @@ float
 lisp_coshf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    MAYBE_SIGNAL_OVERFLOW(fabs(x));
+
     return cr_coshf(x);
 #else    
     return coshf(x);
@@ -497,12 +503,12 @@ lisp_asinhf(float x)
 float
 lisp_acoshf(float x)
 {
-#ifdef FEATURE_CORE_MATH
-    return cr_acoshf(x);
-#else    
     MAYBE_SIGNAL_INVALID(x < 1, x);
     MAYBE_SIGNAL_OVERFLOW(x);
 
+#ifdef FEATURE_CORE_MATH
+    return cr_acoshf(x);
+#else    
     return acoshf(x);
 #endif
 }
@@ -602,6 +608,13 @@ float
 lisp_expm1f(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    /*
+     * If x is +inf, return +inf, to match what expm1 does.
+     */
+    if (isinf(x) && (x > 0)) {
+	return x;
+    }
+
     return cr_expm1f(x);
 #else    
     return expm1f(x);
