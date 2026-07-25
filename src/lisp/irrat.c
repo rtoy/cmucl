@@ -398,6 +398,14 @@ float
 lisp_cosf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    /*
+     * For finite x and 0 < |x| < 2^(-25), we want to signal inexact
+     * and also return x.  Currently, cr_cosf doesn't do that, but
+     * cr_cos does.  This makes the two consistent.
+     */
+    if (isfinite(x) && (x != 0) && (fabsf(x) < 0x1p-25f)) {
+	fdlibm_setexception(x, FDLIBM_INEXACT);
+    }
     return cr_cosf(x);
 #else    
     return cosf(x);
