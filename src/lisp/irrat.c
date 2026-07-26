@@ -492,6 +492,15 @@ lisp_tanhf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_tanhf(x);
 #else    
+    /*
+     * Signal inexact for |x| >= 9.  tanhf doesn't because the
+     * compiler constant folds the result to 1 instead of signaling
+     * inexact.
+     */
+    if (isnormal(x) && (fabsf(x) >= 9)) {
+	fdlibm_setexception(x, FDLIBM_INEXACT);
+    }
+
     return tanhf(x);
 #endif
 }
