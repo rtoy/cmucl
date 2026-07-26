@@ -23,431 +23,395 @@
   (kernel:make-single-float #x7f800001)
   "A random single-float signaling NaN value")
 
-(define-test %cosh.exceptions
-  (:tag :fdlibm)
-  (assert-error 'floating-point-overflow
-		(kernel:%cosh 1000d0))
-  (assert-error 'floating-point-overflow
-		(kernel:%cosh -1000d0))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%cosh *snan*))
-  (assert-true (ext:float-nan-p (kernel:%cosh *qnan*)))
+;;; A test body is written once, using the markers below, and
+;;; DEF-FLOAT-EXCEPTIONS-TESTS substitutes the value appropriate to each
+;;; float format to produce one test per format:
+;;;
+;;;   %fun			The routine under test
+;;;   +snan+ +qnan+		A signaling and a quiet NaN
+;;;   +infinity+		Positive and negative infinity
+;;;   +negative-infinity+
+;;;   +most-positive-float+	MOST-POSITIVE-<format>-FLOAT
+;;;   +most-negative-float+	MOST-NEGATIVE-<format>-FLOAT
+;;;   (%float number)		NUMBER in the format under test; NUMBER must
+;;;                               be a rational or double-float
+;;;
+;;; Nothing else is touched, so anything that is not a marker means what
+;;; it says.
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+
+(defun single-float-routine-name (name)
+  "Return the name of the single-float version of the routine NAME.
+  The C99 convention, which CMUCL follows, is to append an \"f\" to the
+  name of the double-float version."
+  (intern (string (ext:symbolicate name "F"))
+	  (symbol-package name)))
+
+(defun subst-float-markers (form markers format)
+  "Copy FORM, replacing each marker symbol that is a key of the alist
+  MARKERS by the corresponding value, and each form (%FLOAT NUMBER) by
+  NUMBER coerced to the float format FORMAT.  Everything else is copied
+  unchanged."
+  (cond ((symbolp form)
+	 (let ((marker (assoc form markers :test #'eq)))
+	   (if marker
+	       (cdr marker)
+	       form)))
+	((atom form)
+	 form)
+	((eq (car form) '%float)
+	 (let ((number (second form)))
+	   ;; A single-float has already lost the precision the
+	   ;; double-float test needs.
+	   (unless (or (rationalp number)
+		       (typep number 'double-float))
+	     (error "The argument of ~S must be a rational or a double-float, not ~S"
+		    '%float number))
+	   (coerce number format)))
+	(t
+	 (cons (subst-float-markers (car form) markers format)
+	       (subst-float-markers (cdr form) markers format)))))
+
+) ; eval-when
+
+(defmacro def-float-exceptions-tests (routine options &body body)
+  "Define a pair of tests named ROUTINE.EXCEPTIONS and
+  ROUTINEf.EXCEPTIONS for the double-float and single-float versions,
+  respectively, of ROUTINE.  OPTIONS is handed to DEFINE-TEST
+  unchanged.  BODY is the test body, written using the markers above."
+  (let ((single (single-float-routine-name routine)))
+    `(progn
+       (define-test ,(ext:symbolicate routine ".EXCEPTIONS")
+	   ,options
+	 ,@(subst-float-markers
+	    body
+	    `((%fun . ,routine)
+	      (+snan+ . *snan*)
+	      (+qnan+ . *qnan*)
+	      (+infinity+ . ext:double-float-positive-infinity)
+	      (+negative-infinity+ . ext:double-float-negative-infinity)
+	      (+most-positive-float+ . most-positive-double-float)
+	      (+most-negative-float+ . most-negative-double-float))
+	    'double-float))
+       (define-test ,(ext:symbolicate single ".EXCEPTIONS")
+	   ,options
+	 ,@(subst-float-markers
+	    body
+	    `((%fun . ,single)
+	      (+snan+ . *sf-snan*)
+	      (+qnan+ . *sf-qnan*)
+	      (+infinity+ . ext:single-float-positive-infinity)
+	      (+negative-infinity+ . ext:single-float-negative-infinity)
+	      (+most-positive-float+ . most-positive-single-float)
+	      (+most-negative-float+ . most-negative-single-float))
+	    'single-float)))))
+
+(def-float-exceptions-tests kernel:%cosh
+    (:tag :fdlibm)
   (assert-error 'floating-point-overflow
-		(kernel:%coshf 1000f0))
+		(%fun (%float 1000)))
   (assert-error 'floating-point-overflow
-		(kernel:%coshf -1000f0))
+		(%fun (%float -1000)))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%coshf *sf-snan*))
-  (assert-true (ext:float-nan-p (kernel:%coshf *sf-qnan*)))
-  
-  
+		(%fun +snan+))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
   ;; Same, but with overflow's masked
   (ext:with-float-traps-masked (:overflow)
-    (assert-equal ext:double-float-positive-infinity
-		  (kernel:%cosh 1000d0))
-    (assert-equal ext:double-float-positive-infinity
-		  (kernel:%cosh -1000d0))
-    (assert-equal ext:double-float-positive-infinity
-		  (kernel:%cosh ext:double-float-positive-infinity))
-    (assert-equal ext:double-float-positive-infinity
-		  (kernel:%cosh ext:double-float-negative-infinity))
-
-    (assert-equal ext:single-float-positive-infinity
-		  (kernel:%coshf 1000f0))
-    (assert-equal ext:single-float-positive-infinity
-		  (kernel:%coshf -1000f0))
-    (assert-equal ext:single-float-positive-infinity
-		  (kernel:%coshf ext:single-float-positive-infinity))
-    (assert-equal ext:single-float-positive-infinity
-		  (kernel:%coshf ext:single-float-negative-infinity)))
+    (assert-equal +infinity+
+		  (%fun (%float 1000)))
+    (assert-equal +infinity+
+		  (%fun (%float -1000)))
+    (assert-equal +infinity+
+		  (%fun +infinity+))
+    (assert-equal +infinity+
+		  (%fun +negative-infinity+)))
   ;; Test NaN
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%cosh *snan*)))
-    (assert-true (ext:float-nan-p (kernel:%coshf *sf-snan*)))))
+    (assert-true (ext:float-nan-p (%fun +snan+)))))
 
-(define-test %sinh.exceptions
-  (:tag :fdlibm)
+(def-float-exceptions-tests kernel:%sinh
+    (:tag :fdlibm)
   (assert-error 'floating-point-overflow
-		(kernel:%sinh 1000d0))
+		(%fun (%float 1000)))
   (assert-error 'floating-point-overflow
-		(kernel:%sinh -1000d0))
+		(%fun (%float -1000)))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%sinh *snan*))
-  (assert-true (ext:float-nan-p (kernel:%sinh *qnan*)))
-
-  (assert-error 'floating-point-overflow
-		(kernel:%sinhf 1000f0))
-  (assert-error 'floating-point-overflow
-		(kernel:%sinhf -1000f0))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%sinhf *sf-snan*))
-  (assert-true (ext:float-nan-p (kernel:%sinhf *sf-qnan*)))
+		(%fun +snan+))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
   ;; Same, but with overflow's masked
   (ext:with-float-traps-masked (:overflow)
-    (assert-equal ext:double-float-positive-infinity
-		  (kernel:%sinh 1000d0))
-    (assert-equal ext:double-float-negative-infinity
-		  (kernel:%sinh -1000d0))
-    (assert-equal ext:double-float-positive-infinity
-		  (kernel:%sinh ext:double-float-positive-infinity))
-    (assert-equal ext:double-float-negative-infinity
-		  (kernel:%sinh ext:double-float-negative-infinity))
-    (assert-equal ext:single-float-positive-infinity
-		  (kernel:%sinhf 1000f0))
-    (assert-equal ext:single-float-negative-infinity
-		  (kernel:%sinhf -1000f0))
-    (assert-equal ext:single-float-positive-infinity
-		  (kernel:%sinhf ext:single-float-positive-infinity))
-    (assert-equal ext:single-float-negative-infinity
-		  (kernel:%sinhf ext:single-float-negative-infinity)))
+    (assert-equal +infinity+
+		  (%fun (%float 1000)))
+    (assert-equal +negative-infinity+
+		  (%fun (%float -1000)))
+    (assert-equal +infinity+
+		  (%fun +infinity+))
+    (assert-equal +negative-infinity+
+		  (%fun +negative-infinity+)))
   ;; Test NaN
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%sinh *qnan*)))
-    (assert-true (ext:float-nan-p (kernel:%sinhf *sf-qnan*))))
+    (assert-true (ext:float-nan-p (%fun +snan+))))
   ;; sinh(x) = x for |x| < 2^-28.  Should signal inexact unless x = 0.
-  (let ((x (scale-float 1d0 -29))
-	(x0 0d0))
+  (let ((x (scale-float (%float 1) -29))
+	(x0 (%float 0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
-	(assert-eql 0d0 (kernel:%sinh x0)))
+	(assert-eql (%float 0) (%fun x0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
-		      (kernel:%sinh x)))))
+		      (%fun x)))))
 
-(define-test %tanh.exceptions
-  (:tag :fdlibm)
-  (assert-true (ext:float-nan-p (kernel:%tanh *qnan*)))
+(def-float-exceptions-tests kernel:%tanh
+    (:tag :fdlibm)
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%tanh *snan*))
-  (assert-true (ext:float-nan-p (kernel:%tanhf *sf-qnan*)))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%tanhf *sf-snan*))
+		(%fun +snan+))
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%tanh *snan*)))
-    (assert-true (ext:float-nan-p (kernel:%tanhf *sf-snan*))))
+    (assert-true (ext:float-nan-p (%fun +snan+))))
   ;; tanh(x) = +/- 1 for |x| > 22, raising inexact, always.
-  (let ((x 22.1d0))
+  (let ((x (%float 22.1d0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
-		      (kernel:%tanh x)))))
+		      (%fun x)))))
 
-(define-test %acosh.exceptions
-  (:tag :fdlibm)
+(def-float-exceptions-tests kernel:%acosh
+    (:tag :fdlibm)
   (assert-error 'floating-point-overflow
-		(kernel:%acosh ext:double-float-positive-infinity))
+		(%fun +infinity+))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%acosh 0d0))
-  (assert-error 'floating-point-overflow
-		(kernel:%acoshf ext:single-float-positive-infinity))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%acoshf 0f0))
+		(%fun (%float 0)))
   (ext:with-float-traps-masked (:overflow)
-    (assert-equal ext:double-float-positive-infinity
-		  (kernel:%acosh ext:double-float-positive-infinity))
-    (assert-equal ext:single-float-positive-infinity
-		  (kernel:%acoshf ext:single-float-positive-infinity)))
+    (assert-equal +infinity+
+		  (%fun +infinity+)))
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%acosh 0d0)))
-    (assert-true (ext:float-nan-p (kernel:%acoshf 0f0)))))
+    (assert-true (ext:float-nan-p (%fun (%float 0))))))
 
-(define-test %asinh.exceptions
-  (:tag :fdlibm)
+(def-float-exceptions-tests kernel:%asinh
+    (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
-		(kernel:%asinh *snan*))
+		(%fun +snan+))
   (assert-error 'floating-point-overflow
-		(kernel:%asinh ext:double-float-positive-infinity))
+		(%fun +infinity+))
   (assert-error 'floating-point-overflow
-		(kernel:%asinh ext:double-float-negative-infinity))
-  (assert-true (ext:float-nan-p (kernel:%asinh *qnan*)))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%asinhf *sf-snan*))
-  (assert-error 'floating-point-overflow
-		(kernel:%asinhf ext:single-float-positive-infinity))
-  (assert-error 'floating-point-overflow
-		(kernel:%asinhf ext:single-float-negative-infinity))
-  (assert-true (ext:float-nan-p (kernel:%asinhf *sf-qnan*)))
-
+		(%fun +negative-infinity+))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
   (ext:with-float-traps-masked (:overflow)
-    (assert-equal ext:double-float-positive-infinity
-		  (kernel:%asinh ext:double-float-positive-infinity))
-    (assert-error ext:double-float-negative-infinity
-		  (kernel:%asinh ext:double-float-negative-infinity))
-    (assert-equal ext:single-float-positive-infinity
-		  (kernel:%asinhf ext:single-float-positive-infinity))
-    (assert-error ext:single-float-negative-infinity
-		  (kernel:%asinhf ext:single-float-negative-infinity)))
+    (assert-equal +infinity+
+		  (%fun +infinity+))
+    (assert-equal +negative-infinity+
+		  (%fun +negative-infinity+)))
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%asinh *snan*)))
-    (assert-true (ext:float-nan-p (kernel:%asinhf *sf-snan*))))
-  (let ((x (scale-float 1d0 -29))
-	(x0 0d0))
+    (assert-true (ext:float-nan-p (%fun +snan+))))
+  (let ((x (scale-float (%float 1) -29))
+	(x0 (%float 0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
-	(assert-eql 0d0 (asinh x0)))
+	(assert-eql (%float 0) (asinh x0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
 		      (asinh x)))))
 
-(define-test %atanh.exceptions
-  (:tag :fdlibm)
+(def-float-exceptions-tests kernel:%atanh
+    (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
-		(kernel:%atanh 2d0))
+		(%fun (%float 2)))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%atanh -2d0))
+		(%fun (%float -2)))
   (assert-error 'division-by-zero
-		(kernel:%atanh 1d0))
+		(%fun (%float 1)))
   (assert-error 'division-by-zero
-		(kernel:%atanh -1d0))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%atanhf 2f0))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%atanhf -2f0))
-  (assert-error 'division-by-zero
-		(kernel:%atanhf 1f0))
-  (assert-error 'division-by-zero
-		(kernel:%atanhf -1f0))
+		(%fun (%float -1)))
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%atanh 2d0)))
-    (assert-true (ext:float-nan-p (kernel:%atanh -2d0)))
-    (assert-true (ext:float-nan-p (kernel:%atanhf 2f0)))
-    (assert-true (ext:float-nan-p (kernel:%atanhf -2f0))))
+    (assert-true (ext:float-nan-p (%fun (%float 2))))
+    (assert-true (ext:float-nan-p (%fun (%float -2)))))
   (ext:with-float-traps-masked (:divide-by-zero)
-    (assert-equal ext:double-float-positive-infinity
-		  (kernel:%atanh 1d0))
-    (assert-equal ext:double-float-negative-infinity
-		  (kernel:%atanh -1d0))
-    (assert-equal ext:single-float-positive-infinity
-		  (kernel:%atanhf 1f0))
-    (assert-equal ext:single-float-negative-infinity
-		  (kernel:%atanhf -1f0))))
+    (assert-equal +infinity+
+		  (%fun (%float 1)))
+    (assert-equal +negative-infinity+
+		  (%fun (%float -1)))))
 
-(define-test %expm1.exceptions
-  (:tag :fdlibm)
+(def-float-exceptions-tests kernel:%expm1
+    (:tag :fdlibm)
   (assert-error 'floating-point-overflow
-		(kernel:%expm1 709.8d0))
-  (assert-equal ext:double-float-positive-infinity
-		(kernel:%expm1 ext:double-float-positive-infinity))
+		(%fun (%float 709.8d0)))
+  (assert-equal +infinity+
+		(%fun +infinity+))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%expm1 *snan*))
-  (assert-true (ext:float-nan-p (kernel:%expm1 *qnan*)))
-  (assert-error 'floating-point-overflow
-		(kernel:%expm1f 709.8f0))
-  (assert-equal ext:single-float-positive-infinity
-		(kernel:%expm1f ext:single-float-positive-infinity))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%expm1f *sf-snan*))
-  (assert-true (ext:float-nan-p (kernel:%expm1f *sf-qnan*)))
+		(%fun +snan+))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
   (ext:with-float-traps-masked (:overflow)
-    (assert-equal ext:double-float-positive-infinity
-		  (kernel:%expm1 709.8d0))
-    (assert-equal ext:single-float-positive-infinity
-		 (kernel:%expm1f 709.8f0))
-    )
+    (assert-equal +infinity+
+		  (%fun (%float 709.8d0))))
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext::float-nan-p (kernel:%expm1 *snan*)))
-    (assert-true (ext::float-nan-p (kernel:%expm1f *sf-snan*))))
+    (assert-true (ext:float-nan-p (%fun +snan+))))
   ;; expm1(x) = -1 for x < -56*log(2), signaling inexact
   #-core-math
-  (let ((x (* -57 (log 2d0))))
+  (let ((x (* -57 (log (%float 2)))))
     (ext:with-float-traps-enabled (:inexact)
 	(assert-error 'floating-point-inexact
-		      (kernel:%expm1 x)))))
+		      (%fun x)))))
 
-(define-test %log1p.exceptions
-  (:tag :fdlibm)
+(def-float-exceptions-tests kernel:%log1p
+    (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
-		(kernel:%log1p -2d0))
+		(%fun (%float -2)))
   (assert-error #-core-math 'floating-point-overflow
 		#+core-math 'division-by-zero
-		(kernel:%log1p -1d0))
-  (assert-true (ext:float-nan-p (kernel:%log1p *qnan*)))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%log1pf -2f0))
-  (assert-error #-core-math 'floating-point-overflow
-		#+core-math 'division-by-zero
-		(kernel:%log1pf -1f0))
-  (assert-true (ext:float-nan-p (kernel:%log1pf *sf-qnan*)))
+		(%fun (%float -1)))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
   (ext:with-float-traps-masked (#-core-math :overflow
 				#+core-math :divide-by-zero)
-    (assert-equal ext:double-float-negative-infinity
-		  (kernel:%log1p -1d0))
-    (assert-equal ext:single-float-negative-infinity
-		  (kernel:%log1pf -1f0)))
+    (assert-equal +negative-infinity+
+		  (%fun (%float -1))))
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%log1p *snan*)))
-    (assert-true (ext:float-nan-p (kernel:%log1pf *sf-snan*))))
+    (assert-true (ext:float-nan-p (%fun +snan+))))
   ;; log1p(x) = x for |x| < 2^-54, signaling inexact except for x = 0.
-  (let ((x (scale-float 1d0 -55))
-	(x0 0d0))
+  (let ((x (scale-float (%float 1) -55))
+	(x0 (%float 0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
-	(assert-eql 0d0 (kernel:%log1p x0)))
+	(assert-eql (%float 0) (%fun x0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
-		      (kernel:%log1p x)))))
+		      (%fun x)))))
 
-(define-test %exp.exceptions
-  (:tag :fdlibm)
+(def-float-exceptions-tests kernel:%exp
+    (:tag :fdlibm)
   (assert-error 'floating-point-overflow
-		(kernel:%exp 710d0))
-  (assert-true (ext:float-nan-p (kernel:%exp *qnan*)))
+		(%fun (%float 710)))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%exp *snan*))
-  (assert-equal ext:double-float-positive-infinity
-		(kernel:%exp ext:double-float-positive-infinity))
-  (assert-equal 0d0
-		(kernel:%exp -1000d0))
-  (assert-error 'floating-point-overflow
-		(kernel:%expf 710f0))
-  (assert-true (ext:float-nan-p (kernel:%expf *sf-qnan*)))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%expf *sf-snan*))
-  (assert-equal ext:single-float-positive-infinity
-		(kernel:%expf ext:single-float-positive-infinity))
-  (assert-equal 0f0
-		(kernel:%expf -1000f0))
+		(%fun +snan+))
+  (assert-equal +infinity+
+		(%fun +infinity+))
+  (assert-equal (%float 0)
+		(%fun (%float -1000)))
   (ext:with-float-traps-masked (:overflow)
-    (assert-equal ext:double-float-positive-infinity
-		  (kernel:%exp 710d0))
-    (assert-equal ext:single-float-positive-infinity
-		  (kernel:%expf 710f0)))
+    (assert-equal +infinity+
+		  (%fun (%float 710))))
   (ext:with-float-traps-enabled (:underflow)
     (assert-error 'floating-point-underflow
-		  (kernel:%exp -1000d0))
-    (assert-error 'floating-point-underflow
-		  (kernel:%expf -1000f0)))
-  (let ((x (scale-float 1d0 -29))
-	(x0 0d0))
-    ;; exp(x) = x, |x| < 2^-28, with inexact exception unlees x = 0
+		  (%fun (%float -1000))))
+  (let ((x (scale-float (%float 1) -29))
+	(x0 (%float 0)))
+    ;; exp(x) = x, |x| < 2^-28, with inexact exception unless x = 0
     (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
-	(assert-eql 1d0 (kernel:%exp x0)))
+	(assert-eql (%float 1) (%fun x0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
-		      (kernel:%exp x)))))
+		      (%fun x)))))
 
-(define-test %log.exception
-  (:tag :fdlibm)
+(def-float-exceptions-tests kernel:%log
+    (:tag :fdlibm)
   (assert-error 'division-by-zero
-		(kernel:%log 0d0))
+		(%fun (%float 0)))
   (assert-error 'division-by-zero
-		(kernel:%log -0d0))
+		(%fun (%float -0d0)))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%log -1d0))
+		(%fun (%float -1)))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%log *snan*))
-  (assert-true (ext:float-nan-p (kernel:%log *qnan*)))
-  (assert-error 'division-by-zero
-		(kernel:%logf 0f0))
-  (assert-error 'division-by-zero
-		(kernel:%logf -0f0))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%logf -1f0))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%logf *sf-snan*))
-  (assert-true (ext:float-nan-p (kernel:%logf *sf-qnan*)))
+		(%fun +snan+))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
   (ext:with-float-traps-masked (:divide-by-zero)
-    (assert-equal ext:double-float-negative-infinity
-		  (kernel:%log 0d0))
-    (assert-equal ext:double-float-negative-infinity
-		  (kernel:%log -0d0))
-    (assert-equal ext:single-float-negative-infinity
-		  (kernel:%logf 0f0))
-    (assert-equal ext:single-float-negative-infinity
-		  (kernel:%logf -0f0)))
+    (assert-equal +negative-infinity+
+		  (%fun (%float 0)))
+    (assert-equal +negative-infinity+
+		  (%fun (%float -0d0))))
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%log -1d0)))
-    (assert-true (ext:float-nan-p (kernel:%log *snan*)))
-    (assert-true (ext:float-nan-p (kernel:%logf -1f0)))
-    (assert-true (ext:float-nan-p (kernel:%logf *sf-snan*)))))
+    (assert-true (ext:float-nan-p (%fun (%float -1))))
+    (assert-true (ext:float-nan-p (%fun +snan+)))))
 
-(define-test %acos.exceptions
-  (:tag :fdlibm)
+(def-float-exceptions-tests kernel:%acos
+    (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
-		(kernel:%acos 2d0))
+		(%fun (%float 2)))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%acos -2d0))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%acosf 2f0))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%acosf -2f0))
+		(%fun (%float -2)))
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%acos 2d0)))
-    (assert-true (ext:float-nan-p (kernel:%acos -2d0)))
-    (assert-true (ext:float-nan-p (kernel:%acosf 2f0)))
-    (assert-true (ext:float-nan-p (kernel:%acosf -2f0)))))
+    (assert-true (ext:float-nan-p (%fun (%float 2))))
+    (assert-true (ext:float-nan-p (%fun (%float -2))))))
 
-(define-test %asin.exceptions
-  (:tag :fdlibm)
+(def-float-exceptions-tests kernel:%asin
+    (:tag :fdlibm)
   (assert-error 'floating-point-invalid-operation
-		(kernel:%asin 2d0))
+		(%fun (%float 2)))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%asin -2d0))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%asinf 2f0))
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%asinf -2f0))
+		(%fun (%float -2)))
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%asin 2d0)))
-    (assert-true (ext:float-nan-p (kernel:%asin -2d0)))
-    (assert-true (ext:float-nan-p (kernel:%asinf 2f0)))
-    (assert-true (ext:float-nan-p (kernel:%asinf -2f0)))))
-
-(define-test %atan.exceptions
-  (:tag :fdlibm)
-  (assert-error 'floating-point-invalid-operation
-		(kernel:%atan *snan*))
-  (assert-true (ext:float-nan-p (kernel:%atan *qnan*)))
-  (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%atan *snan*))))
-  ;; atan(x) = x for |x| < 2^-29, signaling inexact.
-  (let ((x (scale-float 1d0 -30))
-	(x0 0d0))
+    (assert-true (ext:float-nan-p (%fun (%float 2))))
+    (assert-true (ext:float-nan-p (%fun (%float -2)))))
+  ;; asin(x) = x for |x| < 2^-27.  Signal inexact unless x = 0.
+  (let ((x (scale-float (%float 1) -28))
+	(x0 (%float 0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
-	(assert-eql 0d0 (kernel:%atan x0)))
+	(assert-eql (%float 0) (%fun x0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
-		      (kernel:%atan x)))))
+		      (%fun x)))))
 
-(define-test %log10.exceptions
-  (:tag :fdlibm)
-  ;; %log10(2^k) = k
+(def-float-exceptions-tests kernel:%atan
+    (:tag :fdlibm)
+  (assert-error 'floating-point-invalid-operation
+		(%fun +snan+))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
+  (ext:with-float-traps-masked (:invalid)
+    (assert-true (ext:float-nan-p (%fun +snan+))))
+  ;; atan(x) = x for |x| < 2^-29, signaling inexact.
+  (let ((x (scale-float (%float 1) -30))
+	(x0 (%float 0)))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must not throw an inexact exception because the result
+	;; is exact when the arg is 0.
+	(assert-eql (%float 0) (%fun x0)))
+    (ext:with-float-traps-enabled (:inexact)
+	;; This must throw an inexact exception for non-zero x even
+	;; though the result is exactly x.
+	(assert-error 'floating-point-inexact
+		      (%fun x)))))
+
+(define-test %log10-basic-tests
+    (:tag :fdlibm)
+  ;; %log10(10^k) = k
   (dotimes (k 23)
     (assert-equalp k
-		  (kernel:%log10 (float (expt 10 k) 1d0))))
+		   (kernel:%log10 (float (expt 10 k) 1d0)))))
+
+(def-float-exceptions-tests kernel:%log10
+    (:tag :fdlibm)
   (assert-error 'division-by-zero
-		(kernel:%log10 0d0))
+		(%fun (%float 0)))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%log10 -1d0))
-  (assert-true (ext:float-nan-p (kernel:%log10 *qnan*)))
-  (assert-equal ext:double-float-positive-infinity
-		(kernel:%log10 ext:double-float-positive-infinity))
+		(%fun (%float -1)))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
+  (assert-equal +infinity+
+		(%fun +infinity+))
   (ext:with-float-traps-masked (:divide-by-zero)
-    (assert-equal ext:double-float-negative-infinity
-		  (kernel:%log10 0d0))
-    (assert-equal ext:double-float-negative-infinity
-		  (kernel:%log10 -0d0)))
+    (assert-equal +negative-infinity+
+		  (%fun (%float 0)))
+    (assert-equal +negative-infinity+
+		  (%fun (%float -0d0))))
   (ext:with-float-traps-masked (:invalid)
-    (assert-true (ext:float-nan-p (kernel:%log10 -1d0)))))
+    (assert-true (ext:float-nan-p (%fun (%float -1))))))
 
 (define-test %scalbn.exceptions
   (:tag :fdlibm)
@@ -784,97 +748,79 @@
 
 (define-test %asin-basic-tests
     (:tag :fdlibm)
-  (let ((x (scale-float 1d0 -28))
-	(x0 0d0))
-    ;; asin(x) = x for |x| < 2^-27, with inexact exception if x is not 0.
+  (let ((x (scale-float 1d0 -28)))
+    ;; asin(x) = x for |x| < 2^-27
     (assert-eql x (kernel:%asin x))
     (assert-eql (- x) (kernel:%asin (- x)))))
 
-(define-test %asin-exception
-    (:tag :fdlibm)
-  (let ((x (scale-float 1d0 -28))
-	(x0 0d0))
-    ;; asin(x) = x for |x| < 2^-27, with inexact exception if x is not 0.
-    (assert-eql x (kernel:%asin x))
-    (assert-eql (- x) (kernel:%asin (- x)))
-    (ext:with-float-traps-enabled (:inexact)
-	;; This must not throw an inexact exception because the result
-	;; is exact when the arg is 0.
-	(assert-eql 0d0 (kernel:%asin x0)))
-    (ext:with-float-traps-enabled (:inexact)
-	;; This must throw an inexact exception for non-zero x even
-	;; though the result is exactly x.
-	(assert-error 'floating-point-inexact
-		      (kernel:%asin x)))))
-
-(define-test %cos.exceptions
+(def-float-exceptions-tests kernel:%cos
     (:tag :fdlibm)
   ;; cos(inf) signals invalid operation
   (assert-error 'floating-point-invalid-operation
-		(kernel:%cos ext:double-float-positive-infinity))
+		(%fun +infinity+))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%cos ext:double-float-negative-infinity))
+		(%fun +negative-infinity+))
   ;; cos(nan) is NaN
-  (assert-true (ext:float-nan-p (kernel:%cos *qnan*)))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
   
   ;; cos(x) = 1 for |x| < 2^-27.  Signal inexact unless x = 0
-  (let ((x (scale-float 1d0 -28))
-	(x0 0d0))
+  (let ((x (scale-float (%float 1) -28))
+	(x0 (%float 0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
-	(assert-eql 1d0 (kernel:%cos x0)))
+	(assert-eql (%float 1) (%fun x0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
-		      (kernel:%cos x)))))
+		      (%fun x)))))
 
-(define-test %sin.exceptions
+(def-float-exceptions-tests kernel:%sin
     (:tag :fdlibm)
   ;; sin(inf) signals invalid operation
   (assert-error 'floating-point-invalid-operation
-		(kernel:%sin ext:double-float-positive-infinity))
+		(%fun +infinity+))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%sin ext:double-float-negative-infinity))
+		(%fun +negative-infinity+))
   ;; sin(nan) is NaN
-  (assert-true (ext:float-nan-p (kernel:%sin *qnan*)))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
 
   ;; sin(x) = x for |x| < 2^-27.  Signal inexact unless x = 0
-  (let ((x (scale-float 1d0 -28))
-	(x0 0d0))
+  (let ((x (scale-float (%float 1) -28))
+	(x0 (%float 0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
-	(assert-eql 0d0 (kernel:%sin x0)))
+	(assert-eql (%float 0) (%fun x0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
-		      (kernel:%sin x)))))
+		      (%fun x)))))
 
-(define-test %tan.exceptions
+(def-float-exceptions-tests kernel:%tan
     (:tag :fdlibm)
   ;; tan(inf) signals invalid operation
   (assert-error 'floating-point-invalid-operation
-		(kernel:%tan ext:double-float-positive-infinity))
+		(%fun +infinity+))
   (assert-error 'floating-point-invalid-operation
-		(kernel:%tan ext:double-float-negative-infinity))
+		(%fun +negative-infinity+))
   ;; tan(nan) is NaN
-  (assert-true (ext:float-nan-p (kernel:%sin *qnan*)))
+  (assert-true (ext:float-nan-p (%fun +qnan+)))
 
   ;; tan(x) = x for |x| < 2^-28.  Signal inexact unless x = 0
-  (let ((x (scale-float 1d0 -29))
-	(x0 0d0))
+  (let ((x (scale-float (%float 1) -29))
+	(x0 (%float 0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
-	(assert-eql 0d0 (kernel:%tan x0)))
+	(assert-eql (%float 0) (%fun x0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
-		      (kernel:%tan x)))))
+		      (%fun x)))))
 
 ;; Test cases from e_pow.c for fdlibm.
 (define-test %pow.case.1
