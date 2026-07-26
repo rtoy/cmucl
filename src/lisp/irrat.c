@@ -160,9 +160,9 @@ lisp_acos(double x)
 double
 lisp_sinh(double x)
 {
-#ifdef FEATURE_CORE_MATH
     MAYBE_SIGNAL_OVERFLOW(x);
 	
+#ifdef FEATURE_CORE_MATH
     return cr_sinh(x);
 #else    
     return sinh(x);
@@ -172,9 +172,9 @@ lisp_sinh(double x)
 double
 lisp_cosh(double x)
 {
-#ifdef FEATURE_CORE_MATH
     MAYBE_SIGNAL_OVERFLOW(fabs(x));
 
+#ifdef FEATURE_CORE_MATH
     return cr_cosh(x);
 #else    
     return cosh(x);
@@ -465,9 +465,9 @@ lisp_acosf(float x)
 float
 lisp_sinhf(float x)
 {
-#ifdef FEATURE_CORE_MATH
     MAYBE_SIGNAL_OVERFLOW(x);
 
+#ifdef FEATURE_CORE_MATH
     return cr_sinhf(x);
 #else    
     return sinhf(x);
@@ -477,9 +477,9 @@ lisp_sinhf(float x)
 float
 lisp_coshf(float x)
 {
-#ifdef FEATURE_CORE_MATH
     MAYBE_SIGNAL_OVERFLOW(fabs(x));
 
+#ifdef FEATURE_CORE_MATH
     return cr_coshf(x);
 #else    
     return coshf(x);

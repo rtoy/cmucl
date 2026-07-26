@@ -115,6 +115,10 @@
 		(%fun (%float -1000)))
   (assert-error 'floating-point-invalid-operation
 		(%fun +snan+))
+  (assert-error 'floating-point-overflow
+		(%fun +infinity+))
+  (assert-error 'floating-point-overflow
+		(%fun +negative-infinity+))
   (assert-true (ext:float-nan-p (%fun +qnan+)))
   ;; Same, but with overflow's masked
   (ext:with-float-traps-masked (:overflow)
@@ -138,6 +142,10 @@
 		(%fun (%float -1000)))
   (assert-error 'floating-point-invalid-operation
 		(%fun +snan+))
+  (assert-error 'floating-point-overflow
+		(%fun +infinity+))
+  (assert-error 'floating-point-overflow
+		(%fun +negative-infinity+))
   (assert-true (ext:float-nan-p (%fun +qnan+)))
   ;; Same, but with overflow's masked
   (ext:with-float-traps-masked (:overflow)
