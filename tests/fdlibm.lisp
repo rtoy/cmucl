@@ -262,7 +262,6 @@
   (ext:with-float-traps-masked (:invalid)
     (assert-true (ext:float-nan-p (%fun +snan+))))
   ;; expm1(x) = -1 for x < -56*log(2), signaling inexact
-  #-core-math
   (let ((x (* -57 (log (%float 2)))))
     (ext:with-float-traps-enabled (:inexact)
 	(assert-error 'floating-point-inexact

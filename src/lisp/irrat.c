@@ -340,6 +340,16 @@ double
 lisp_expm1(double x)
 {
 #ifdef FEATURE_CORE_MATH
+    /*
+     * For x <= -37.43, cr_expm1 doesn't signal inexact because an
+     * expression is constant folded to -1.0.  Manually test this case
+     * ourselves.
+     */
+
+    if (isfinite(x) && (x <= -37.42)) {
+	fdlibm_setexception(x, FDLIBM_INEXACT);
+    }
+	    
     return cr_expm1(x);
 #else    
     return expm1(x);
@@ -632,6 +642,16 @@ lisp_expm1f(float x)
 	return x;
     }
 
+    /*
+     * For x <= -17.33, cr_expm1f doesn't signal inexact because an
+     * expression is constant folded to -1.0.  Manually test this case
+     * ourselves.
+     */
+
+    if (isfinite(x) && (x <= -17.32f)) {
+	fdlibm_setexception(x, FDLIBM_INEXACT);
+    }
+	    
     return cr_expm1f(x);
 #else    
     return expm1f(x);
