@@ -187,15 +187,6 @@ lisp_tanh(double x)
 #ifdef FEATURE_CORE_MATH
     return cr_tanh(x);
 #else    
-    /*
-     * Signal invalid.  A peek at openlibm/s_tanh.c indicates that the
-     * result is always 1 for |x| >= 22.
-     */
-#if 0
-    if (isnormal(x) && (fabs(x) >= 22)) {
-	fdlibm_setexception(x, FDLIBM_INEXACT);
-    }
-#endif
     return tanh(x);
 #endif
 }
@@ -250,17 +241,6 @@ lisp_exp(double x)
 	return x;
     }
     
-    /*
-     * Can't depend on cr_exp to signal underflow.  It seems the
-     * underflow has been constant-folded to zero.  Hence, check for
-     * underflow here and explicitly signal an underflow.  The
-     * constant here is from core-math exp.c.
-     */
-#if 0
-    if (x <= -0x1.74910d52d3052p+9) {
-	return fdlibm_setexception(0.0, FDLIBM_UNDERFLOW);
-    }
-#endif
     return cr_exp(x);
 #else    
     return exp(x);
@@ -343,17 +323,6 @@ double
 lisp_expm1(double x)
 {
 #ifdef FEATURE_CORE_MATH
-    /*
-     * For x <= -37.43, cr_expm1 doesn't signal inexact because an
-     * expression is constant folded to -1.0.  Manually test this case
-     * ourselves.
-     */
-
-#if 0
-    if (isfinite(x) && (x <= -37.42)) {
-	fdlibm_setexception(x, FDLIBM_INEXACT);
-    }
-#endif	    
     return cr_expm1(x);
 #else    
     return expm1(x);
@@ -412,17 +381,7 @@ float
 lisp_cosf(float x)
 {
 #ifdef FEATURE_CORE_MATH
-    /*
-     * For finite x and 0 < |x| < 2^(-25), we want to signal inexact
-     * and also return x.  Currently, cr_cosf doesn't do that, but
-     * cr_cos does.  This makes the two consistent.
-     */
-#if 0
-    if (isfinite(x) && (x != 0) && (fabsf(x) < 0x1p-25f)) {
-	fdlibm_setexception(x, FDLIBM_INEXACT);
-    }
-#endif
-    return cr_cosf(x);
+kk    return cr_cosf(x);
 #else    
     return cosf(x);
 #endif
@@ -508,16 +467,6 @@ lisp_tanhf(float x)
 #ifdef FEATURE_CORE_MATH
     return cr_tanhf(x);
 #else    
-    /*
-     * Signal inexact for |x| >= 9.  tanhf doesn't because the
-     * compiler constant folds the result to 1 instead of signaling
-     * inexact.
-     */
-#if 0
-    if (isnormal(x) && (fabsf(x) >= 9)) {
-	fdlibm_setexception(x, FDLIBM_INEXACT);
-    }
-#endif
     return tanhf(x);
 #endif
 }
@@ -649,17 +598,6 @@ lisp_expm1f(float x)
 	return x;
     }
 
-    /*
-     * For x <= -17.33, cr_expm1f doesn't signal inexact because an
-     * expression is constant folded to -1.0.  Manually test this case
-     * ourselves.
-     */
-
-#if 0
-    if (isfinite(x) && (x <= -17.32f)) {
-	fdlibm_setexception(x, FDLIBM_INEXACT);
-    }
-#endif	    
     return cr_expm1f(x);
 #else    
     return expm1f(x);
