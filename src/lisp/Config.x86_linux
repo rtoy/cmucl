@@ -7,8 +7,11 @@ CORE_MATH = -DCORE_MATH_SUPPORT_ERRNO
 CFLAGS += $(COPT)
 CPPFLAGS += -m32
 # Gcc 15.2.1 and possibly other version can't compile core-math
-# without this option.
+# without this option. 
 CFLAGS += -std=gnu11
+# We want gcc to honor FP rounding so things like 1.0-tiny aren't
+# constant-folded to 1.0.
+CFLAGS += -frounding-math
 CFLAGS += -rdynamic  -march=pentium4 -mfpmath=sse -mtune=generic
 # ANALYZER flag should be set to -fanalyzer when doing the CI builds
 # for the C static analyzer.
