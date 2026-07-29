@@ -381,7 +381,7 @@ float
 lisp_cosf(float x)
 {
 #ifdef FEATURE_CORE_MATH
-kk    return cr_cosf(x);
+    return cr_cosf(x);
 #else    
     return cosf(x);
 #endif
