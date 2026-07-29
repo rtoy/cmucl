@@ -3,6 +3,9 @@ include Config.x86_common
 
 CC = clang
 CPPFLAGS += -m32 -D__NO_CTYPE
+# -ftrapping-math so flag-raising idioms like 1.0-tiny aren't
+# -constant-folded away.
+CFLAGS += -ftrapping-math
 CFLAGS += $(COPT)
 
 # Allow sse2 instructions (-msse2); and tune for pentium4
