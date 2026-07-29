@@ -6,7 +6,7 @@
 
 (defparameter *single-float-nan*
   (ext:with-float-traps-masked (:invalid :divide-by-zero)
-    (/ 0d0 0d0)))
+    (/ 0f0 0f0)))
 
 (defparameter *double-float-nan*
   (ext:with-float-traps-masked (:invalid :divide-by-zero)
@@ -34,7 +34,11 @@
     (frob double-float <)
     (frob double-float >)
     (frob single-float =)
-    (frob double-float =)))
+    (frob double-float =)
+    (frob single-float <=)
+    (frob single-float >=)
+    (frob double-float <=)
+    (frob double-float >=)))
 
 (define-test nan-single.<
     (:tag :nan)
@@ -175,14 +179,14 @@
 (define-test nan-double.=
     (:tag :nan)
   ;; Basic tests with regular numbers.
-  (assert-true (stst-= 1d0 1d0))
-  (assert-false (stst-= 2d0 1d0))
-  (assert-false (stst-= 0d0 1d0))
+  (assert-true (dtst-= 1d0 1d0))
+  (assert-false (dtst-= 2d0 1d0))
+  (assert-false (dtst-= 0d0 1d0))
   ;; Tests with NaN, where = should fail.
   (ext:with-float-traps-masked (:invalid)
-    (assert-false (stst-= *double-float-nan* 1d0))
-    (assert-false (stst-= 1d0 *double-float-nan*))
-    (assert-false (stst-= *double-float-nan* *double-float-nan*))))
+    (assert-false (dtst-= *double-float-nan* 1d0))
+    (assert-false (dtst-= 1d0 *double-float-nan*))
+    (assert-false (dtst-= *double-float-nan* *double-float-nan*))))
   
 (define-test nan-single.=3
     (:tag :nan)

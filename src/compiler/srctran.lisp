@@ -3531,6 +3531,79 @@
 (deftransform > ((x y) (real real) * :when :both)
   (ir1-transform-< y x x y '<))
 
+;;; NAN-FREE-TYPE-P  --  Internal
+;;;
+;;;    Return true if no value of type Type can be a NaN.  Rationals
+;;; obviously can't be.  Neither can a float type carrying a bound,
+;;; since a NaN is unordered with respect to every bound and so
+;;; satisfies no interval constraint.  This is deliberately
+;;; conservative; it only has to be right when it says yes.
+;;;
+(defun nan-free-type-p (type)
+  (or (csubtypep type (specifier-type 'rational))
+      (and (numeric-type-p type)
+	   (eq (numeric-type-class type) 'float)
+	   (or (numeric-type-low type)
+	       (numeric-type-high type))
+	   t)))
+
+;;; IR1-TRANSFORM-<=  --  Internal
+;;;
+;;;    See if we can statically determine (<= X Y) from type
+;;; information, the way IR1-TRANSFORM-< does for (< X Y).  Note that
+;;; we deliberately do not use SAME-LEAF-REF-P here: (<= X X) is false
+;;; when X is a NaN, so the two args being the same leaf tells us
+;;; nothing.
+;;;
+;;;    When neither arg can be a NaN we expand into the negation of the
+;;; strict comparison.  That is one comparison instead of the two the
+;;; general transform needs, and it also leaves a < or > in the IR1
+;;; where FIND-TEST-CONSTRAINTS can still see it.  Otherwise we give up
+;;; and let the general transform handle the unordered case.
+;;;
+;;;    As in IR1-TRANSFORM-<, "inverse" is the function that gives the
+;;; same answer with the args reversed, so 2 <= 3 is the same as 3 >= 2.
+;;; "Negated" is the strict comparison whose negation we are.
+;;;
+(defun ir1-transform-<= (x y first second inverse negated)
+  (multiple-value-bind (definitely-greater definitely-not-greater)
+      (ir1-transform-<-helper y x)
+    (cond (definitely-greater
+	   nil)
+	  (definitely-not-greater
+	   t)
+	  ((and (constant-continuation-p first)
+		(not (constant-continuation-p second)))
+	   `(,inverse y x))
+	  ((and (nan-free-type-p (continuation-type x))
+		(nan-free-type-p (continuation-type y)))
+	   `(not (,negated x y)))
+	  (t
+	   (give-up)))))
+
+;;; The general transforms for <= and >= have to be defined before the
+;;; specific ones: DEFTRANSFORM pushes onto the transform list, and
+;;; IR1-OPTIMIZE-COMBINATION walks that list newest first, stopping at
+;;; the first transform that doesn't give up.
+;;;
+;;; (<= X Y) is not (not (> X Y)) when a NaN is involved.  A NaN is
+;;; unordered with respect to everything including itself, so all four
+;;; of <, >, <= and >= must be false.  Going through < and = gets that
+;;; right, and gets the mixed float/rational cases right too, since
+;;; those signal in exactly the same places (< X Y) does.
+;;;
+(deftransform <= ((x y) (t t) * :when :both)
+  '(if (< x y) t (= x y)))
+
+(deftransform >= ((x y) (t t) * :when :both)
+  '(if (> x y) t (= x y)))
+
+(deftransform <= ((x y) (real real) * :when :both)
+  (ir1-transform-<= x y x y '>= '>))
+
+(deftransform >= ((x y) (real real) * :when :both)
+  (ir1-transform-<= y x x y '<= '<))
+
 ;; Like IR1-TRANSFORM-< but for CHAR<.  This is needed so that the
 ;; vops for base-char comparison with a constant gets used when the
 ;; first arg is the constant.
@@ -3592,8 +3665,8 @@
 (def-source-transform = (&rest args) (multi-compare '= args nil))
 (def-source-transform < (&rest args) (multi-compare '< args nil))
 (def-source-transform > (&rest args) (multi-compare '> args nil))
-(def-source-transform <= (&rest args) (multi-compare '> args t))
-(def-source-transform >= (&rest args) (multi-compare '< args t))
+(def-source-transform <= (&rest args) (multi-compare '<= args nil))
+(def-source-transform >= (&rest args) (multi-compare '>= args nil))
 
 (def-source-transform char= (&rest args) (multi-compare 'char= args nil))
 (def-source-transform char< (&rest args) (multi-compare 'char< args nil))
