@@ -11,13 +11,20 @@ include Config.x86_common
 #
 # The unit tests pass and so do the ansi-tests.
 
-CC = /opt/local/bin/clang -ftrapping-math
+CC = /opt/local/bin/clang
+# gcc only works if a patch is applied to openlibm/cdefs-compat.h so
+# that a .stabs is not generated.
 #CC = /opt/local/bin/gcc
 
 # Compile code that will run on OSX 10.6.  This only works if
 # you have the SDK available.
 MIN_VER = -mmacosx-version-min=10.6
 
+# clang needs -ftrapping-math and gcc needs -frounding-math so that
+# flag-raising idioms like 1.0-tiny aren't constant-folded away and
+# guarded pokes aren't speculated above their guards.
+# Both clang and gcc recognize these, so always include both flags.
+CFLAGS += -ftrapping-math -frounding-math
 CFLAGS += $(COPT)
 CPPFLAGS += -DDARWIN $(MIN_VER) -m32
 CFLAGS += -g3 -mtune=generic
