@@ -13,6 +13,11 @@
     (/ 0d0 0d0)))
 
 
+;; Define functions to test 2 and 3 arg comparisons of single and
+;; double-float numbers.  The 2-arg functions are named "[ds]tst-[op]"
+;; and the 3-arg functions are "[ds]tst-[op]3".  "op" is <, >, =, <=,
+;; >=.  Thus stst-< compares 2 single-float numbers using < and
+;; >stst-<3 compare 3 single-float numbers using <.
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (macrolet
       ((frob (ntype op)
@@ -211,3 +216,146 @@
     (assert-false (dtst-=3 *double-float-nan* 1d0 1d0))
     (assert-false (dtst-=3 1d0 *double-float-nan* 1d0))
     (assert-false (dtst-=3 1d0 1d0 *double-float-nan*))))
+
+;;; Tests for <= and >=, for issue #156.  These used to be compiled as
+;;; the negation of > and <, which gets the wrong answer for NaN: a
+;;; NaN is unordered with respect to everything, so <, >, <=, and >=
+;;; must all be false.
+
+(define-test nan-single.<=
+    (:tag :nan)
+  ;; First just make sure it works with regular single-floats
+  (assert-true (stst-<= 1f0 2f0))
+  (assert-true (stst-<= 1f0 1f0))
+  (assert-false (stst-<= 1f0 0f0))
+  ;; Now try NaN.  All comparisons should be false.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (stst-<= *single-float-nan* 1f0))
+    (assert-false (stst-<= 1f0 *single-float-nan*))
+    (assert-false (stst-<= *single-float-nan* *single-float-nan*))))
+
+(define-test nan-double.<=
+    (:tag :nan)
+  ;; First just make sure it works with regular double-floats
+  (assert-true (dtst-<= 1d0 2d0))
+  (assert-true (dtst-<= 1d0 1d0))
+  (assert-false (dtst-<= 1d0 0d0))
+  ;; Now try NaN.  All comparisons should be false.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (dtst-<= *double-float-nan* 1d0))
+    (assert-false (dtst-<= 1d0 *double-float-nan*))
+    (assert-false (dtst-<= *double-float-nan* *double-float-nan*))))
+
+(define-test nan-single.>=
+    (:tag :nan)
+  ;; First just make sure it works with regular single-floats
+  (assert-true (stst->= 2f0 1f0))
+  (assert-true (stst->= 1f0 1f0))
+  (assert-false (stst->= 0f0 1f0))
+  ;; Now try NaN.  All comparisons should be false.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (stst->= *single-float-nan* 1f0))
+    (assert-false (stst->= 1f0 *single-float-nan*))
+    (assert-false (stst->= *single-float-nan* *single-float-nan*))))
+
+(define-test nan-double.>=
+    (:tag :nan)
+  ;; First just make sure it works with regular double-floats
+  (assert-true (dtst->= 2d0 1d0))
+  (assert-true (dtst->= 1d0 1d0))
+  (assert-false (dtst->= 0d0 1d0))
+  ;; Now try NaN.  All comparisons should be false.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (dtst->= *double-float-nan* 1d0))
+    (assert-false (dtst->= 1d0 *double-float-nan*))
+    (assert-false (dtst->= *double-float-nan* *double-float-nan*))))
+
+(define-test nan-single.<=3
+    (:tag :nan)
+  ;; First just make sure it works with regular single-floats
+  (assert-true (stst-<=3 1f0 2f0 3f0))
+  (assert-true (stst-<=3 1f0 2f0 2f0))
+  (assert-true (stst-<=3 1f0 1f0 2f0))
+  (assert-false (stst-<=3 1f0 0f0 2f0))
+  ;; Now try NaN in each position.  All comparisons should be false.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (stst-<=3 *single-float-nan* 2f0 3f0))
+    (assert-false (stst-<=3 1f0 *single-float-nan* 3f0))
+    (assert-false (stst-<=3 1f0 2f0 *single-float-nan*))
+    (assert-false
+     (stst-<=3 *single-float-nan* *single-float-nan* *single-float-nan*))))
+
+(define-test nan-double.<=3
+    (:tag :nan)
+  ;; First just make sure it works with regular double-floats
+  (assert-true (dtst-<=3 1d0 2d0 3d0))
+  (assert-true (dtst-<=3 1d0 2d0 2d0))
+  (assert-true (dtst-<=3 1d0 1d0 2d0))
+  (assert-false (dtst-<=3 1d0 0d0 2d0))
+  ;; Now try NaN in each position.  All comparisons should be false.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (dtst-<=3 *double-float-nan* 2d0 3d0))
+    (assert-false (dtst-<=3 1d0 *double-float-nan* 3d0))
+    (assert-false (dtst-<=3 1d0 2d0 *double-float-nan*))
+    (assert-false
+     (dtst-<=3 *double-float-nan* *double-float-nan* *double-float-nan*))))
+
+(define-test nan-single.>=3
+    (:tag :nan)
+  ;; First just make sure it works with regular single-floats
+  (assert-true (stst->=3 3f0 2f0 1f0))
+  (assert-true (stst->=3 3f0 1f0 1f0))
+  (assert-true (stst->=3 2f0 2f0 1f0))
+  (assert-false (stst->=3 0f0 2f0 1f0))
+  ;; Now try NaN in each position.  All comparisons should be false.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (stst->=3 *single-float-nan* 2f0 1f0))
+    (assert-false (stst->=3 3f0 *single-float-nan* 1f0))
+    (assert-false (stst->=3 3f0 2f0 *single-float-nan*))
+    (assert-false
+     (stst->=3 *single-float-nan* *single-float-nan* *single-float-nan*))))
+
+(define-test nan-double.>=3
+    (:tag :nan)
+  ;; First just make sure it works with regular double-floats
+  (assert-true (dtst->=3 3d0 2d0 1d0))
+  (assert-true (dtst->=3 3d0 1d0 1d0))
+  (assert-true (dtst->=3 2d0 2d0 1d0))
+  (assert-false (dtst->=3 0d0 2d0 1d0))
+  ;; Now try NaN in each position.  All comparisons should be false.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (dtst->=3 *double-float-nan* 2d0 1d0))
+    (assert-false (dtst->=3 3d0 *double-float-nan* 1d0))
+    (assert-false (dtst->=3 3d0 2d0 *double-float-nan*))
+    (assert-false
+     (dtst->=3 *double-float-nan* *double-float-nan* *double-float-nan*))))
+
+(define-test nan.<=->=.full-call
+    (:tag :nan)
+  ;; Exercise the full-call path through #'<= and #'>=, which the
+  ;; declared functions above never reach.
+  (ext:with-float-traps-masked (:invalid)
+    (dolist (nan (list *single-float-nan* *double-float-nan*))
+      (assert-false (funcall #'<= nan nan))
+      (assert-false (funcall #'>= nan nan))
+      (assert-false (funcall #'<= nan 1d0))
+      (assert-false (funcall #'>= nan 1d0))
+      (assert-false (funcall #'<= 1d0 nan))
+      (assert-false (funcall #'>= 1d0 nan)))))
+
+(define-test nan.<=->=.rational
+    (:tag :nan)
+  ;; Comparison of a NaN against the rational 0 takes the zero
+  ;; shortcut in BASIC-COMPARE and compares against a float zero, so
+  ;; it must be false.  Comparison against any other rational must
+  ;; convert the NaN with RATIONAL, which signals.
+  (ext:with-float-traps-masked (:invalid)
+    (dolist (nan (list *single-float-nan* *double-float-nan*))
+      (assert-false (funcall #'<= nan 0))
+      (assert-false (funcall #'>= nan 0))
+      (assert-false (funcall #'<= 0 nan))
+      (assert-false (funcall #'>= 0 nan))
+      (assert-error 'error (funcall #'<= nan 1))
+      (assert-error 'error (funcall #'>= nan 1))
+      (assert-error 'error (funcall #'<= 1 nan))
+      (assert-error 'error (funcall #'>= 1 nan)))))
