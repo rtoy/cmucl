@@ -18,5 +18,6 @@
 		 (compile nil
 			  `(lambda (x)
 			     (declare (type (signed-byte 16) x))
-			     (* x -7)))))))
+			     (* x -7)))
+		 :stream s))))
     (assert-true (search ", #x-7" text) text)))
