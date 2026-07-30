@@ -347,3 +347,38 @@
       (assert-error 'error (funcall #'>= nan 1))
       (assert-error 'error (funcall #'<= 1 nan))
       (assert-error 'error (funcall #'>= 1 nan)))))
+
+(define-test nan.derived-type.<=
+    (:tag :nan)
+  ;; The interval arithmetic used to derive types assumes no NaN, so
+  ;; (abs x) has a derived type of (double-float 0d0) even though
+  ;; (abs NaN) is a NaN.  Make sure <= and >= do not use the derived
+  ;; bound to justify compiling into the negation of a strict
+  ;; comparison, which is wrong for NaN.
+  (macrolet ((frob (op)
+	       `(let ((f (compile nil '(lambda (x y)
+					 (declare (double-float x y))
+					 (,op (abs x) y)))))
+		  (ext:with-float-traps-masked (:invalid)
+		    (assert-false (funcall f *double-float-nan* 1d0))
+		    (assert-false (funcall f 1d0 *double-float-nan*))))))
+    (frob <=)
+    (frob >=)))
+
+(define-test nan.typep-bounded-float
+    (:tag :nan)
+  ;; A NaN satisfies no bound, so it is not a member of any bounded
+  ;; float type.  The compiled bound test used to be the negation of a
+  ;; strict comparison, so NaN incorrectly passed it.
+  (ext:with-float-traps-masked (:invalid)
+    (assert-false (typep *double-float-nan* '(double-float 0d0)))
+    (assert-false (typep *double-float-nan* '(double-float * 0d0)))
+    (assert-false (typep *double-float-nan* '(double-float -1d0 1d0)))
+    (assert-false (typep *single-float-nan* '(single-float 0f0)))
+    (assert-false (typep *single-float-nan* '(single-float * 0f0)))
+    (assert-false (typep *single-float-nan* '(single-float -1f0 1f0)))
+    ;; And the compiled version, so the TYPEP source transform is
+    ;; exercised, not just %TYPEP.
+    (let ((f (compile nil '(lambda (x)
+			     (typep x '(double-float 0d0))))))
+      (assert-false (funcall f *double-float-nan*)))))

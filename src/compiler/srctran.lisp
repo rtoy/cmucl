@@ -3531,22 +3531,6 @@
 (deftransform > ((x y) (real real) * :when :both)
   (ir1-transform-< y x x y '<))
 
-;;; NAN-FREE-TYPE-P  --  Internal
-;;;
-;;;    Return true if no value of type Type can be a NaN.  Rationals
-;;; obviously can't be.  Neither can a float type carrying a bound,
-;;; since a NaN is unordered with respect to every bound and so
-;;; satisfies no interval constraint.  This is deliberately
-;;; conservative; it only has to be right when it says yes.
-;;;
-(defun nan-free-type-p (type)
-  (or (csubtypep type (specifier-type 'rational))
-      (and (numeric-type-p type)
-	   (eq (numeric-type-class type) 'float)
-	   (or (numeric-type-low type)
-	       (numeric-type-high type))
-	   t)))
-
 ;;; IR1-TRANSFORM-<=  --  Internal
 ;;;
 ;;;    See if we can statically determine (<= X Y) from type
@@ -3568,18 +3552,27 @@
 (defun ir1-transform-<= (x y first second inverse negated)
   (multiple-value-bind (definitely-greater definitely-not-greater)
       (ir1-transform-<-helper y x)
-    (cond (definitely-greater
-	   nil)
-	  (definitely-not-greater
-	   t)
-	  ((and (constant-continuation-p first)
-		(not (constant-continuation-p second)))
-	   `(,inverse y x))
-	  ((and (nan-free-type-p (continuation-type x))
-		(nan-free-type-p (continuation-type y)))
-	   `(not (,negated x y)))
-	  (t
-	   (give-up)))))
+    (flet ((nan-free-type-p (type)
+	     ;; Return true if no value of type Type can be a NaN, i.e. if the
+	     ;; type is rational.  A bounded float type also excludes NaN in
+	     ;; principle, since a NaN satisfies no interval constraint, but we
+	     ;; cannot trust bounded float types here: derived types are computed
+	     ;; by interval arithmetic that assumes no NaN, so for example
+	     ;; (ABS X) derives a non-negative float type even though (ABS NaN)
+	     ;; is a NaN at runtime.
+	     (csubtypep type (specifier-type 'rational))))
+      (cond (definitely-greater
+		nil)
+	    (definitely-not-greater
+		t)
+	    ((and (constant-continuation-p first)
+		  (not (constant-continuation-p second)))
+	     `(,inverse y x))
+	    ((and (nan-free-type-p (continuation-type x))
+		  (nan-free-type-p (continuation-type y)))
+	     `(not (,negated x y)))
+	    (t
+	     (give-up))))))
 
 ;;; The general transforms for <= and >= have to be defined before the
 ;;; specific ones: DEFTRANSFORM pushes onto the transform list, and
