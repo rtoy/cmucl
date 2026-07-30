@@ -16,7 +16,7 @@
   (let ((text (with-output-to-string (s)
 		(disassem:disassemble
 		 (compile nil
-			  (lambda (x)
-			    (declare (type (signed-byte 16) x))
-			    (* x -7)))))))
+			  `(lambda (x)
+			     (declare (type (signed-byte 16) x))
+			     (* x -7)))))))
     (assert-true (search ", #x-7" text) text)))
