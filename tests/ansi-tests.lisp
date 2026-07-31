@@ -7,10 +7,16 @@
     (:tag :issues)
   ;; The interpreter's COMPILE-FOR-EVAL deleted unreachable blocks in a
   ;; single forward pass over the DFO.  Since deleting a block can mark
-  ;; earlier blocks for deletion, DELETE-P blocks survived into
-  ;; ENVIRONMENT-ANALYZE, which then tried to build an NLX entry stub for
-  ;; an exit in one of them and failed with "NIL is not of type CBLOCK".
-  ;; Note this must go through EVAL, not COMPILE, to exercise the bug.
+  ;; blocks earlier in the DFO for deletion, DELETE-P blocks survived
+  ;; into later phases, which must not examine them.
+  ;;
+  ;; Both of these must go through EVAL, not COMPILE, to exercise the
+  ;; bug; COMPILE runs IR1-OPTIMIZE and was never affected.
+  ;;
+  ;; MISC.645: the dead block held the exit of the CMUCL-DEBUG-CATCH-TAG
+  ;; escape function.  ENVIRONMENT-ANALYZE built an NLX entry stub for
+  ;; it and INSERT-CLEANUP-CODE got a NIL successor, failing with
+  ;; "NIL is not of type C::CBLOCK".
   (assert-eql 0
               (eval '((lambda (a)
                         (declare (notinline abs isqrt))
@@ -26,3 +32,27 @@
                            3)
                           a))
                       0))))
+
+(define-test misc.187.eval-dead-nlx-blocks
+    (:tag :issues)
+  ;; MISC.187: the dead block held a REF to the escape function of the
+  ;; CATCH in an unreachable &optional default init form, and
+  ;; ANNOTATE-COMPONENT-FOR-EVAL asserted no leaf is an :ESCAPE
+  ;; function.
+  (assert-eql -6321798384
+              (apply (eval '#'(lambda (a b c)
+                                (declare (notinline))
+                                (declare (optimize (safety 3)))
+                                (declare (optimize (speed 0)))
+                                (declare (optimize (debug 0)))
+                                (flet ((%f7 (&optional (f7-1 (catch 'ct7 0))
+                                                       (f7-2 0))
+                                         c))
+                                  (let ((v8
+                                         (flet ((%f14 (f14-1
+                                                       &optional (f14-2 (%f7 b)))
+                                                  0))
+                                           0)))
+                                    (%f7 b)))))
+                     '(2374299 70496 -6321798384))))
+
