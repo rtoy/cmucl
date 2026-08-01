@@ -1154,3 +1154,29 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+
+
+
+(define-test issue.636.misc.194
+    (:tag :issues)
+  ;; Lifetime analysis used to assert in CONVERT-TO-ENVIRONMENT-TN
+  ;; because DO-SAVE-P-STUFF handed it the environment of the block
+  ;; holding the NLX entry instead of the environment recorded in the
+  ;; :DEBUG-ENVIRONMENT TN.  With separate environments for each
+  ;; &OPTIONAL entry point, a TN belonging to one entry can be live at
+  ;; another entry's non-local entry.
+  (assert-eql
+   0
+   (funcall (compile nil
+                     '(lambda (a b c)
+                        (declare (notinline funcall))
+                        (declare (optimize (safety 3) (speed 0) (debug 3)))
+                        (flet ((%f14 (f14-1 f14-2
+                                      &optional (f14-3 0)
+                                                (f14-4 (catch 'ct8 0))
+                                                (f14-5 (unwind-protect c)))
+                                 (declare (ignore f14-1 f14-2 f14-3 f14-4 f14-5))
+                                 0))
+                          (funcall #'%f14 0 0))))
+            1 2 3)))
+
