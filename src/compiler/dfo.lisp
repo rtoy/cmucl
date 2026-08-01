@@ -24,6 +24,15 @@
 ;;; any other components we reach.  We repeatedly iterate over the entry
 ;;; points, since new ones may show up during the walk.
 ;;;
+;;;    We don't walk into entry points that are already known to be dead.
+;;; DELETE-LAMBDA leaves the bind block of a deleted lambda linked to the
+;;; component head when that block was already marked for deletion, relying on
+;;; a later IR1 optimization pass to flush it.  When the lambda is deleted
+;;; after the last such pass, we are the only one left who can delete the
+;;; block, and flagging it here would keep it, and everything reachable from
+;;; it, alive all the way into the back end.  This is the same test that
+;;; IR1-OPTIMIZE uses to delete dead blocks.
+;;;
 (defun find-dfo (component)
   (declare (type component component))
   (clear-flags component)
@@ -31,7 +40,8 @@
   (let ((head (component-head component)))
     (do ()
 	((dolist (ep (block-succ head) t)
-	   (unless (block-flag ep)
+	   (unless (or (block-flag ep)
+		       (block-unreachable-p ep))
 	     (find-dfo-aux ep head component)
 	     (return nil))))))
 

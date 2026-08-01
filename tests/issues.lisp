@@ -1154,3 +1154,20 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+
+(define-test issue.635.byte-compile-dead-unwind-protect
+    (:tag :issues)
+  ;; An UNWIND-PROTECT in a dead branch left the bind block of its
+  ;; escape function linked to the component head after the lambda was
+  ;; deleted, so FIND-DFO kept the block and the dead code reached the
+  ;; byte compiler's back end.  (ansi-tests MISC.78)
+  (assert-equal
+   -12
+   (funcall (compile nil
+                     '(lambda ()
+                        (declare (optimize (speed 0) (debug 0)))
+                        (let ((v4
+                               (case 227
+                                 ((-11113 -106126) (unwind-protect 8473))
+                                 (t 43916))))
+                          -12))))))
