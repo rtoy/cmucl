@@ -100,11 +100,23 @@
 	      ;; COMPILE-COMPONENT.
 	      (dolist (component *all-components*)
 		;;
-		;; Since we don't call IR1-OPTIMIZE, delete
-		;; unreachable blocks here.
-		(do-blocks (block component)
-		  (when (block-unreachable-p block)
-		    (delete-block block)))
+		;; Since we don't call IR1-OPTIMIZE, delete unreachable
+		;; blocks here.  Deleting a block can mark blocks *earlier*
+		;; in the DFO for deletion: DELETE-BLOCK calls
+		;; DELETE-CONTINUATION, which calls MARK-FOR-DELETION on the
+		;; DEST's block, and that walks backwards over predecessors.
+		;; A single forward pass therefore leaves DELETE-P blocks in
+		;; the component.  Such blocks have no successors and may
+		;; hold :DELETED continuations, so ENVIRONMENT-ANALYZE later
+		;; hands a NIL successor to INSERT-CLEANUP-CODE.  Iterate
+		;; until we reach a fixed point.
+		(loop
+		  (let ((deleted nil))
+		    (do-blocks (block component)
+		      (when (block-unreachable-p block)
+			(delete-block block)
+			(setq deleted t)))
+		    (unless deleted (return))))
 		
 		(ir1-finalize component)
 		(let ((*compile-component* component))
