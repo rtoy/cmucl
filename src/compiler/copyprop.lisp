@@ -102,34 +102,28 @@
 ;;; Kill, we must look at all VOP results, seeing if any of the reads of the
 ;;; written TN are copies for eligible TNs.
 ;;;
-;;;    Note that a VOP must contribute to Kill even when it is itself a MOVE
-;;; whose result is an eligible copy TN.  Although such a TN has only one VOP
-;;; write, it may hold a different value before that write -- an incoming
-;;; argument, say -- and copies made from it beforehand are invalidated here.
-;;; Skipping the Kill scan in that case let a stale copy reach a successor
-;;; block through Out, so that (let ((g a)) (setq a 522) g) returned 522.
-;;;
 (defun init-copy-sets (block)
   (declare (type cblock block))
   (let ((kill (make-sset))
 	(gen (make-sset)))
     (do ((vop (ir2-block-start-vop (block-info block)) (vop-next vop)))
 	((null vop))
-      (do ((res (vop-results vop) (tn-ref-across res)))
-	  ((null res))
-	(let ((res-tn (tn-ref-tn res)))
-	  (do ((read (tn-reads res-tn) (tn-ref-next read)))
-	      ((null read))
-	    (let ((read-vop (tn-ref-vop read)))
-	      (when (eq (vop-info-name (vop-info read-vop)) 'move)
-		(let ((y (tn-ref-tn (vop-results read-vop))))
-		  (when (tn-is-copy-of y)
-		    (sset-delete y gen)
-		    (sset-adjoin y kill))))))))
-      (when (eq (vop-info-name (vop-info vop)) 'move)
-	(let ((y (tn-ref-tn (vop-results vop))))
-	  (when (tn-is-copy-of y)
-	    (sset-adjoin y gen)))))
+      (unless (and (eq (vop-info-name (vop-info vop)) 'move)
+		   (let ((y (tn-ref-tn (vop-results vop))))
+		     (when (tn-is-copy-of y)
+		       (sset-adjoin y gen)
+		       t)))
+	(do ((res (vop-results vop) (tn-ref-across res)))
+	    ((null res))
+	  (let ((res-tn (tn-ref-tn res)))
+	    (do ((read (tn-reads res-tn) (tn-ref-next read)))
+		((null read))
+	      (let ((read-vop (tn-ref-vop read)))
+		(when (eq (vop-info-name (vop-info read-vop)) 'move)
+		  (let ((y (tn-ref-tn (vop-results read-vop))))
+		    (when (tn-is-copy-of y)
+		      (sset-delete y gen)
+		      (sset-adjoin y kill))))))))))
 
     (setf (block-out block) (copy-sset gen))
     (setf (block-kill block) kill)
