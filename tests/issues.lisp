@@ -1154,3 +1154,29 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+
+
+
+(define-test issue.637.delete-optional-entry-point
+    (:tag :issues)
+  ;; Compiling this used to signal an assertion failure in
+  ;; C::DELETE-LAMBDA: the &optional default forms do a RETURN-FROM to
+  ;; %F17, whose only call is in dead code, so the optional-dispatch
+  ;; entry points become unreachable while still :OPTIONAL.
+  (assert-equal
+   250738
+   (funcall (compile nil
+                     '(lambda (a b c)
+                        (flet ((%f17 (f17-1 f17-2 f17-3)
+                                 (flet ((%f2 (f2-1 f2-2
+                                              &optional
+                                              (f2-3 (return-from %f17 f17-1))
+                                              (f2-4 (return-from %f17 -57)))
+                                          b))
+                                   (multiple-value-call #'%f2
+                                     (values c -588 55101157)))))
+                          (if nil
+                              (let* ((v6 (%f17 102136 3096194 a)))
+                                b)
+                              c))))
+            -511 -2269809964 250738)))
