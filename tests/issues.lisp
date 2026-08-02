@@ -1180,3 +1180,30 @@
                                 b)
                               c))))
             -511 -2269809964 250738)))
+
+(define-test issue.637.delete-optional-entry-point.2
+    (:tag :issues)
+  ;; Like the above, but the RETURN-FROM targets a BLOCK reached through
+  ;; an APPLY rather than a local function called in dead code.
+  (assert-equal
+   3
+   (funcall (compile nil
+                     '(lambda (a b c)
+                        (block b3
+                          (flet ((%f11 (f11-1 f11-2
+                                        &optional
+                                        (f11-3
+                                         (block b6
+                                           (labels ((%f11 (f11-1
+                                                           &optional (f11-2 c)
+                                                           (f11-3 (return-from b6 -1806)))
+                                                      (return-from b3 -28432)))
+                                             (apply #'%f11 (list -114))))))
+                                   (return-from %f11 f11-2)))
+                            (%f11 b c
+                                  (labels ((%f10 (f10-1 f10-2
+                                                  &optional (f10-3 a)
+                                                  (f10-4 (%f11 -3931 170)))
+                                             -1704759))
+                                    c))))))
+            1 2 3)))
