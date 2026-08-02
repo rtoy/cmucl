@@ -750,6 +750,18 @@
 ;;; SAVE-P true.  We compute the save-set, and if :FORCE-TO-STACK, force all
 ;;; the live TNs to be stack environment TNs.
 ;;;
+;;;    A :DEBUG-ENVIRONMENT TN already records the environment whose frame it
+;;; lives in, and that need not be the environment of Block.
+;;; SETUP-ENVIRONMENT-LIVE-CONFLICTS gives such a TN a :LIVE conflict in every
+;;; block of its own environment, and PROPAGATE-LIVE-TNS then carries those
+;;; conflicts back into the predecessor blocks, which for a local call are in
+;;; the caller's environment.  Since DO-LIVE-TNS visits every :LIVE conflict in
+;;; a block, the callee's TNs turn up in the save set of a :FORCE-TO-STACK VOP
+;;; in the caller.  Converting one of those to an :ENVIRONMENT TN of Block's
+;;; environment would move it into the wrong frame, so use the TN's own
+;;; environment instead.  Compare the analogous test in
+;;; MAKE-DEBUG-ENVIRONMENT-TNS-LIVE.
+;;;
 (defun do-save-p-stuff (vop block live-bits)
   (declare (type vop vop) (type ir2-block block)
 	   (type local-tn-bit-vector live-bits))
@@ -762,7 +774,9 @@
 	  (unless (eq (tn-kind tn) :environment)
 	    (convert-to-environment-tn
 	     tn
-	     (block-environment (ir2-block-block block))))))))
+	     (if (eq (tn-kind tn) :debug-environment)
+		 (tn-environment tn)
+		 (block-environment (ir2-block-block block)))))))))
   (undefined-value))
 
 
