@@ -1120,6 +1120,17 @@
       (bind
        (let ((lambda (bind-lambda node)))
 	 (unless (eq (functional-kind lambda) :deleted)
+	   ;;
+	   ;; An :OPTIONAL lambda is an entry point of an optional-dispatch,
+	   ;; and may not be deleted just because it has no references, since
+	   ;; local call analysis can still create new references to it.
+	   ;; DELETE-LAMBDA asserts as much.  But here we are deleting the
+	   ;; block holding the BIND itself, so the entry point really is
+	   ;; unreachable.  Clear the :OPTIONAL kind so DELETE-LAMBDA will
+	   ;; accept it; DELETE-OPTIONAL-DISPATCH skips entry points that are
+	   ;; already :DELETED.
+	   (when (eq (functional-kind lambda) :optional)
+	     (setf (functional-kind lambda) nil))
 	   (delete-lambda lambda))))
       (entry
        (dolist (exit (entry-exits node))
