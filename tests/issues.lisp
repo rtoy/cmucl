@@ -1154,3 +1154,28 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+(define-test issue.639.byte-compile-deleted-exit
+    (:tag :issues)
+  ;; ansi-tests MISC.80.  When IR1 deletes a local RETURN-FROM whose
+  ;; value is delivered past a pending full call, the pending function
+  ;; was left buried on the byte interpreter's stack under the live
+  ;; exit value, misaligning the stack at the join and calling the
+  ;; wrong function.
+  (assert-equal
+   57385
+   (funcall (compile nil
+		     '(lambda (b c)
+			(declare (notinline > logior imagpart))
+			(declare (optimize (speed 0) (debug 0)))
+			(labels ((%f16 ()
+				   (imagpart
+				    (block b3
+				      (logeqv
+				       (logior -122516
+					       (if (> -1 0)
+						   (return-from b3 c)
+						   b))
+				       (return-from %f16 32186310))))))
+			  (lognor (%f16) b))))
+	    -123886
+	    -1656)))

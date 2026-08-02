@@ -82,3 +82,27 @@
   (when (fboundp 'c::%note-type-defined)
     (c::%note-type-defined name))
   name)
+
+(in-package "C")
+;; Bootstrap for the POP-N-UNDER byte-compiler XOP (ansi-tests
+;; MISC.80).  DEFINE-XOP in code/byte-interp.lisp looks up the XOP
+;; index at macroexpansion time using the host compiler's *XOP-NAMES*,
+;; so the host must know the new name before compiling the world.
+(setq *xop-names*
+      '(breakpoint; 0
+	dup; 1
+	type-check; 2
+	fdefn-function-or-lose; 3
+	default-unknown-values; 4
+	push-n-under; 5
+	pop-n-under; 6
+	xop7
+	merge-unknown-values
+	make-closure
+	throw
+	catch
+	breakup
+	return-from
+	tagbody
+	go
+	unwind-protect))
