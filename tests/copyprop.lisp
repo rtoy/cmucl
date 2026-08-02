@@ -5,21 +5,26 @@
 
 (in-package "COPYPROP-TESTS")
 
-;;; INIT-COPY-SETS used to skip its Kill scan for a MOVE whose result was
-;;; itself an eligible copy TN, on the assumption that such a TN is written
-;;; only once and so cannot invalidate anything.  That is wrong for a
-;;; variable's home TN: it holds the incoming argument before the SETQ writes
-;;; it, and a copy made from it beforehand is invalidated by that write.  The
-;;; stale copy survived in Out and reached the use in a successor block, so
-;;; the reference to G below read A's register after it had been clobbered.
+;;; Copy propagation deletes a MOVE when every reference to its destination
+;;; can instead read the source, which requires the source to be unchanged
+;;; between the move and the reference.  INIT-COPY-SETS never looked for such
+;;; changes at a MOVE whose own destination was an eligible copy TN, on the
+;;; assumption that a TN written once cannot invalidate anything.  That is
+;;; false for a variable's home TN: it already holds the incoming argument
+;;; before a SETQ moves a new value into it, so a copy taken from it earlier
+;;; is invalidated by that SETQ even though the SETQ is its only MOVE.
 ;;;
-;;; The special binding matters only because it forces the use of G into a
-;;; block separate from the copy and the SETQ; PROPAGATE-COPIES kills
-;;; correctly within a block, so the bug is only visible across one.
+;;; In COPYPROP.SETQ-ACROSS-SPECIAL-BIND, the move of A into G was recorded as
+;;; a copy, the SETQ of A was not recorded as invalidating it, and the
+;;; reference to G was rewritten to read A directly, so LOGNOT saw 522 rather
+;;; than the argument.  All three tests here are that same shape.
 ;;;
-;;; Copy propagation runs when SPEED >= COMPILATION-SPEED, and DEBUG 3 keeps
-;;; the XEP and the entry lambda from being merged, which is what leaves the
-;;; home TN with a single VOP write.  Both are needed to reproduce.
+;;; PROPAGATE-COPIES always looked for invalidations, so the wrong code only
+;;; appeared when the reference was in a different block from the copy and the
+;;; SETQ -- here separated by the cleanup for the special binding.  DEBUG 3 is
+;;; also needed, since it keeps the XEP and the entry lambda from being
+;;; merged, which is what leaves A's home TN with a single MOVE.  Copy
+;;; propagation itself only runs when SPEED >= COMPILATION-SPEED.
 
 (define-test copyprop.setq-across-special-bind
   (:tag :issues)
