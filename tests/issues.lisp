@@ -1154,3 +1154,68 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+
+;; Dead code containing a non-local exit left the bind block of a
+;; deleted lambda linked to the component head, so FIND-DFO kept the
+;; block and the dead code survived into the back end.  This affected
+;; both the byte compiler and the native compiler.
+
+(define-test issue.635.dead-nlx.1
+    (:tag :issues)
+  ;; ansi-test MISC.78.  Byte compiled.
+  (assert-equal
+   -12
+   (funcall (compile nil
+		     '(lambda ()
+		       (declare (optimize (speed 0) (debug 0)))
+		       (let ((v4
+			      (case 227
+				((-11113 -106126) (unwind-protect 8473))
+				(t 43916))))
+			 -12))))))
+
+(define-test issue.635.dead-nlx.2
+    (:tag :issues)
+  ;; ansi-test MISC.79.  Same as MISC.78, but natively compiled.
+  (assert-equal
+   -12
+   (funcall (compile nil
+		     '(lambda ()
+		       (let ((v4
+			      (case 227
+				((-11113 -106126) (unwind-protect 8473))
+				(t 43916))))
+			 -12))))))
+
+(define-test issue.635.dead-nlx.3
+    (:tag :issues)
+  ;; ansi-test MISC.151A.  A dead CATCH instead of an UNWIND-PROTECT.
+  (assert-equal
+   0
+   (funcall (compile nil
+		     '(lambda ()
+		       (declare (optimize (speed 3) (space 3) (safety 1)
+					  (debug 1) (compilation-speed 0)))
+		       (case 0
+			 ((-12 -9 -12 -2 -5 -2 15)
+			  (catch 'ct7 (throw 'ct7 0)))
+			 (t 0)))))))
+
+(define-test issue.635.dead-nlx.4
+    (:tag :issues)
+  ;; ansi-test MISC.196.  Dead CATCHes inside a local function call.
+  (assert-equal
+   0
+   (funcall (compile nil
+		     '(lambda (a b)
+		       (declare (type (integer 1 46794484349) a))
+		       (declare (type (integer -627 -2) b))
+		       (declare (ignorable a b))
+		       (declare (optimize (speed 3) (safety 1) (debug 1)))
+		       (if (not (logbitp 0 0))
+			   0
+			   (labels ((%f9 (f9-1 f9-2 f9-3)
+				      0))
+			     (%f9 (catch 'ct6 a) (catch 'ct4 0) 0)))))
+	    1 -200)))
+
