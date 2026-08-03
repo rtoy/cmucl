@@ -845,7 +845,38 @@
 
     (if (member kind '(:let :mv-let :assignment))
 	(let ((home (lambda-home leaf)))
-	  (setf (lambda-lets home) (delete leaf (lambda-lets home))))
+	  (setf (lambda-lets home) (delete leaf (lambda-lets home)))
+	  ;;
+	  ;; A deleted lambda's variables can no longer be referenced.
+	  ;; References can be left behind when the bind block is
+	  ;; deleted as unreachable while part of the body is kept
+	  ;; "reachable" by an escape function whose only reference is
+	  ;; from that same dead code, as in
+	  ;;
+	  ;;   (if t 0 (dotimes (i 5) (catch 'c 0)))
+	  ;;
+	  ;; where the loop, the catch's entry and the escape
+	  ;; function's exit form a reachability cycle that FIND-DFO
+	  ;; cannot collect.  If such stale references survive to
+	  ;; environment analysis, the exit is NLX-converted and the
+	  ;; dead code becomes reachable again, causing an assertion
+	  ;; failure in FIND-IN-ENVIRONMENT during VMR conversion.
+	  ;; Mark the referencing blocks for deletion; the
+	  ;; predecessor propagation in MARK-FOR-DELETION takes down
+	  ;; the rest of the cycle, including the escape function.
+	  ;;
+	  ;; Only do this when the lambda still has its BIND, that is,
+	  ;; when it is being deleted as part of deleting unreachable
+	  ;; code.  When a vacuous LET is removed by DELETE-LET, the
+	  ;; bind is unlinked and cleared first and the body remains
+	  ;; live, but variables with no references can still have
+	  ;; live SET nodes, which must not be marked.
+	  (when bind
+	    (dolist (var (lambda-vars leaf))
+	      (dolist (ref (leaf-refs var))
+		(mark-for-deletion (node-block ref)))
+	      (dolist (set (basic-var-sets var))
+		(mark-for-deletion (node-block set))))))
 	(let* ((bind-block (node-block bind))
 	       (component (block-component bind-block))
 	       (return (lambda-return leaf)))
@@ -1011,7 +1042,12 @@
 ;;;
 (defun mark-for-deletion (block)
   (declare (type cblock block))
-  (unless (block-delete-p block)
+  (unless (or (block-delete-p block)
+	      ;; Don't mark the component head or tail.  The
+	      ;; component head can be a predecessor of a marked block
+	      ;; when the block belongs to an escape function whose
+	      ;; only reference is from unreachable code.
+	      (null (block-start block)))
     (setf (block-delete-p block) t)
     (setf (component-reanalyze (block-component block)) t)
     (dolist (pred (block-pred block))
