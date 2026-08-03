@@ -101,12 +101,6 @@
 ;;; Cleanup-Mess-Up of the exit's cleanup) so that values whose only path
 ;;; to their receiver is through the non-local exit are not treated as
 ;;; dead and discarded.
-(defun stack-tailp (tail stack)
-  (declare (list tail stack))
-  (let ((diff (- (length stack) (length tail))))
-    (and (>= diff 0)
-	 (equal (nthcdr diff stack) tail))))
-
 (defun stack-simulation-walk (block stack)
   (declare (type cblock block) (list stack))
   (let ((2block (block-info block)))
