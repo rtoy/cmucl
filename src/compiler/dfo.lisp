@@ -31,7 +31,8 @@
   (let ((head (component-head component)))
     (do ()
 	((dolist (ep (block-succ head) t)
-	   (unless (block-flag ep)
+	   (unless (or (block-flag ep)
+		       (block-delete-p ep))
 	     (find-dfo-aux ep head component)
 	     (return nil))))))
 
@@ -104,7 +105,18 @@
   (unless (eq (block-component block) component)
     (join-components component (block-component block)))
 	
-  (unless (block-flag block)
+  (unless (or (block-flag block)
+	      ;;
+	      ;; Don't walk into blocks marked for deletion, so that
+	      ;; the final pass deletes them even when they are still
+	      ;; reachable.  A block condemned by MARK-FOR-DELETION
+	      ;; can remain reachable from the component head when it
+	      ;; belongs to an escape function whose only reference is
+	      ;; from equally dead code; walking it here would keep
+	      ;; that dead cycle alive forever.  BLOCK-DELETE-P is
+	      ;; never cleared once set, so such blocks can never be
+	      ;; needed again.
+	      (block-delete-p block))
     (setf (block-flag block) t)
     (dolist (succ (block-succ block))
       (find-dfo-aux succ head component))
