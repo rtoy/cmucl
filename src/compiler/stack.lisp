@@ -89,10 +89,24 @@
 ;;; stack because this walk may be from a values receiver whose lifetime
 ;;; encloses that of the previous walk.
 ;;;
-;;;    If a predecessor block is the component head, then it must be the case
-;;; that this is a NLX entry stub.  If so, we just stop our walk, since the
-;;; stack at the exit point doesn't have anything to do with our stack.
+;;;    If a predecessor block is the component head, then this is either a
+;;; NLX entry stub or a function entry point (e.g. an XEP or an
+;;; optional-dispatch entry point.)  For a function entry, the stack at that
+;;; point comes from our callers, so we just stop the walk.
 ;;;
+;;;    For a NLX entry stub for a catch, the values that were on the stack
+;;; at the %CATCH node that established the catch are still on the stack
+;;; at the entry stub, since a throw restores the stack pointer that
+;;; %CATCH saved.  We continue the walk at the %CATCH's block (the
+;;; Cleanup-Mess-Up of the exit's cleanup) so that values whose only path
+;;; to their receiver is through the non-local exit are not treated as
+;;; dead and discarded.
+(defun stack-tailp (tail stack)
+  (declare (list tail stack))
+  (let ((diff (- (length stack) (length tail))))
+    (and (>= diff 0)
+	 (equal (nthcdr diff stack) tail))))
+
 (defun stack-simulation-walk (block stack)
   (declare (type cblock block) (list stack))
   (let ((2block (block-info block)))
@@ -109,15 +123,36 @@
       (setf (ir2-block-start-stack 2block) new-stack)
       
       (when new-stack
-	(dolist (pred (block-pred block))
-	  (if (eq pred (component-head (block-component block)))
-	      (assert (find block
-			    (environment-nlx-info (block-environment block))
-			    :key #'nlx-info-target))
-	      (let ((pred-stack (ir2-block-end-stack (block-info pred))))
-		(unless (tailp new-stack pred-stack)
-		  (assert (search pred-stack new-stack))
-		  (stack-simulation-walk pred new-stack))))))))
+	(flet ((stack-tailp (tail stack)
+		 (declare (list tail stack))
+		 ;; Like TAILP, but compares the list contents instead
+		 ;; of the cons cells.  Walks arriving at a block from
+		 ;; different directions can carry stacks that are
+		 ;; EQUAL but don't share structure, so TAILP alone
+		 ;; would cause such blocks to be re-walked forever.
+		 (let ((diff (- (length stack) (length tail))))
+		   (and (>= diff 0)
+			(equal (nthcdr diff stack) tail)))))
+	  (dolist (pred (block-pred block))
+	    (if (eq pred (component-head (block-component block)))
+		(let ((info (find block
+				  (environment-nlx-info (block-environment block))
+				  :key #'nlx-info-target)))
+		  (when (and info
+			     (eq (cleanup-kind (nlx-info-cleanup info)) :catch))
+		    (let ((mess-up (cleanup-mess-up (nlx-info-cleanup info))))
+		      (when mess-up
+			(let* ((mess-block (node-block mess-up))
+			       (mess-stack (ir2-block-end-stack
+					    (block-info mess-block))))
+			  (unless (stack-tailp new-stack mess-stack)
+			    (assert (search mess-stack new-stack))
+			    (stack-simulation-walk mess-block
+						   new-stack)))))))
+		(let ((pred-stack (ir2-block-end-stack (block-info pred))))
+		  (unless (stack-tailp new-stack pred-stack)
+		    (assert (search pred-stack new-stack))
+		    (stack-simulation-walk pred new-stack)))))))))
 
   (undefined-value))
 
