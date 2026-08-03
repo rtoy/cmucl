@@ -986,7 +986,7 @@
 	       (member (functional-kind fun) '(nil :assignment))
 	       (not (functional-entry-function fun)))
       (let* ((ref-cont (node-cont (first refs)))
-	     (call (continuation-dest ref-cont)))
+	     (call (and ref-cont (continuation-dest ref-cont))))
 	(when (and call
 		   (basic-combination-p call)
 		   (eq (basic-combination-fun call) ref-cont)
@@ -1101,7 +1101,8 @@
     (let ((outside-non-tail-call nil)
 	  (outside-call nil))
       (when (and (dolist (ref (leaf-refs fun) t)
-		   (let ((dest (continuation-dest (node-cont ref))))
+		   (let* ((cont (node-cont ref))
+			  (dest (and cont (continuation-dest cont))))
 		     (when (or (not dest)
 			       (block-delete-p (node-block dest)))
 		       (return nil))
