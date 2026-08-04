@@ -1154,3 +1154,46 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+(define-test issue.644.dead-entry-points
+    (:tag :issues)
+  ;; Unreachable code containing a closure used to keep itself alive
+  ;; through circular references: the closure's entry-point link kept
+  ;; its body reachable, the body's exit kept the referring code
+  ;; reachable, and that code held the only reference to the closure.
+  ;; IR2 conversion then failed with an assertion about the home
+  ;; environment of a variable whose home lambda had been deleted.
+  (let ((f (compile nil '(lambda (a b)
+			   (declare (optimize (speed 2) (space 3) (safety 0)
+					      (debug 1) (compilation-speed 3)))
+			   (if (if a nil nil)
+			       (labels ((%f9 (x)
+					  (ignore-errors 0)))
+				 (dotimes (iv4 5 a) (%f9 b)))
+			       0)))))
+    (assert-equal 0 (funcall f 1 2))))
+
+(define-test issue.644.dead-entry-points.misc.249
+    (:tag :issues)
+  ;; The original MISC.249 test from ansi-tests.
+  (let ((f (compile nil '(lambda (a b)
+			   (declare (notinline <=))
+			   (declare (optimize (speed 2) (space 3) (safety 0)
+					      (debug 1) (compilation-speed 3)))
+			   (if (if (<= 0) nil nil)
+			       (labels ((%f9 (f9-1 f9-2 f9-3)
+					  (ignore-errors 0)))
+				 (dotimes (iv4 5 a) (%f9 0 0 b)))
+			       0)))))
+    (assert-equal 0 (funcall f 1 2))))
+
+(define-test issue.644.dead-entry-points.tagbody
+    (:tag :issues)
+  ;; The case from the old FIXME in DELETE-BLOCK's ENTRY case: dead
+  ;; code in a tagbody containing an escape closure.  Only compile it;
+  ;; calling it would loop forever.
+  (assert-true (compile nil '(lambda ()
+			       (tagbody
+				  (go loop)
+				  (block g1472
+				    #'(lambda () (return-from g1472 nil)))
+				loop)))))
