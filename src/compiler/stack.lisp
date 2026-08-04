@@ -105,31 +105,6 @@
 ;;; %CATCH saved the stack pointer, so we compare the stub's stack
 ;;; against the block's end stack with those pushes split off, and put
 ;;; them back on top when we re-walk the block.
-
-;;; Split-Mess-Stack  --  Internal
-;;;
-;;;    Return two values: the prefix of Stack consisting of continuations
-;;; that are pushed by Mess-Up's block after the Mess-Up node, and the
-;;; rest of Stack.  The former are on the stack at the block's end but
-;;; not at the point where the mess-up saved the stack pointer.
-;;;
-(defun split-mess-stack (mess-up 2block stack)
-  (declare (type node mess-up) (type ir2-block 2block) (list stack))
-  (let ((after ())
-	(saw-mess-up nil))
-    (do-nodes (node cont (node-block mess-up))
-      (when (and saw-mess-up
-		 (member cont (ir2-block-pushed 2block)))
-	(push cont after))
-      (when (eq node mess-up)
-	(setq saw-mess-up t)))
-    (do ((top stack (cdr top))
-	 (above ()))
-	((or (null top)
-	     (not (member (car top) after)))
-	 (values (nreverse above) top))
-      (push (car top) above))))
-
 (defun stack-simulation-walk (block stack)
   (declare (type cblock block) (list stack))
   (let ((2block (block-info block)))
