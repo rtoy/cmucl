@@ -100,13 +100,11 @@
 ;;; %CATCH saved.  We continue the walk at the %CATCH's block (the
 ;;; Cleanup-Mess-Up of the exit's cleanup) so that values whose only path
 ;;; to their receiver is through the non-local exit are not treated as
-;;; dead and discarded.
-(defun stack-tailp (tail stack)
-  (declare (list tail stack))
-  (let ((diff (- (length stack) (length tail))))
-    (and (>= diff 0)
-	 (equal (nthcdr diff stack) tail))))
-
+;;; dead and discarded.  Values pushed by that block after the %CATCH
+;;; node are on the stack at the block's end but not at the point where
+;;; %CATCH saved the stack pointer, so we compare the stub's stack
+;;; against the block's end stack with those pushes split off, and put
+;;; them back on top when we re-walk the block.
 (defun stack-simulation-walk (block stack)
   (declare (type cblock block) (list stack))
   (let ((2block (block-info block)))
@@ -143,12 +141,43 @@
 		    (let ((mess-up (cleanup-mess-up (nlx-info-cleanup info))))
 		      (when mess-up
 			(let* ((mess-block (node-block mess-up))
-			       (mess-stack (ir2-block-end-stack
-					    (block-info mess-block))))
-			  (unless (stack-tailp new-stack mess-stack)
-			    (assert (search mess-stack new-stack))
-			    (stack-simulation-walk mess-block
-						   new-stack)))))))
+			       (mess-2block (block-info mess-block))
+			       (mess-stack (ir2-block-end-stack mess-2block)))
+			  (flet
+			      ((split-mess-stack (mess-up 2block stack)
+				 ;; Return two values: the prefix of
+				 ;; Stack consisting of continuations
+				 ;; that are pushed by Mess-Up's block
+				 ;; after the Mess-Up node, and the
+				 ;; rest of Stack.  The former are on
+				 ;; the stack at the block's end but
+				 ;; not at the point where the mess-up
+				 ;; saved the stack pointer.
+				 (declare (type node mess-up)
+					  (type ir2-block 2block)
+					  (list stack))
+				 (let ((after ())
+				       (saw-mess-up nil))
+				   (do-nodes (node cont (node-block mess-up))
+				     (when (and saw-mess-up
+						(member cont (ir2-block-pushed 2block)))
+				       (push cont after))
+				     (when (eq node mess-up)
+				       (setq saw-mess-up t)))
+				   (do ((top stack (cdr top))
+					(above ()))
+				       ((or (null top)
+					    (not (member (car top) after)))
+					(values (nreverse above) top))
+				     (push (car top) above)))))
+			    (multiple-value-bind (above below)
+				(split-mess-stack mess-up mess-2block
+						  mess-stack)
+			      (unless (stack-tailp new-stack below)
+				(assert (search below new-stack))
+				(stack-simulation-walk
+				 mess-block
+				 (append above new-stack))))))))))
 		(let ((pred-stack (ir2-block-end-stack (block-info pred))))
 		  (unless (stack-tailp new-stack pred-stack)
 		    (assert (search pred-stack new-stack))
