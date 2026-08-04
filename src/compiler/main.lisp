@@ -444,6 +444,9 @@
   (declare (type component component))
   (clear-flags component)
   (let ((live ()))
+    ;; Start with the entry points that are definitely live: top-level
+    ;; lambdas, and XEPs referenced from some other component (such as
+    ;; the top-level component that dumps or funcalls the function).
     (dolist (fun (component-lambdas component))
       (case (functional-kind fun)
 	((:top-level :top-level-xep)
@@ -459,6 +462,12 @@
 		 (setf (block-flag block) t)
 		 (dolist (succ (block-succ block))
 		   (flag-reachable succ)))))
+      ;; Flag every block reachable from the bind blocks of the live
+      ;; lambdas.  Any lambda referenced from a flagged block is also
+      ;; live and contributes its own blocks, so iterate until no new
+      ;; live lambdas are found.  FLAG-REACHABLE stops at already
+      ;; flagged blocks, so re-walking the live list each time around
+      ;; only visits new blocks.
       (loop
 	(dolist (fun live)
 	  (let ((bind (lambda-bind fun)))
@@ -473,6 +482,13 @@
 		(push fun live)
 		(setq found-live t))))
 	  (unless found-live (return)))))
+    ;; Unlink the bind blocks of the dead lambdas from the component
+    ;; head.  Their blocks are then genuinely unreachable, and the
+    ;; next flow graph analysis deletes them, which also deletes the
+    ;; lambdas and their references via the usual DELETE-BLOCK
+    ;; processing.  :Optional lambdas are skipped since DELETE-LAMBDA
+    ;; can't be called on them; they are deleted when their
+    ;; optional-dispatch's XEP is.
     (let ((head (component-head component)))
       (dolist (fun (component-lambdas component))
 	(unless (or (member fun live)
@@ -482,7 +498,6 @@
 	      (unlink-blocks head bind-block)
 	      (setf (component-reanalyze component) t)))))))
   (undefined-value))
-
   
 ;;; COMPILE-COMPONENT -- internal.
 ;;;
