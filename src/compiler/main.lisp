@@ -416,6 +416,88 @@
 		      (leaf-refs fun))
 	 (return))))))
 
+
+;;; GC-DEAD-ENTRY-POINTS  --  Internal
+;;;
+;;;    Delete lambdas in Component that are unreachable, but that keep
+;;; themselves apparently live through circular references.  This can happen
+;;; when a closure and the code containing the only reference to it become
+;;; unreachable together: the closure's entry-point link from the component
+;;; head keeps its body in the flow graph, the body's exits keep the referring
+;;; code reachable, and the reference in that code keeps the closure's
+;;; reference count from ever dropping to zero.  Ordinary unreachable code
+;;; deletion then never collects any of it, and environment analysis sees
+;;; references to variables whose home lambdas have been deleted, causing
+;;; IR2 conversion to fail.
+;;;
+;;;    We compute liveness from the real entry points: top-level lambdas and
+;;; external entry points that are referenced from outside Component (the
+;;; same test as DELETE-IF-NO-ENTRIES.)  A lambda referenced from a block
+;;; reachable from a live lambda is also live; we iterate to a fixed point.
+;;; We then remove the component head links of the entry points that aren't
+;;; live and let the normal flow graph analysis delete the now genuinely
+;;; unreachable blocks.  :Optional lambdas are never unlinked directly, since
+;;; DELETE-LAMBDA can't be called on them; they are collected as part of
+;;; their optional-dispatch's XEP deletion.
+;;;
+(defun gc-dead-entry-points (component)
+  (declare (type component component))
+  (clear-flags component)
+  (let ((live ()))
+    ;; Start with the entry points that are definitely live: top-level
+    ;; lambdas, and XEPs referenced from some other component (such as
+    ;; the top-level component that dumps or funcalls the function).
+    (dolist (fun (component-lambdas component))
+      (case (functional-kind fun)
+	((:top-level :top-level-xep)
+	 (push fun live))
+	(:external
+	 (unless (every #'(lambda (ref)
+			    (eq (block-component (node-block ref))
+				component))
+			(leaf-refs fun))
+	   (push fun live)))))
+    (labels ((flag-reachable (block)
+	       (unless (block-flag block)
+		 (setf (block-flag block) t)
+		 (dolist (succ (block-succ block))
+		   (flag-reachable succ)))))
+      ;; Flag every block reachable from the bind blocks of the live
+      ;; lambdas.  Any lambda referenced from a flagged block is also
+      ;; live and contributes its own blocks, so iterate until no new
+      ;; live lambdas are found.  FLAG-REACHABLE stops at already
+      ;; flagged blocks, so re-walking the live list each time around
+      ;; only visits new blocks.
+      (loop
+	(dolist (fun live)
+	  (let ((bind (lambda-bind fun)))
+	    (when bind
+	      (flag-reachable (node-block bind)))))
+	(let ((found-live nil))
+	  (dolist (fun (component-lambdas component))
+	    (unless (member fun live)
+	      (when (find-if #'(lambda (ref)
+				 (block-flag (node-block ref)))
+			     (leaf-refs fun))
+		(push fun live)
+		(setq found-live t))))
+	  (unless found-live (return)))))
+    ;; Unlink the bind blocks of the dead lambdas from the component
+    ;; head.  Their blocks are then genuinely unreachable, and the
+    ;; next flow graph analysis deletes them, which also deletes the
+    ;; lambdas and their references via the usual DELETE-BLOCK
+    ;; processing.  :Optional lambdas are skipped since DELETE-LAMBDA
+    ;; can't be called on them; they are deleted when their
+    ;; optional-dispatch's XEP is.
+    (let ((head (component-head component)))
+      (dolist (fun (component-lambdas component))
+	(unless (or (member fun live)
+		    (member (functional-kind fun) '(:optional :deleted)))
+	  (let ((bind-block (node-block (lambda-bind fun))))
+	    (when (member bind-block (block-succ head))
+	      (unlink-blocks head bind-block)
+	      (setf (component-reanalyze component) t)))))))
+  (undefined-value))
   
 ;;; COMPILE-COMPONENT -- internal.
 ;;;
@@ -439,6 +521,9 @@
 		       (component-name component))))
 
     (ir1-phases component)
+
+    (gc-dead-entry-points component)
+    (dfo-as-needed component)
 
     (when *loop-analyze*
       (dfo-as-needed component)
