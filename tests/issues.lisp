@@ -1403,3 +1403,28 @@
 			  (lognor (%f16) b))))
 	    -123886
 	    -1656)))
+
+
+
+(define-test issue-652.free-special-decl-scope
+    (:tag :issues)
+  ;; A free SPECIAL declaration in a lambda scopes over only the body
+  ;; forms, not the &optional/&key default forms or &aux init forms
+  ;; (CLHS 3.3.4).  From ansi-tests DEFUN.5 and LAMBDA.52 through
+  ;; LAMBDA.54.
+  (dolist (ll '((&optional (y x)) (&key (y x)) (&aux (y x))))
+    (let ((form `(lambda ()
+		   (let ((x 1))
+		     (declare (special x))
+		     (let ((x 2))
+		       (flet ((f (,@ll)
+				(declare (special x))
+				(values y x)))
+			 (f)))))))
+      (flet ((check (fun)
+	       (multiple-value-bind (y x)
+		   (funcall fun)
+		 (assert-equal 2 y ll)
+		 (assert-equal 1 x ll))))
+	(check (compile nil form))
+	(check (eval form))))))

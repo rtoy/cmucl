@@ -1517,6 +1517,40 @@
     new-body))
 
 
+;;; Separate-Free-Special-Declarations  --  Internal
+;;;
+;;;    Split out any SPECIAL declarations in Decls that do not name one of
+;;; the Vars bound by the lambda (including &aux vars).  A free SPECIAL
+;;; declaration scopes over only the body forms, not the &aux and default
+;;; initialization forms (CLHS 3.3.4), so we move such declarations into a
+;;; LOCALLY wrapped around Body.  We return two values: the remaining
+;;; declarations and the possibly wrapped body.
+;;;
+(defun separate-free-special-declarations (decls vars body)
+  (declare (list decls vars body))
+  (collect ((new-decls)
+	    (free-names))
+    (dolist (decl decls)
+      (collect ((new-specs))
+	(dolist (spec (rest decl))
+	  (if (and (consp spec) (eq (first spec) 'special))
+	      (collect ((bound-names))
+		(dolist (name (rest spec))
+		  (if (and (symbolp name)
+			   (not (find-in-bindings vars name)))
+		      (free-names name)
+		      (bound-names name)))
+		(when (bound-names)
+		  (new-specs `(special ,@(bound-names)))))
+	      (new-specs spec)))
+	(when (new-specs)
+	  (new-decls `(declare ,@(new-specs))))))
+    (values (new-decls)
+	    (if (free-names)
+		`((locally (declare (special ,@(free-names)))
+		    ,@body))
+		body))))
+
 ;;; IR1-Convert-Lambda  --  Internal
 ;;;
 ;;;    Convert a Lambda into a Lambda or Optional-Dispatch leaf.  NAME and
@@ -1543,6 +1577,9 @@
       (find-lambda-vars (cadr form))
     (multiple-value-bind (body decls)
 	(system:parse-body (cddr form) *lexical-environment* t)
+      (multiple-value-setq (decls body)
+	(separate-free-special-declarations decls (append aux-vars vars)
+					    body))
       (let* ((*allow-debug-catch-tag* (and *allow-debug-catch-tag* 
 					   allow-debug-catch-tag))
 	     (new-body (if (and parent-form
