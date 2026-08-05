@@ -1391,12 +1391,9 @@
 ;;; variable can be used.
 ;;;
 ;;;     Substitution of individual references is inhibited if the reference is
-;;; in a different component from the home.  This can happen with closures
-;;; over top-level lambda vars, or with references from code that is
-;;; unreachable but not yet deleted, since references from deleted functions
-;;; don't cause components to be joined (see FIND-REFERENCE-FUNCTIONS).  In
-;;; such cases, the references may have already been compiled or may be about
-;;; to be deleted, and thus can't (or needn't) be retroactively modified.
+;;; in a different component from the home.  This can only happen with closures
+;;; over top-level lambda vars.  In such cases, the references may have already
+;;; been compiled, and thus can't be retroactively modified.
 ;;;
 ;;;    If all of the variables are deleted (have no references) when we are
 ;;; done, then we delete the let.
@@ -1423,9 +1420,13 @@
 		(let ((this-comp (block-component (node-block use))))
 		  (substitute-leaf-if
 		   #'(lambda (ref)
-		       ;; Don't touch refs in other components; see the
-		       ;; comment above.
-		       (eq (block-component (node-block ref)) this-comp))
+		       (cond ((eq (block-component (node-block ref))
+				  this-comp)
+			      t)
+			     (t
+			      (assert (eq (functional-kind (lambda-home fun))
+					  :top-level))
+			      nil)))
 		   leaf var))
 		t)))))
        ((and (null (rest (leaf-refs var)))
