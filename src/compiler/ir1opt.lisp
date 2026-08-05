@@ -628,7 +628,17 @@
   (declare (type cif node))
   (let ((test (if-test node))
 	(block (node-block node)))
-    
+    ;;
+    ;; If the block has no successors, then both branches of the IF
+    ;; must have been deleted out from under us, e.g. by DELETE-BLOCK
+    ;; unlinking the blocks of a deleted lambda.  The block is
+    ;; unreachable, so propagate the deletion backward instead of
+    ;; trying to optimize the IF; UNLINK-NODE would fail on a block
+    ;; with no successor.
+    (when (null (block-succ block))
+      (mark-for-deletion block)
+      (return-from ir1-optimize-if (undefined-value)))
+
     (when (and (eq (block-start block) test)
 	       (eq (continuation-next test) node)
 	       (rest (block-start-uses block)))
