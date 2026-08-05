@@ -608,22 +608,27 @@
 	(setf (block-type-check block) nil)))
 
     (dolist (cont (conts))
-      (multiple-value-bind (check types)
-	  (continuation-check-types
-	   cont
-	   (and (eq (continuation-%type-check cont) :error)
-		(policy (continuation-dest cont) (= safety 3))))
-	(ecase check
-	  (:simple)
-	  (:hairy
-	   (convert-type-check cont types))
-	  (:too-hairy
-	   (let* ((context (continuation-dest cont))
-		  (*compiler-error-context* context))
-	     (when (policy context (>= safety brevity))
-	       (compiler-note
-		_N"Type assertion too complex to check:~% ~S."
-		(type-specifier (continuation-asserted-type cont)))))
-	   (setf (continuation-%type-check cont) :deleted))))))
+      ;; The conversion of previous type checks may have invoked
+      ;; local call analysis, deleting or flushing the dest of a
+      ;; continuation collected above.  Such a continuation's value
+      ;; is no longer used, so there is nothing to check.
+      (when (continuation-dest cont)
+	(multiple-value-bind (check types)
+	    (continuation-check-types
+	     cont
+	     (and (eq (continuation-%type-check cont) :error)
+		  (policy (continuation-dest cont) (= safety 3))))
+	  (ecase check
+	    (:simple)
+	    (:hairy
+	     (convert-type-check cont types))
+	    (:too-hairy
+	     (let* ((context (continuation-dest cont))
+		    (*compiler-error-context* context))
+	       (when (policy context (>= safety brevity))
+		 (compiler-note
+		  _N"Type assertion too complex to check:~% ~S."
+		  (type-specifier (continuation-asserted-type cont)))))
+	     (setf (continuation-%type-check cont) :deleted)))))))
 
   (undefined-value))

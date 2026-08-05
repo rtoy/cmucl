@@ -1338,3 +1338,40 @@
 				  (block g1472
 				    #'(lambda () (return-from g1472 nil)))
 				loop)))))
+
+
+
+(define-test misc.644.type-checks-emitted
+    (:tag :issues)
+  ;; The fix for ansi-test MISC.644 makes GENERATE-TYPE-CHECKS skip
+  ;; continuations whose dest was flushed during check conversion.
+  ;; Verify that type checks are still emitted for continuations with
+  ;; live dests, for both the :SIMPLE (backend template) and :HAIRY
+  ;; (CONVERT-TYPE-CHECK) paths.
+  (flet ((signaled-type-error (fun arg)
+	   ;; Call FUN on ARG, returning the datum and expected type
+	   ;; from the signaled TYPE-ERROR, or NIL if no TYPE-ERROR
+	   ;; was signaled.
+	   (handler-case (progn (funcall fun arg) nil)
+	     (type-error (c)
+	       (values (type-error-datum c)
+		       (type-error-expected-type c))))))
+    (let ((f-simple (compile nil '(lambda (x)
+				    (declare (optimize (safety 3)))
+				    (the fixnum x))))
+	  ;; A ranged integer type has no check template, so this must
+	  ;; go through CONVERT-TYPE-CHECK.
+	  (f-hairy (compile nil '(lambda (x)
+				   (declare (optimize (safety 3)))
+				   (the (integer 0 10) x)))))
+      (multiple-value-bind (datum expected)
+	  (signaled-type-error f-simple 'a)
+	(assert-equal 'a datum)
+	(assert-true (subtypep expected 'fixnum))
+	(assert-true (subtypep 'fixnum expected)))
+      (multiple-value-bind (datum expected)
+	  (signaled-type-error f-hairy 42)
+	(assert-equal 42 datum)
+	(assert-true (subtypep expected '(integer 0 10)))
+	(assert-true (subtypep '(integer 0 10) expected)))
+      (assert-equal 7 (funcall f-hairy 7)))))
