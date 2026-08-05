@@ -741,7 +741,8 @@
 ;;;; Deleting stuff:
 
 (declaim (start-block delete-ref delete-functional flush-dest
-		      delete-continuation delete-block delete-lambda))
+		      delete-continuation delete-block delete-lambda
+		      mark-for-deletion))
 
 ;;; Delete-Lambda-Var  --  Internal
 ;;;
