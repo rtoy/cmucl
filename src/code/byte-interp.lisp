@@ -900,6 +900,35 @@
       (push-eval-stack val))
     (byte-interpret component new-pc fp)))
 
+;;; POP-N-UNDER -- Xop.
+;;;
+;;; Discard stack slots buried under the top of the stack.  The first
+;;; operand is the number of values on the top of the stack to
+;;; preserve; the second is the number of stack slots directly below
+;;; them to discard.  A second operand of zero means that the slot
+;;; directly below the preserved values holds the count of an
+;;; unknown-values group; that group, including its count slot, is
+;;; discarded.
+;;;
+(define-xop pop-n-under (component old-pc pc fp)
+  (declare (ignore old-pc))
+  (with-extended-operand (component pc keep pc1)
+    (with-extended-operand (component pc1 howmany new-pc)
+      (let* ((sp (current-stack-pointer))
+	     (src (- sp keep))
+	     (count (if (zerop howmany)
+			(let ((num (eval-stack-ref (1- src))))
+			  (declare (type index num))
+			  (1+ num))
+			howmany))
+	     (dst (- src count)))
+	(declare (type stack-pointer sp src dst))
+	(dotimes (i keep)
+	  (setf (eval-stack-ref (+ dst i))
+		(eval-stack-ref (+ src i))))
+	(setf (current-stack-pointer) (- sp count)))
+      (byte-interpret component new-pc fp))))
+
 
 
 ;;;; Type checking:

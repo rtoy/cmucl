@@ -227,7 +227,7 @@
     fdefn-function-or-lose; 3
     default-unknown-values; 4
     push-n-under; 5
-    xop6
+    pop-n-under; 6
     xop7
     merge-unknown-values
     make-closure
@@ -841,6 +841,50 @@
 		  (t
 		   (incf fixed results))))))
 	  (flush-fixed)))
+      ;; The loop above only flushes dead values down to the first live
+      ;; one.  When IR1 deletes a local exit whose value is delivered
+      ;; past a pending full call, the pending function (and any
+      ;; already-pushed arguments) can be dead on the stack UNDERNEATH
+      ;; live values, where a simple pop can't reach them.  Squeeze such
+      ;; buried dead values out with %BYTE-POP-N-UNDER, which discards
+      ;; slots below the topmost KEEP live slots.  We must not disturb
+      ;; anything at or below an :NLX-ENTRY marker, and we can't compute
+      ;; a static slot count past a live :unknown values group, so we
+      ;; stop scanning at either.
+      (let ((keep 0)
+	    (fixed 0)
+	    (found nil)
+	    (lives nil)
+	    (tail stack))
+	(flet ((flush-buried ()
+		 (unless (zerop fixed)
+		   (pops `(%byte-pop-n-under ,keep ,fixed))
+		   (setf fixed 0))))
+	  (loop
+	    (when (null tail)
+	      (return))
+	    (let ((cont (car tail)))
+	      (when (eq cont :nlx-entry)
+		(return))
+	      (let* ((info (continuation-info cont))
+		     (results (byte-continuation-info-results info)))
+		(cond ((sset-member info live)
+		       (when (eq results :unknown)
+			 (return))
+		       (flush-buried)
+		       (incf keep (if (eq results :fdefinition) 1 results))
+		       (push cont lives))
+		      ((eq results :unknown)
+		       (flush-buried)
+		       (pops `(%byte-pop-n-under ,keep 0))
+		       (setf found t))
+		      (t
+		       (incf fixed (if (eq results :fdefinition) 1 results))
+		       (setf found t)))))
+	    (setq tail (cdr tail)))
+	  (flush-buried))
+	(when found
+	  (setq stack (nconc (nreverse lives) tail))))
       (when (pops)
 	(assert pred)
 	(let ((cleanup-block
@@ -1768,6 +1812,24 @@
   (assert (and (zerop num-args) (zerop results)))
   (output-byte-with-operand segment byte-pop-n (continuation-value count)))
 
+(defknown %byte-pop-n-under (index index) (values))
+
+(defoptimizer (%byte-pop-n-under byte-annotate) ((keep count) node)
+  (assert (constant-continuation-p keep))
+  (assert (constant-continuation-p count))
+  (annotate-continuation keep 0)
+  (annotate-continuation count 0)
+  (annotate-continuation (basic-combination-fun node) 0)
+  (setf (node-tail-p node) nil)
+  t)
+
+(defoptimizer (%byte-pop-n-under byte-compile)
+	      ((keep count) node results num-args segment)
+  (assert (and (zerop num-args) (zerop results)))
+  (output-do-xop segment 'pop-n-under)
+  (output-extended-operand segment (continuation-value keep))
+  (output-extended-operand segment (continuation-value count)))
+
 (defoptimizer (%special-bind byte-annotate) ((var value) node)
   (annotate-continuation var 0)
   (annotate-continuation value 1)
@@ -2386,13 +2448,21 @@
 	      (let* ((low-3-bits (extract-3-bit-op byte))
 		     (xop (nth (if (eq low-3-bits :var) (next-byte) low-3-bits)
 			       *xop-names*)))
-		(note (intl:gettext "xop ~A~@[ ~D~]")
-		      xop
-		      (case xop
-			((catch go unwind-protect)
-			 (extract-24-bits))
-			((type-check push-n-under)
-			 (get-constant (extract-extended-op)))))))
+		(case xop
+		  (pop-n-under
+		   (note (intl:gettext "xop pop-n-under ~D, ~D")
+			 (extract-extended-op)
+			 (extract-extended-op)))
+		  (t
+		   (note (intl:gettext "xop ~A~@[ ~D~]")
+			 xop
+			 (case xop
+			   ((catch go unwind-protect)
+			    (extract-24-bits))
+			   (type-check
+			    (get-constant (extract-extended-op)))
+			   (push-n-under
+			    (extract-extended-op))))))))
 			 
 	     ((#b11100000 #b11100000)
 	      ;; inline

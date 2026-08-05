@@ -20381,6 +20381,10 @@ msgid "if-eq ~D"
 msgstr ""
 
 #: src/compiler/byte-comp.lisp
+msgid "xop pop-n-under ~D, ~D"
+msgstr ""
+
+#: src/compiler/byte-comp.lisp
 msgid "xop ~A~@[ ~D~]"
 msgstr ""
 
