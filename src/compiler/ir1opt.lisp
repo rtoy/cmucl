@@ -1786,6 +1786,17 @@
 	  (setf (continuation-dest arg) node))
 	(setf (combination-args use) nil)
 	(flush-dest list)
+	;;
+	;; Explicitly delete the now argless call to LIST instead of
+	;; relying on FLUSH-DEAD-CODE, which refuses to flush calls
+	;; when SAFETY = 3.  Leaving the dead call around confuses the
+	;; byte compiler's stack analysis, because the values consumed
+	;; by the dead call are no longer on the top of the simulated
+	;; stack.  Deleting it is safe: the arguments are still
+	;; evaluated as arguments of the VALUES call, and LIST itself
+	;; cannot signal an error.
+	(flush-dest (combination-fun use))
+	(unlink-node use)
 	(setf (combination-args node) args))
       t)))
 
