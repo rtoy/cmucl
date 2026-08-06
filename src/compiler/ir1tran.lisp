@@ -1454,7 +1454,8 @@
 
 (declaim (start-block ir1-convert-lambda ir1-convert-lambda-body
 		      ir1-convert-aux-bindings varify-lambda-arg
-		      ir1-convert-dynamic-extent-bindings))
+		      ir1-convert-dynamic-extent-bindings
+		      separate-free-special-declarations))
 
 ;;; Varify-Lambda-Arg  --  Internal
 ;;;
@@ -1520,11 +1521,11 @@
 ;;; Separate-Free-Special-Declarations  --  Internal
 ;;;
 ;;;    Split out any SPECIAL declarations in Decls that do not name one of
-;;; the Vars bound by the lambda (including &aux vars).  A free SPECIAL
-;;; declaration scopes over only the body forms, not the &aux and default
-;;; initialization forms (CLHS 3.3.4), so we move such declarations into a
-;;; LOCALLY wrapped around Body.  We return two values: the remaining
-;;; declarations and the possibly wrapped body.
+;;; the Vars bound by the form (for a lambda, including &aux vars).  A free
+;;; SPECIAL declaration scopes over only the body forms, not the value,
+;;; &aux, or default initialization forms (CLHS 3.3.4), so we move such
+;;; declarations into a LOCALLY wrapped around Body.  We return two values:
+;;; the remaining declarations and the possibly wrapped body.
 ;;;
 (defun separate-free-special-declarations (decls vars body)
   (declare (list decls vars body))
@@ -3149,6 +3150,11 @@
   evaluated."
   (multiple-value-bind (vars values)
       (extract-let-variables bindings 'let)
+    ;; A free SPECIAL declaration scopes over only the body forms, not
+    ;; the value forms (CLHS 3.3.4), so move such declarations into a
+    ;; LOCALLY wrapped around the body.
+    (multiple-value-setq (decls body)
+      (separate-free-special-declarations decls vars body))
     (let ((*lexical-environment* (process-declarations decls vars nil cont)))
       (if (dynamic-extent-allocation-p vars values)
 	  (with-dynamic-extent (start cont nnext-cont :bind)
@@ -3176,6 +3182,13 @@
   form to reference any of the previous Vars."
   (multiple-value-bind (vars values)
       (extract-let-variables bindings 'let*)
+    ;; A free SPECIAL declaration scopes over only the body forms, not
+    ;; the value forms (CLHS 3.3.4), so move such declarations into a
+    ;; LOCALLY wrapped around the body.  Bound SPECIAL declarations
+    ;; still scope over subsequent value forms via the variable
+    ;; structures.
+    (multiple-value-setq (decls body)
+      (separate-free-special-declarations decls vars body))
     (let ((*lexical-environment* (process-declarations decls vars nil cont)))
       (ir1-convert-dynamic-extent-bindings start cont body vars values nil))))
 
