@@ -1089,7 +1089,16 @@
 	(reoptimize-continuation cont)))
 
   (dolist (b (block-pred block))
-    (unlink-blocks b block))
+    (unlink-blocks b block)
+    ;;
+    ;; If the predecessor is not itself being deleted, unlinking has
+    ;; left it with a dangling control transfer.  Since Block is
+    ;; unreachable, such a predecessor must be transitively
+    ;; unreachable too, so propagate the deletion backward.  Without
+    ;; this, a block ending in an IF can be left with no successors,
+    ;; which IR1-OPTIMIZE-IF then trips over in UNLINK-NODE.
+    (unless (block-delete-p b)
+      (mark-for-deletion b)))
   (dolist (b (block-succ block))
     (unlink-blocks block b))
 
