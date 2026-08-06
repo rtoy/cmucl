@@ -1428,3 +1428,30 @@
 		 (assert-equal 1 x ll))))
 	(check (compile nil form))
 	(check (eval form))))))
+
+(define-test issue-654.let-free-special-decl-scope
+    (:tag :issues)
+  ;; A free SPECIAL declaration in a LET or LET* scopes over only the
+  ;; body forms, not the value forms (CLHS 3.3.4).  From ansi-tests
+  ;; LET.17, LET.17A, LET*.17, and LET*.17A.
+  (dolist (op '(let let*))
+    (let ((form `(lambda ()
+		   (let ((x :bad))
+		     (declare (special x))
+		     (let ((x :good))
+		       (,op ((y x))
+			 (declare (special x))
+			 y))))))
+      (assert-equal :good (funcall (compile nil form)) op)
+      (assert-equal :good (funcall (eval form)) op)))
+  ;; A bound SPECIAL declaration in LET* still scopes over subsequent
+  ;; value forms.
+  (let ((form '(lambda ()
+		 (let ((x :outer))
+		   (declare (ignorable x))
+		   (let* ((x :inner)
+			  (y x))
+		     (declare (special x))
+		     (list y x))))))
+    (assert-equal '(:inner :inner) (funcall (compile nil form)))
+    (assert-equal '(:inner :inner) (funcall (eval form)))))
