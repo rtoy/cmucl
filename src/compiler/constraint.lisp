@@ -115,6 +115,52 @@
       (ok-ref-lambda-var use))))
 
 
+;;; REF-VALUE-CURRENT-AT-NODE-P  --  Internal
+;;;
+;;;    Return true if the value delivered by Ref is certain to still be
+;;; the current value of Ref's lambda-var when control reaches Node.
+;;; This is trivially true when the variable has no sets.  Otherwise we
+;;; scan forward from Ref looking for an intervening set of the
+;;; variable.  Optimizations such as SUBSTITUTE-SINGLE-USE-CONTINUATION
+;;; can leave a test's argument continuation using a Ref node that is
+;;; separated from the test by arbitrary code, including sets of the
+;;; referenced variable; a constraint derived from such a Ref would
+;;; describe a stale value of the variable.  If we run off the end of
+;;; the node chain without reaching Node, we conservatively return
+;;; false.
+;;;
+(defun ref-value-current-at-node-p (ref node)
+  (declare (type ref ref) (type node node))
+  (let ((var (ref-leaf ref)))
+    (or (null (lambda-var-sets var))
+	(do ((current (continuation-next (node-cont ref))
+		      (continuation-next (node-cont current))))
+	    ((null current) nil)
+	  (when (eq current node)
+	    (return t))
+	  (when (and (set-p current)
+		     (eq (set-var current) var))
+	    (return nil))))))
+
+
+;;; OK-TEST-CONT-LAMBDA-VAR  --  Internal
+;;;
+;;;    Like OK-CONT-LAMBDA-VAR, but for continuations that are (perhaps
+;;; indirectly) the test of the if If.  We reject the variable when its
+;;; value at the test might differ from its value in the successor
+;;; blocks, since the test constraint is attached to the successors and
+;;; asserts a property of the variable's value there.
+;;;
+(defun ok-test-cont-lambda-var (cont if)
+  (declare (type continuation cont) (type cif if))
+  (let ((use (continuation-use cont)))
+    (when (ref-p use)
+      (let ((var (ok-ref-lambda-var use)))
+	(when (and var
+		   (ref-value-current-at-node-p use if))
+	  var)))))
+
+
 ;;; ADD-TEST-CONSTRAINT  --  Internal
 ;;;
 ;;;    Add the indicated test constraint to Block, marking the block as having
@@ -156,8 +202,12 @@
   (declare (type node use) (type cif if))
   (typecase use
     (ref
-     (add-complement-constraints if 'typep (ok-ref-lambda-var use)
-				 *null-type* t))
+     (let ((var (ok-ref-lambda-var use)))
+       (add-complement-constraints if 'typep
+				   (and var
+					(ref-value-current-at-node-p use if)
+					var)
+				   *null-type* t)))
     (combination
      (unless (eq (combination-kind use) :error)
        (let ((name (continuation-function-name
@@ -169,15 +219,16 @@
 	      (when (constant-continuation-p type)
 		(let ((val (continuation-value type)))
 		  (add-complement-constraints if 'typep
-					      (ok-cont-lambda-var (first args))
+					      (ok-test-cont-lambda-var
+					       (first args) if)
 					      (if (ctype-p val)
 						  val
 						  (specifier-type val))
 					      nil)))))
 	   ((eq eql)
-	    (let* ((var1 (ok-cont-lambda-var (first args)))
+	    (let* ((var1 (ok-test-cont-lambda-var (first args) if))
 		   (arg2 (second args))
-		   (var2 (ok-cont-lambda-var arg2)))
+		   (var2 (ok-test-cont-lambda-var arg2 if)))
 	      (cond ((not var1))
 		    (var2
 		     (add-complement-constraints if 'eql var1 var2 nil))
@@ -188,9 +239,9 @@
 						 nil)))))
 	   ((< >)
 	    (let* ((arg1 (first args))
-		   (var1 (ok-cont-lambda-var arg1))
+		   (var1 (ok-test-cont-lambda-var arg1 if))
 		   (arg2 (second args))
-		   (var2 (ok-cont-lambda-var arg2)))
+		   (var2 (ok-test-cont-lambda-var arg2 if)))
 	      (when var1
 		(add-complement-constraints if name var1 (continuation-type arg2)
 					    nil))
@@ -202,7 +253,8 @@
 	    (let ((ptype (gethash name (backend-predicate-types *backend*))))
 	      (when ptype
 		(add-complement-constraints if 'typep
-					    (ok-cont-lambda-var (first args))
+					    (ok-test-cont-lambda-var
+					     (first args) if)
 					    ptype nil)))))))))
   (undefined-value))
 
