@@ -96,16 +96,32 @@
 	      (when *check-consistency*
 		(check-ir1-consistency *all-components*))
 	      ;;
+	      ;; Since we don't call IR1-OPTIMIZE, delete unreachable
+	      ;; blocks here.  This must be done for all components
+	      ;; before any component is annotated because deletion in
+	      ;; one component can alter another:  deleting the blocks
+	      ;; of an unreferenced local function can delete the last
+	      ;; reference to a variable of a live function, flushing
+	      ;; the corresponding argument of a live call.  If that
+	      ;; happens after the live component has been annotated,
+	      ;; the annotation no longer agrees with the IR1 and
+	      ;; INTERNAL-APPLY binds arguments to the wrong variables.
+	      ;; See MISC.415 in the ansi-tests.  Since deleting blocks
+	      ;; can make further blocks unreachable, iterate until
+	      ;; there is nothing left to delete.
+	      (loop
+		(let ((deleted-p nil))
+		  (dolist (component *all-components*)
+		    (do-blocks (block component)
+		      (when (block-unreachable-p block)
+			(delete-block block)
+			(setf deleted-p t))))
+		  (unless deleted-p
+		    (return))))
+	      ;;
 	      ;; This DOLIST body comes from the beginning of
 	      ;; COMPILE-COMPONENT.
 	      (dolist (component *all-components*)
-		;;
-		;; Since we don't call IR1-OPTIMIZE, delete
-		;; unreachable blocks here.
-		(do-blocks (block component)
-		  (when (block-unreachable-p block)
-		    (delete-block block)))
-		
 		(ir1-finalize component)
 		(let ((*compile-component* component))
 		  (environment-analyze component))
