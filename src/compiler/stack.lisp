@@ -102,9 +102,16 @@
 ;;; to their receiver is through the non-local exit are not treated as
 ;;; dead and discarded.  Values pushed by that block after the %CATCH
 ;;; node are on the stack at the block's end but not at the point where
-;;; %CATCH saved the stack pointer, so we compare the stub's stack
-;;; against the block's end stack with those pushes split off, and put
-;;; them back on top when we re-walk the block.
+;;; %CATCH saved the stack pointer.  We find those pushes from the
+;;; block's nodes, strip them off the top of the block's end stack (if
+;;; it has been computed yet) when comparing it against the stub's
+;;; stack, and put them back on top when we re-walk the block.  A
+;;; continuation with multiple uses can appear both in the stub's stack
+;;; and among the pushes after the %CATCH: with the implicit
+;;; MULTIPLE-VALUE-PROG1 representation, an exit inside the body can
+;;; push the result continuation again on top of the saved values.  The
+;;; re-walk then carries the same continuation at more than one stack
+;;; position, which is fine, since each position is matched separately.
 (defun stack-simulation-walk (block stack)
   (declare (type cblock block) (list stack))
   (let ((2block (block-info block)))
@@ -145,14 +152,27 @@
 			       (mess-stack (ir2-block-end-stack mess-2block)))
 			  (flet
 			      ((split-mess-stack (mess-up 2block stack)
-				 ;; Return two values: the prefix of
-				 ;; Stack consisting of continuations
-				 ;; that are pushed by Mess-Up's block
-				 ;; after the Mess-Up node, and the
-				 ;; rest of Stack.  The former are on
-				 ;; the stack at the block's end but
-				 ;; not at the point where the mess-up
-				 ;; saved the stack pointer.
+				 ;; Return two values: the
+				 ;; continuations that are pushed by
+				 ;; Mess-Up's block after the Mess-Up
+				 ;; node, in stack order with the
+				 ;; last push on top, and Stack with
+				 ;; those continuations stripped off
+				 ;; the top.  The former are on the
+				 ;; stack at the block's end but not
+				 ;; at the point where the mess-up
+				 ;; saved the stack pointer.  We find
+				 ;; them from the block's nodes
+				 ;; rather than from Stack, since the
+				 ;; block's end stack may not have
+				 ;; been computed yet when the walk
+				 ;; reaches the entry stub first, and
+				 ;; since a continuation with
+				 ;; multiple uses can be pushed both
+				 ;; before and after the mess-up, in
+				 ;; which case the end stack alone
+				 ;; can't identify the pushes above
+				 ;; the save point.
 				 (declare (type node mess-up)
 					  (type ir2-block 2block)
 					  (list stack))
@@ -164,12 +184,10 @@
 				       (push cont after))
 				     (when (eq node mess-up)
 				       (setq saw-mess-up t)))
-				   (do ((top stack (cdr top))
-					(above ()))
+				   (do ((top stack (cdr top)))
 				       ((or (null top)
 					    (not (member (car top) after)))
-					(values (nreverse above) top))
-				     (push (car top) above)))))
+					(values after top))))))
 			    (multiple-value-bind (above below)
 				(split-mess-stack mess-up mess-2block
 						  mess-stack)
