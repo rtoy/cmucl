@@ -1674,6 +1674,14 @@
 (defun generate-byte-code-for-exit (segment exit cont)
   (declare (ignore cont))
   (let ((nlx-info (find-nlx-info (exit-entry exit) (node-cont exit))))
+    ;; If the block's value is unused, IR1 has flushed the exit value,
+    ;; so nothing has pushed the values and value count that the
+    ;; RETURN-FROM XOP pops.  Push a zero count so that the XOP throws
+    ;; no values instead of popping whatever happens to be on the
+    ;; stack.
+    (when (and (eq (cleanup-kind (nlx-info-cleanup nlx-info)) :block)
+	       (null (exit-value exit)))
+      (output-push-int segment 0))
     (output-byte-with-operand segment
 			      byte-push-arg
 			      (closure-position nlx-info
