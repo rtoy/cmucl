@@ -994,6 +994,14 @@
 			     (interpreted-function-definition res)
 			     (cons (length args) args)
 			     (interpreted-function-closure res))))
+		  ;; If the closure is empty, the function does not
+		  ;; depend on the current dynamic environment, so we
+		  ;; can cache it.  This makes multiple references to
+		  ;; the same local function yield EQ function
+		  ;; objects.
+		  (when (zerop (length calling-closure))
+		    (setf (c:lambda-eval-info-function (c::leaf-info leaf))
+			  res))
 		  res))))))))
 
 ;;; LEAF-VALUE-LAMBDA-VAR -- Internal Interface.
