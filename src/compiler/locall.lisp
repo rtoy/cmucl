@@ -804,9 +804,26 @@
     (link-blocks return-block next-block)
     (unlink-node return)
     (delete-return return)
-    (let ((result (return-result return))
-	  (cont (node-cont call))
-	  (call-type (node-derived-type call)))
+    (let* ((result (return-result return))
+	   (call-cont (node-cont call))
+	   ;;
+	   ;; A tail call's value is the value returned by its home function,
+	   ;; so Call's continuation is normally that function's return
+	   ;; continuation.  But if the home function was itself let-converted
+	   ;; at a tail call after its own return had already been deleted,
+	   ;; Call still names that deleted return's continuation, which no
+	   ;; longer has a destination.  Substituting onto it loses the value:
+	   ;; FLUSH-DEAD-CODE deletes whatever produced it, and the home
+	   ;; function returns whatever happens to be in the result register.
+	   ;; Use the home function's real return continuation instead.
+	   ;;
+	   (cont (or (and (node-tail-p call)
+			  (null (continuation-dest call-cont))
+			  (let ((home-return (lambda-return
+					      (node-home-lambda call))))
+			    (and home-return (return-result home-return))))
+		     call-cont))
+	   (call-type (node-derived-type call)))
       (when (eq (continuation-use cont) call)
 	(assert-continuation-type cont (continuation-asserted-type result)))
       (unless (eq call-type *wild-type*)
