@@ -2055,6 +2055,64 @@
 
 ;;;; Noise to actually do the compile.
 
+;;; CLOSURE-HOME-ENVIRONMENT  --  Internal
+;;;
+;;;    Return the environment in which Thing, an element of an
+;;; ENVIRONMENT-CLOSURE, is defined.  These are the same tests that
+;;; OUTPUT-REF-LAMBDA-VAR and OUTPUT-REF-NLX-INFO use to decide whether a
+;;; value is local or must be fetched out of the closure.
+;;;
+(defun closure-home-environment (thing)
+  (etypecase thing
+    (lambda-var (lambda-environment (lambda-var-home thing)))
+    (nlx-info (node-environment (cleanup-mess-up (nlx-info-cleanup thing))))))
+
+
+;;; MERGE-ENTRY-POINT-CLOSURES  --  Internal
+;;;
+;;;    The byte interpreter jumps directly to the entry points of an optional
+;;; dispatch, pushing the closure of the XEP no matter which entry point it
+;;; picks (see INVOKE-XEP.)  Environment analysis, though, only closes over
+;;; what each entry point actually uses, so the entry points can easily
+;;; disagree with the XEP, and with each other, about how many closure values
+;;; there are and in what order.  An entry point that closes over less than
+;;; the XEP does then reads its arguments out of the wrong stack slots, since
+;;; the extra closure values pushed by INVOKE-XEP sit on top of the arguments.
+;;;
+;;;    Give every entry point the same closure as its XEP.  We first widen the
+;;; XEP's closure to cover everything any entry point needs, then hand that
+;;; closure to each entry point.  CLOSE-OVER also adds the values to the
+;;; environments that reference the entry points, so local calls still push
+;;; what the entry point now expects to find.
+;;;
+(defun merge-entry-point-closures (component)
+  (dolist (lambda (component-lambdas component))
+    (when (eq (lambda-kind lambda) :external)
+      (let ((entry (lambda-entry-function lambda)))
+	(when (optional-dispatch-p entry)
+	  (let ((xep-env (lambda-environment lambda))
+		(envs ()))
+	    (dolist (ep (list* (optional-dispatch-main-entry entry)
+			       (optional-dispatch-entry-points entry)))
+	      (let ((env (lambda-environment ep)))
+		(unless (or (eq env xep-env) (member env envs))
+		  (push env envs))))
+	    (dolist (env envs)
+	      (dolist (thing (environment-closure env))
+		(close-over thing xep-env (closure-home-environment thing))))
+	    (let ((closure (environment-closure xep-env)))
+	      ;;
+	      ;; Do all of the closing over before storing any of the closures,
+	      ;; since closing over a value in one entry point can push it onto
+	      ;; the closure of another one.
+	      (dolist (env envs)
+		(dolist (thing closure)
+		  (close-over thing env (closure-home-environment thing))))
+	      (dolist (env envs)
+		(setf (environment-closure env) (copy-list closure)))))))))
+  (undefined-value))
+
+
 (defun assign-locals (component)
   ;;
   ;; Process all of the lambdas in component, and assign stack frame
@@ -2124,6 +2182,10 @@
 (defun byte-compile-component (component)
   (setf (component-info component) (make-byte-component-info))
   (maybe-mumble "ByteAnn ")
+
+  ;; Make every entry point of an optional dispatch agree with its XEP about
+  ;; what the closure looks like.
+  (merge-entry-point-closures component)
 
   ;; Assign offsets for all the locals, and figure out which args can
   ;; stay in the argument area and which need to be moved into locals.
