@@ -189,6 +189,103 @@
   (undefined-value))
 
 
+;;; Block-Within-Cleanup-P  --  Internal
+;;;
+;;;    Return true if Block is in the dynamic extent of Cleanup, i.e. if
+;;; Cleanup is one of the cleanups enclosing the first node in Block.  The
+;;; node that establishes a cleanup is itself in the next enclosing cleanup,
+;;; so walking out through those nodes enumerates the cleanups in effect.
+;;;
+(defun block-within-cleanup-p (block cleanup)
+  (declare (type cblock block) (type cleanup cleanup))
+  (do ((cup (block-start-cleanup block)
+	    (let ((mess-up (cleanup-mess-up cup)))
+	      (and mess-up (node-enclosing-cleanup mess-up)))))
+      ((null cup) nil)
+    (when (eq cup cleanup)
+      (return t))))
+
+
+;;; Annotate-NLX-Extent-Values  --  Internal
+;;;
+;;;    A throw restores the stack pointer that %CATCH saved, so the
+;;; unknown-values continuations that were on the stack when the catch was
+;;; established are still on the stack at the entry stub.  They must
+;;; therefore stay on the stack for the whole dynamic extent of the catch:
+;;; if anything in the body pops the stack below them, the next push
+;;; clobbers the values that the entry stub is going to hand to their
+;;; receiver.
+;;;
+;;;    The backward walk only annotates blocks from which a values receiver
+;;; can be reached in the flow graph.  When the body can only reach the
+;;; receiver through the non-local exit (e.g. a CATCH whose body always
+;;; throws), the blocks of the body are left with an empty stack, and the
+;;; last pass in Stack-Analyze then inserts cleanup code that discards the
+;;; values.  So we put the entry stub's start stack back on the bottom of
+;;; the stacks of every block in the extent that doesn't already have it.
+;;; Only values pushed inside the body can then be discarded there.
+;;;
+;;;    We only do this where Stack-Simulation-Walk also continues the walk
+;;; at the %CATCH's block, since the body must not end up with more on its
+;;; stack than the block it is entered from.  We check that directly, and
+;;; we leave nested exits alone: those would need the stacks of all the
+;;; enclosing cleanups spliced together in the right order.
+;;;
+;;;    Since APPEND shares the tail with the stub's stack, the stacks that
+;;; we build here still satisfy the TAILP test in Discard-Unused-Values.
+;;;
+(defun annotate-nlx-extent-values (component)
+  (declare (type component component))
+  (collect ((infos nil adjoin))
+    (dolist (fun (component-lambdas component))
+      (let ((env (lambda-environment fun)))
+	(when env
+	  (dolist (info (environment-nlx-info env))
+	    (infos info)))))
+
+    (flet ((stack-tailp (tail stack)
+	     (declare (list tail stack))
+	     ;; Like TAILP, but compares the list contents instead of the
+	     ;; cons cells.  A block that the walk did annotate can carry a
+	     ;; stack that is EQUAL to the stub's without sharing structure.
+	     (let ((diff (- (length stack) (length tail))))
+	       (and (>= diff 0)
+		    (equal (nthcdr diff stack) tail))))
+	   (nested-exit-p (cleanup info)
+	     (dolist (other (infos) nil)
+	       (unless (eq other info)
+		 (when (block-within-cleanup-p (nlx-info-target other) cleanup)
+		   (return t))))))
+      (dolist (info (infos))
+	(let ((cleanup (nlx-info-cleanup info)))
+	  (when (eq (cleanup-kind cleanup) :catch)
+	    (let ((target (nlx-info-target info))
+		  (mess-up (cleanup-mess-up cleanup)))
+	      (let ((stack (ir2-block-start-stack (block-info target))))
+		(when (and stack
+			   mess-up
+			   (tailp stack
+				  (ir2-block-end-stack
+				   (block-info (node-block mess-up))))
+			   (not (nested-exit-p cleanup info)))
+		  (do-blocks (block component)
+		    (when (and (not (eq block target))
+			       (block-within-cleanup-p block cleanup))
+		      (let ((2block (block-info block)))
+			(unless (stack-tailp stack
+					     (ir2-block-start-stack 2block))
+			  (setf (ir2-block-start-stack 2block)
+				(append (ir2-block-start-stack 2block) stack)))
+			(unless (stack-tailp stack
+					     (ir2-block-end-stack 2block))
+			  (setf (ir2-block-end-stack 2block)
+				(append (ir2-block-end-stack 2block)
+					stack))))))))))))))
+
+  (undefined-value))
+
+
+
 ;;; Discard-Unused-Values  --  Internal
 ;;;
 ;;;    Called when we discover that the stack-top unknown-values continuation
@@ -275,7 +372,9 @@
     
     (dolist (block generators)
       (annotate-dead-values block))
-    
+
+    (annotate-nlx-extent-values component)
+
     (do-blocks (block component)
       (let ((top (car (ir2-block-end-stack (block-info block)))))
 	(dolist (succ (block-succ block))
