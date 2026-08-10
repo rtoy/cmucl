@@ -657,11 +657,29 @@
 	  (block (vop-block vop)))
       (cond
        ((eq (vop-info-name info) 'move)
+	;; A constant can only be moved directly when its value is of
+	;; the destination's primitive type, because a direct constant
+	;; move VOP puts the value itself into the instruction.  IR2
+	;; copy propagation can substitute a constant whose value is
+	;; not of the destination's primitive type into dynamically
+	;; dead code (ansi-test MISC.252: a bignum-valued constant
+	;; feeding a word-represented TN), and selecting a direct
+	;; constant move for it fails at assembly time.  Skipping
+	;; FIND-MOVE-VOP here makes us fall back to
+	;; COERCE-VOP-OPERANDS, which loads the constant as a
+	;; descriptor and coerces that, which is always possible.
+	;; Load-time constant TNs have no leaf and thus no compile-time
+	;; value, so they are not checked.
 	(let* ((args (vop-args vop))
 	       (x (tn-ref-tn args))
 	       (y (tn-ref-tn (vop-results vop)))
-	       (res (find-move-vop x nil (tn-sc y) (tn-primitive-type y)
-				   #'sc-move-vops)))
+	       (x-leaf (tn-leaf x))
+	       (res (unless (and (constant-p x-leaf)
+				 (not (ctypep (constant-value x-leaf)
+					      (primitive-type-type
+					       (tn-primitive-type y)))))
+		      (find-move-vop x nil (tn-sc y) (tn-primitive-type y)
+				     #'sc-move-vops))))
 	  (cond ((and (null (tn-reads y))
 		      (eq (tn-kind y) :normal))
 		 (delete-vop vop))
