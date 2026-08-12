@@ -2497,8 +2497,12 @@
   (typecase stream
     (stream:simple-stream (stream::%file-string-length stream object))
     (broadcast-stream
-     ;; CLHS says we must return 1 in this case
-     1)
+     (let ((streams (broadcast-stream-streams stream)))
+       ;; CLHS broadcast-stream says the value from the last component
+       ;; stream is used.  If there are none, then 1 is returned.
+       (if streams
+	   (file-string-length (first (last streams)) object)
+	   1)))
     #+unicode
     (t (funcall (ef-strlen (fd-stream-external-format stream))
 		stream object))
