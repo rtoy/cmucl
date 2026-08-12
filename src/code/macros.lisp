@@ -1666,28 +1666,35 @@
 	 (close ,var)))))
 
 
-(defmacro with-output-to-string ((var &optional string &key element-type)
+(defmacro with-output-to-string ((var &optional string
+				     &key (element-type nil element-type-p))
 				 &parse-body (forms decls))
   "If STRING is specified, it must be a string with a fill pointer;
-   the output is incrementally appended to the string (as if by use of
-   VECTOR-PUSH-EXTEND)."
-  (declare (ignore element-type))
-  (if string
-      `(let ((,var (make-fill-pointer-output-stream ,string)))
-	 ,@decls
-	 (unwind-protect
-	   (progn ,@forms)
-	   (close ,var)))
-      `(let ((,var (make-string-output-stream)))
-	 ,@decls
-	 (unwind-protect
-	   (progn ,@forms)
-	   (close ,var))
-	 (get-output-stream-string ,var))))
+  the output is incrementally appended to the string (as if by use of
+  VECTOR-PUSH-EXTEND).  ELEMENT-TYPE is always evaluated, but its value
+  is ignored when STRING is specified."
+  (let ((etype (gensym "ELEMENT-TYPE-")))
+    (if string
+	`(let ((,var (make-fill-pointer-output-stream ,string))
+	       ,@(when element-type-p
+		   `((,etype ,element-type))))
+	   ,@(when element-type-p
+	       `((declare (ignore ,etype))))
+	   ,@decls
+	   (unwind-protect
+		(progn ,@forms)
+	     (close ,var)))
+	`(let ((,var (make-string-output-stream
+		      ,@(when element-type-p
+			  `(:element-type ,element-type)))))
+	   ,@decls
+	   (unwind-protect
+		(progn ,@forms)
+	     (close ,var))
+	   (get-output-stream-string ,var)))))
 
-
+
 ;;;; Iteration macros:
-
 ;; Helper for dotimes.  Extract any declarations for the dotimes
 ;; counter and create a similar declaration for our dummy loop
 ;; counter.  Skip over special declarations, though, because we don't
