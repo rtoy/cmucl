@@ -1050,10 +1050,8 @@
 		   (push *ouch-ptr* escapes)
 		   (ouch-read-buffer ch))))))
 	    (t
-	     (when (and (constituentp char)
-			(eql (get-secondary-attribute char)
-			     #.package-delimiter)
-			(not colon))
+	     (when (and (not colon)
+			(test-attribute char #.package-delimiter *readtable*))
 	       (setq colon *ouch-ptr*))
 	     (ouch-read-buffer char))))))
 
