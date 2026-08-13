@@ -978,12 +978,16 @@
 	(simple-program-error (intl:gettext "Bogus DEFPACKAGE option: ~S") option))
       (case (car option)
 	(:nicknames
-	 (setf nicknames (stringify-names (cdr option) "package")))
+	 ;; The :NICKNAMES option can be given more than once; the
+	 ;; effect is cumulative.
+	 (setf nicknames
+	       (append nicknames (stringify-names (cdr option) "package"))))
 	(:local-nicknames
 	 (setf local-nicknames
-	       (mapcar #'(lambda (o)
-			   (stringify-names o "package"))
-		       (cdr option))))
+	       (append local-nicknames
+		       (mapcar #'(lambda (o)
+				   (stringify-names o "package"))
+			       (cdr option)))))
 	(:size
 	 (cond (size
 		(simple-program-error (intl:gettext "Can't specify :SIZE twice.")))
