@@ -176,9 +176,14 @@
 		     :format-control (intl:gettext "Wrong number of args to FUNCTION:~% ~S.")
 		     :format-arguments (list exp)))
 	    (let ((name (second exp)))
+	      ;; Return the raw definition, including any
+	      ;; encapsulations such as fwrappers installed by TRACE
+	      ;; or PROFILE, to match the behavior of compiled code,
+	      ;; which calls through the fdefn-function slot.
+	      ;; FDEFINITION would strip the encapsulations.
 	      (cond ((consp name)
 		     (if (valid-function-name-p name)
-			 (fdefinition name)
+			 (raw-definition name)
 			 (eval:make-interpreted-function name)))
 		    ((macro-function name)
 		     (error 'simple-type-error
@@ -194,7 +199,7 @@
 			    :format-control (intl:gettext "~S is a special operator.")
 			    :format-arguments (list name)))
 		    (t
-		     (fdefinition name)))))
+		     (raw-definition name)))))
 	   (quote
 	    (unless (= args 1)
 	      (error 'simple-program-error

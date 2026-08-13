@@ -956,10 +956,12 @@
       (c::global-var
        (locally (declare (optimize (safety 1)))
 	 (if (eq (c::global-var-kind leaf) :global-function)
-	     (let ((name (c::global-var-name leaf)))
-	       (if (symbolp name)
-		   (symbol-function name)
-		   (fdefinition name)))
+	     ;; Use the raw definition, including any encapsulations
+	     ;; such as fwrappers installed by TRACE or PROFILE, to
+	     ;; match the behavior of compiled code, which calls
+	     ;; through the fdefn-function slot.  FDEFINITION would
+	     ;; strip the encapsulations.
+	     (kernel:raw-definition (c::global-var-name leaf))
 	     (symbol-value (c::global-var-name leaf)))))
       (c::lambda-var
        (leaf-value-lambda-var node leaf frame-ptr closure))
