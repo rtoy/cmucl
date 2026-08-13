@@ -263,6 +263,15 @@
 ;;;    the NLX continuation so that there will be a use to represent the NLX
 ;;;    use.
 ;;;
+;;;    When the %NLX-ENTRY call takes over as a use of the exit continuation,
+;;; it must also take over the type that was derived for the Exit node it
+;;; replaces.  The stub was created by INSERT-NLX-ENTRY-STUB after IR1
+;;; optimization has finished, so its derived type is still the * that
+;;; %NLX-ENTRY is declared to return.  Leaving it that way widens the
+;;; continuation's proven type behind the back of GENERATE-TYPE-CHECKS, which
+;;; has already decided how (or whether) to check the continuation's assertion.
+;;; If several exits share an NLX-Info, we accumulate the union of their types.
+;;;
 (defun note-non-local-exit (env exit)
   (declare (type environment env) (type exit exit))
   (let ((entry (exit-entry exit))
@@ -286,6 +295,11 @@
 	(substitute-leaf (find-constant info) exit-fun)
 	(let ((node (block-last (nlx-info-target info))))
 	  (delete-continuation-use node)
+	  (setf (node-derived-type node)
+		(if (eq (node-derived-type node) *wild-type*)
+		    (node-derived-type exit)
+		    (values-type-union (node-derived-type node)
+				       (node-derived-type exit))))
 	  (add-continuation-use node (nlx-info-continuation info))))))
 
   (undefined-value))
