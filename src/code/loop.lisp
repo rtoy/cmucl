@@ -2032,6 +2032,8 @@ collected result will be returned as the value of the LOOP."
        (when (and stepby-constantp start-constantp limit-constantp)
 	 (when (setq first-test (funcall (symbol-function testfn) start-value limit-value))
 	   (setq remaining-tests t)))
+       ;; STEP-HACK appears in slots 4 and 8 and must be the same form
+       ;; in both; see LOOP-FOR-ARITHMETIC.
        `(() (,indexv ,(hide-variable-reference t indexv step)) ,remaining-tests ,step-hack
 	 () () ,first-test ,step-hack))))
 
@@ -2041,12 +2043,30 @@ collected result will be returned as the value of the LOOP."
 
 
 (defun loop-for-arithmetic (var val data-type kwd)
-  (loop-sequencer
-    var (loop-check-data-type data-type 'number) t
-    nil nil nil nil nil nil
-    (loop-collect-prepositional-phrases
-      '((:from :upfrom :downfrom) (:to :upto :downto :above :below) (:by))
-      nil (list (list kwd val)))))
+  ;; Step an internal index and assign VAR from it, so that VAR is
+  ;; never given a value past the limit; that value is what the loop
+  ;; epilogue sees.  Slots 4 and 8 of the LOOP-SEQUENCER result must
+  ;; stay EQUAL, or LOOP-BODY merges nothing and leaves the first
+  ;; termination test in RBEFORE, ahead of the prologue, where PSIMP
+  ;; truncates at the GO and drops the INITIALLY clauses.
+  (let ((indexv (loop-gentemp 'loop-index-))
+	(type (loop-check-data-type data-type 'number)))
+    (prog1
+	(loop-sequencer
+	  indexv type nil
+	  var type
+	  nil nil
+	  indexv nil
+	  (loop-collect-prepositional-phrases
+	    '((:from :upfrom :downfrom) (:to :upto :downto :above :below) (:by))
+	    nil (list (list kwd val))))
+      ;; Give VAR its initial value ahead of the loop prologue, so that
+      ;; INITIALLY clauses, and the epilogue of a loop that never
+      ;; iterates, see the starting value instead of the value VAR was
+      ;; bound to.  The NIL keeps *LOOP-AFTER-BODY* the same length as
+      ;; *LOOP-BEFORE-LOOP*, which LOOP-BODY requires.
+      (push (loop-make-desetq (list var indexv)) *loop-before-loop*)
+      (push nil *loop-after-body*))))
 
 
 (defun loop-sequence-elements-path (variable data-type prep-phrases
