@@ -2092,7 +2092,8 @@
 
 ;;; COMPILE  --  Public
 ;;;
-(defun compile (name &optional (definition (or (macro-function name)
+(defun compile (name &optional (definition (or (and (symbolp name)
+						    (macro-function name))
 					       (fdefinition name))))
   "Compiles the function (or macro-function) whose name is NAME.  If
   DEFINITION is supplied, it should be a lambda expression which will
