@@ -1824,15 +1824,18 @@
 			     (if atsign (write-char #\+ stream)))
 			 (when lpoint (write-char #\0 stream))
 			 (write-string fstr stream)
-			 ;; Add a zero if we need it.  Which means
-			 ;; we figured out we need one above, or
-			 ;; another condition.  Basically, append a
-			 ;; zero if there are no width constraints
-			 ;; and if the last char to print was a
-			 ;; decimal (so the trailing fraction is
-			 ;; zero.)
+			 ;; Add a zero if we need it.  Which means we
+			 ;; figured out we need one above, or another
+			 ;; condition.  Basically, append a zero if
+			 ;; there are no width constraints and if the
+			 ;; last char to print was a decimal (so the
+			 ;; trailing fraction is zero.)  But only if D
+			 ;; was also omitted.  CLHS 22.3.3.2 only
+			 ;; calls for that extra zero digit when D is
+			 ;; not supplied.  If D is given, exactly
+			 ;; d-k+1 fraction digit
 			 (when (or add-zero-p
-				   (and (null w)
+				   (and (null w) (null d)
 					(char= (aref fstr (1- flen)) #\.)))
 			   ;; It's later and we're adding the zero
 			   ;; digit.
