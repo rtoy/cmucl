@@ -1610,12 +1610,33 @@ radix-R.  If you have a power-list then pass it in as PL."
 		       (when width
 			 (format t "min = ~S~%" (min (- e) width))))
 
-		     (let ((leading-zeros
-			    (if (or fmin (null fdigits))
-				(if (or allow-overflow-p (null width))
-				    (- e)
-				    (min (- e) (1- width)))
-				(min (- e) fdigits))))
+		     (let* ((round-to-zero-p
+			     ;; When fdigits is not given and we have
+			     ;; a width constraint that we must not
+			     ;; exceed, the fraction rounds to zero
+			     ;; when even the first significant digit
+			     ;; lies beyond the last fraction position
+			     ;; that fits within the width.  CLHS
+			     ;; 22.3.3.1 says a single zero digit
+			     ;; should then appear after the decimal
+			     ;; point, so print exactly one zero and
+			     ;; no digits.  This fixes things like
+			     ;; (format nil "~3f" 1e-6).  We should
+			     ;; print "0.0", not ".00".
+			     (and (null fdigits)
+				  (not fmin)
+				  width
+				  (not allow-overflow-p)
+				  (>= (- e) (max 1 (1- width)))))
+			    (leading-zeros
+			     (cond (round-to-zero-p
+				    1)
+				   ((or fmin (null fdigits))
+				    (if (or allow-overflow-p (null width))
+					(- e)
+					(min (- e) (1- width))))
+				   (t
+				    (min (- e) fdigits)))))
 		       (dotimes (i leading-zeros)
 			 (write-char #\0 stream))
 		       ;; If we're out of room (because fdigits is too
@@ -1623,9 +1644,10 @@ radix-R.  If you have a power-list then pass it in as PL."
 		       ;; fixes things like (format nil "~,2f" 0.001).
 		       ;; We should print ".00", not ".001".  But if
 		       ;; fmin is set, we want to print out something.
-		       (when (or (null fdigits)
-				 (plusp (+ e fdigits))
-				 fmin)
+		       (when (and (not round-to-zero-p)
+				  (or (null fdigits)
+				      (plusp (+ e fdigits))
+				      fmin))
 			 ;; But only print the whole string if there's
 			 ;; no width constraint or if we're allowed to
 			 ;; exceed the width.
