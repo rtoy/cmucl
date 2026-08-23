@@ -1700,24 +1700,47 @@
 ;; counter.  Skip over special declarations, though, because we don't
 ;; want to make the dummy counter special.
 ;;
-;; Returns two values:
+;; Returns three values:
 ;; 1.  Set of declarations for the dotimes loop counter that would be
 ;;     suitable for use in the result-form of the loop,
-;; 2.  Declarations suitable for the dummy loop counter.
+;; 2.  Declarations suitable for the dummy loop counter,
+;; 3.  The free declarations of the body, that is, the declarations
+;;     that say nothing about the dotimes loop counter.  The
+;;     result-form is in the scope of the free declarations of the
+;;     body, so these are suitable for use in the result-form too.
 (defun dotimes-extract-var-decls (var counter count decls)
-  (let (var-decls counter-decls)
+  (let (var-decls counter-decls free-decls)
     (dolist (decl decls)
       (dolist (d (cdr decl))
-	(when (member var (cdr d))
-	  (cond ((eq (car d) 'type)
-		 (push `(type ,(second d) ,var) var-decls)
-		 (push `(type ,(second d) ,counter) counter-decls))
-		((eq (car d) 'special)
-		 ;; Declare var special, but not the counter
-		 (push `(,(car d) ,var) var-decls))
+	;; The variables of a type declaration are in the cddr; for
+	;; everything else they're in the cdr.  Declarations that don't
+	;; mention variables at all (OPTIMIZE, INLINE, and friends)
+	;; can't name the counter, so they end up as free declarations.
+	(let* ((names (if (eq (car d) 'type)
+			  (cddr d)
+			  (cdr d)))
+	       (others (remove var names)))
+	  (cond ((not (member var names))
+		 ;; Says nothing about the loop counter, so the whole
+		 ;; declaration is free in the body.
+		 (push d free-decls))
 		(t
-		 (push `(,(car d) ,var) var-decls)
-		 (push `(,(car d) ,counter) counter-decls))))))
+		 (cond ((eq (car d) 'type)
+			(push `(type ,(second d) ,var) var-decls)
+			(push `(type ,(second d) ,counter) counter-decls))
+		       ((eq (car d) 'special)
+			;; Declare var special, but not the counter
+			(push `(,(car d) ,var) var-decls))
+		       (t
+			(push `(,(car d) ,var) var-decls)
+			(push `(,(car d) ,counter) counter-decls)))
+		 ;; Whatever else the declaration mentioned is free in
+		 ;; the body.
+		 (when others
+		   (push (if (eq (car d) 'type)
+			     `(type ,(second d) ,@others)
+			     `(,(car d) ,@others))
+			 free-decls)))))))
     (unless counter-decls
       (setf counter-decls (if (numberp count)
 			      `((type (integer 0 ,count) ,counter))
@@ -1725,7 +1748,10 @@
     (values (if var-decls
 		`((declare ,@(nreverse var-decls)))
 		nil)
-	    `((declare ,@(nreverse counter-decls))))))
+	    `((declare ,@(nreverse counter-decls)))
+	    (if free-decls
+		`((declare ,@(nreverse free-decls)))
+		nil))))
 	      
 
 ;;; Make sure we iterate the given number of times, independent of
@@ -1734,17 +1760,22 @@
 ;;; form.  We also spuriously reference the var in case the body or
 ;;; result form don't reference the var either.  (Mostly modeled on
 ;;; the dolist macro below.)
+;;;
+;;; The result-form is in the scope of the free declarations of the
+;;; body, so those are added to the binding of the var for the
+;;; result-form.  (The count is not, so it must not see them.)
 (defmacro dotimes ((var count &optional (result nil)) &body body)
   (let ((count-var (gensym "CTR-")))
     (multiple-value-bind (forms decls)
 	(parse-body body nil nil)
-      (multiple-value-bind (var-decls ctr-decls)
+      (multiple-value-bind (var-decls ctr-decls free-decls)
 	  (dotimes-extract-var-decls var count-var count decls)
 	(cond ((numberp count)
 	       `(do ((,count-var 0 (1+ ,count-var)))
 		    ((>= ,count-var ,count)
 		     (let ((,var ,count-var))
 		       ,@var-decls
+		       ,@free-decls
 		       ,var
 		       ,result))
 		  ,@ctr-decls
@@ -1759,6 +1790,7 @@
 			((>= ,count-var ,v1)
 			 (let ((,var ,count-var))
 			   ,@var-decls
+			   ,@free-decls
 			   ,var
 			   ,result))
 		      ,@ctr-decls
