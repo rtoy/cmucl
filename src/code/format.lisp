@@ -1597,14 +1597,20 @@
 	  (decf spaceleft len)
 	  ;;optional leading zero
 	  (when lpoint
-	    (if (or (> spaceleft 0) tpoint) ;force at least one digit
+	    (if (or (> spaceleft 0)
+		    ;; If the trailing zero was suppressed because D
+		    ;; was 0 and the value rounded away completely,
+		    ;; the string is just ".", so force the leading
+		    ;; zero to get at least one digit.
+		    (and (not tpoint) (= len 1)))
 		(decf spaceleft)
 		(setq lpoint nil)))
-	  ;;optional trailing zero
+	  ;;mandatory trailing zero.  If TPOINT is still set here, D
+	  ;;was not supplied, and CLHS 22.3.3.1 requires at least one
+	  ;;digit after the decimal point, even if that makes the
+	  ;;result wider than W.
 	  (when tpoint
-	    (if (> spaceleft 0)
-		(decf spaceleft)
-		(setq tpoint nil))))
+	    (decf spaceleft)))
 	(cond ((and w (< spaceleft 0) ovf)
 	       ;;field width overflow
 	       (dotimes (i w) (write-char ovf stream))
