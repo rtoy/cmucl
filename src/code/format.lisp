@@ -1798,19 +1798,26 @@
 		(when (and d (zerop d)) (setq tpoint nil))
 		(when w 
 		  (decf spaceleft flen)
-		  ;; See CLHS 22.3.3.2.  "If the parameter d is
-		  ;; omitted, ... [and] if the fraction to be
-		  ;; printed is zero then a single zero digit should
-		  ;; appear after the decimal point."  So we need to
-		  ;; subtract one from here because we're going to
-		  ;; add an extra 0 digit later.
-		  (when (and (null d) (char= (aref fstr (1- flen)) #\.))
-		    (setf add-zero-p t)
-		    (decf spaceleft))
+		  ;; Optional leading zero, when the fraction is less
+		  ;; than one.
 		  (when lpoint
 		    (if (or (> spaceleft 0) tpoint)
 			(decf spaceleft)
 			(setq lpoint nil)))
+		  ;; See CLHS 22.3.3.2.  "If the parameter d is
+		  ;; omitted, ... [and] if the fraction to be
+		  ;; printed is zero then a single zero digit should
+		  ;; appear after the decimal point."  But d is also
+		  ;; chosen "subject to the width constraint imposed
+		  ;; by the parameter w", and exactly w characters
+		  ;; are to be output, so only add that zero digit if
+		  ;; there's still room for it.  We reserve the space
+		  ;; here; the digit itself is written out later.
+		  (when (and (null d)
+			     (> spaceleft 0)
+			     (char= (aref fstr (1- flen)) #\.))
+		    (setf add-zero-p t)
+		    (decf spaceleft))
 		  (when (and tpoint (<= spaceleft 0))
 		    (setq tpoint nil)))
 		(cond ((and w (< spaceleft 0) ovf)
