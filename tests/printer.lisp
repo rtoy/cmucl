@@ -4,7 +4,23 @@
 (in-package "PRINTER-TESTS")
 
 (define-test format.float.1
-  (assert-equal ".0000"
+    (:tag :printer :format-float)
+  ;; This follows from CLHS 22.3.3.1:
+  ;;
+  ;;   Exactly w characters will be output....Leading zeros are not
+  ;;   permitted, except that a single zero digit is output before the
+  ;;   decimal point if the printed value is less than one, and this
+  ;;   single zero digit is not output at all if w=d+1.
+  ;;
+  ;;   If the parameter d is omitted, then there is no constraint on
+  ;;   the number of digits to appear after the decimal point. A value
+  ;;   is chosen for d in such a way that as many digits as possible
+  ;;   may be printed subject to the width constraint imposed by the
+  ;;   parameter w and the constraint that no trailing zero digits may
+  ;;   appear in the fraction, except that if the fraction to be
+  ;;   printed is zero, then a single zero digit should appear after
+  ;;   the decimal point if permitted by the width constraint.
+  (assert-equal "  0.0"
 		(format nil "~5F" 1d-10))
   (assert-equal "0.000"
 		(format nil "~,3F" 0.000001)))
