@@ -1190,6 +1190,41 @@
       (convert-and-maybe-compile form path)))
 
 
+;;; PROCESS-COMPILER-ONLY-DEFSTRUCT  --  Internal
+;;;
+;;;    Handle a top-level %COMPILER-ONLY-DEFSTRUCT form from a DEFSTRUCT
+;;; expansion.  We establish the structure class in the compile-time
+;;; environment now and generate no code for load time.  A non-top-level
+;;; DEFSTRUCT never gets here, so it has no compile-time effect, as required
+;;; by CLHS 3.2.3.1.
+;;;
+(defun process-compiler-only-defstruct (form)
+  (eval form)
+  (undefined-value))
+
+;;; PROCESS-COMPILER-DEFSTRUCT  --  Internal
+;;;
+;;;    Handle a top-level %COMPILER-DEFSTRUCT form from a DEFSTRUCT expansion.
+;;; We establish the compiler semantics of the accessors and other implicitly
+;;; defined functions now, and arrange for %%COMPILER-DEFSTRUCT to do so again
+;;; at load time.  Any leaves for those functions already in *FREE-FUNCTIONS*
+;;; were made before this information was known, so we flush them to keep
+;;; things in synch.
+;;;
+(defun process-compiler-defstruct (form path)
+  (let ((info (eval (second form))))
+    (kernel:%%compiler-defstruct info)
+    (dolist (slot (kernel:dd-slots info))
+      (let ((fun (kernel:dsd-accessor slot)))
+	(remhash fun *free-functions*)
+	(unless (kernel:dsd-read-only slot)
+	  (remhash `(setf ,fun) *free-functions*))))
+    (remhash (kernel:dd-predicate info) *free-functions*)
+    (remhash (kernel:dd-copier info) *free-functions*)
+    (convert-and-maybe-compile `(kernel:%%compiler-defstruct ',info) path)
+    (compile-top-level-lambdas () t)))
+
+
 (declaim (special *compiler-error-bailout*))
 
 ;;; PROCESS-FORM  --  Internal
@@ -1220,9 +1255,10 @@
 	    ((error cerror break signal make-package use-package unuse-package shadow
 	      shadowing-import export unexport import)
 	     (process-cold-load-form form path nil))
+	    (kernel:%compiler-only-defstruct
+	     (process-compiler-only-defstruct form))
 	    (kernel:%compiler-defstruct
-	     (convert-and-maybe-compile form path)
-	     (compile-top-level-lambdas () t))
+	     (process-compiler-defstruct form path))
 	    ((eval-when)
 	     (unless (>= (length form) 2)
 	       (compiler-error _N"EVAL-WHEN form is too short: ~S." form))

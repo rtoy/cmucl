@@ -1154,3 +1154,20 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+
+(define-test issue.683.non-top-level-defstruct
+    (:tag :issues)
+  ;; A non-top-level DEFSTRUCT must not define the structure at
+  ;; compile time; the class and constructor must only come into
+  ;; existence when the DEFSTRUCT is actually executed.
+  (let ((f (compile nil '(lambda ()
+			  (unless (find-class 'issue.683.struct nil)
+			    (defstruct issue.683.struct a b))))))
+    (assert-false (find-class 'issue.683.struct nil))
+    (funcall f)
+    (assert-true (find-class 'issue.683.struct nil))
+    (assert-true (fboundp 'make-issue.683.struct))
+    (let ((s (funcall 'make-issue.683.struct :a 1 :b 2)))
+      (assert-true (funcall 'issue.683.struct-p s))
+      (assert-equal 1 (funcall 'issue.683.struct-a s))
+      (assert-equal 2 (funcall 'issue.683.struct-b s)))))
