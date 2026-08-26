@@ -2219,6 +2219,14 @@
 	     (when (eq (numeric-type-complexp component-type) :complex)
 	       (not-real))
 	     (modified-numeric-type component-type :complexp :complex))
+	   (complex-part (component-type)
+	     ;; Any subtype of RATIONAL is upgraded to RATIONAL.  This
+	     ;; also handles types like RATIO, which is the intersection
+	     ;; type (AND RATIONAL (NOT INTEGER)) and hence not a
+	     ;; NUMERIC-TYPE.
+	     (if (csubtypep component-type (specifier-type 'rational))
+		 (complex1 (specifier-type 'rational))
+		 (complex1 component-type)))
 	   (complex-union (component)
 	     (unless (numberp component)
 	       (not-numeric))
@@ -2255,9 +2263,7 @@
     (let ((ctype (specifier-type typespec)))
       (typecase ctype
 	(numeric-type
-	 (if (csubtypep ctype (specifier-type 'rational))
-	     (complex1 (specifier-type 'rational))
-	     (complex1 ctype)))
+	 (complex-part ctype))
 	(union-type (apply #'type-union
 			   ;; FIXME: This code could suffer from
 			   ;; (admittedly very obscure) cases of
@@ -2265,7 +2271,7 @@
 			   ;;   (OR (AND INTEGER (SATISFIES ODDP))
 			   ;;       (AND FLOAT (SATISFIES FOO))
 			   ;; and not even report the problem very well.
-			   (mapcar #'complex1
+			   (mapcar #'complex-part
 				   (union-type-types ctype))))
 	(member-type
 	 ;; MEMBER-TYPE is almost the same as UNION-TYPE, but there's
@@ -2291,17 +2297,22 @@
 	(t
 	 (multiple-value-bind (subtypep certainly)
 	     (csubtypep ctype (specifier-type 'real))
-	   (if (and (not subtypep) certainly)
-	       (not-real)
+	   (cond
+	     ((and (not subtypep) certainly)
+	      (not-real))
+	     ((csubtypep ctype (specifier-type 'rational))
+	      ;; E.g. (COMPLEX RATIO).
+	      (complex1 (specifier-type 'rational)))
+	     (t
 	       ;; ANSI just says that TYPESPEC is any subtype of
 	       ;; type REAL, not necessarily a NUMERIC-TYPE. In
 	       ;; particular, at this point TYPESPEC could legally be
 	       ;; an intersection type like (AND REAL (SATISFIES ODDP)),
 	       ;; in which case we fall through the logic above and
 	       ;; end up here, stumped.
-	       (error (intl:gettext "~@<(known bug #145): The type ~S is too hairy to be 
+	      (error (intl:gettext "~@<(known bug #145): The type ~S is too hairy to be 
                          used for a COMPLEX component.~:@>")
-		      typespec))))))))
+		     typespec)))))))))
 
 ;;; Check-Bound  --  Internal
 ;;;
