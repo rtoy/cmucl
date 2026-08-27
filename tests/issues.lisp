@@ -1154,3 +1154,23 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+
+
+(define-test issue.684.pprint-short-forms
+    (:tag :issues)
+  ;; Pretty-printing a list whose car has a pprint dispatch entry but
+  ;; whose shape is not what the dispatch function expects must not
+  ;; signal an error, and the output must read back as the same form.
+  (dolist (form '((defpackage) (defpackage foo)
+		  (handler-bind) (handler-case) (handler-case foo ())
+		  (declare ()) (declare (type))
+		  (defstruct ()) (defstruct (foo ()) ())
+		  (defclass foo bar)
+		  (defmethod foo ())
+		  (defgeneric foo () (:method ()))
+		  (restart-case) (restart-case foo ()) (restart-case foo (bar))))
+    (assert-equal form
+		  (read-from-string
+		   (let ((*print-pretty* t))
+		     (prin1-to-string form)))
+		  form)))
