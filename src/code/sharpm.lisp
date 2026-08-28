@@ -232,7 +232,20 @@
 	  (%reader-error
 	   stream (intl:gettext "The ~S structure does not have a default constructor.")
 	   (car body)))
-	(apply (fdefinition def-con) (rest body))))))
+	;; CLHS 2.4.8.13 says each slot name is converted to a
+	;; keyword as if by (intern (string slot) "KEYWORD") before
+	;; calling the constructor.  This allows slot names to be
+	;; given as strings, characters, or non-keyword symbols.
+	(let ((slots-and-values (rest body)))
+	  (when (oddp (length slots-and-values))
+	    (%reader-error stream
+			   _N"The slot name ~S is missing a value in #S: ~S"
+			   (first (last slots-and-values))
+			   body))
+	  (apply (fdefinition def-con)
+		 (loop for (slot value) on slots-and-values by #'cddr
+		       collect (intern (string slot) *keyword-package*)
+		       collect value)))))))
 
 
 ;;;; #=/##

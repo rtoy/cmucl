@@ -9096,6 +9096,10 @@ msgid "#~DA axis ~D is empty, but axis ~\n"
 msgstr ""
 
 #: src/code/sharpm.lisp
+msgid "The slot name ~S is missing a value in #S: ~S"
+msgstr ""
+
+#: src/code/sharpm.lisp
 msgid "Non-list following #S: ~S"
 msgstr ""
 

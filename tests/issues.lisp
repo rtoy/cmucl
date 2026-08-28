@@ -1154,3 +1154,22 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+
+
+
+
+(defstruct issue-685-struct a b c)
+
+(define-test issue.685.sharp-s-slot-names
+    (:tag :issues)
+  ;; CLHS 2.4.8.13: #S slot names are coerced to keywords as if by
+  ;; (intern (string slot) "KEYWORD"), so strings, uninterned symbols,
+  ;; and other non-keyword symbols are all valid.
+  (let ((*package* (find-package "ISSUES-TESTS")))
+    (let ((v (read-from-string "#s(issue-685-struct \"A\" 1 b 2 #:c 3)")))
+      (assert-true (typep v 'issue-685-struct))
+      (assert-equal 1 (issue-685-struct-a v))
+      (assert-equal 2 (issue-685-struct-b v))
+      (assert-equal 3 (issue-685-struct-c v)))
+    (assert-error 'reader-error
+		  (read-from-string "#s(issue-685-struct :a)"))))
