@@ -1455,19 +1455,19 @@ When annotations are present, invoke them at the right positions."
 
 (defun pprint-handler-bind (stream list &rest noise)
   (declare (ignore noise))
-  (funcall (formatter "~:<~^~W~3I ~:_~W~1I~@{ ~:@_~W~}~:>")
+  (funcall (formatter "~:<~^~W~^~3I ~:_~W~1I~@{ ~:@_~W~}~:>")
 	   stream list))
 
 (defun pprint-handler-case (stream list &rest noise)
   (declare (ignore noise))
   ;; Like pprint-handler-bind, but each of the error clauses is
   ;; printed with declarations and forms on a separate line, indented
-  ;; like a function body.  The handler-case part, "~:<~^~W~3I
+  ;; like a function body.  The handler-case part, "~:<~^~W~^~3I
   ;; ~:_~W~1I~@{ ~:@_...~:>" comes from pprint-handler-bind, but the
   ;; last "~W" is replaced to print out the error clauses in the way
-  ;; we want.  These are done with "~:<~W~^~3I ~:_~W~^~1I~@{
+  ;; we want.  These are done with "~:<~^~W~^~3I ~:_~W~^~1I~@{
   ;; ~@:_~W~}~:>", taken from PPRINT-WITH-LIKE.
-  (funcall (formatter "~:<~^~W~3I ~:_~W~1I~@{ ~:@_~:<~W~^~3I ~:_~W~^~1I~@{ ~@:_~W~}~:>~}~:>")
+  (funcall (formatter "~:<~^~W~^~3I ~:_~W~1I~@{ ~:@_~:<~^~W~^~3I ~:_~W~^~1I~@{ ~@:_~W~}~:>~}~:>")
 	   stream list))
 
   
@@ -1562,6 +1562,7 @@ When annotations are present, invoke them at the right positions."
 	 ;; make them all line up after the first symbol of the
 	 ;; spec.
 	 (pprint-logical-block (stream spec :prefix "(" :suffix ")")
+	   (pprint-exit-if-list-exhausted)
 	   (when (eq (car spec) 'type)
 	     (output-object (pprint-pop) stream)
 	     (pprint-exit-if-list-exhausted)
@@ -1689,13 +1690,13 @@ When annotations are present, invoke them at the right positions."
     (write-char #\space stream)
     (pprint-indent :block 1 stream)
     ;; Output name and any options neatly
-    (funcall (formatter "~:<~W~^ ~1I~@:_~@{~:<~W~^ ~:I~W~@{ ~_~W~}~:>~^~@:_~}~:>")
+    (funcall (formatter "~:<~^~W~^ ~1I~@:_~@{~:<~^~W~^ ~:I~W~@{ ~_~W~}~:>~^~@:_~}~:>")
 	     stream (pprint-pop))
     ;; Output each slot neatly
     (loop
        (pprint-exit-if-list-exhausted)
        (pprint-newline :mandatory stream)
-       (funcall (formatter "~:<~W~^~:I ~W~_~@{ ~W~^~@_~}~:>") stream (pprint-pop)))))
+       (funcall (formatter "~:<~^~W~^~:I ~W~_~@{ ~W~^~@_~}~:>") stream (pprint-pop)))))
 
 (defun pprint-defclass (stream list &rest noise)
   (declare (ignore noise))
@@ -1713,6 +1714,7 @@ When annotations are present, invoke them at the right positions."
     ;; Output superclasses
     (funcall (formatter "~W") stream (pprint-pop))
     (pprint-indent :block 1 stream)
+    (pprint-exit-if-list-exhausted)
     (pprint-newline :mandatory stream)
     ;; Output slots.  We try to output keyword and value on one line together
     (funcall (formatter "~:<~^~@{~:<~^~W~^ ~:I~@{~W~^ ~W~^~@:_~}~:>~^~@:_~}~:>")
@@ -1767,6 +1769,7 @@ When annotations are present, invoke them at the right positions."
 				     (output-object qual-or-lambda stream)))
 			      (pprint-exit-if-list-exhausted)))
 			 ;; Rest of the forms
+			 (pprint-exit-if-list-exhausted)
 			 (pprint-newline :mandatory stream)
 			 (pprint-indent :block 0 stream)
 			 (loop
@@ -1782,7 +1785,7 @@ When annotations are present, invoke them at the right positions."
 
 (defun pprint-defpackage (stream list &rest noise)
   (declare (ignore noise))
-  (funcall (formatter "~:<~W ~W~I~@{~@:_ ~:<~@{~W~^~:I~@{ ~W~^~:_~}~}~:>~}~:>")
+  (funcall (formatter "~:<~^~W~^ ~W~^~I~@{~@:_ ~:<~@{~W~^~:I~@{ ~W~^~:_~}~}~:>~}~:>")
 	   stream list))
 
 (defun pprint-defmethod (stream list &rest noise)
@@ -1807,6 +1810,7 @@ When annotations are present, invoke them at the right positions."
 		(output-object qual-or-lambda stream)))
 	 (pprint-exit-if-list-exhausted)))
     ;; Rest of the forms
+    (pprint-exit-if-list-exhausted)
     (pprint-newline :mandatory stream)
     (pprint-indent :block 0 stream)
     (loop
@@ -1829,21 +1833,21 @@ When annotations are present, invoke them at the right positions."
     (loop
        (pprint-exit-if-list-exhausted)
        (pprint-newline :mandatory stream)
-       (destructuring-bind (case-name lambda-list &rest forms)
-	   (pprint-pop)
-	 (pprint-logical-block (stream forms :prefix "(" :suffix ")")
-	   ;; case-name
-	   (output-object case-name stream)
-	   (write-char #\space stream)
-	   ;; lambda-list
-	   (pprint-lambda-list stream lambda-list)
-	   ;;(pprint-newline :mandatory stream)
-	   (pprint-exit-if-list-exhausted)
-	   (loop
-	      (write-char #\space stream)
-	      (output-object (pprint-pop) stream)
-	      (pprint-exit-if-list-exhausted)
-	      (pprint-newline :linear stream)))))))
+       (pprint-logical-block (stream (pprint-pop) :prefix "(" :suffix ")")
+	 (pprint-exit-if-list-exhausted)
+	 ;; case-name
+	 (output-object (pprint-pop) stream)
+	 (pprint-exit-if-list-exhausted)
+	 (write-char #\space stream)
+	 ;; lambda-list
+	 (pprint-lambda-list stream (pprint-pop))
+	 ;;(pprint-newline :mandatory stream)
+	 (pprint-exit-if-list-exhausted)
+	 (loop
+	    (write-char #\space stream)
+	    (output-object (pprint-pop) stream)
+	    (pprint-exit-if-list-exhausted)
+	    (pprint-newline :linear stream))))))
 
 (defun pprint-when (stream list &rest noise)
   (declare (ignore noise))
