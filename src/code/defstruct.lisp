@@ -823,10 +823,16 @@
 ;;; %GET-COMPILER-LAYOUT  --  Internal
 ;;;
 ;;; Delay looking for compiler-layout until the constructor is being compiled,
-;;; since it doesn't exist until after the eval-when (compile) is compiled.
+;;; since it doesn't exist until the compiler has processed the top-level
+;;; %COMPILER-ONLY-DEFSTRUCT form.  If it still isn't known, the DEFSTRUCT is
+;;; not at top level and has no compile-time effect, so look the layout up at
+;;; run time instead.
 ;;;
 (defmacro %get-compiler-layout (name)
-  `',(compiler-layout-or-lose name))
+  (let ((layout (info type compiler-layout name)))
+    (if layout
+	`',layout
+	`(compiler-layout-or-lose ',name))))
 
 ;;; FIND-NAME-INDICES  --  Internal
 ;;;
@@ -1719,8 +1725,9 @@
 ;;;    This function is called at compile-time to do the compile-time-only
 ;;; actions for defining a structure type.  It installs the class in the type
 ;;; system in a similar way to %DEFSTRUCT, but is quieter and safer in the case
-;;; of redefinition.  Eval-when doesn't do the right thing when nested or
-;;; non-top-level, so this is magically called by the compiler.
+;;; of redefinition.  The compiler calls this when it processes a top-level
+;;; DEFSTRUCT; a non-top-level DEFSTRUCT has no compile-time effect and just
+;;; calls this at run time after %DEFSTRUCT.
 ;;;
 ;;;    Basically, this function avoids trashing the compiler by only actually
 ;;; defining the class if there is no current definition.  Instead, we just set

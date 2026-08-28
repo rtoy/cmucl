@@ -3066,38 +3066,6 @@
 	      (ir1-convert start cont `(proclaim ,what)))))
       (ir1-convert start cont `(proclaim ,what))))
 
-
-;;; %Compiler-Defstruct IR1 Convert  --  Internal
-;;;
-;;;    This is a frob that DEFSTRUCT expands into to establish the compiler
-;;; semantics.  The other code in the expansion and %%COMPILER-DEFSTRUCT do
-;;; most of the work, we just clear all of the functions out of
-;;; *FREE-FUNCTIONS* to keep things in synch.  %%COMPILER-DEFSTRUCT is also
-;;; called at load-time.
-;;;
-(def-ir1-translator kernel:%compiler-defstruct
-		    ((info) start cont :kind :function)
-  (let* ((info (eval info)))
-    (kernel:%%compiler-defstruct info)
-    (dolist (slot (kernel:dd-slots info))
-      (let ((fun (kernel:dsd-accessor slot)))
-	(remhash fun *free-functions*)
-	(unless (kernel:dsd-read-only slot)
-	  (remhash `(setf ,fun) *free-functions*))))
-    (remhash (kernel:dd-predicate info) *free-functions*)
-    (remhash (kernel:dd-copier info) *free-functions*)
-    (ir1-convert start cont `(kernel:%%compiler-defstruct ',info))))
-
-;;; %COMPILER-ONLY-DEFSTRUCT  IR1 Convert  --  Internal
-;;;
-;;;    Don't actually compile anything, instead call the function now.  Use
-;;; EVAL so this can be compiled... 
-;;; 
-(def-ir1-translator kernel:%compiler-only-defstruct
-		    ((info inherits) start cont :kind :function)
-  (eval `(kernel:%compiler-only-defstruct ,info ,inherits))
-  (reference-constant start cont nil))
- 
 
 ;;;; Let and Let*:
 ;;;

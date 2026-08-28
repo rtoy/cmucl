@@ -1504,3 +1504,28 @@
   ;; Not a type specifier at all; SPECIFIER-TYPE signals this one.
   (assert-error 'program-error
 		(make-string-output-stream :element-type 42)))
+
+
+
+
+(define-test issue.683.non-top-level-defstruct
+    (:tag :issues)
+  ;; A non-top-level DEFSTRUCT must not define the structure at
+  ;; compile time; the class and constructor must only come into
+  ;; existence when the DEFSTRUCT is actually executed.
+  ;;
+  ;; DEFSTRUCT interns the constructor and accessor names in *PACKAGE*
+  ;; when it is macroexpanded, which happens here when COMPILE runs,
+  ;; so bind *PACKAGE* to make them land in this package.
+  (let ((f (let ((*package* (find-package "ISSUES-TESTS")))
+	     (compile nil '(lambda ()
+			    (unless (find-class 'issue.683.struct nil)
+			      (defstruct issue.683.struct a b)))))))
+    (assert-false (find-class 'issue.683.struct nil))
+    (funcall f)
+    (assert-true (find-class 'issue.683.struct nil))
+    (assert-true (fboundp 'make-issue.683.struct))
+    (let ((s (funcall 'make-issue.683.struct :a 1 :b 2)))
+      (assert-true (funcall 'issue.683.struct-p s))
+      (assert-equal 1 (funcall 'issue.683.struct-a s))
+      (assert-equal 2 (funcall 'issue.683.struct-b s)))))
