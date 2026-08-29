@@ -47,6 +47,10 @@ OLDLISP="cmulisp"
 GIT_FILE_COMMENT="yes"
 export GIT_FILE_COMMENT
 
+# If generated errno values differs from checked in values, stop the
+# build.  This is the default.
+ERRNO="error"
+
 SKIPUTILS=no
 
 # If gmake exists, assume it is GNU make and use it.
@@ -97,6 +101,10 @@ usage ()
     echo "    -R        Force recompiling the C runtime.  Normally, just runs make to "
     echo "               recompile anything that has changed."
     echo "    -G        Don't use git to fill file-comment information"
+    echo "    -E val    Continue build even if there are changes in errno values.  If"
+    echo "                val='error', stop the build if errno values have changed."
+    echo "                If val = 'default', use the original checked-in errno values."
+    echo "                If val = 'new' use the updated errno values."
     exit 1
 }
 
@@ -149,16 +157,11 @@ buildit ()
     fi
 }
 
-# Create the errno file containing all the def-unix-error forms.  No
-# options mean we use the existing OS-specific template.  Exit if
-# there's an error in creating the errno file.
-bin/create-errno.sh || exit 1
-
 BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
 UPDATE_TRANS=
 
-while getopts "123PRGo:b:v:uB:C:Ui:w:O:?" arg
+while getopts "123PRGo:b:v:uB:C:Ui:w:O:E:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -178,10 +181,26 @@ do
 	O) OLDLISPFLAGS="$OLDLISPFLAGS $OPTARG" ;;
         R) REBUILD_LISP="yes";;
 	G) GIT_FILE_COMMENT="no";;
+	E) ERRNO="$OPTARG" ;;
 	\?) usage
 	    ;;
     esac
 done
+
+# Create the errno file containing all the def-unix-error forms.  No
+# options mean we use the existing OS-specific template.  Exit if
+# there's an error in creating the errno file.
+ERRNOOPT=""
+case $ERRNO in
+    error) ;;
+    default) ERRNOOPT="-D" ;;
+    new) ERRNOOPT="-U" ;;
+    *)
+	echo "Unknown value for -E option: ${ERRNO}"
+	exit 1
+	;;
+esac
+bin/create-errno.sh "${ERRNOOPT}" || exit 1
 
 # Generate lisp/cmucl-version.h with the appropriate version.  The -v
 # option (if given) overrides the default that git-describe.sh uses.
