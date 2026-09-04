@@ -71,7 +71,7 @@ fi
 
 usage ()
 {
-    echo "build.sh [-123obvuBCUG?]"
+    echo "build.sh [123PRGo:b:v:uB:C:Ui:w:O:E:?]"
     echo "    -1        Skip build 1"
     echo "    -2        Skip build 2"
     echo "    -3        Skip build 3"
@@ -101,10 +101,11 @@ usage ()
     echo "    -R        Force recompiling the C runtime.  Normally, just runs make to "
     echo "               recompile anything that has changed."
     echo "    -G        Don't use git to fill file-comment information"
-    echo "    -E val    Continue build even if there are changes in errno values.  If"
-    echo "                val='error', stop the build if errno values have changed."
-    echo "                If val = 'default', use the original checked-in errno values."
-    echo "                If val = 'new' use the updated errno values."
+    echo "    -E val    Continue build even if there are changes in errno values.  If val is"
+    echo "                'error': stop the build if errno values have changed"
+    echo "                'default': use the original checked-in errno values"
+    echo "                'new': use the updated errno values"
+    echo "              If -E is not given, it defaults to 'error'."
     exit 1
 }
 
