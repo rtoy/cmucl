@@ -1154,3 +1154,22 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+
+
+
+(define-test issue.670.length-of-dotted-list
+    (:tag :issues)
+  ;; (LENGTH '(A . B)) must signal a TYPE-ERROR that reports the
+  ;; offending final cdr, B.  The x86 LENGTH/LIST vop used to report
+  ;; the entire list instead, so the resulting TYPE-ERROR had a datum
+  ;; that was itself of the reported expected type, LIST.
+  (let ((dotted (cons 'a 'b)))
+    (assert-error 'type-error (length dotted))
+    (multiple-value-bind (datum expected)
+	(handler-case (length dotted)
+	  (type-error (c)
+	    (values (type-error-datum c)
+		    (type-error-expected-type c))))
+      (assert-eql 'b datum)
+      (assert-true (subtypep expected 'list))
+      (assert-false (typep datum expected)))))
