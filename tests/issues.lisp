@@ -1168,7 +1168,7 @@
   ;; symbol, so a function name like (SETF FOO) signaled a type error
   ;; instead of compiling the function.
   (assert-equal '(setf issue.667-car)
-                (compile '(setf issue.667-car)))
+		(compile '(setf issue.667-car)))
   (let ((x (list 1 2)))
     (setf (issue.667-car x) 42)
     (assert-equal 42 (car x))))
@@ -1177,7 +1177,7 @@
     (:tag :issues)
   ;; Verify that compiling a macro by name still works.
   (assert-equal 'issue.667-macro
-                (compile 'issue.667-macro))
+		(compile 'issue.667-macro))
   (assert-true (macro-function 'issue.667-macro))
   (assert-equal '(42) (issue.667-macro 42)))
 
