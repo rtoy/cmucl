@@ -1154,3 +1154,29 @@
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
 
+
+(defun (setf issue.667-car) (val arg)
+  (setf (car arg) val))
+
+(defmacro issue.667-macro (arg)
+  `(list ,arg))
+
+(define-test issue.667.compile-setf-function-name
+    (:tag :issues)
+  ;; COMPILE used to compute its default DEFINITION argument by
+  ;; calling MACRO-FUNCTION on the name.  MACRO-FUNCTION requires a
+  ;; symbol, so a function name like (SETF FOO) signaled a type error
+  ;; instead of compiling the function.
+  (assert-equal '(setf issue.667-car)
+		(compile '(setf issue.667-car)))
+  (let ((x (list 1 2)))
+    (setf (issue.667-car x) 42)
+    (assert-equal 42 (car x))))
+
+(define-test issue.667.compile-macro-name
+    (:tag :issues)
+  ;; Verify that compiling a macro by name still works.
+  (assert-equal 'issue.667-macro
+		(compile 'issue.667-macro))
+  (assert-true (macro-function 'issue.667-macro))
+  (assert-equal '(42) (issue.667-macro 42)))
