@@ -45,278 +45,165 @@
     (frob double-float <=)
     (frob double-float >=)))
 
-(define-test nan-single.<
-    (:tag :nan)
-  ;; First just make sure it works with regular single-floats
+;; Define a test Name, tagged :nan, for one of the comparison
+;; functions defined above.  Fn is the function to test and Args is a
+;; list of two or three float literals arranged so that (Fn . Args) is
+;; true.  The Sanity forms are assertions on ordinary numbers and are
+;; run first.  Then Fn is called with every combination of Args in
+;; which at least one argument has been replaced by a NaN of the same
+;; float format, and each such call is asserted to be false: a NaN is
+;; unordered with respect to everything, including itself, so every
+;; comparison involving a NaN is false.
+;;
+;; Before issue #156 was fixed, <= and >= were compiled as the
+;; negation of > and <, which is exactly wrong for NaN, and NaN in the
+;; last position of a 3-arg comparison could not be tested.
+(defmacro define-nan-test (name fn args &body sanity)
+  (let ((nan (etypecase (first args)
+	       (single-float '*single-float-nan*)
+	       (double-float '*double-float-nan*)))
+	(n (length args)))
+    `(define-test ,name
+	 (:tag :nan)
+       ,@sanity
+       (ext:with-float-traps-masked (:invalid)
+	 ;; The one bits in the mask determine where NaN shows up in
+	 ;; the comparison operation so we have NaN in all possible
+	 ;; places.
+	 ,@(loop for mask from 1 below (ash 1 n)
+		 collect
+		 `(assert-false
+		   (,fn ,@(loop for i from 0 below n
+				for arg in args
+				collect (if (logbitp i mask) nan arg)))))))))
+
+(define-nan-test nan-single.< stst-< (1f0 2f0)
+  ;; Make sure it works with ordinary single-floats.
   (assert-true (stst-< 1f0 2f0))
   (assert-false (stst-< 1f0 1f0))
-  (assert-false (stst-< 1f0 0f0))
-  ;; Now try NaN.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (stst-< *single-float-nan* 1f0))
-    (assert-false (stst-< 1f0 *single-float-nan*))
-    (assert-false (stst-< *single-float-nan* *single-float-nan*))))
+  (assert-false (stst-< 1f0 0f0)))
 
-(define-test nan-double.<
-    (:tag :nan)
-  ;; First just make sure it works with regular single-floats
-  (assert-true (dtst-< 1d0 2d0))
-  (assert-false (dtst-< 1d0 1d0))
-  (assert-false (dtst-< 1d0 0d0))
-  ;; Now try NaN.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (dtst-< *double-float-nan* 1d0))
-    (assert-false (dtst-< 1d0 *double-float-nan*))
-    (assert-false (dtst-< *double-float-nan* *double-float-nan*))))
-
-(define-test nan-single.>
-    (:tag :nan)
-  ;; First just make sure it works with regular single-floats
-  (assert-true (stst-> 2f0 1f0))
-  (assert-false (stst-> 1f0 1f0))
-  (assert-false (stst-> 0f0 1f0))
-  ;; Now try NaN.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (stst-> *single-float-nan* 1f0))
-    (assert-false (stst-> 1f0 *single-float-nan*))
-    (assert-false (stst-> *single-float-nan* *single-float-nan*))))
-
-(define-test nan-double.>
-    (:tag :nan)
-  ;; First just make sure it works with regular single-floats
-  (assert-true (dtst-> 2d0 1d0))
-  (assert-false (dtst-> 1d0 1d0))
-  (assert-false (dtst-> 0d0 1d0))
-  ;; Now try NaN.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (dtst-> *double-float-nan* 1d0))
-    (assert-false (dtst-> 1d0 *double-float-nan*))
-    (assert-false (dtst-> *double-float-nan* *double-float-nan*))))
-
-(define-test nan-single.<3
-    (:tag :nan)
-  ;; First just make sure it works with regular single-floats
+(define-nan-test nan-single.<3 stst-<3 (1f0 2f0 3f0)
+  ;; Make sure it works with ordinary single-floats.
   (assert-true (stst-<3 1f0 2f0 3f0))
   (assert-false (stst-<3 1f0 2f0 2f0))
   (assert-false (stst-<3 1f0 1f0 2f0))
-  (assert-false (stst-<3 1f0 0f0 2f0))
-  ;; Now try NaN in each position, including the last.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (stst-<3 *single-float-nan* 2f0 3f0))
-    (assert-false (stst-<3 1f0 *single-float-nan* 3f0))
-    (assert-false (stst-<3 1f0 2f0 *single-float-nan*))
-    (assert-false (stst-<3 *single-float-nan* *single-float-nan* 3f0))
-    (assert-false
-     (stst-<3 *single-float-nan* *single-float-nan* *single-float-nan*))))
-  
-(define-test nan-double.<3
-    (:tag :nan)
-  ;; First just make sure it works with regular double-floats
+  (assert-false (stst-<3 1f0 0f0 2f0)))
+
+(define-nan-test nan-double.< dtst-< (1d0 2d0)
+  ;; Make sure it works with ordinary double-floats.
+  (assert-true (dtst-< 1d0 2d0))
+  (assert-false (dtst-< 1d0 1d0))
+  (assert-false (dtst-< 1d0 0d0)))
+
+(define-nan-test nan-double.<3 dtst-<3 (1d0 2d0 3d0)
+  ;; Make sure it works with ordinary double-floats.
   (assert-true (dtst-<3 1d0 2d0 3d0))
   (assert-false (dtst-<3 1d0 2d0 2d0))
   (assert-false (dtst-<3 1d0 1d0 2d0))
-  (assert-false (dtst-<3 1d0 0d0 2d0))
-  ;; Now try NaN in each position, including the last.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (dtst-<3 *double-float-nan* 2d0 3d0))
-    (assert-false (dtst-<3 1d0 *double-float-nan* 3d0))
-    (assert-false (dtst-<3 1d0 2d0 *double-float-nan*))
-    (assert-false (dtst-<3 *double-float-nan* *double-float-nan* 3d0))
-    (assert-false
-     (dtst-<3 *double-float-nan* *double-float-nan* *double-float-nan*))))
-  
-(define-test nan-single.>3
-    (:tag :nan)
-  ;; First just make sure it works with regular single-floats
+  (assert-false (dtst-<3 1d0 0d0 2d0)))
+
+(define-nan-test nan-single.> stst-> (2f0 1f0)
+  ;; Make sure it works with ordinary single-floats.
+  (assert-true (stst-> 2f0 1f0))
+  (assert-false (stst-> 1f0 1f0))
+  (assert-false (stst-> 0f0 1f0)))
+
+(define-nan-test nan-single.>3 stst->3 (3f0 2f0 1f0)
+  ;; Make sure it works with ordinary single-floats.
   (assert-true (stst->3 3f0 2f0 1f0))
   (assert-false (stst->3 3f0 1f0 1f0))
   (assert-false (stst->3 2f0 2f0 1f0))
-  (assert-false (stst->3 0f0 2f0 1f0))
-  ;; Now try NaN in each position, including the last.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (stst->3 *single-float-nan* 2f0 3f0))
-    (assert-false (stst->3 1f0 *single-float-nan* 3f0))
-    (assert-false (stst->3 3f0 2f0 *single-float-nan*))
-    (assert-false (stst->3 *single-float-nan* *single-float-nan* 3f0))
-    (assert-false
-     (stst->3 *single-float-nan* *single-float-nan* *single-float-nan*))))
-  
-(define-test nan-double.>3
-    (:tag :nan)
-  ;; First just make sure it works with regular double-floats
+  (assert-false (stst->3 0f0 2f0 1f0)))
+
+(define-nan-test nan-double.> dtst-> (2d0 1d0)
+  ;; Make sure it works with ordinary double-floats.
+  (assert-true (dtst-> 2d0 1d0))
+  (assert-false (dtst-> 1d0 1d0))
+  (assert-false (dtst-> 0d0 1d0)))
+
+(define-nan-test nan-double.>3 dtst->3 (3d0 2d0 1d0)
+  ;; Make sure it works with ordinary double-floats.
   (assert-true (dtst->3 3d0 2d0 1d0))
   (assert-false (dtst->3 3d0 1d0 1d0))
   (assert-false (dtst->3 2d0 2d0 1d0))
-  (assert-false (dtst->3 0d0 2d0 1d0))
-  ;; Now try NaN in each position, including the last.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (dtst->3 *double-float-nan* 2d0 3d0))
-    (assert-false (dtst->3 1d0 *double-float-nan* 3d0))
-    (assert-false (dtst->3 3d0 2d0 *double-float-nan*))
-    (assert-false (dtst->3 *double-float-nan* *double-float-nan* 3d0))
-    (assert-false
-     (dtst->3 *double-float-nan* *double-float-nan* *double-float-nan*))))
-  
-(define-test nan-single.=
-    (:tag :nan)
-  ;; Basic tests with regular numbers.
+  (assert-false (dtst->3 0d0 2d0 1d0)))
+
+(define-nan-test nan-single.= stst-= (1f0 1f0)
+  ;; Make sure it works with ordinary single-floats.
   (assert-true (stst-= 1f0 1f0))
   (assert-false (stst-= 2f0 1f0))
-  (assert-false (stst-= 0f0 1f0))
-  ;; Tests with NaN, where = should fail.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (stst-= *single-float-nan* 1f0))
-    (assert-false (stst-= 1f0 *single-float-nan*))
-    (assert-false (stst-= *single-float-nan* *single-float-nan*))))
+  (assert-false (stst-= 0f0 1f0)))
 
-(define-test nan-double.=
-    (:tag :nan)
-  ;; Basic tests with regular numbers.
-  (assert-true (dtst-= 1d0 1d0))
-  (assert-false (dtst-= 2d0 1d0))
-  (assert-false (dtst-= 0d0 1d0))
-  ;; Tests with NaN, where = should fail.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (dtst-= *double-float-nan* 1d0))
-    (assert-false (dtst-= 1d0 *double-float-nan*))
-    (assert-false (dtst-= *double-float-nan* *double-float-nan*))))
-  
-(define-test nan-single.=3
-    (:tag :nan)
-  ;; Basic tests with regular numbers.
+(define-nan-test nan-single.=3 stst-=3 (1f0 1f0 1f0)
+  ;; Make sure it works with ordinary single-floats.
   (assert-true (stst-=3 1f0 1f0 1f0))
   (assert-false (stst-=3 1f0 1f0 0f0))
-  (assert-false (stst-=3 0f0 1f0 1f0))
-  ;; Tests with NaN, where = should fail.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (stst-=3 *single-float-nan* 1f0 1f0))
-    (assert-false (stst-=3 1f0 *single-float-nan* 1f0))
-    (assert-false (stst-=3 1f0 1f0 *single-float-nan*))))
+  (assert-false (stst-=3 0f0 1f0 1f0)))
 
-(define-test nan-double.=3
-    (:tag :nan)
-  ;; Basic tests with regular numbers.
+(define-nan-test nan-double.= dtst-= (1d0 1d0)
+  ;; Make sure it works with ordinary double-floats.
+  (assert-true (dtst-= 1d0 1d0))
+  (assert-false (dtst-= 2d0 1d0))
+  (assert-false (dtst-= 0d0 1d0)))
+
+(define-nan-test nan-double.=3 dtst-=3 (1d0 1d0 1d0)
+  ;; Make sure it works with ordinary double-floats.
   (assert-true (dtst-=3 1d0 1d0 1d0))
   (assert-false (dtst-=3 1d0 1d0 0d0))
-  (assert-false (dtst-=3 0d0 1d0 1d0))
-  ;; Tests with NaN, where = should fail.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (dtst-=3 *double-float-nan* 1d0 1d0))
-    (assert-false (dtst-=3 1d0 *double-float-nan* 1d0))
-    (assert-false (dtst-=3 1d0 1d0 *double-float-nan*))))
+  (assert-false (dtst-=3 0d0 1d0 1d0)))
 
-;;; Tests for <= and >=, for issue #156.  These used to be compiled as
-;;; the negation of > and <, which gets the wrong answer for NaN: a
-;;; NaN is unordered with respect to everything, so <, >, <=, and >=
-;;; must all be false.
-
-(define-test nan-single.<=
-    (:tag :nan)
-  ;; First just make sure it works with regular single-floats
+(define-nan-test nan-single.<= stst-<= (1f0 2f0)
+  ;; Make sure it works with ordinary single-floats.
   (assert-true (stst-<= 1f0 2f0))
   (assert-true (stst-<= 1f0 1f0))
-  (assert-false (stst-<= 1f0 0f0))
-  ;; Now try NaN.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (stst-<= *single-float-nan* 1f0))
-    (assert-false (stst-<= 1f0 *single-float-nan*))
-    (assert-false (stst-<= *single-float-nan* *single-float-nan*))))
+  (assert-false (stst-<= 1f0 0f0)))
 
-(define-test nan-double.<=
-    (:tag :nan)
-  ;; First just make sure it works with regular double-floats
-  (assert-true (dtst-<= 1d0 2d0))
-  (assert-true (dtst-<= 1d0 1d0))
-  (assert-false (dtst-<= 1d0 0d0))
-  ;; Now try NaN.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (dtst-<= *double-float-nan* 1d0))
-    (assert-false (dtst-<= 1d0 *double-float-nan*))
-    (assert-false (dtst-<= *double-float-nan* *double-float-nan*))))
-
-(define-test nan-single.>=
-    (:tag :nan)
-  ;; First just make sure it works with regular single-floats
-  (assert-true (stst->= 2f0 1f0))
-  (assert-true (stst->= 1f0 1f0))
-  (assert-false (stst->= 0f0 1f0))
-  ;; Now try NaN.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (stst->= *single-float-nan* 1f0))
-    (assert-false (stst->= 1f0 *single-float-nan*))
-    (assert-false (stst->= *single-float-nan* *single-float-nan*))))
-
-(define-test nan-double.>=
-    (:tag :nan)
-  ;; First just make sure it works with regular double-floats
-  (assert-true (dtst->= 2d0 1d0))
-  (assert-true (dtst->= 1d0 1d0))
-  (assert-false (dtst->= 0d0 1d0))
-  ;; Now try NaN.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (dtst->= *double-float-nan* 1d0))
-    (assert-false (dtst->= 1d0 *double-float-nan*))
-    (assert-false (dtst->= *double-float-nan* *double-float-nan*))))
-
-(define-test nan-single.<=3
-    (:tag :nan)
-  ;; First just make sure it works with regular single-floats
+(define-nan-test nan-single.<=3 stst-<=3 (1f0 2f0 3f0)
+  ;; Make sure it works with ordinary single-floats.
   (assert-true (stst-<=3 1f0 2f0 3f0))
   (assert-true (stst-<=3 1f0 2f0 2f0))
   (assert-true (stst-<=3 1f0 1f0 2f0))
-  (assert-false (stst-<=3 1f0 0f0 2f0))
-  ;; Now try NaN in each position.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (stst-<=3 *single-float-nan* 2f0 3f0))
-    (assert-false (stst-<=3 1f0 *single-float-nan* 3f0))
-    (assert-false (stst-<=3 1f0 2f0 *single-float-nan*))
-    (assert-false
-     (stst-<=3 *single-float-nan* *single-float-nan* *single-float-nan*))))
+  (assert-false (stst-<=3 1f0 0f0 2f0)))
 
-(define-test nan-double.<=3
-    (:tag :nan)
-  ;; First just make sure it works with regular double-floats
+(define-nan-test nan-double.<= dtst-<= (1d0 2d0)
+  ;; Make sure it works with ordinary double-floats.
+  (assert-true (dtst-<= 1d0 2d0))
+  (assert-true (dtst-<= 1d0 1d0))
+  (assert-false (dtst-<= 1d0 0d0)))
+
+(define-nan-test nan-double.<=3 dtst-<=3 (1d0 2d0 3d0)
+  ;; Make sure it works with ordinary double-floats.
   (assert-true (dtst-<=3 1d0 2d0 3d0))
   (assert-true (dtst-<=3 1d0 2d0 2d0))
   (assert-true (dtst-<=3 1d0 1d0 2d0))
-  (assert-false (dtst-<=3 1d0 0d0 2d0))
-  ;; Now try NaN in each position.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (dtst-<=3 *double-float-nan* 2d0 3d0))
-    (assert-false (dtst-<=3 1d0 *double-float-nan* 3d0))
-    (assert-false (dtst-<=3 1d0 2d0 *double-float-nan*))
-    (assert-false
-     (dtst-<=3 *double-float-nan* *double-float-nan* *double-float-nan*))))
+  (assert-false (dtst-<=3 1d0 0d0 2d0)))
 
-(define-test nan-single.>=3
-    (:tag :nan)
-  ;; First just make sure it works with regular single-floats
+(define-nan-test nan-single.>= stst->= (2f0 1f0)
+  ;; Make sure it works with ordinary single-floats.
+  (assert-true (stst->= 2f0 1f0))
+  (assert-true (stst->= 1f0 1f0))
+  (assert-false (stst->= 0f0 1f0)))
+
+(define-nan-test nan-single.>=3 stst->=3 (3f0 2f0 1f0)
+  ;; Make sure it works with ordinary single-floats.
   (assert-true (stst->=3 3f0 2f0 1f0))
   (assert-true (stst->=3 3f0 1f0 1f0))
   (assert-true (stst->=3 2f0 2f0 1f0))
-  (assert-false (stst->=3 0f0 2f0 1f0))
-  ;; Now try NaN in each position.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (stst->=3 *single-float-nan* 2f0 1f0))
-    (assert-false (stst->=3 3f0 *single-float-nan* 1f0))
-    (assert-false (stst->=3 3f0 2f0 *single-float-nan*))
-    (assert-false
-     (stst->=3 *single-float-nan* *single-float-nan* *single-float-nan*))))
+  (assert-false (stst->=3 0f0 2f0 1f0)))
 
-(define-test nan-double.>=3
-    (:tag :nan)
-  ;; First just make sure it works with regular double-floats
+(define-nan-test nan-double.>= dtst->= (2d0 1d0)
+  ;; Make sure it works with ordinary double-floats.
+  (assert-true (dtst->= 2d0 1d0))
+  (assert-true (dtst->= 1d0 1d0))
+  (assert-false (dtst->= 0d0 1d0)))
+
+(define-nan-test nan-double.>=3 dtst->=3 (3d0 2d0 1d0)
+  ;; Make sure it works with ordinary double-floats.
   (assert-true (dtst->=3 3d0 2d0 1d0))
   (assert-true (dtst->=3 3d0 1d0 1d0))
   (assert-true (dtst->=3 2d0 2d0 1d0))
-  (assert-false (dtst->=3 0d0 2d0 1d0))
-  ;; Now try NaN in each position.  All comparisons should be false.
-  (ext:with-float-traps-masked (:invalid)
-    (assert-false (dtst->=3 *double-float-nan* 2d0 1d0))
-    (assert-false (dtst->=3 3d0 *double-float-nan* 1d0))
-    (assert-false (dtst->=3 3d0 2d0 *double-float-nan*))
-    (assert-false
-     (dtst->=3 *double-float-nan* *double-float-nan* *double-float-nan*))))
+  (assert-false (dtst->=3 0d0 2d0 1d0)))
 
 (define-test nan.<=->=.full-call
     (:tag :nan)
