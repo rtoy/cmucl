@@ -1162,9 +1162,9 @@
   ;; an element-type that isn't a subtype of CHARACTER must be
   ;; rejected.  BYTE isn't a type specifier at all, so SUBTYPEP can't
   ;; tell, and we reject it too.
-  (assert-true (make-string-output-stream :element-type 'character))
-  (assert-true (make-string-output-stream :element-type 'base-char))
-  (assert-true (make-string-output-stream :element-type 'standard-char))
+  (assert-true (typep (make-string-output-stream :element-type 'character) 'string-stream))
+  (assert-true (typep (make-string-output-stream :element-type 'base-char) 'string-stream))
+  (assert-true (typep (make-string-output-stream :element-type 'standard-char) 'string-stream))
   (assert-error 'type-error
 		(make-string-output-stream :element-type 'byte))
   (assert-error 'type-error
