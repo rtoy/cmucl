@@ -7346,6 +7346,10 @@ msgid ""
 msgstr ""
 
 #: src/code/stream.lisp
+msgid "Element-type ~S is not a subtype of CHARACTER"
+msgstr ""
+
+#: src/code/stream.lisp
 msgid ""
 "Returns an Output stream which will accumulate all output given to it for\n"
 "   the benefit of the function Get-Output-Stream-String."
