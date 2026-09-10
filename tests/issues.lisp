@@ -1199,5 +1199,5 @@
   (assert-error 'type-error
 		(make-string-output-stream :element-type 'integer))
   ;; Not a type specifier at all; SPECIFIER-TYPE signals this one.
-  (assert-error 'program-error
+  (assert-error 'type-error
 		(make-string-output-stream :element-type 42)))

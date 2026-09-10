@@ -1795,9 +1795,14 @@ output to Output-stream"
 (defun make-string-output-stream (&key (element-type 'character))
   "Returns an Output stream which will accumulate all output given to it for
    the benefit of the function Get-Output-Stream-String."
-  (unless (subtypep element-type 'character)
+  (unless (handler-case (subtypep element-type 'character)
+	    (parse-unknown-type ()
+	      nil)
+	    (error ()
+	      nil))
     (error 'simple-type-error
 	   :datum element-type
+	   :expected-type 'character
 	   :format-control _"Element-type ~S is not a subtype of CHARACTER"
 	   :format-arguments (list element-type)))
   (%make-string-output-stream))
