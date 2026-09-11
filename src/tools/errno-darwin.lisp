@@ -105,4 +105,4 @@
 (defconstant ENOTRECOVERABLE 104)
 (defconstant EOWNERDEAD 105)
 (defconstant ELAST 106)
-(defconstant EQFULL ELAST))
+(defconstant EQFULL ELAST)
