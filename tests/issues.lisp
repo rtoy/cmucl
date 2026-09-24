@@ -1199,3 +1199,24 @@
       (assert-eql 'b datum)
       (assert-true (subtypep expected 'list))
       (assert-false (typep datum expected)))))
+
+
+
+(define-test issue.671.make-string-output-stream-element-type
+    (:tag :issues)
+  ;; MAKE-STRING-OUTPUT-STREAM accumulates characters in a string, so
+  ;; an element-type that isn't a subtype of CHARACTER must be
+  ;; rejected.  BYTE isn't a type specifier at all, so SUBTYPEP can't
+  ;; tell, and we reject it too.
+  (assert-true (typep (make-string-output-stream :element-type 'character) 'string-stream))
+  (assert-true (typep (make-string-output-stream :element-type 'base-char) 'string-stream))
+  (assert-true (typep (make-string-output-stream :element-type 'standard-char) 'string-stream))
+  (assert-error 'type-error
+		(make-string-output-stream :element-type 'byte))
+  (assert-error 'type-error
+		(make-string-output-stream :element-type '(unsigned-byte 8)))
+  (assert-error 'type-error
+		(make-string-output-stream :element-type 'integer))
+  ;; Not a type specifier at all; SPECIFIER-TYPE signals this one.
+  (assert-error 'type-error
+		(make-string-output-stream :element-type 42)))
