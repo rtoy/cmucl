@@ -3124,7 +3124,7 @@
       "fold identity operations"
       result)))
 
-(deftransform logand ((x y) (* (constant-argument t)) *)
+(deftransform logand ((x y) (* (constant-argument integer)) *)
   "fold identity operation"
   (let ((y (continuation-value y)))
     (unless (and (plusp y)
