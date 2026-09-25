@@ -87,43 +87,16 @@ find_errno ()
     # Linux, Darwin, and Solaris (with Sun C) to dump the macros
     # defined in errno.h.  The results are sorted in ascending
     # numerical order and aliases follow the original definition.
-echo "#include <errno.h>" |
-    cpp -dM - |
-    awk '
-BEGIN {
-    max = 0
-}
-# Pattern is "#define EFOO number"
-/^#define[ \t]+(E[A-Z0-9]+)[ \t]+([0-9]+)/ {
-    # If "number" has already been recorded, make this one an alias of
-    # the original by appending this to any existing aliases.  Otherwise
-    # add the entry to errno array.
-    if ($3 in errno) {
-	alias[errno[$3]] = alias[errno[$3]] " " $2
-    } else {
-	errno[$3] = $2
-	max = ($3 > max) ? $3 : max
-    }
-}
-# Pattern is "#define EFOO EALIAS"
-/^#define[ \t]+(E[A-Z0-9]+)[ \t]+(E[A-Z0-9]+)/ {
-    # Append this to the alias array
-    alias[$3] = alias[$3] " " $2
-}
-END {
-    # Print out each errno/alias in numerical order, with any aliases just
-    # after the primary.
-    for (i = 0; i <= max; i++) {
-	if (i in errno) {
-	    printf "(defconstant %s %d)\n", errno[i], i
-	    if (errno[i] in alias) {
-		n = split(alias[errno[i]], names, " ")
-		for (j = 1; j <= n; j++)
-		    printf "(defconstant %s %s)\n", names[j], errno[i]
-	    }
-	}
-    }
-}'
+    {
+	echo "#include <errno.h>"
+	echo "#include <errno.h>" |
+	    cpp -dM - |
+	    awk '/^#define[ \t]+E[A-Z0-9]+[ \t]/ { printf "\"%s\" %s\n", $2, $2 }'
+    } |
+	cpp -P - |
+	awk '/^"E[A-Z0-9]+" [0-9]+$/ { gsub(/"/, "", $1); print $1, $2 }' |
+	LC_ALL=C sort -k2,2n -k1,1 |
+	awk '{ printf "(defconstant %s %d)\n", $1, $2 }'
 }
 
 if [ "$UPDATE" = "yes" ]; then
