@@ -1202,7 +1202,7 @@
 
 
 
-(define-test issue.671.make-string-output-stream-element-type
+(define-test issue.670.length-of-dotted-list
     (:tag :issues)
   ;; (LENGTH '(A . B)) must signal a TYPE-ERROR that reports the
   ;; offending final cdr, B.  The x86 LENGTH/LIST vop used to report
