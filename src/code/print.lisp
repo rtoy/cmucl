@@ -1524,148 +1524,114 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 (defvar *digits* "0123456789")
 
-(defun flonum-to-string (x &key width fdigits scale fmin (num-expt 0 num-expt-p)
-			        (allow-overflow-p t))
+(defun flonum-to-string (x &key width fdigits scale fmin
+				(num-expt 0 num-expt-p)
+				(allow-overflow-p t))
   (setf x (abs x))
-  (cond ((zerop x)
-	 ;;zero is a special case which float-string cannot handle
-	 (if fdigits
-	     (let ((s (make-string (1+ fdigits) :initial-element #\0)))
-	       (setf (schar s 0) #\.)
-	       (values s (length s) t (zerop fdigits) 0))
-	     (values "." 1 t t 0)))
-	(t
-	 (flet ((fixup-flonum-to-digits (x &optional (expt 0) position relativep)
-		  (multiple-value-bind (e s)
-		      (flonum-to-digits x position relativep)
-		    (values (- e expt) s e))))
-	   (multiple-value-bind (e string printed-e)
-	       (if fdigits
-		   (fixup-flonum-to-digits x
-					   num-expt
-					   (+ (min (- (+ fdigits (or scale 0)))
-						   (- (or fmin 0)))
-					      num-expt))
-		   (if (and width (> width 1))
-		       (let ((ndigits (1- width)))
-			 #+(or)
-			 (progn
-			   (format t "ndigits = ~A~%" ndigits)
-			   (format t "scale   = ~A~%" scale))
-			 (when (and scale (< scale 0))
-			   (setf ndigits (+ ndigits scale)))
-			 (when (minusp num-expt)
-			   (incf ndigits (- num-expt)))
-			 (fixup-flonum-to-digits x num-expt
-						 ndigits
-						 t))
-		       (fixup-flonum-to-digits x num-expt)))
-	     (let ((stream (make-string-output-stream))
-		   (printed-roundoff-p (and num-expt-p (/= num-expt printed-e))))
-	       (when (and num-expt-p (/= num-expt printed-e))
-		 ;; The actual exponent of the number differs from the
-		 ;; printed exponent.  This happens for something like
-		 ;; (format nil "~11,3,2,0,'*,,'EE" .9999).  With only
-		 ;; 3 fraction digits, .9999 gets rounded to 1.000 But
-		 ;; the exponent for .9999 is -1, and the exponent for
-		 ;; the printed result is actually 1.  We need to
-		 ;; decrement e by 1 to account for this.
-		 (decf e))
-	       #+(or)
-	       (progn
-		 (format t "e = ~S~%" e)
-		 (format t "roundoff = ~S~%" printed-roundoff-p))
-	       
-	       (incf e (or scale 0))
-	       (if (plusp e)
-		   (progn
-		     (write-string string stream :end (min (length string)
-							   e))
-		     (dotimes (i (- e (length string)))
-		       (write-char #\0 stream))
-		     (write-char #\. stream)
-		     (write-string string stream :start (min (length string)
-							     e))
-		     (when fdigits
-		       (dotimes (i (- fdigits
-				      (- (length string) 
-					 (min (length string) e))))
-			 (write-char #\0 stream))))
-		   (progn
-		     (write-string "." stream)
-		     ;; Write out the leading zeroes.  If fmin is set,
-		     ;; we need all of them.  But if fdigits is given
-		     ;; and is smaller than -e, we only want fdigits
-		     ;; to be output.  That way we don't print too
-		     ;; many leading zeroes if the number is too
-		     ;; small.
-		     ;;
-		     ;; Also print them all out if :allow-overflow-p
-		     ;; is set or there's no width constraint.
-		     #+(or)
-		     (progn
-		       (format t "fmin = ~S~%" fmin)
-		       (format t "fdigits = ~S~%" fdigits)
-		       (format t "width = ~S~%" width)
-		       (when width
-			 (format t "min = ~S~%" (min (- e) width))))
-
-		     (let* ((round-to-zero-p
-			     ;; When fdigits is not given and we have
-			     ;; a width constraint that we must not
-			     ;; exceed, the fraction rounds to zero
-			     ;; when even the first significant digit
-			     ;; lies beyond the last fraction position
-			     ;; that fits within the width.  CLHS
-			     ;; 22.3.3.1 says a single zero digit
-			     ;; should then appear after the decimal
-			     ;; point, so print exactly one zero and
-			     ;; no digits.  This fixes things like
-			     ;; (format nil "~3f" 1e-6).  We should
-			     ;; print "0.0", not ".00".
-			     (and (null fdigits)
-				  (not fmin)
-				  width
-				  (not allow-overflow-p)
-				  (>= (- e) (max 1 (1- width)))))
-			    (leading-zeros
-			     (cond (round-to-zero-p
-				    1)
-				   ((or fmin (null fdigits))
-				    (if (or allow-overflow-p (null width))
-					(- e)
-					(min (- e) (1- width))))
-				   (t
-				    (min (- e) fdigits)))))
-		       (dotimes (i leading-zeros)
-			 (write-char #\0 stream))
-		       ;; If we're out of room (because fdigits is too
-		       ;; small), don't print out our string.  This
-		       ;; fixes things like (format nil "~,2f" 0.001).
-		       ;; We should print ".00", not ".001".  But if
-		       ;; fmin is set, we want to print out something.
-		       (when (and (not round-to-zero-p)
-				  (or (null fdigits)
-				      (plusp (+ e fdigits))
-				      fmin))
-			 ;; But only print the whole string if there's
-			 ;; no width constraint or if we're allowed to
-			 ;; exceed the width.
-			 (if (or allow-overflow-p (null width))
-			     (write-string string stream)
-			     (write-string string stream
-					   :end (min (- width leading-zeros 1)
-						     (length string)))))
-		       (when fdigits
-			 (dotimes (i (+ fdigits e (- (length string))))
-			   (write-char #\0 stream))))))
-	       (let ((string (get-output-stream-string stream)))
-		 (values string (length string)
-			 (char= (char string 0) #\.)
-			 (char= (char string (1- (length string))) #\.)
-			 (position #\. string)
-			 printed-roundoff-p))))))))
-
+  (if (zerop x)
+      ;; Special case for zeroes
+      (if fdigits
+	  (let ((s (make-string (1+ fdigits) :initial-element #\0)))
+	    (setf (schar s 0) #\.)
+	    (values s (length s) t (zerop fdigits) 0))
+	  (values "." 1 t t 0))
+      (let ((scale (or scale 0)))
+	(flet ((zeros (n)
+		 (make-string (max n 0) :initial-element #\0)))
+	  ;; Step 1: generate the digits
+	  (multiple-value-bind (printed-e digits)
+	      (cond (fdigits
+		     ;; Absolute cutoff: enough digits for FDIGITS
+		     ;; fraction digits after scaling, but never fewer
+		     ;; than FMIN.
+		     (flonum-to-digits
+		      x (- num-expt (max (+ fdigits scale) (or fmin 0)))))
+		    ((and width (> width 1))
+		     ;; Relative cutoff: as many digits as fit in WIDTH
+		     ;; after the point, allowing for a negative scale
+		     ;; factor and for leading zeros of small numbers.
+		     (flonum-to-digits
+		      x (+ (1- width) (min scale 0) (max (- num-expt) 0)) t))
+		    (t
+		     ;; Free format: shortest string that reads back
+		     ;; to exactly X.
+		     (flonum-to-digits x)))
+	    (let* ((len (length digits))
+		   ;; Rounding can move the printed exponent away from
+		   ;; the real one, e.g. .9999 -> 1.000.  The caller
+		   ;; bumps its exponent, so we compensate here.
+		   (roundoff (and num-expt-p (/= num-expt printed-e)))
+		   ;; Number of digits before the decimal point.  E <= 0
+		   ;; means -E zeros go after the point before DIGITS.
+		   (e (+ (- printed-e num-expt) (if roundoff -1 0) scale))
+		   ;; True if we may exceed WIDTH.
+		   (unconstrained (or allow-overflow-p (null width))))
+	      ;; Step 2: Decide what goes on each side of the point.
+	      (multiple-value-bind (int-part frac-part)
+		  (if (plusp e)
+		      (let ((split (min len e)))
+			(values
+			 (concatenate 'string
+				      (subseq digits 0 split)
+				      (zeros (- e len)))
+			 (concatenate 'string
+				      (subseq digits split)
+				      (if fdigits
+					  (zeros (- fdigits (- len split)))
+					  ""))))
+		      (let* (;; With no FDIGITS and a width we must
+			     ;; not exceed, the fraction rounds to
+			     ;; zero when even the first significant
+			     ;; digit lies beyond the last position
+			     ;; that fits.  CLHS 22.3.3.1 then wants a
+			     ;; single zero digit, so (format nil
+			     ;; "~3f" 1e-6) is "0.0", not ".00".
+			     (round-to-zero-p
+			      (and (null fdigits)
+				   (not fmin)
+				   (not unconstrained)
+				   (>= (- e) (max 1 (1- width)))))
+			     (leading-zeros
+			      (cond (round-to-zero-p 1)
+				    ;; FMIN or no FDIGITS: all of
+				    ;; them, unless the width caps us.
+				    ((or fmin (null fdigits))
+				     (if unconstrained
+					 (- e)
+					 (min (- e) (1- width))))
+				    ;; FDIGITS: never more than
+				    ;; FDIGITS, so (format nil "~,2f"
+				    ;; 0.001) is ".00", not ".001".
+				    (t (min (- e) fdigits))))
+			     ;; The significant digits themselves, if
+			     ;; there's room for any of them.
+			     (shown
+			      (cond (round-to-zero-p "")
+				    ((or (null fdigits)
+					 (plusp (+ e fdigits))
+					 fmin)
+				     (if (or unconstrained fdigits)
+					 digits
+					 (subseq digits 0
+						 (max 0 (min (- width leading-zeros 1)
+							     len)))))
+				    (t ""))))
+			(values
+			 ""
+			 (concatenate 'string
+				      (zeros leading-zeros)
+				      shown
+				      (if fdigits
+					  (zeros (+ fdigits e (- len)))
+					  "")))))
+		;; Step 3: combine substrings and describe the result.
+		(let ((string (concatenate 'string int-part "." frac-part)))
+		  (values string
+			  (length string)
+			  (zerop (length int-part))
+			  (zerop (length frac-part))
+			  (length int-part)
+			  roundoff)))))))))
 
 ;;;; Entry point for the float printer.
 
