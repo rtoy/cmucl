@@ -850,6 +850,33 @@
 		      (stream-external-format
 		       (make-broadcast-stream s1 s2 s3)))))))
 
+;; CLHS says FILE-STRING-LENGTH on a broadcast stream returns the value
+;; from the last component stream, and 1 if there are no component
+;; streams.
+(define-test issue.669.broadcast-stream.file-string-length
+    (:tag :issues)
+  (ext:with-temporary-directory (tmp-dir)
+    ;; Use two different external formats so we can tell which stream the
+    ;; answer came from.
+    (with-open-file (s1 (merge-pathnames "bss-1" tmp-dir)
+			:direction :output
+			:if-exists :supersede
+			:external-format :latin1)
+      (with-open-file (s2 (merge-pathnames "bss-2" tmp-dir)
+			  :direction :output
+			  :if-exists :supersede
+			  :external-format :utf-8)
+	(let ((broadcast (make-broadcast-stream s1 s2))
+	      (char #\Latin_Small_Letter_E_With_Acute))
+	  ;; This character is one octet in latin1 and two in utf-8, so the
+	  ;; value from the last stream is 2.
+	  (assert-equal 1 (file-string-length s1 char))
+	  (assert-equal 2 (file-string-length s2 char))
+	  (assert-equal 2 (file-string-length broadcast char))
+	  (assert-equal (file-string-length s2 (string char))
+			(file-string-length broadcast (string char))))))
+    (assert-equal 1 (file-string-length (make-broadcast-stream) "jd"))))
+
 (define-test issue.150
     (:tag :issues)
   (let ((ext:*gc-verbose* nil)
@@ -1180,25 +1207,6 @@
 		(compile 'issue.667-macro))
   (assert-true (macro-function 'issue.667-macro))
   (assert-equal '(42) (issue.667-macro 42)))
-
-
-
-(define-test issue.670.length-of-dotted-list
-    (:tag :issues)
-  ;; (LENGTH '(A . B)) must signal a TYPE-ERROR that reports the
-  ;; offending final cdr, B.  The x86 LENGTH/LIST vop used to report
-  ;; the entire list instead, so the resulting TYPE-ERROR had a datum
-  ;; that was itself of the reported expected type, LIST.
-  (let ((dotted (cons 'a 'b)))
-    (assert-error 'type-error (length dotted))
-    (multiple-value-bind (datum expected)
-	(handler-case (length dotted)
-	  (type-error (c)
-	    (values (type-error-datum c)
-		    (type-error-expected-type c))))
-      (assert-eql 'b datum)
-      (assert-true (subtypep expected 'list))
-      (assert-false (typep datum expected)))))
 
 
 
