@@ -142,3 +142,22 @@
 (define-test format-no-nil-form.1
     (assert-equal '(block nil) (third (second (macroexpand-1 '(formatter "~
 "))))))
+
+
+
+(define-test issue.679.format-f-fdigits-truncated-to-width
+    (:tag :issues)
+  ;; When D is supplied, ~F must print exactly D digits after the
+  ;; decimal point; the width never truncates them.  FLONUM-TO-STRING
+  ;; used to cut the significant digits to fit the width, yielding
+  ;; ".12" for the second case, and passing a negative :END to
+  ;; WRITE-STRING in the first.
+  (assert-equal ".00100" (format nil "~2,5f" 0.001))
+  (assert-equal ".123" (format nil "~3,3f" 0.123))
+  ;; Unaffected neighbors, pinned so they stay that way.
+  (assert-equal ".50" (format nil "~2,2f" 0.5))
+  (assert-equal "0.00" (format nil "~4,2f" 0.001))
+  ;; With an overflowchar, the too-narrow field fills with it instead
+  ;; of relaxing the width.
+  (assert-equal "**" (format nil "~2,5,,'*f" 0.001))  
+  (assert-equal "***" (format nil "~3,3,,'*f" 0.123)))
