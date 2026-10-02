@@ -61,6 +61,7 @@ public domain.
     * #477: Support reading and writing double-double-float in hex
 	    format.  "w" is the suffix used to denote
 	    double-double-floats.
+    * #495: Describe for deftype returns more information.
     * #504: Do correct rounding in `scale-float-maybe-underflow`.
             This was causing some denormals to be read incorrectly.
   * Other changes:
