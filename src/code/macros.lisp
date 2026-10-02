@@ -1694,7 +1694,9 @@
 	   (get-output-stream-string ,var)))))
 
 
+
 ;;;; Iteration macros:
+
 ;; Helper for dotimes.  Extract any declarations for the dotimes
 ;; counter and create a similar declaration for our dummy loop
 ;; counter.  Skip over special declarations, though, because we don't
