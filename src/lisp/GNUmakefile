@@ -67,18 +67,6 @@ OPENLIBM_FLOAT = \
 OPENLIBM_SRCS = $(OPENLIBM_DOUBLE) $(OPENLIBM_FLOAT)
 endif
 
-# FDLIBM = k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c sincos.c \
-# 	s_log1p.c s_expm1.c e_pow.c e_exp.c e_log.c \
-# 	e_acos.c e_asin.c s_atan.c \
-# 	e_cosh.c e_sinh.c s_tanh.c \
-# 	e_acosh.c s_asinh.c e_atanh.c \
-# 	e_atan2.c \
-# 	e_rem_pio2.c k_rem_pio2.c \
-# 	e_log10.c s_scalbn.c \
-# 	setexception.c \
-# 	e_hypot.c \
-# 	log2.c
-
 FDLIBM = setexception.c
 
 
