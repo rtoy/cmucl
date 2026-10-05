@@ -19,17 +19,56 @@ all: lisp.nm
 -include internals.inc
 include Config
 
-FDLIBM = k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c sincos.c \
-	s_log1p.c s_expm1.c e_pow.c e_exp.c e_log.c \
-	e_acos.c e_asin.c s_atan.c \
-	e_cosh.c e_sinh.c s_tanh.c \
-	e_acosh.c s_asinh.c e_atanh.c \
-	e_atan2.c \
-	e_rem_pio2.c k_rem_pio2.c \
-	e_log10.c s_scalbn.c \
-	setexception.c \
-	e_hypot.c \
-	log2.c
+# Need rem_pio2 routines because double-double routines need these for
+# pi reduction.  This is independent of whether we are using core-math
+# or not.
+OPENLIBM_DIR = openlibm
+CPPFLAGS += -I $(PATH1)/$(OPENLIBM_DIR) -DOPENLIBM_USE_HOST_MATH_H
+
+REM_PIO2 = \
+	$(OPENLIBM_DIR)/e_rem_pio2.c \
+	$(OPENLIBM_DIR)/k_rem_pio2.c
+
+ifndef FEATURE_CORE_MATH
+OPENLIBM_DOUBLE = \
+	$(OPENLIBM_DIR)/e_acos.c \
+	$(OPENLIBM_DIR)/e_acosh.c \
+	$(OPENLIBM_DIR)/e_asin.c \
+	$(OPENLIBM_DIR)/e_atan2.c \
+	$(OPENLIBM_DIR)/e_atanh.c \
+	$(OPENLIBM_DIR)/e_cosh.c \
+	$(OPENLIBM_DIR)/e_exp.c \
+	$(OPENLIBM_DIR)/e_hypot.c \
+	$(OPENLIBM_DIR)/e_log10.c \
+	$(OPENLIBM_DIR)/e_log.c \
+	$(OPENLIBM_DIR)/e_log2.c \
+	$(OPENLIBM_DIR)/e_pow.c \
+	$(OPENLIBM_DIR)/e_sinh.c \
+	$(OPENLIBM_DIR)/k_cos.c \
+	$(OPENLIBM_DIR)/k_sin.c \
+	$(OPENLIBM_DIR)/k_tan.c \
+	$(OPENLIBM_DIR)/k_exp.c \
+	$(OPENLIBM_DIR)/s_asinh.c \
+	$(OPENLIBM_DIR)/s_atan.c \
+	$(OPENLIBM_DIR)/s_cos.c \
+	$(OPENLIBM_DIR)/s_expm1.c \
+	$(OPENLIBM_DIR)/s_log1p.c \
+	$(OPENLIBM_DIR)/s_scalbn.c \
+	$(OPENLIBM_DIR)/s_sin.c \
+	$(OPENLIBM_DIR)/s_sincos.c \
+	$(OPENLIBM_DIR)/s_tan.c \
+	$(OPENLIBM_DIR)/s_tanh.c
+
+OPENLIBM_FLOAT = \
+	$(OPENLIBM_DIR)/e_rem_pio2f.c \
+	$(patsubst %.c, %f.c, $(OPENLIBM_DOUBLE))
+
+
+OPENLIBM_SRCS = $(OPENLIBM_DOUBLE) $(OPENLIBM_FLOAT)
+endif
+
+FDLIBM = setexception.c
+
 
 SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	vars.c parse.c interrupt.c search.c validate.c globals.c \
@@ -37,6 +76,7 @@ SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	runprog.c time.c case-mapping.c exec-init.c \
 	irrat.c \
 	${CORE_MATH_SRCS} \
+	$(REM_PIO2) \
 	${OPENLIBM_SRCS} \
 	${FDLIBM} ${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC} ${GC_SRC}
 

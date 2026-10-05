@@ -1597,14 +1597,20 @@
 	  (decf spaceleft len)
 	  ;;optional leading zero
 	  (when lpoint
-	    (if (or (> spaceleft 0) tpoint) ;force at least one digit
+	    (if (or (> spaceleft 0)
+		    ;; If the trailing zero was suppressed because D
+		    ;; was 0 and the value rounded away completely,
+		    ;; the string is just ".", so force the leading
+		    ;; zero to get at least one digit.
+		    (and (not tpoint) (= len 1)))
 		(decf spaceleft)
 		(setq lpoint nil)))
-	  ;;optional trailing zero
+	  ;;mandatory trailing zero.  If TPOINT is still set here, D
+	  ;;was not supplied, and CLHS 22.3.3.1 requires at least one
+	  ;;digit after the decimal point, even if that makes the
+	  ;;result wider than W.
 	  (when tpoint
-	    (if (> spaceleft 0)
-		(decf spaceleft)
-		(setq tpoint nil))))
+	    (decf spaceleft)))
 	(cond ((and w (< spaceleft 0) ovf)
 	       ;;field width overflow
 	       (dotimes (i w) (write-char ovf stream))
@@ -1753,33 +1759,18 @@
 	   (or (float-infinity-p number)
 	       (float-nan-p number)))
       (prin1 number stream)
-      (let* ((num-expt (accurate-scale-exponent (abs number)))
-	     (expt (if (zerop number)
-		       0
-		       (- num-expt k)))
+      (let* ((sign (if (minusp (float-sign number))
+		       #\-
+		       (and atsign #\+)))
+	     (num-expt (accurate-scale-exponent (abs number)))
+	     (expt (if (zerop number) 0 (- num-expt k)))
 	     (estr (decimal-string (abs expt)))
-	     (elen (if e (max (length estr) e) (length estr)))
-	     (add-zero-p nil))
-	(if (and w ovf e (> elen e))	;exponent overflow
-	    (dotimes (i w)
-	      (write-char ovf stream))
-	    ;; The hairy case
-	    (let* ((fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
-		   (fmin (if (minusp k)
-			     1
-			     fdig))
-		   (spaceleft (if w
-				  (- w 2 elen
-				     (if (or atsign (minusp (float-sign number)))
-					 1 0))
-				  nil)))
-	      #+(or)
-	      (progn
-		(format t "fdig = ~A~%" fdig)
-		(format t "fmin = ~A~%" fmin)
-		(format t "spaceleft = ~A~%" spaceleft)
-		(format t "expt = ~S~%" expt))
-
+	     (elen (if e (max (length estr) e) (length estr))))
+	(if (and w ovf e (> elen e))
+	    (dotimes (i w) (write-char ovf stream))
+	    (let* ((fdig (and d (if (plusp k) (1+ (- d k)) d)))
+		   (fmin (if (minusp k) 1 fdig))
+		   (spaceleft (and w (- w (if sign 1 0) 2 elen))))
 	      (multiple-value-bind (fstr flen lpoint tpoint point-pos roundoff)
 		  (lisp::flonum-to-string (abs number)
 					  :width spaceleft
@@ -1788,71 +1779,33 @@
 					  :fmin fmin
 					  :num-expt num-expt)
 		(declare (ignore point-pos))
-		#+(or)
-		(progn
-		  (format t "fstr = ~S~%" fstr)
-		  (format t "flen = ~S~%" flen)
-		  (format t "lp   = ~S~%" lpoint)
-		  (format t "tp   = ~S~%" tpoint))
-
-		(when (and d (zerop d)) (setq tpoint nil))
-		(when w 
-		  (decf spaceleft flen)
-		  ;; See CLHS 22.3.3.2.  "If the parameter d is
-		  ;; omitted, ... [and] if the fraction to be
-		  ;; printed is zero then a single zero digit should
-		  ;; appear after the decimal point."  So we need to
-		  ;; subtract one from here because we're going to
-		  ;; add an extra 0 digit later.
-		  (when (and (null d) (char= (aref fstr (1- flen)) #\.))
-		    (setf add-zero-p t)
-		    (decf spaceleft))
-		  (when lpoint
-		    (if (or (> spaceleft 0) tpoint)
-			(decf spaceleft)
-			(setq lpoint nil)))
-		  (when (and tpoint (<= spaceleft 0))
-		    (setq tpoint nil)))
-		(cond ((and w (< spaceleft 0) ovf)
-		       ;;significand overflow
-		       (dotimes (i w) (write-char ovf stream)))
-		      (t (when w
-			   (dotimes (i spaceleft)
-			     (write-char pad stream)))
-			 (if (minusp (float-sign number))
-			     (write-char #\- stream)
-			     (if atsign (write-char #\+ stream)))
-			 (when lpoint (write-char #\0 stream))
+		(let* ((trailing-zero (and (null d)
+					   (char= (char fstr (1- flen)) #\.)))
+		       (slack (and w (- spaceleft flen
+					(if trailing-zero 1 0))))
+		       (leading-zero (and lpoint
+					  (or (null w)
+					      (> slack 0)
+					      (and tpoint
+						   (not (and d (zerop d)))))))
+		       (padding (and w (- slack (if leading-zero 1 0))))
+		       (expt (if roundoff (1+ expt) expt))
+		       (estr (if roundoff (decimal-string (abs expt)) estr)))
+		  (cond ((and w (< padding 0) ovf)
+			 (dotimes (i w) (write-char ovf stream)))
+			(t
+			 (when w (dotimes (i padding) (write-char pad stream)))
+			 (when sign (write-char sign stream))
+			 (when leading-zero (write-char #\0 stream))
 			 (write-string fstr stream)
-			 ;; Add a zero if we need it.  Which means
-			 ;; we figured out we need one above, or
-			 ;; another condition.  Basically, append a
-			 ;; zero if there are no width constraints
-			 ;; and if the last char to print was a
-			 ;; decimal (so the trailing fraction is
-			 ;; zero.)
-			 (when (or add-zero-p
-				   (and (null w)
-					(char= (aref fstr (1- flen)) #\.)))
-			   ;; It's later and we're adding the zero
-			   ;; digit.
-			   (write-char #\0 stream))
-			 (write-char (if marker
-					 marker
-					 (format-exponent-marker number))
+			 (when trailing-zero (write-char #\0 stream))
+			 (write-char (or marker (format-exponent-marker number))
 				     stream)
-			 (when roundoff
-			   ;; Printed result has rounded the number up
-			   ;; so that the exponent is one too small.
-			   ;; Increase our printed exponent.
-			   (incf expt)
-			   (setf estr (decimal-string (abs expt))))
 			 (write-char (if (minusp expt) #\- #\+) stream)
-			 (when e 
-			   ;;zero-fill before exponent if necessary
+			 (when e
 			   (dotimes (i (- e (length estr)))
 			     (write-char #\0 stream)))
-			 (write-string estr stream))))))))
+			 (write-string estr stream)))))))))
   (values))
 
 (def-format-directive #\G (colonp atsignp params)
