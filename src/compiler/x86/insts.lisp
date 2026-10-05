@@ -1431,7 +1431,11 @@
      (emit-ea segment src #b100))))
 
 (define-instruction imul (segment dst &optional src1 src2)
-  (:printer accum-reg/mem ((op '(#b1111011 #b101))))
+  ;; One-operand form: edx:eax <- eax * r/m.  Print just the r/m
+  ;; operand; ACCUM-REG/MEM would print "IMUL EAX, ECX", which is how
+  ;; the two-operand 0F AF form prints, and would hide the fact that
+  ;; EDX is written too.
+  (:printer reg/mem ((op '(#b1111011 #b101))))
   (:printer ext-reg-reg/mem ((op #b1010111) (width 1)))
   (:printer reg-reg/mem ((op #b0110100) (width 1) (imm nil :type 'imm-word))
 	    '(:name :tab reg ", " reg/mem ", " imm))

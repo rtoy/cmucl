@@ -850,6 +850,33 @@
 		      (stream-external-format
 		       (make-broadcast-stream s1 s2 s3)))))))
 
+;; CLHS says FILE-STRING-LENGTH on a broadcast stream returns the value
+;; from the last component stream, and 1 if there are no component
+;; streams.
+(define-test issue.669.broadcast-stream.file-string-length
+    (:tag :issues)
+  (ext:with-temporary-directory (tmp-dir)
+    ;; Use two different external formats so we can tell which stream the
+    ;; answer came from.
+    (with-open-file (s1 (merge-pathnames "bss-1" tmp-dir)
+			:direction :output
+			:if-exists :supersede
+			:external-format :latin1)
+      (with-open-file (s2 (merge-pathnames "bss-2" tmp-dir)
+			  :direction :output
+			  :if-exists :supersede
+			  :external-format :utf-8)
+	(let ((broadcast (make-broadcast-stream s1 s2))
+	      (char #\Latin_Small_Letter_E_With_Acute))
+	  ;; This character is one octet in latin1 and two in utf-8, so the
+	  ;; value from the last stream is 2.
+	  (assert-equal 1 (file-string-length s1 char))
+	  (assert-equal 2 (file-string-length s2 char))
+	  (assert-equal 2 (file-string-length broadcast char))
+	  (assert-equal (file-string-length s2 (string char))
+			(file-string-length broadcast (string char))))))
+    (assert-equal 1 (file-string-length (make-broadcast-stream) "jd"))))
+
 (define-test issue.150
     (:tag :issues)
   (let ((ext:*gc-verbose* nil)
@@ -1153,6 +1180,74 @@
   (assert-true (stream::find-external-format :646 nil))
   (assert-true (eq (stream::find-external-format :646 nil)
 		   (stream::find-external-format :iso646-us nil))))
+
+
+
+(defun (setf issue.667-car) (val arg)
+  (setf (car arg) val))
+
+(defmacro issue.667-macro (arg)
+  `(list ,arg))
+
+(define-test issue.667.compile-setf-function-name
+    (:tag :issues)
+  ;; COMPILE used to compute its default DEFINITION argument by
+  ;; calling MACRO-FUNCTION on the name.  MACRO-FUNCTION requires a
+  ;; symbol, so a function name like (SETF FOO) signaled a type error
+  ;; instead of compiling the function.
+  (assert-equal '(setf issue.667-car)
+		(compile '(setf issue.667-car)))
+  (let ((x (list 1 2)))
+    (setf (issue.667-car x) 42)
+    (assert-equal 42 (car x))))
+
+(define-test issue.667.compile-macro-name
+    (:tag :issues)
+  ;; Verify that compiling a macro by name still works.
+  (assert-equal 'issue.667-macro
+		(compile 'issue.667-macro))
+  (assert-true (macro-function 'issue.667-macro))
+  (assert-equal '(42) (issue.667-macro 42)))
+
+
+
+(define-test issue.670.length-of-dotted-list
+    (:tag :issues)
+  ;; (LENGTH '(A . B)) must signal a TYPE-ERROR that reports the
+  ;; offending final cdr, B.  The x86 LENGTH/LIST vop used to report
+  ;; the entire list instead, so the resulting TYPE-ERROR had a datum
+  ;; that was itself of the reported expected type, LIST.
+  (let ((dotted (cons 'a 'b)))
+    (assert-error 'type-error (length dotted))
+    (multiple-value-bind (datum expected)
+	(handler-case (length dotted)
+	  (type-error (c)
+	    (values (type-error-datum c)
+		    (type-error-expected-type c))))
+      (assert-eql 'b datum)
+      (assert-true (subtypep expected 'list))
+      (assert-false (typep datum expected)))))
+
+
+
+(define-test issue.671.make-string-output-stream-element-type
+    (:tag :issues)
+  ;; MAKE-STRING-OUTPUT-STREAM accumulates characters in a string, so
+  ;; an element-type that isn't a subtype of CHARACTER must be
+  ;; rejected.  BYTE isn't a type specifier at all, so SUBTYPEP can't
+  ;; tell, and we reject it too.
+  (assert-true (typep (make-string-output-stream :element-type 'character) 'string-stream))
+  (assert-true (typep (make-string-output-stream :element-type 'base-char) 'string-stream))
+  (assert-true (typep (make-string-output-stream :element-type 'standard-char) 'string-stream))
+  (assert-error 'type-error
+		(make-string-output-stream :element-type 'byte))
+  (assert-error 'type-error
+		(make-string-output-stream :element-type '(unsigned-byte 8)))
+  (assert-error 'type-error
+		(make-string-output-stream :element-type 'integer))
+  ;; Not a type specifier at all; SPECIFIER-TYPE signals this one.
+  (assert-error 'type-error
+		(make-string-output-stream :element-type 42)))
 
 
 
