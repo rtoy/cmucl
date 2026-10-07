@@ -1770,6 +1770,8 @@
 	    (dotimes (i w) (write-char ovf stream))
 	    (let* ((fdig (and d (if (plusp k) (1+ (- d k)) d)))
 		   (fmin (if (minusp k) 1 fdig))
+		   ;; The space left after the sign and exponent
+		   ;; (e+NN) are accounted for.
 		   (spaceleft (and w (- w (if sign 1 0) 2 elen))))
 	      (multiple-value-bind (fstr flen lpoint tpoint point-pos roundoff)
 		  (lisp::flonum-to-string (abs number)
@@ -1779,16 +1781,26 @@
 					  :fmin fmin
 					  :num-expt num-expt)
 		(declare (ignore point-pos))
-		(let* ((trailing-zero (and (null d)
-					   (char= (char fstr (1- flen)) #\.)))
-		       (slack (and w (- spaceleft flen
-					(if trailing-zero 1 0))))
+		(let* (;; The columns left for optional trialing zeros and any padding.
+		       (columns-left (and w (- spaceleft flen)))
 		       (leading-zero (and lpoint
 					  (or (null w)
-					      (> slack 0)
+					      (> columns-left 0)
 					      (and tpoint
 						   (not (and d (zerop d)))))))
-		       (padding (and w (- slack (if leading-zero 1 0))))
+		       (leading-zero-length (if leading-zero 1 0))
+		       ;; CLHS 22.3.3.2 wants a single zero digit after the
+		       ;; decimal point when the fraction to be printed is
+		       ;; zero.  But D is chosen subject to the width
+		       ;; constraint imposed by W, and exactly W characters
+		       ;; are output, so print it only if it still fits.
+		       (trailing-zero (and (null d)
+					   (char= (char fstr (1- flen)) #\.)
+					   (or (null w)
+					       (> (- columns-left leading-zero-length) 0))))
+		       (padding (and w (- columns-left
+					  leading-zero-length
+					  (if trailing-zero 1 0))))
 		       (expt (if roundoff (1+ expt) expt))
 		       (estr (if roundoff (decimal-string (abs expt)) estr)))
 		  (cond ((and w (< padding 0) ovf)
