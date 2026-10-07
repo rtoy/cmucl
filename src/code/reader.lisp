@@ -469,9 +469,12 @@
 	    :operation operation)))
 
 (defun readtable-case (table)
+  (check-type table readtable)
   (%readtable-case table))
 
 (defun (setf readtable-case) (new-case table)
+  (check-type table readtable)
+  (check-type new-case (member :upcase :downcase :preserve :invert))
   (assert-not-standard-readtable table '(setf readtable-case))
   (setf (%readtable-case table) new-case))
 
