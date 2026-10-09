@@ -1247,3 +1247,24 @@
   ;; Not a type specifier at all; SPECIFIER-TYPE signals this one.
   (assert-error 'type-error
 		(make-string-output-stream :element-type 42)))
+
+
+
+(define-test static-vector.weak-pointer-broken
+    (:tag :issues)
+  ;; A weak pointer to an unreachable static vector must be broken
+  ;; when the GC finds the vector unreachable, since the vector is
+  ;; freed afterwards.  The test body is interpreted, so compile the
+  ;; allocation to keep the interpreter from holding a reference to
+  ;; the vector.
+  (let ((wp (funcall
+	     (compile nil
+		      '(lambda ()
+			(let ((vec (make-array 1000000
+					       :element-type '(unsigned-byte 8)
+					       :initial-element 1
+					       :allocation :malloc)))
+			  (ext:make-weak-pointer vec)))))))
+    (ext:gc :full t)
+    (assert-equal '(nil nil)
+		  (multiple-value-list (ext:weak-pointer-value wp)))))

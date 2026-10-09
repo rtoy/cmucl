@@ -2285,7 +2285,8 @@ msgstr ""
 
 #: src/code/array.lisp
 msgid ""
-"List of weak-pointers to static vectors.  Needed for GCing static vectors"
+"List of SAPs to the start of each static vector.  Needed for GCing\n"
+"  static vectors"
 msgstr ""
 
 #: src/code/array.lisp
@@ -2384,15 +2385,11 @@ msgid "Finalizing static vectors ~S~%"
 msgstr ""
 
 #: src/code/array.lisp
-msgid "static vector ~A.  header = ~X~%"
+msgid "static vector at #x~X.  header = ~X~%"
 msgstr ""
 
 #: src/code/array.lisp
-msgid "  static vector ~A in use~%"
-msgstr ""
-
-#: src/code/array.lisp
-msgid "  Free static vector ~A~%"
+msgid "  static vector at #x~X in use~%"
 msgstr ""
 
 #: src/code/array.lisp

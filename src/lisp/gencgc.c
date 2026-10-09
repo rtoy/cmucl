@@ -2698,6 +2698,28 @@ maybe_static_array_p(lispobj header)
     return result;
 }
 
+/*
+ * Return TRUE if OBJECT points to a static vector, i.e., an object
+ * outside all of the Lisp spaces whose header marks it as a static
+ * vector.
+ */
+static boolean
+static_vector_p(lispobj object)
+{
+    lispobj header;
+
+    if (dynamic_space_p(object) || new_space_p(object) || static_space_p(object)
+        || read_only_space_p(object) || control_stack_space_p(object)
+        || binding_stack_space_p(object) || signal_space_p(object)
+        || other_space_p(object)) {
+        return FALSE;
+    }
+
+    header = *(lispobj *) PTR(object);
+
+    return maybe_static_array_p(header) && (HeaderValue(header) & 1) == 1;
+}
+
 static int
 scav_static_vector(lispobj object)
 {
@@ -5413,6 +5435,14 @@ scan_weak_pointers(void)
 		wp->value = NIL;
 		wp->broken = T;
 	    }
+	} else if (Pointerp(value) && static_vector_p(value)
+		   && (first_pointer[0] & 0x80000000) == 0) {
+	    /*
+	     * Unreachable static vector.  finalize-static-vectors
+	     * will free it after GC, so break the weak pointer.
+	     */
+	    wp->value = NIL;
+	    wp->broken = T;
 	}
     }
 }

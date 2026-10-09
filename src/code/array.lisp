@@ -161,7 +161,8 @@
     (t #.vm:complex-vector-type)))
 
 (defvar *static-vectors* nil
-  "List of weak-pointers to static vectors.  Needed for GCing static vectors")
+  "List of SAPs to the start of each static vector.  Needed for GCing
+  static vectors")
 
 (defun make-static-vector (length element-type)
   (multiple-value-bind (type bits)
@@ -207,10 +208,8 @@
 	 (setf (sys:sap-ref-32 pointer 0) (+ type (ash 1 vm:type-bits)))
 	 (setf (sys:sap-ref-32 pointer vm:word-bytes) (ash length 2))
 	 ;; Convert the sap to a lisp object and initialize the array
-	 (let ((vector
-		(kernel:make-lisp-obj (+ vm:other-pointer-type (sys:sap-int pointer)))))
-	   (push (make-weak-pointer vector) *static-vectors*)
-	   vector))))))
+	 (push pointer *static-vectors*)
+	 (kernel:make-lisp-obj (+ vm:other-pointer-type (sys:sap-int pointer))))))))
 
 (defun make-array (dimensions &key
 			      (element-type t)
@@ -363,55 +362,50 @@
 				       (- (* 2 vm:word-bytes)))))
 	   (logbitp vm:type-bits header)))))
 
-(defun free-static-vector (vector)
-  (sys:without-gcing
-   (let ((addr (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address vector))))
-     (when *debug-static-array-p*
-       (format t (intl:gettext "~&Freeing foreign vector at #x~X~%") addr))
-     (alien:alien-funcall
-      (alien:extern-alien "free"
-			  (function c-call:void
-				    sys:system-area-pointer))
-      (sys:int-sap addr)))))
+(defun free-static-vector (sap)
+  (when *debug-static-array-p*
+    (format t (intl:gettext "~&Freeing foreign vector at #x~X~%") (sys:sap-int sap)))
+  (alien:alien-funcall
+   (alien:extern-alien "free"
+		       (function c-call:void
+				 sys:system-area-pointer))
+   sap))
 
 (defun finalize-static-vectors ()
-  ;; Run down the list of weak-pointers to static vectors.  Look at
-  ;; the static vector and see if vector is marked.  If so, clear the
+  ;; Run down the list of SAPs to static vectors.  Look at the header
+  ;; of each static vector and see if it is marked.  If so, clear the
   ;; mark, and do nothing.  If the mark is not set, then the vector is
-  ;; free, so free it, and remove this weak-pointer from the list.
-  ;; The mark bit the MSB of the header word.  Look at scavenge in
-  ;; gencgc.c.
+  ;; unreachable, so free it, and remove the SAP from the list.  The
+  ;; mark bit is the MSB of the header word.  Look at scavenge in
+  ;; gencgc.c.  The GC has already broken any weak pointers to the
+  ;; unreachable vectors; see scan_weak_pointers in gencgc.c.
+  ;;
+  ;; We keep SAPs instead of weak pointers because the GC breaks weak
+  ;; pointers to unreachable static vectors, and we would then have no
+  ;; way to find the vector to free it.
   (when *static-vectors*
     (when *debug-static-array-p*
-      (let ((*print-array* nil))
-	(format t (intl:gettext "Finalizing static vectors ~S~%") *static-vectors*)))
+      (format t (intl:gettext "Finalizing static vectors ~S~%") *static-vectors*))
     (setf *static-vectors*
 	  (delete-if
-	   #'(lambda (wp)
-	       (let ((vector (weak-pointer-value wp)))
-		 (when vector
-		   (let* ((sap (sys:vector-sap vector))
-			  (header (sys:sap-ref-32 sap (* -2 vm:word-bytes))))
-		     (when *debug-static-array-p*
-		       (format t (intl:gettext "static vector ~A.  header = ~X~%")
-			       vector header))
-		     (cond ((logbitp 31 header)
-			    ;; Clear mark
-			    (setf (sys:sap-ref-32 sap (* -2 vm:word-bytes))
-				  (logand header #x7fffffff))
-			    (when *debug-static-array-p*
-			      (let ((*print-array* nil))
-				(format t (intl:gettext "  static vector ~A in use~%") vector)))
-			    nil)
-			   (t
-			    ;; Mark was clear so free the vector
-			    (when *debug-static-array-p*
-			      (let ((*print-array* nil))
-				(format t (intl:gettext "  Free static vector ~A~%") vector)))
-			    (sys:without-interrupts
-			      (setf (weak-pointer-value wp) nil)
-			      (free-static-vector vector))
-			    t))))))
+	   #'(lambda (sap)
+	       (let ((header (sys:sap-ref-32 sap 0)))
+		 (when *debug-static-array-p*
+		   (format t (intl:gettext "static vector at #x~X.  header = ~X~%")
+			   (sys:sap-int sap) header))
+		 (cond ((logbitp 31 header)
+			;; Clear mark
+			(setf (sys:sap-ref-32 sap 0)
+			      (logand header #x7fffffff))
+			(when *debug-static-array-p*
+			  (format t (intl:gettext "  static vector at #x~X in use~%")
+				  (sys:sap-int sap)))
+			nil)
+		       (t
+			;; Mark was clear so free the vector
+			(sys:without-interrupts
+			  (free-static-vector sap))
+			t))))
 	   *static-vectors*))))
 
 ;; Clean up any unreferenced static vectors after GC has run.
