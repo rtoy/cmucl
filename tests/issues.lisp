@@ -1250,6 +1250,26 @@
 
 
 
+
+
+
+
+(defparameter *static-vector-weak-pointer*
+  (let ((vec (make-array 1000000 :element-type '(unsigned-byte 8)
+				 :initial-element 1
+				 :allocation :malloc)))
+    (ext:make-weak-pointer vec)))
+
+(define-test issue.243.weak-pointer-to-static-vector
+    (:tag :issues)
+  ;; The test case from issue #243.  The weak pointer must be broken
+  ;; after GC, and accessing its value must not reference the freed
+  ;; vector.
+  (ext:gc :full t)
+  (assert-equal '(nil nil)
+		(multiple-value-list
+		 (ext:weak-pointer-value *static-vector-weak-pointer*))))
+
 (define-test static-vector.weak-pointer-broken
     (:tag :issues)
   ;; A weak pointer to an unreachable static vector must be broken
