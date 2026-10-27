@@ -126,6 +126,62 @@ int debug_lisp_search = FALSE;
 /* #define DEBUG_LISP_SEARCH */
 
 /*
+ * If argv0 contains no slash, the executable was found by searching
+ * PATH, so search PATH ourselves for an executable file with that
+ * name.  Return the realpath of the executable, or NULL if it can't
+ * be determined.  The caller must free the returned string.
+ */
+static char *
+executable_realpath(const char *argv0)
+{
+    const char *path;
+    const char *start;
+    char buf[PATH_MAX];
+
+    if (strchr(argv0, '/') != NULL) {
+        return realpath(argv0, NULL);
+    }
+
+    path = getenv("PATH");
+    if (path == NULL) {
+        return NULL;
+    }
+
+    start = path;
+    for (;;) {
+        const char *end = strchr(start, ':');
+        size_t len = end ? (size_t) (end - start) : strlen(start);
+        int n;
+
+        /* An empty PATH element means the current directory */
+        if (len == 0) {
+            n = snprintf(buf, sizeof(buf), "./%s", argv0);
+        } else {
+            n = snprintf(buf, sizeof(buf), "%.*s/%s", (int) len, start, argv0);
+        }
+
+	if (debug_lisp_search) {
+	    fprintf(stderr, "PATH search: %s\n", buf);
+	}
+
+        if (n > 0 && n < (int) sizeof(buf) && access(buf, X_OK) == 0) {
+            struct stat st;
+
+            if (stat(buf, &st) == 0 && S_ISREG(st.st_mode)) {
+                return realpath(buf, NULL);
+            }
+        }
+
+        if (end == NULL) {
+            break;
+        }
+        start = end + 1;
+    }
+
+    return NULL;
+}
+
+/*
  * From the current location of the lisp executable, create a suitable
  * default for CMUCLLIB.  The result is a colon-separated list
  * directories to be used for finding the core file and for the cmucl
@@ -143,7 +199,7 @@ default_cmucllib(const char *argv0arg)
     int path_len;
     char *slash;
 
-    cwd = realpath(argv0arg, NULL);
+    cwd = executable_realpath(argv0arg);
 
     if (debug_lisp_search) {
 	fprintf(stderr, "Realpath of %s = %s\n", argv0arg, cwd);
