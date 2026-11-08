@@ -1667,32 +1667,29 @@
 
 
 (defmacro with-output-to-string ((var &optional string
-				     &key (element-type nil element-type-p))
+				     &key (element-type ''character))
 				 &parse-body (forms decls))
   "If STRING is specified, it must be a string with a fill pointer;
   the output is incrementally appended to the string (as if by use of
   VECTOR-PUSH-EXTEND).  ELEMENT-TYPE is always evaluated, but its value
   is ignored when STRING is specified."
-  (let ((etype (gensym "ELEMENT-TYPE-")))
-    (if string
-	`(let ((,var (make-fill-pointer-output-stream ,string))
-	       ,@(when element-type-p
-		   `((,etype ,element-type))))
-	   ,@(when element-type-p
-	       `((declare (ignore ,etype))))
-	   ,@decls
-	   (unwind-protect
-		(progn ,@forms)
-	     (close ,var)))
-	`(let ((,var (make-string-output-stream
-		      ,@(when element-type-p
-			  `(:element-type ,element-type)))))
-	   ,@decls
-	   (unwind-protect
-		(progn ,@forms)
-	     (close ,var))
-	   (get-output-stream-string ,var)))))
-
+  ;; The ELEMENT-TYPE form is evaluated in the value form of the LET so
+  ;; that the declarations of the body do not scope over it.
+  (if string
+      `(let ((,var (make-fill-pointer-output-stream
+		    ;; Evaluate STRING and ELEMENT-TYPE, returning
+		    ;; just the STRING.
+		    (prog1 ,string ,element-type))))
+	 ,@decls
+	 (unwind-protect
+	   (progn ,@forms)
+	   (close ,var)))
+      `(let ((,var (make-string-output-stream :element-type ,element-type)))
+	 ,@decls
+	 (unwind-protect
+	   (progn ,@forms)
+	   (close ,var))
+	 (get-output-stream-string ,var))))
 
 
 ;;;; Iteration macros:
