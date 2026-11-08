@@ -236,14 +236,23 @@
 	;; keyword as if by (intern (string slot) "KEYWORD") before
 	;; calling the constructor.  This allows slot names to be
 	;; given as strings, characters, or non-keyword symbols.
-	(let ((slots-and-values (rest body)))
-	  (when (oddp (length slots-and-values))
+	(let* ((slots-and-values (rest body))
+	       (len (proper-list-p slots-and-values)))
+	  (unless len
 	    (%reader-error stream
-			   _N"The slot name ~S is missing a value in #S: ~S"
-			   (first (last slots-and-values))
+			   (intl:gettext "The slot list in #S is not a proper list: ~S")
+			   body))
+	  (when (oddp len)
+	    (%reader-error stream
+			   (intl:gettext "The slot name ~S is missing a value in #S: ~S")
+			   (car (last slots-and-values))
 			   body))
 	  (apply (fdefinition def-con)
 		 (loop for (slot value) on slots-and-values by #'cddr
+		       do (unless (typep slot '(or symbol string character))
+			    (%reader-error stream
+					   (intl:gettext "The slot name ~S in #S is not a string designator: ~S")
+					   slot body))
 		       collect (intern (string slot) *keyword-package*)
 		       collect value)))))))
 

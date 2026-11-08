@@ -9100,10 +9100,6 @@ msgid "#~DA axis ~D is empty, but axis ~\n"
 msgstr ""
 
 #: src/code/sharpm.lisp
-msgid "The slot name ~S is missing a value in #S: ~S"
-msgstr ""
-
-#: src/code/sharpm.lisp
 msgid "Non-list following #S: ~S"
 msgstr ""
 
@@ -9117,6 +9113,18 @@ msgstr ""
 
 #: src/code/sharpm.lisp
 msgid "The ~S structure does not have a default constructor."
+msgstr ""
+
+#: src/code/sharpm.lisp
+msgid "The slot list in #S is not a proper list: ~S"
+msgstr ""
+
+#: src/code/sharpm.lisp
+msgid "The slot name ~S is missing a value in #S: ~S"
+msgstr ""
+
+#: src/code/sharpm.lisp
+msgid "The slot name ~S in #S is not a string designator: ~S"
 msgstr ""
 
 #: src/code/sharpm.lisp
