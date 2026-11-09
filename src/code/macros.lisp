@@ -1666,19 +1666,25 @@
 	 (close ,var)))))
 
 
-(defmacro with-output-to-string ((var &optional string &key element-type)
+(defmacro with-output-to-string ((var &optional string
+				     &key (element-type ''character))
 				 &parse-body (forms decls))
   "If STRING is specified, it must be a string with a fill pointer;
-   the output is incrementally appended to the string (as if by use of
-   VECTOR-PUSH-EXTEND)."
-  (declare (ignore element-type))
+  the output is incrementally appended to the string (as if by use of
+  VECTOR-PUSH-EXTEND).  ELEMENT-TYPE is always evaluated, but its value
+  is ignored when STRING is specified."
+  ;; The ELEMENT-TYPE form is evaluated in the value form of the LET so
+  ;; that the declarations of the body do not scope over it.
   (if string
-      `(let ((,var (make-fill-pointer-output-stream ,string)))
+      `(let ((,var (make-fill-pointer-output-stream
+		    ;; Evaluate STRING and ELEMENT-TYPE, returning
+		    ;; just the STRING.
+		    (prog1 ,string ,element-type))))
 	 ,@decls
 	 (unwind-protect
 	   (progn ,@forms)
 	   (close ,var)))
-      `(let ((,var (make-string-output-stream)))
+      `(let ((,var (make-string-output-stream :element-type ,element-type)))
 	 ,@decls
 	 (unwind-protect
 	   (progn ,@forms)
