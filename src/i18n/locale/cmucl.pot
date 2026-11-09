@@ -15324,8 +15324,9 @@ msgstr ""
 #: src/code/macros.lisp
 msgid ""
 "If STRING is specified, it must be a string with a fill pointer;\n"
-"   the output is incrementally appended to the string (as if by use of\n"
-"   VECTOR-PUSH-EXTEND)."
+"  the output is incrementally appended to the string (as if by use of\n"
+"  VECTOR-PUSH-EXTEND).  ELEMENT-TYPE is always evaluated, but its value\n"
+"  is ignored when STRING is specified."
 msgstr ""
 
 #: src/code/macros.lisp
