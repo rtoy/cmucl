@@ -182,26 +182,21 @@ do
 	O) OLDLISPFLAGS="$OLDLISPFLAGS $OPTARG" ;;
         R) REBUILD_LISP="yes";;
 	G) GIT_FILE_COMMENT="no";;
-	E) ERRNO="$OPTARG" ;;
+        E) case "$OPTARG" in
+               error)   ERRNOOPT= ;;
+               default) ERRNOOPT=-D ;;
+               new)     ERRNOOPT=-U ;;
+               *) echo "Unknown value for -E option: $OPTARG"
+                  usage ;;
+           esac ;;
 	\?) usage
 	    ;;
     esac
 done
 
-# Create the errno file containing all the def-unix-error forms.  No
-# options mean we use the existing OS-specific template.  Exit if
-# there's an error in creating the errno file.
-ERRNOOPT=""
-case $ERRNO in
-    error) ;;
-    default) ERRNOOPT="-D" ;;
-    new) ERRNOOPT="-U" ;;
-    *)
-	echo "Unknown value for -E option: ${ERRNO}"
-	exit 1
-	;;
-esac
-bin/create-errno.sh "${ERRNOOPT}" || exit 1
+# Create the errno file containing all the def-unix-error forms.  Exit
+# if there's an error in creating the errno file.
+bin/create-errno.sh $ERRNOOPT || exit 1
 
 # Generate lisp/cmucl-version.h with the appropriate version.  The -v
 # option (if given) overrides the default that git-describe.sh uses.
