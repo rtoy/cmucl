@@ -1248,6 +1248,37 @@
 		(make-string-output-stream :element-type 42)))
 
 
+(define-test issue.684.pprint-short-forms
+    (:tag :issues)
+  ;; Pretty-printing a list whose car has a pprint dispatch entry but
+  ;; whose shape is not what the dispatch function expects must not
+  ;; signal an error, and the output must read back as the same form.
+  (dolist (form '((defpackage)
+		  (defpackage foo)
+		  (defpackage foo ())
+		  (handler-bind)
+		  (handler-case)
+		  (handler-case foo ())
+		  (handler-case foo (error))
+		  (declare ())
+		  (declare (type))
+		  (defstruct ())
+		  (defstruct foo ())
+		  (defstruct (foo ()) ())
+		  (defclass foo)
+		  (defclass foo bar)
+		  (defmethod foo ())
+		  (defgeneric foo () (:method ()))
+		  (restart-case)
+		  (restart-case foo ())
+		  (restart-case foo (bar))
+		  (restart-case foo (bar ()))))
+    (assert-equal form
+		  (read-from-string
+		   (let ((*print-pretty* t))
+		     (prin1-to-string form)))
+		  form)))
+
 
 (defstruct issue-685-struct a b c)
 
