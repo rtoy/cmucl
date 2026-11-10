@@ -1779,14 +1779,15 @@
 					  :fmin fmin
 					  :num-expt num-expt)
 		(declare (ignore point-pos))
-		(let* (;; Columns left not claimed by the mantissa
-		       ;; (and sign and exponent parts in SPACELEFT).
+		(let* (;; Columns left after the sign, exponent marker
+		       ;; and exponent which are already not included
+		       ;; in SPACELEFT
 		       (columns-left (and w (- spaceleft flen)))
 		       (leading-zero (and lpoint
 					  (or (null w)
 					      (> columns-left 0)
 					      (and tpoint
-						   (not (and d (zerop d)))))))
+						   (not (eql d 0))))))
 		       (leading-zero-length (if leading-zero 1 0))
 		       ;; CLHS 22.3.3.2 wants a single zero digit after the
 		       ;; decimal point when the fraction to be printed is
@@ -1796,8 +1797,7 @@
 		       (trailing-zero (and (null d)
 					   (char= (char fstr (1- flen)) #\.)
 					   (or (null w)
-					       (> (- columns-left leading-zero-length)
-						  0))))
+					       (> columns-left leading-zero-length))))
 		       (padding (and w (- columns-left
 					  leading-zero-length
 					  (if trailing-zero 1 0))))
