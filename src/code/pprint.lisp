@@ -1455,7 +1455,7 @@ When annotations are present, invoke them at the right positions."
 
 (defun pprint-handler-bind (stream list &rest noise)
   (declare (ignore noise))
-  (funcall (formatter "~:<~^~W~^~3I ~:_~W~1I~@{ ~:@_~W~}~:>")
+  (funcall (formatter "~:<~W~^~3I ~:_~W~1I~@{ ~:@_~W~}~:>")
 	   stream list))
 
 (defun pprint-handler-case (stream list &rest noise)
@@ -1785,7 +1785,7 @@ When annotations are present, invoke them at the right positions."
 
 (defun pprint-defpackage (stream list &rest noise)
   (declare (ignore noise))
-  (funcall (formatter "~:<~^~W~^ ~W~^~I~@{~@:_ ~:<~@{~W~^~:I~@{ ~W~^~:_~}~}~:>~}~:>")
+  (funcall (formatter "~:<~W~^ ~W~^~I~@{~@:_ ~:<~@{~W~^~:I~@{ ~W~^~:_~}~}~:>~}~:>")
 	   stream list))
 
 (defun pprint-defmethod (stream list &rest noise)

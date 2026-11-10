@@ -1253,14 +1253,21 @@
   ;; Pretty-printing a list whose car has a pprint dispatch entry but
   ;; whose shape is not what the dispatch function expects must not
   ;; signal an error, and the output must read back as the same form.
-  (dolist (form '((defpackage) (defpackage foo)
-		  (handler-bind) (handler-case) (handler-case foo ())
-		  (declare ()) (declare (type))
-		  (defstruct ()) (defstruct (foo ()) ())
+  (dolist (form '((defpackage)
+		  (defpackage foo)
+		  (handler-bind)
+		  (handler-case) (handler-case foo ())
+		  (declare ())
+		  (declare (type))
+		  (defstruct ())
+		  (defstruct (foo ()) ())
 		  (defclass foo bar)
 		  (defmethod foo ())
 		  (defgeneric foo () (:method ()))
-		  (restart-case) (restart-case foo ()) (restart-case foo (bar))))
+		  (restart-case)
+		  (restart-case foo ())
+		  (restart-case foo (bar))
+		  (restart-case foo (bar ()))))
     (assert-equal form
 		  (read-from-string
 		   (let ((*print-pretty* t))
