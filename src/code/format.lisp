@@ -1779,16 +1779,28 @@
 					  :fmin fmin
 					  :num-expt num-expt)
 		(declare (ignore point-pos))
-		(let* ((trailing-zero (and (null d)
-					   (char= (char fstr (1- flen)) #\.)))
-		       (slack (and w (- spaceleft flen
-					(if trailing-zero 1 0))))
+		(let* (;; Columns left after the sign, exponent marker
+		       ;; and exponent which are already not included
+		       ;; in SPACELEFT
+		       (columns-left (and w (- spaceleft flen)))
 		       (leading-zero (and lpoint
 					  (or (null w)
-					      (> slack 0)
+					      (> columns-left 0)
 					      (and tpoint
-						   (not (and d (zerop d)))))))
-		       (padding (and w (- slack (if leading-zero 1 0))))
+						   (not (eql d 0))))))
+		       (leading-zero-length (if leading-zero 1 0))
+		       ;; CLHS 22.3.3.2 wants a single zero digit after the
+		       ;; decimal point when the fraction to be printed is
+		       ;; zero.  But D is chosen subject to the width
+		       ;; constraint imposed by W, and exactly W characters
+		       ;; are output, so print it only if it still fits.
+		       (trailing-zero (and (null d)
+					   (char= (char fstr (1- flen)) #\.)
+					   (or (null w)
+					       (> columns-left leading-zero-length))))
+		       (padding (and w (- columns-left
+					  leading-zero-length
+					  (if trailing-zero 1 0))))
 		       (expt (if roundoff (1+ expt) expt))
 		       (estr (if roundoff (decimal-string (abs expt)) estr)))
 		  (cond ((and w (< padding 0) ovf)
