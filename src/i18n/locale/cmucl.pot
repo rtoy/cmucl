@@ -7346,6 +7346,10 @@ msgid ""
 msgstr ""
 
 #: src/code/stream.lisp
+msgid "Element-type ~S is not a subtype of CHARACTER"
+msgstr ""
+
+#: src/code/stream.lisp
 msgid ""
 "Returns an Output stream which will accumulate all output given to it for\n"
 "   the benefit of the function Get-Output-Stream-String."
@@ -9109,6 +9113,18 @@ msgstr ""
 
 #: src/code/sharpm.lisp
 msgid "The ~S structure does not have a default constructor."
+msgstr ""
+
+#: src/code/sharpm.lisp
+msgid "The slot list in #S is not a proper list: ~S"
+msgstr ""
+
+#: src/code/sharpm.lisp
+msgid "The slot name ~S is missing a value in #S: ~S"
+msgstr ""
+
+#: src/code/sharpm.lisp
+msgid "The slot name ~S in #S is not a string designator: ~S"
 msgstr ""
 
 #: src/code/sharpm.lisp
@@ -13167,11 +13183,31 @@ msgid "~&It names a type specifier."
 msgstr ""
 
 #: src/code/describe.lisp
+msgid "~&  Lambda list: ~S"
+msgstr ""
+
+#: src/code/describe.lisp
+msgid "~&  Sample expansion: ~S: ~S"
+msgstr ""
+
+#: src/code/describe.lisp
+msgid "~&It names a primitive type specifier."
+msgstr ""
+
+#: src/code/describe.lisp
+msgid "~&  Internal type: ~S"
+msgstr ""
+
+#: src/code/describe.lisp
 msgid "~&Its ~S property is ~S."
 msgstr ""
 
 #: src/code/describe.lisp
 msgid "~&It is defined in:~&~A"
+msgstr ""
+
+#: src/code/describe.lisp
+msgid "~&The type is defined in:~&~A"
 msgstr ""
 
 #: src/code/tty-inspect.lisp
@@ -15288,8 +15324,9 @@ msgstr ""
 #: src/code/macros.lisp
 msgid ""
 "If STRING is specified, it must be a string with a fill pointer;\n"
-"   the output is incrementally appended to the string (as if by use of\n"
-"   VECTOR-PUSH-EXTEND)."
+"  the output is incrementally appended to the string (as if by use of\n"
+"  VECTOR-PUSH-EXTEND).  ELEMENT-TYPE is always evaluated, but its value\n"
+"  is ignored when STRING is specified."
 msgstr ""
 
 #: src/code/macros.lisp

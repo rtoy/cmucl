@@ -254,14 +254,15 @@
       (when doc
 	(intl::note-translatable intl::*default-domain* doc))
       `(eval-when (:compile-toplevel :load-toplevel :execute)
-	 (set-defvar-source-location ',name (c::source-location))
+	 (set-deftype-source-location ',name (c::source-location))
 	 (%deftype ',name
+		   ',arglist
 		   #'(lambda (,whole)
 		       ,@local-decs
 		       (block ,name ,body))
 		   ,@(when doc `(,doc)))))))
 ;;;
-(defun %deftype (name expander &optional doc)
+(defun %deftype (name lambda-list expander &optional doc)
   (when (info declaration recognized name)
     (error (intl:gettext "Deftype already names a declaration: ~S.") name))
   (ecase (info type kind name)
@@ -279,6 +280,7 @@
      (setf (info type kind name) :defined)))
 
   (setf (info type expander name) expander)
+  (setf (info type lambda-list name) lambda-list)
   (when doc
     (setf (documentation name 'type) doc))
   ;; ### Bootstrap hack -- we need to define types before %note-type-defined
@@ -430,6 +432,9 @@
 
 (defun set-defvar-source-location (name source-location)
   (setf (info :source-location :defvar name) source-location))
+
+(defun set-deftype-source-location (name source-location)
+  (setf (info :source-location :deftype name) source-location))
 
 ;;; %Defconstant, %%Defconstant  --  Internal
 ;;;
@@ -1661,19 +1666,25 @@
 	 (close ,var)))))
 
 
-(defmacro with-output-to-string ((var &optional string &key element-type)
+(defmacro with-output-to-string ((var &optional string
+				     &key (element-type ''character))
 				 &parse-body (forms decls))
   "If STRING is specified, it must be a string with a fill pointer;
-   the output is incrementally appended to the string (as if by use of
-   VECTOR-PUSH-EXTEND)."
-  (declare (ignore element-type))
+  the output is incrementally appended to the string (as if by use of
+  VECTOR-PUSH-EXTEND).  ELEMENT-TYPE is always evaluated, but its value
+  is ignored when STRING is specified."
+  ;; The ELEMENT-TYPE form is evaluated in the value form of the LET so
+  ;; that the declarations of the body do not scope over it.
   (if string
-      `(let ((,var (make-fill-pointer-output-stream ,string)))
+      `(let ((,var (make-fill-pointer-output-stream
+		    ;; Evaluate STRING and ELEMENT-TYPE, returning
+		    ;; just the STRING.
+		    (prog1 ,string ,element-type))))
 	 ,@decls
 	 (unwind-protect
 	   (progn ,@forms)
 	   (close ,var)))
-      `(let ((,var (make-string-output-stream)))
+      `(let ((,var (make-string-output-stream :element-type ,element-type)))
 	 ,@decls
 	 (unwind-protect
 	   (progn ,@forms)

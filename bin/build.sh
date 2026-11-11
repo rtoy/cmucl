@@ -38,7 +38,7 @@ ENABLE2="yes"
 ENABLE3="yes"
 ENABLE4="yes"
 
-version=21e
+version=21f
 SRCDIR=src
 BINDIR=bin
 TOOLDIR=$BINDIR
@@ -46,6 +46,10 @@ OLDLISPFLAGS="-noinit -nositeinit"
 OLDLISP="cmulisp"
 GIT_FILE_COMMENT="yes"
 export GIT_FILE_COMMENT
+
+# If generated errno values differs from checked in values, stop the
+# build.  This is the default.
+ERRNO="error"
 
 SKIPUTILS=no
 
@@ -67,7 +71,7 @@ fi
 
 usage ()
 {
-    echo "build.sh [-123obvuBCUG?]"
+    echo "build.sh [123PRGo:b:v:uB:C:Ui:w:O:E:?]"
     echo "    -1        Skip build 1"
     echo "    -2        Skip build 2"
     echo "    -3        Skip build 3"
@@ -97,6 +101,11 @@ usage ()
     echo "    -R        Force recompiling the C runtime.  Normally, just runs make to "
     echo "               recompile anything that has changed."
     echo "    -G        Don't use git to fill file-comment information"
+    echo "    -E val    Continue build even if there are changes in errno values.  If val is"
+    echo "                'error': stop the build if errno values have changed"
+    echo "                'default': use the original checked-in errno values"
+    echo "                'new': use the updated errno values"
+    echo "              If -E is not given, it defaults to 'error'."
     exit 1
 }
 
@@ -149,16 +158,11 @@ buildit ()
     fi
 }
 
-# Create the errno file containing all the def-unix-error forms.  No
-# options mean we use the existing OS-specific template.  Exit if
-# there's an error in creating the errno file.
-bin/create-errno.sh || exit 1
-
 BUILDWORLD="$TOOLDIR/build-world.sh"
 BUILD_POT="yes"
 UPDATE_TRANS=
 
-while getopts "123PRGo:b:v:uB:C:Ui:w:O:?" arg
+while getopts "123PRGo:b:v:uB:C:Ui:w:O:E:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -178,10 +182,21 @@ do
 	O) OLDLISPFLAGS="$OLDLISPFLAGS $OPTARG" ;;
         R) REBUILD_LISP="yes";;
 	G) GIT_FILE_COMMENT="no";;
+        E) case "$OPTARG" in
+               error)   ERRNOOPT= ;;
+               default) ERRNOOPT=-D ;;
+               new)     ERRNOOPT=-U ;;
+               *) echo "Unknown value for -E option: $OPTARG"
+                  usage ;;
+           esac ;;
 	\?) usage
 	    ;;
     esac
 done
+
+# Create the errno file containing all the def-unix-error forms.  Exit
+# if there's an error in creating the errno file.
+bin/create-errno.sh $ERRNOOPT || exit 1
 
 # Generate lisp/cmucl-version.h with the appropriate version.  The -v
 # option (if given) overrides the default that git-describe.sh uses.
