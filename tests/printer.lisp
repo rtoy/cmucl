@@ -4,7 +4,23 @@
 (in-package "PRINTER-TESTS")
 
 (define-test format.float.1
-  (assert-equal ".0000"
+    (:tag :printer :format-float)
+  ;; This follows from CLHS 22.3.3.1:
+  ;;
+  ;;   Exactly w characters will be output....Leading zeros are not
+  ;;   permitted, except that a single zero digit is output before the
+  ;;   decimal point if the printed value is less than one, and this
+  ;;   single zero digit is not output at all if w=d+1.
+  ;;
+  ;;   If the parameter d is omitted, then there is no constraint on
+  ;;   the number of digits to appear after the decimal point. A value
+  ;;   is chosen for d in such a way that as many digits as possible
+  ;;   may be printed subject to the width constraint imposed by the
+  ;;   parameter w and the constraint that no trailing zero digits may
+  ;;   appear in the fraction, except that if the fraction to be
+  ;;   printed is zero, then a single zero digit should appear after
+  ;;   the decimal point if permitted by the width constraint.
+  (assert-equal "  0.0"
 		(format nil "~5F" 1d-10))
   (assert-equal "0.000"
 		(format nil "~,3F" 0.000001)))
@@ -126,3 +142,22 @@
 (define-test format-no-nil-form.1
     (assert-equal '(block nil) (third (second (macroexpand-1 '(formatter "~
 "))))))
+
+
+
+(define-test issue.679.format-f-fdigits-truncated-to-width
+    (:tag :issues)
+  ;; When D is supplied, ~F must print exactly D digits after the
+  ;; decimal point; the width never truncates them.  FLONUM-TO-STRING
+  ;; used to cut the significant digits to fit the width, yielding
+  ;; ".12" for the second case, and passing a negative :END to
+  ;; WRITE-STRING in the first.
+  (assert-equal ".00100" (format nil "~2,5f" 0.001))
+  (assert-equal ".123" (format nil "~3,3f" 0.123))
+  ;; Unaffected neighbors, pinned so they stay that way.
+  (assert-equal ".50" (format nil "~2,2f" 0.5))
+  (assert-equal "0.00" (format nil "~4,2f" 0.001))
+  ;; With an overflowchar, the too-narrow field fills with it instead
+  ;; of relaxing the width.
+  (assert-equal "**" (format nil "~2,5,,'*f" 0.001))  
+  (assert-equal "***" (format nil "~3,3,,'*f" 0.123)))

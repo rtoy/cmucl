@@ -6105,10 +6105,6 @@ msgid ""
 msgstr ""
 
 #: src/code/ext-code.lisp
-msgid "Execution of a form compiled with errors:~% ~S"
-msgstr ""
-
-#: src/code/ext-code.lisp
 msgid ""
 "Read a C-style hex float from STREAM and return a float value.\n"
 "  Format: [sign] 0x <hex-mantissa> [. <hex-fraction>] p <exp> [f|w]\n"
@@ -7347,6 +7343,10 @@ msgstr ""
 msgid ""
 "Returns an input stream which will supply the characters of String between\n"
 "  Start and End in order."
+msgstr ""
+
+#: src/code/stream.lisp
+msgid "Element-type ~S is not a subtype of CHARACTER"
 msgstr ""
 
 #: src/code/stream.lisp
@@ -9113,6 +9113,18 @@ msgstr ""
 
 #: src/code/sharpm.lisp
 msgid "The ~S structure does not have a default constructor."
+msgstr ""
+
+#: src/code/sharpm.lisp
+msgid "The slot list in #S is not a proper list: ~S"
+msgstr ""
+
+#: src/code/sharpm.lisp
+msgid "The slot name ~S is missing a value in #S: ~S"
+msgstr ""
+
+#: src/code/sharpm.lisp
+msgid "The slot name ~S in #S is not a string designator: ~S"
 msgstr ""
 
 #: src/code/sharpm.lisp
@@ -15312,8 +15324,9 @@ msgstr ""
 #: src/code/macros.lisp
 msgid ""
 "If STRING is specified, it must be a string with a fill pointer;\n"
-"   the output is incrementally appended to the string (as if by use of\n"
-"   VECTOR-PUSH-EXTEND)."
+"  the output is incrementally appended to the string (as if by use of\n"
+"  VECTOR-PUSH-EXTEND).  ELEMENT-TYPE is always evaluated, but its value\n"
+"  is ignored when STRING is specified."
 msgstr ""
 
 #: src/code/macros.lisp

@@ -249,11 +249,11 @@
   ((input    :initarg :input    :reader hex-float-parse-error-input)
    (position :initarg :position :reader hex-float-parse-error-position)
    (message  :initarg :message  :reader hex-float-parse-error-message))
-  (:report #'(lambda (c s)
-               (format s "Hex float parse error~@[ at position ~D~]: ~A~@[ (input: ~S)~]"
-                       (hex-float-parse-error-position c)
-                       (hex-float-parse-error-message c)
-                       (hex-float-parse-error-input c)))))
+  (:report (lambda (c s)
+             (format s "Hex float parse error~@[ at position ~D~]: ~A~@[ (input: ~S)~]"
+                     (hex-float-parse-error-position c)
+                     (hex-float-parse-error-message c)
+                     (hex-float-parse-error-input c)))))
 
 (defun read-hex-float-from-stream (stream)
   "Read a C-style hex float from STREAM and return a float value.
