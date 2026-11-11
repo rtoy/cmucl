@@ -372,7 +372,7 @@
 ;;;
 (defun describe-function-arglist (kind name header-args)
   (cond ((eq kind :macro)
-	 (c::info :function :macro-arglist name))
+	 (c::info function lambda-list name))
 	(header-args
 	 (values header-args t))
 	(t
@@ -406,7 +406,7 @@
       (macro-function-name kind name))
     (when (eq kind :macro)
       (multiple-value-bind (args knownp)
-	  (c::info :function :lambda-list name)
+	  (c::info function lambda-list name)
 	(print-function/macro-arglist kind args knownp)))
     (desc-doc name 'function kind)
     (unless (eq kind :macro)
