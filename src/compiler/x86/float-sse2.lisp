@@ -828,7 +828,7 @@
 
 (macrolet
     ((frob (name translate sc type inst)
-       `(define-vop (fsqrt)
+       `(define-vop (,name)
 	  (:args (x :scs (,sc)))
 	  (:results (y :scs (,sc)))
 	  (:translate ,translate)
@@ -843,7 +843,6 @@
 	    (inst ,inst y x)))))
   (frob %fsqrt/single-float %sqrtf single-reg single-float sqrtss)
   (frob %fsqrt/double-float %sqrt double-reg double-float sqrtsd))
-  
 
 (macrolet ((frob ((name translate mov sc type) &body body)
              `(define-vop (,name)

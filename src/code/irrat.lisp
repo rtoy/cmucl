@@ -108,6 +108,13 @@
 (def-math-rtn ("lisp_pow" %pow) 2)
 #-(or x86 sparc-v7 sparc-v8 sparc-v9)
 (def-math-rtn "sqrt" 1)
+#+(or x86 sparc-v7 sparc-v8 sparc-v9)
+(progn
+  #-(and x86 sse2)
+  (declaim (inline %sqrtf))
+  (export '%sqrtf)
+  (alien:def-alien-routine ("sqrtf" %sqrtf) single-float
+    (x single-float)))
 (def-math-rtn ("lisp_hypot" %hypot) 2)
 
 (def-math-rtn ("lisp_log1p" %log1p) 1)
@@ -210,12 +217,6 @@
 	     (values double-float))
     (%sqrt x))
   )
-
-#+(and x86 sse2)
-(defun %sqrtf (x)
-  (declare (single-float x)
-	   (values single-float))
-  (%sqrtf x))
 
 ;; Slightly simplified interface to __ieee754_rem_pio2, but instead of
 ;; needing to pass an array in, the output array is broken up into two
@@ -920,11 +921,14 @@
      (if (minusp number)
 	 (complex-sqrt number)
 	 (coerce (%sqrt (coerce number 'double-float)) 'single-float)))
-    (((foreach single-float double-float))
+    ((single-float)
      (if (minusp number)
 	 (complex-sqrt number)
-	 (coerce (%sqrt (coerce number 'double-float))
-		 '(dispatch-type number))))
+	 (%sqrtf number)))
+    ((double-float)
+     (if (minusp number)
+	 (complex-sqrt number)
+	 (%sqrt number)))
     #+double-double
     ((double-double-float)
      (if (minusp number)

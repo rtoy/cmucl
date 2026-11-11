@@ -640,7 +640,6 @@
     (double-float) (double-float 0.0d0)
     (movable foldable flushable))
 
-#+(and x86 sse2)
 (defknown (%sqrtf)
     (single-float) (single-float 0f0)
     (movable foldable flushable))
@@ -675,7 +674,6 @@
 
 (dolist (stuff '((exp %exp *)
 		 (log %log float)
-		 #+(and x86 sse2)
 		 (sqrt %sqrt float)
 		 (sin %sin float)
 		 (cos %cos float)
@@ -697,17 +695,6 @@
       `(,primf x))
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
       `(,prim x)))))
-
-;; For x86 with sse2, the above handles sqrt because we have %sqrtf
-;; that is converted to sqrtss.  For other archs, we need to convert
-;; the single to double and call %sqrt.
-#-(and x86 sse2)
-(dolist (stuff '((sqrt %sqrt float)))
-  (destructuring-bind (name prim rtype) stuff
-    (deftransform name ((x) '(single-float) rtype :eval-name t)
-      `(coerce (,prim (coerce x 'double-float)) 'single-float))
-    (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
-		  `(,prim x))))
 
 (defknown (kernel::%%sincos)
     (double-float) (values null double-float double-float)
