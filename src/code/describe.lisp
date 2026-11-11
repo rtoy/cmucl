@@ -369,14 +369,13 @@
   (let ((name (or name (%function-name x))))
     (multiple-value-setq (kind name)
       (macro-function-name kind name))
-    (let ((args (%function-arglist x)))
-      ;; A macro's function header may not carry the arglist (e.g. when
-      ;; byte-compiled or compiled at a low debug level), so fall back
-      ;; to the saved macro-arglist.
-      (if (and (eq kind :macro) (null args))
-	  (multiple-value-bind (margs knownp)
-	      (c::info :function :macro-arglist name)
-	    (print-function/macro-arglist kind margs knownp))
+    (if (eq kind :macro)
+	;; The macro lambda-list lives in the info environment, not in the
+	;; expander's function header, so take it from there.
+	(multiple-value-bind (args knownp)
+	    (c::info :function :macro-arglist name)
+	  (print-function/macro-arglist kind args knownp))
+	(let ((args (%function-arglist x)))
 	  (print-function/macro-arglist kind args (not (null args)))))
 
     (desc-doc name 'function kind)

@@ -258,7 +258,8 @@
      (compiler-warning _N"~S previously defined as a macro." name)
      (setf (info function kind name) :function)
      (setf (info function where-from name) :assumed)
-     (clear-info function macro-function name))
+     (clear-info function macro-function name)
+     (clear-info function macro-arglist name))
     ((nil)
      (setf (info function kind name) :function)))
   
