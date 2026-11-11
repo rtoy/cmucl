@@ -1190,11 +1190,11 @@
 (define-info-type source-location deftype (or form-numbers null) nil)
 (define-info-type type lambda-list list nil)
 
-;; macro-arglist
+;; lambda-list
 ;;
-;; The macro-arglist for byte-compiled macros which otherwise
+;; The lambda-list for byte-compiled macros which otherwise
 ;; wouldn't have the arglist printed.
-(define-info-type function macro-arglist list nil)
+(define-info-type function lambda-list list nil)
   
 ); defun other-info-init
 

@@ -259,7 +259,7 @@
      (setf (info function kind name) :function)
      (setf (info function where-from name) :assumed)
      (clear-info function macro-function name)
-     (clear-info function macro-arglist name))
+     (clear-info function lambda-list name))
     ((nil)
      (setf (info function kind name) :function)))
   

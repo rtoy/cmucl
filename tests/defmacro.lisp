@@ -24,24 +24,24 @@
 (define-test issue.497.macro-arglist-no-args
   (:tag :issues)
   (multiple-value-bind (value knownp)
-      (c::info :function :macro-arglist 'issue.497.no-args)
+      (c::info :function :lambda-list 'issue.497.no-args)
     (assert-equal '() value)
     (assert-true knownp)))
 
 (define-test issue.497.macro-arglist-simple
   (:tag :issues)
   (assert-equal '(a b)
-		(c::info :function :macro-arglist 'issue.497.simple)))
+		(c::info :function :lambda-list 'issue.497.simple)))
 
 (define-test issue.497.macro-arglist-optional
   (:tag :issues)
   (assert-equal '(a &optional (b 0))
-		(c::info :function :macro-arglist 'issue.497.optional)))
+		(c::info :function :lambda-list 'issue.497.optional)))
 
 (define-test issue.497.macro-arglist-body
   (:tag :issues)
   (assert-equal '(name &body body)
-		(c::info :function :macro-arglist 'issue.497.body)))
+		(c::info :function :lambda-list 'issue.497.body)))
 
 (define-test issue.497.documentation
   (:tag :issues)
@@ -77,7 +77,7 @@
   ;; and is the canonical example from the bug report.  Its arglist
   ;; should be available now.
   (multiple-value-bind (args winp)
-      (c::info :function :macro-arglist 'ext:letf*)
+      (c::info :function :lambda-list 'ext:letf*)
     (assert-true winp)
     (assert-true (consp args))))
 
@@ -90,7 +90,7 @@
   (eval '(defmacro issue.497.setf-mf (a b)
 	   `(list ,a ,b)))
   (assert-true
-   (nth-value 1 (c::info :function :macro-arglist 'issue.497.setf-mf)))
+   (nth-value 1 (c::info :function :lambda-list 'issue.497.setf-mf)))
   ;; Installing a raw expander, whose lambda-list is unknown, must drop
   ;; the recorded arglist.
   (setf (macro-function 'issue.497.setf-mf)
@@ -98,7 +98,7 @@
 	    (declare (ignore env))
 	    `(list ,@(cdr whole))))
   (multiple-value-bind (args knownp)
-      (c::info :function :macro-arglist 'issue.497.setf-mf)
+      (c::info :function :lambda-list 'issue.497.setf-mf)
     (assert-false knownp)
     (assert-false args))
   ;; It is still a macro and expands with the newly installed expander.
@@ -115,13 +115,13 @@
   (eval '(defmacro issue.497.redef (a b)
 	   `(list ,a ,b)))
   (assert-true
-   (nth-value 1 (c::info :function :macro-arglist 'issue.497.redef)))
+   (nth-value 1 (c::info :function :lambda-list 'issue.497.redef)))
   ;; Redefining the macro as a function clears both the macro
   ;; classification and the recorded macro-arglist.
   (handler-bind ((warning #'muffle-warning))
     (eval '(defun issue.497.redef (x) (* x x))))
   (assert-false
-   (nth-value 1 (c::info :function :macro-arglist 'issue.497.redef)))
+   (nth-value 1 (c::info :function :lambda-list 'issue.497.redef)))
   (assert-false (macro-function 'issue.497.redef))
   (assert-eql 9 (funcall 'issue.497.redef 3)))
 

@@ -393,8 +393,8 @@
   (setf (info function kind symbol) :macro)
   (setf (info function macro-function symbol) function)
   ;; The lambda-list of a raw expander function is unknown, so drop any
-  ;; macro-arglist left over from a previous definition.
-  (clear-info function macro-arglist symbol)
+  ;; lambda-list left over from a previous definition.
+  (clear-info function lambda-list symbol)
   (setf (symbol-function symbol)
 	#'(lambda (&rest args) (declare (ignore args))
 	    (error 'simple-undefined-function

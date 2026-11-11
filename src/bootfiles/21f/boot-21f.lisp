@@ -87,7 +87,7 @@
 ;; Fix #497.  Need these new definitions here, including
 ;; def-ir1-translator to get defmacros from setup.lisp processed
 ;; correctly.
-(define-info-type function macro-arglist list nil)
+(define-info-type function lambda-list list nil)
 (defun c::%defmacro (name definition lambda-list doc)
   (assert (eval:interpreted-function-p definition))
   (setf (eval:interpreted-function-name definition) name)
@@ -107,7 +107,7 @@
   (setf (macro-function name) definition)
   (setf (documentation name 'function) doc)
   (when lambda-list
-    (setf (info :function :macro-arglist name) lambda-list))
+    (setf (info :function :lambda-list name) lambda-list))
   name)
 
 (in-package "C")

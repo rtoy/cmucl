@@ -13103,6 +13103,10 @@ msgid "  There is no argument information available."
 msgstr ""
 
 #: src/code/describe.lisp
+msgid "Execution of a form compiled with errors:~% ~S"
+msgstr ""
+
+#: src/code/describe.lisp
 msgid "Macro-function: ~S"
 msgstr ""
 
