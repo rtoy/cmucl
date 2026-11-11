@@ -360,6 +360,24 @@
       (values :macro (second name))
       (values kind name)))
 
+;;; DESCRIBE-FUNCTION-ARGLIST  --  Internal
+;;;
+;;;    Return two values, the lambda-list to describe and whether it is
+;;; known.  A macro's lambda-list is recorded in the info environment
+;;; rather than in the expander's function header.  For a function the
+;;; header is authoritative; HEADER-ARGS is what it provides (NIL when it
+;;; carries no arglist, as for code compiled at debug 0).  When the
+;;; header has none there is presently no recorded function lambda-list
+;;; to fall back to.
+;;;
+(defun describe-function-arglist (kind name header-args)
+  (cond ((eq kind :macro)
+	 (c::info :function :macro-arglist name))
+	(header-args
+	 (values header-args t))
+	(t
+	 (values nil nil))))
+
 ;;; DESCRIBE-FUNCTION-COMPILED  --  Internal
 ;;;
 ;;;    Describe a compiled function.  The closure case calls us to print the
@@ -369,14 +387,9 @@
   (let ((name (or name (%function-name x))))
     (multiple-value-setq (kind name)
       (macro-function-name kind name))
-    (if (eq kind :macro)
-	;; The macro lambda-list lives in the info environment, not in the
-	;; expander's function header, so take it from there.
-	(multiple-value-bind (args knownp)
-	    (c::info :function :macro-arglist name)
-	  (print-function/macro-arglist kind args knownp))
-	(let ((args (%function-arglist x)))
-	  (print-function/macro-arglist kind args (not (null args)))))
+    (multiple-value-bind (args knownp)
+	(describe-function-arglist kind name (%function-arglist x))
+      (print-function/macro-arglist kind args knownp))
 
     (desc-doc name 'function kind)
     (unless (eq kind :macro)
