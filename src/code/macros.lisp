@@ -140,7 +140,7 @@
   (clear-info function where-from name)
   (setf (macro-function name) definition)
   (setf (documentation name 'function) doc)
-  (setf (info :function :macro-arglist name) lambda-list)
+  (setf (info function macro-arglist name) lambda-list)
   name)
 
 
