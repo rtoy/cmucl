@@ -99,6 +99,7 @@ public domain.
             `WITH-OUTPUT-TO-STRING`
     * #675: `DEFPACKAGE` `:NICKNAMES` option is cumulative
     * #677: `~E` adds a spurious fraction digit when `D` is supplied
+    * #678: `~E` adds a trailing zero digit past the field width
     * #679: `~F` prints trailing-zero fraction when value rounds to
             zero
     * #681: `~F` must print at least one digit after the decimal point
