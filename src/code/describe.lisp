@@ -332,7 +332,7 @@
 	      (:lisp (format t "~&~S" name)))))))))
 
 ;; Common function for printing the function or macro lambda-list.
-(defun print-function/macro-arglist (kind args knownp)
+(defun print-function/macro-lambda-list (kind args knownp)
   (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
   (cond ((not knownp)
 	 (format t (intl:gettext "  There is no argument information available.")))
@@ -389,7 +389,7 @@
       (macro-function-name kind name))
     (multiple-value-bind (args knownp)
 	(describe-function-arglist kind name (%function-arglist x))
-      (print-function/macro-arglist kind args knownp))
+      (print-function/macro-lambda-list kind args knownp))
 
     (desc-doc name 'function kind)
     (unless (eq kind :macro)
@@ -407,7 +407,7 @@
     (when (eq kind :macro)
       (multiple-value-bind (args knownp)
 	  (c::info function lambda-list name)
-	(print-function/macro-arglist kind args knownp)))
+	(print-function/macro-lambda-list kind args knownp)))
     (desc-doc name 'function kind)
     (unless (eq kind :macro)
       (describe-function-name name 'function)))

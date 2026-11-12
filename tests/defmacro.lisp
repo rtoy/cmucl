@@ -21,24 +21,24 @@
   "Build a list from two args"
   `(list ,a ,b))
 
-(define-test issue.497.macro-arglist-no-args
+(define-test issue.497.macro-lambda-list-no-args
   (:tag :issues)
   (multiple-value-bind (value knownp)
       (c::info :function :lambda-list 'issue.497.no-args)
     (assert-equal '() value)
     (assert-true knownp)))
 
-(define-test issue.497.macro-arglist-simple
+(define-test issue.497.macro-lambda-list-simple
   (:tag :issues)
   (assert-equal '(a b)
 		(c::info :function :lambda-list 'issue.497.simple)))
 
-(define-test issue.497.macro-arglist-optional
+(define-test issue.497.macro-lambda-list-optional
   (:tag :issues)
   (assert-equal '(a &optional (b 0))
 		(c::info :function :lambda-list 'issue.497.optional)))
 
-(define-test issue.497.macro-arglist-body
+(define-test issue.497.macro-lambda-list-body
   (:tag :issues)
   (assert-equal '(name &body body)
 		(c::info :function :lambda-list 'issue.497.body)))
@@ -81,7 +81,7 @@
     (assert-true winp)
     (assert-true (consp args))))
 
-;;; Tests for keeping the macro-arglist in step with the function kind
+;;; Tests for keeping the macro-lambda-list in step with the function kind
 ;;; when a name stops being (or is re-established as) a macro.
 
 (define-test issue.497.setf-macro-function-clears-arglist
@@ -117,7 +117,7 @@
   (assert-true
    (nth-value 1 (c::info :function :lambda-list 'issue.497.redef)))
   ;; Redefining the macro as a function clears both the macro
-  ;; classification and the recorded macro-arglist.
+  ;; classification and the recorded macro-lambda-list.
   (handler-bind ((warning #'muffle-warning))
     (eval '(defun issue.497.redef (x) (* x x))))
   (assert-false
