@@ -107,7 +107,7 @@
   (setf (macro-function name) definition)
   (setf (documentation name 'function) doc)
   (when lambda-list
-    (setf (info :function :lambda-list name) lambda-list))
+    (setf (info function lambda-list name) lambda-list))
   name)
 
 (in-package "C")
