@@ -135,3 +135,29 @@
   ;; macro even though undefine-function-name leaves the arglist entry.
   (assert-false (macro-function 'issue.497.fmu))
   (assert-false (fboundp 'issue.497.fmu)))
+
+;;; A macro whose expander is compiled along with this file, so describe
+;;; exercises the compiled-function path -- the one that regressed when
+;;; the info slot was renamed.
+(defmacro issue.497.describe-macro (alpha beta &body body)
+  "Zorp marker for the issue.497 describe test."
+  (declare (ignore alpha beta body))
+  nil)
+
+(define-test issue.497.describe-macro-shows-arglist
+    (:tag :issues)
+  ;; (describe 'macro) must print the macro's lambda-list, not
+  ;; "There is no argument information available.".
+  (let ((output (with-output-to-string (*standard-output*)
+		  (describe 'issue.497.describe-macro))))
+    (assert-true (search "ALPHA" output))
+    (assert-true (search "BETA" output)))
+  ;; The original bug report: describing the macro-function object
+  ;; directly must show the same lambda-list and the doc string.
+  (let ((output (with-output-to-string (*standard-output*)
+		  (describe (macro-function 'issue.497.describe-macro)))))
+    (assert-true (search "ALPHA" output))
+    (assert-true (search "BETA" output))
+    (assert-true (search "Zorp" output))))
+
+ 
