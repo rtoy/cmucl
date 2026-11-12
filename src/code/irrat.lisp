@@ -108,6 +108,18 @@
 (def-math-rtn ("lisp_pow" %pow) 2)
 #-(or x86 sparc-v7 sparc-v8 sparc-v9)
 (def-math-rtn "sqrt" 1)
+;; We have to do it this way because not every arch has a sqrtf vop
+;; defined.  For those that don't, we call the C routine to implement
+;; sqrtf.
+#+(or x86 sparc-v7 sparc-v8 sparc-v9)
+(progn
+  ;; With sse2, %sqrtf is translated by a vop.  Don't make it inline
+  ;; because an inline expansion is used in preference to a vop.
+  #-(and x86 sse2)
+  (declaim (inline %sqrtf))
+  (export '%sqrtf)
+  (alien:def-alien-routine ("sqrtf" %sqrtf) single-float
+    (x single-float)))
 (def-math-rtn ("lisp_hypot" %hypot) 2)
 
 (def-math-rtn ("lisp_log1p" %log1p) 1)
@@ -914,11 +926,14 @@
      (if (minusp number)
 	 (complex-sqrt number)
 	 (coerce (%sqrt (coerce number 'double-float)) 'single-float)))
-    (((foreach single-float double-float))
+    ((single-float)
      (if (minusp number)
 	 (complex-sqrt number)
-	 (coerce (%sqrt (coerce number 'double-float))
-		 '(dispatch-type number))))
+	 (%sqrtf number)))
+    ((double-float)
+     (if (minusp number)
+	 (complex-sqrt number)
+	 (%sqrt number)))
     #+double-double
     ((double-double-float)
      (if (minusp number)

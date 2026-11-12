@@ -2215,6 +2215,7 @@
 	   "%POWF"
 	   "%SINF"
 	   "%SINHF"
+	   "%SQRTF"
 	   "%TANF"
 	   "%TANHF"
 	   )

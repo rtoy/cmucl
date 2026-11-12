@@ -640,6 +640,10 @@
     (double-float) (double-float 0.0d0)
     (movable foldable flushable))
 
+(defknown (%sqrtf)
+    (single-float) (single-float 0f0)
+    (movable foldable flushable))
+
 (defknown %expm1
     (double-float) (double-float -1d0)
     (movable foldable flushable))
@@ -691,14 +695,6 @@
       `(,primf x))
     (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
       `(,prim x)))))
-
-#-core-math
-(dolist (stuff '((sqrt %sqrt float)))
-  (destructuring-bind (name prim rtype) stuff
-    (deftransform name ((x) '(single-float) rtype :eval-name t)
-      `(coerce (,prim (coerce x 'double-float)) 'single-float))
-    (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
-		  `(,prim x))))
 
 (defknown (kernel::%%sincos)
     (double-float) (values null double-float double-float)
