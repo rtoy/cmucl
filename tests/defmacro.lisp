@@ -147,17 +147,40 @@
 (define-test issue.497.describe-macro-shows-arglist
     (:tag :issues)
   ;; (describe 'macro) must print the macro's lambda-list, not
-  ;; "There is no argument information available.".
+  ;; "There is no argument information available.".  describe prints
+  ;; the lambda-list in lower case, so the argument names appear
+  ;; downcased.
   (let ((output (with-output-to-string (*standard-output*)
 		  (describe 'issue.497.describe-macro))))
-    (assert-true (search "ALPHA" output))
-    (assert-true (search "BETA" output)))
+    (assert-true (search "alpha" output))
+    (assert-true (search "beta" output)))
   ;; The original bug report: describing the macro-function object
   ;; directly must show the same lambda-list and the doc string.
   (let ((output (with-output-to-string (*standard-output*)
 		  (describe (macro-function 'issue.497.describe-macro)))))
-    (assert-true (search "ALPHA" output))
-    (assert-true (search "BETA" output))
+    (assert-true (search "alpha" output))
+    (assert-true (search "beta" output))
     (assert-true (search "Zorp" output))))
+
+(define-test issue.497.describe-system-macro-shows-arglist
+    (:tag :issues)
+  ;; A natively-compiled system macro must still show real arguments,
+  ;; in the downcased make-arg-names form.
+  (let ((output (with-output-to-string (*standard-output*)
+		  (describe 'dolist))))
+    (assert-true (search "result" output))))
+
+(define-test issue.497.describe-stale-expander
+    (:tag :issues)
+  ;; Holding an expander past a redefinition must not make describe
+  ;; attribute the new lambda-list to the old object.
+  (eval '(defmacro issue.497.stale (aaa bbb) `(list ,aaa ,bbb)))
+  (let ((old (macro-function 'issue.497.stale)))
+    (eval '(defmacro issue.497.stale (xxx yyy zzz)
+	     `(list ,xxx ,yyy ,zzz)))
+    (let ((output (with-output-to-string (*standard-output*)
+		    (describe old))))
+      (assert-false (search "xxx" output))
+      (assert-false (search "yyy" output)))))
 
  

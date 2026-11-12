@@ -13071,14 +13071,6 @@ msgid ""
 msgstr ""
 
 #: src/code/describe.lisp
-msgid "~&~@(~@[~A ~]arguments:~%~)"
-msgstr ""
-
-#: src/code/describe.lisp
-msgid "  There are no arguments."
-msgstr ""
-
-#: src/code/describe.lisp
 msgid "~&Its closure environment is:"
 msgstr ""
 
@@ -13099,7 +13091,15 @@ msgid "~&  Comment: ~A"
 msgstr ""
 
 #: src/code/describe.lisp
+msgid "~&~@(~@[~A ~]arguments:~%~)"
+msgstr ""
+
+#: src/code/describe.lisp
 msgid "  There is no argument information available."
+msgstr ""
+
+#: src/code/describe.lisp
+msgid "  There are no arguments."
 msgstr ""
 
 #: src/code/describe.lisp
