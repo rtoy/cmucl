@@ -233,8 +233,8 @@ lisp_exp(double x)
     /*
      * For consistency, silently return NaN when x is NaN.  Do not
      * signal an invalid operation, even if invalid operation trap is
-     *  enabled.  This is what fdlibm does, and also what many of the
-     *  other core-math routines do.
+     * enabled.  This is what fdlibm does, and also what many of the
+     * other core-math routines do.
      */
 
     if (isnan(x)) {
@@ -452,7 +452,7 @@ lisp_sinhf(float x)
 float
 lisp_coshf(float x)
 {
-    MAYBE_SIGNAL_OVERFLOW(fabs(x));
+    MAYBE_SIGNAL_OVERFLOW(fabsf(x));
 
 #ifdef FEATURE_CORE_MATH
     return cr_coshf(x);

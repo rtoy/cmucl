@@ -45,7 +45,7 @@
   "Return the name of the single-float version of the routine NAME.
   The C99 convention, which CMUCL follows, is to append an \"f\" to the
   name of the double-float version."
-  (intern (string (ext:symbolicate name "F"))
+  (intern (concatenate 'string (symbol-name name) "F")
 	  (symbol-package name)))
 
 (defun subst-float-markers (form markers format)
@@ -120,7 +120,7 @@
   (assert-error 'floating-point-overflow
 		(%fun +negative-infinity+))
   (assert-true (ext:float-nan-p (%fun +qnan+)))
-  ;; Same, but with overflow's masked
+  ;; Same, but with overflows masked
   (ext:with-float-traps-masked (:overflow)
     (assert-equal +infinity+
 		  (%fun (%float 1000)))
@@ -147,7 +147,7 @@
   (assert-error 'floating-point-overflow
 		(%fun +negative-infinity+))
   (assert-true (ext:float-nan-p (%fun +qnan+)))
-  ;; Same, but with overflow's masked
+  ;; Same, but with overflows masked
   (ext:with-float-traps-masked (:overflow)
     (assert-equal +infinity+
 		  (%fun (%float 1000)))
@@ -184,9 +184,11 @@
   (let ((x (%float 22.1d0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
-	;; though the result is exactly x.
+	;; though the result is exactly 1.
 	(assert-error 'floating-point-inexact
-		      (%fun x)))))
+		      (%fun x))
+	(assert-error 'floating-point-inexact
+		      (%fun (- x))))))
 
 (def-float-exceptions-tests kernel:%acosh
     (:tag :fdlibm)
@@ -221,12 +223,12 @@
     (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.
-	(assert-eql (%float 0) (asinh x0)))
+	(assert-eql (%float 0) (%fun x0)))
     (ext:with-float-traps-enabled (:inexact)
 	;; This must throw an inexact exception for non-zero x even
 	;; though the result is exactly x.
 	(assert-error 'floating-point-inexact
-		      (asinh x)))))
+		      (%fun x)))))
 
 (def-float-exceptions-tests kernel:%atanh
     (:tag :fdlibm)
@@ -313,7 +315,7 @@
 		  (%fun (%float -1000))))
   (let ((x (scale-float (%float 1) -29))
 	(x0 (%float 0)))
-    ;; exp(x) = x, |x| < 2^-28, with inexact exception unless x = 0
+    ;; exp(x) = 1 + x, |x| < 2^-28, with inexact exception unless x = 0
     (ext:with-float-traps-enabled (:inexact)
 	;; This must not throw an inexact exception because the result
 	;; is exact when the arg is 0.

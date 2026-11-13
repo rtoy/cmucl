@@ -7,7 +7,7 @@ CORE_MATH = -DCORE_MATH_SUPPORT_ERRNO
 CFLAGS += $(COPT)
 CPPFLAGS += -m32
 # Gcc 15.2.1 and possibly other version can't compile core-math
-# without this option. 
+# without this option.
 CFLAGS += -std=gnu11
 # We want gcc to honor FP rounding so things like 1.0-tiny aren't
 # constant-folded to 1.0.
