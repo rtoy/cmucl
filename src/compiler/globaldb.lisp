@@ -1192,11 +1192,9 @@
 
 ;; lambda-list
 ;;
-;; The lambda-list for byte-compiled macros which otherwise
-;; wouldn't have the arglist printed.
+;; The lambda-list for macros
 (define-info-type function lambda-list list nil)
   
 ); defun other-info-init
 
 (declaim (freeze-type info-env))
-
