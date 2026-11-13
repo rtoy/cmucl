@@ -371,6 +371,10 @@ float
 lisp_sinf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    /*
+     * Unlike cr_sin, cr_sinf signals INVALID for infinities so we
+     * don't need to ourselves.
+     */
     return cr_sinf(x);
 #else    
     return sinf(x);
@@ -381,6 +385,10 @@ float
 lisp_cosf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    /*
+     * Unlike cr_cos, cr_cosf signals INVALID for infinities so we
+     * don't need to ourselves.
+     */
     return cr_cosf(x);
 #else    
     return cosf(x);
@@ -391,6 +399,10 @@ float
 lisp_tanf(float x)
 {
 #ifdef FEATURE_CORE_MATH
+    /*
+     * Unlike cr_tan, cr_tanf signals INVALID for infinities so we
+     * don't need to ourselves.
+     */
     return cr_tanf(x);
 #else    
     return tanf(x);
