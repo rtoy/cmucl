@@ -232,11 +232,14 @@
 ;; returned.
 (defun proper-list-p (list)
   ;; Basically the same as LIST-LENGTH, but with a few extra checks.
+  ;; Y and Z must not be declared to be of type LIST: for a dotted
+  ;; list they hold the non-list tail on the iteration where the
+  ;; LISTP test detects it.
   (do ((n 0 (+ n 2))
        (y list (cddr y))
        (z list (cdr z)))
       (nil)
-    (declare (fixnum n) (list y z))
+    (declare (fixnum n))
     (unless (listp y)
       (return nil))
     (when (endp y) (return n))

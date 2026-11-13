@@ -38,7 +38,7 @@
   (:generator 50
     (let ((done (gen-label))
 	  (loop (gen-label))
-	  (not-list (generate-error-code vop object-not-list-error object)))
+	  (not-list (generate-error-code vop object-not-list-error ptr)))
       (move ptr object)
       (inst xor count count)
 
