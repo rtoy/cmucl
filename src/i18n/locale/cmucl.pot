@@ -14895,7 +14895,7 @@ msgid ""
 "  and the doc-string, or NIL if none."
 msgstr ""
 
-#: src/code/macros.lisp
+#: src/compiler/ir1tran.lisp src/code/macros.lisp
 msgid "defining macro ~A"
 msgstr ""
 

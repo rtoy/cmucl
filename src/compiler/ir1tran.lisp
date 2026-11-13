@@ -3657,7 +3657,16 @@
 (defun do-macro-compile-time (name def)
   (unless (symbolp name)
     (compiler-error _N"Macro name is not a symbol: ~S." name))
-
+  ;; Check the package lock before mutating the info database for
+  ;; this name.  The load-time check in %%defmacro will fire for the
+  ;; load of a compiled fasl, but without this we silently mutate
+  ;; globaldb for a locked-package symbol during compile-file.
+  (let ((package (symbol-package name)))
+    (when (and package (ext:package-definition-lock package))
+      (lisp::signal-package-locked-error
+       package :definition
+       (intl:gettext "defining macro ~A")
+       name)))
   (ecase (info function kind name)
     ((nil))
     (:function
