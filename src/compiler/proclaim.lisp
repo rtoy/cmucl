@@ -286,7 +286,11 @@
       (frob accessor-for)
       (frob inline-expansion)
       (frob source-transform)
-      (frob assumed-type)))
+      (frob assumed-type))
+    ;; Also drop any recorded macro lambda-list.  Unlike the entries
+    ;; above it has no meaningful default, so clear it rather than
+    ;; setting one.
+    (clear-info function lambda-list name))
   (undefined-value))
 
 

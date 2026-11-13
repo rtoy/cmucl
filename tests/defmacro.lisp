@@ -130,11 +130,13 @@
   (eval '(defmacro issue.497.fmu (a b)
 	   `(list ,a ,b)))
   (assert-true (macro-function 'issue.497.fmu))
+  (assert-true (nth-value 1 (c::info function lambda-list 'issue.497.fmu)))
   (fmakunbound 'issue.497.fmu)
-  ;; fmakunbound resets the function kind, so the name is no longer a
-  ;; macro even though undefine-function-name leaves the arglist entry.
+  ;; fmakunbound makes the name no longer a macro and clears the
+  ;; recorded lambda-list.
   (assert-false (macro-function 'issue.497.fmu))
-  (assert-false (fboundp 'issue.497.fmu)))
+  (assert-false (fboundp 'issue.497.fmu))
+  (assert-false (nth-value 1 (c::info function lambda-list 'issue.497.fmu))))
 
 ;;; A macro whose expander is compiled along with this file, so describe
 ;;; exercises the compiled-function path -- the one that regressed when
