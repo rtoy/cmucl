@@ -1245,14 +1245,28 @@
 		   ,labels-form))))))))
 
 (defun find-prefilter-fun (args cache)
-  (let ((filtered-args
-	 (mapcar #'arg-name (remove-if-not #'arg-prefilter args))))
-    (if (null filtered-args)
+  ;; The function generated below stores each filtered value in the
+  ;; slot given by that arg's position in ARGS, since that is what
+  ;; MAKE-FUNSTATE hands out for ARG-POSITION.  The cache constraint
+  ;; therefore has to mention those positions: two formats can agree
+  ;; on the names, fields and prefilters of their filtered args and
+  ;; still disagree about which slot each value lands in, and sharing
+  ;; a function between them leaves the printer reading a slot that
+  ;; was never filled.
+  (let ((constraint
+	 (collect ((constraint))
+	   (let ((position 0))
+	     (dolist (arg args)
+	       (when (arg-prefilter arg)
+		 (constraint (cons (arg-name arg) position)))
+	       (incf position)))
+	   (constraint))))
+    (if (null constraint)
 	(values nil nil)
 	(with-cached-function
 	    (name funstate cache function-cache-prefilters args
 	     :prefix "PREFILTER"
-	     :constraint filtered-args)
+	     :constraint constraint)
 	  (collect ((forms))
 	    (dolist (arg args)
 	      (let ((pf (arg-prefilter arg)))
