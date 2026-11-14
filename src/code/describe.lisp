@@ -279,14 +279,10 @@
 (defun describe-function-interpreted (x kind name)
   (multiple-value-bind (exp closure-p dname)
 		       (eval:interpreted-function-lambda-expression x)
+    ;; The interpreted arglist is the lambda-list; print it the same
+    ;; way as the compiled and byte-compiled cases.
     (let ((args (eval:interpreted-function-arglist x)))
-      (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
-      (cond ((not args)
-	     (write-string (intl:gettext "  There are no arguments.")))
-	    (t
-	     (write-string "  ")
-	     (indenting-further *standard-output* 2
-	       (prin1 args)))))
+      (print-function/macro-lambda-list kind args t))
     
     (let ((name (or name dname)))
       (desc-doc name 'function kind)
@@ -331,6 +327,75 @@
 	      (:stream (format t "~&~S" name))
 	      (:lisp (format t "~&~S" name)))))))))
 
+;; Common function for printing the function or macro lambda-list.
+(defun print-function/macro-lambda-list (kind args knownp)
+  (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
+  (cond ((not knownp)
+	 (format t (intl:gettext "  There is no argument information available.")))
+	((or (null args)
+	     (equal args "()"))
+	 (write-string (intl:gettext "  There are no arguments.")))
+	(t
+	 (write-string "  ")
+	 ;; ARGS is either the make-arg-names string from the function
+	 ;; header or a lambda-list.  Render a lambda-list the way
+	 ;; make-arg-names does, and without the *print-level* and
+	 ;; *print-length* limits describe binds for its other output.
+	 (let ((*print-level* nil)
+	       (*print-length* nil)
+	       (*print-pretty* t)
+	       (*print-case* :downcase))
+	   (indenting-further *standard-output* 2
+			      (etypecase args
+				(string (write-string args))
+				(list (prin1 args))))))))
+
+;;; MACRO-FUNCTION-NAME  --  Internal
+;;;
+;;;    A macroexpander function carries the name (:macro <sym>).  When
+;;; describe is handed such a function directly (rather than the symbol
+;;; naming the macro), KIND is NIL and NAME is (:macro <sym>).  Recognize
+;;; that form and return the effective kind (:macro) and the real name
+;;; <sym>, so the arglist and documentation can be found.  Otherwise
+;;; return KIND and NAME unchanged.
+;;;
+(defun macro-function-name (kind name)
+  (if (and (consp name) (eq (car name) :macro))
+      (values :macro (second name))
+      (values kind name)))
+
+;;; DESCRIBE-FUNCTION-ARGLIST  --  Internal
+;;;
+;;;    Return two values, the lambda-list to describe and whether it is
+;;; known.  A macro's lambda-list is recorded in the info environment
+;;; rather than in the expander's function header.  For a function the
+;;; header is authoritative; HEADER-ARGS is what it provides (NIL when it
+;;; carries no arglist, as for code compiled at debug 0).  When the
+;;; header has none there is presently no recorded function lambda-list
+;;; to fall back to.
+;;;
+(defun describe-function-arglist (x kind name header-args)
+  (cond (header-args
+	 ;; The function header carries a make-arg-names rendering of the
+	 ;; lambda-list -- nicely formatted, and describing X itself --
+	 ;; so prefer it for both functions and macros.
+	 (values header-args t))
+	((eq kind :macro)
+	 ;; A byte-compiled macro has no header arglist; fall back to the
+	 ;; recorded lambda-list, but only when X is NAME's current
+	 ;; macro-function, not an expander kept past a redefinition.
+	 (if (and name (eq x (macro-function name)))
+	     (c::info function lambda-list name)
+	     (values nil nil)))
+	((and name
+	      (valid-function-name-p name)
+	      (fboundp name)
+	      (eq x (fdefinition name)))
+	 ;; Likewise for a function whose header lacks an arglist.
+	 ;; (Nothing records function lambda-lists yet.)
+	 (c::info function lambda-list name))
+	(t
+	 (values nil nil))))
 
 ;;; DESCRIBE-FUNCTION-COMPILED  --  Internal
 ;;;
@@ -338,28 +403,30 @@
 ;;; guts.
 ;;;
 (defun describe-function-compiled (x kind name)
-  (let ((args (%function-arglist x)))
-    (format t (intl:gettext "~&~@(~@[~A ~]arguments:~%~)") kind)
-    (cond ((not args)
-	   (format t (intl:gettext "  There is no argument information available.")))
-	  ((string= args "()")
-	   (write-string (intl:gettext "  There are no arguments.")))
-	  (t
-	   (write-string "  ")
-	   (indenting-further *standard-output* 2
-	     (write-string args)))))
-
   (let ((name (or name (%function-name x))))
+    (multiple-value-setq (kind name)
+      (macro-function-name kind name))
+    (multiple-value-bind (args knownp)
+	(describe-function-arglist x kind name (%function-arglist x))
+      (print-function/macro-lambda-list kind args knownp))
+
     (desc-doc name 'function kind)
     (unless (eq kind :macro)
       (describe-function-name name (%function-type x))))
 
   (print-compiled-from (kernel:function-code-header x)))
 
-
+;;; DESCRIBE-FUNCTION-BYTE-COMPILED -- Internal
+;;;
+;;;    Describe a byte-compiled function.
 (defun describe-function-byte-compiled (x kind name)
-
   (let ((name (or name (c::byte-function-name x))))
+    (multiple-value-setq (kind name)
+      (macro-function-name kind name))
+    (when (eq kind :macro)
+      (multiple-value-bind (args knownp)
+	  (describe-function-arglist x kind name nil)
+	(print-function/macro-lambda-list kind args knownp)))
     (desc-doc name 'function kind)
     (unless (eq kind :macro)
       (describe-function-name name 'function)))

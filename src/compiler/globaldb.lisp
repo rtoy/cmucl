@@ -1189,7 +1189,12 @@
 ;; deftype information
 (define-info-type source-location deftype (or form-numbers null) nil)
 (define-info-type type lambda-list list nil)
+
+;; lambda-list
+;;
+;; The lambda-list for macros
+(define-info-type function lambda-list list nil)
+  
 ); defun other-info-init
 
 (declaim (freeze-type info-env))
-

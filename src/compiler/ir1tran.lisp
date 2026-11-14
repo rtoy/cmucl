@@ -3684,8 +3684,8 @@
 	   (fun (ir1-convert-lambda def name 'defmacro)))
       (setf (leaf-name fun) (list :macro name))
       (setf (functional-arg-documentation fun) (eval lambda-list))
-
-      (ir1-convert start cont `(%%defmacro ',name ,fun ,doc)))
+      ;; Save the macro lambda-list so it can be retrieved later.
+      (ir1-convert start cont `(%%defmacro ',name ,fun ',(eval lambda-list) ,doc)))
 
     (when *compile-print*
       (compiler-mumble (intl:gettext "~&; Converted ~S.~%") name))))
