@@ -3967,9 +3967,33 @@
   (declare (ignore source))
   (let* ((name (eval name))
 	 (lambda (second def))
-	 (*current-path* (revert-source-path 'defun))
-	 (expansion (unless (eq (info function inlinep name) :notinline)
-		      (inline-syntactic-closure-lambda lambda))))
+	 (*current-path* (revert-source-path 'defun)))
+    ;; Check the package lock before mutating globaldb for this name.
+    ;; The load-time check in REDEFINING-FUNCTION (via
+    ;; *SETF-FDEFINITION-HOOK*) fires for the load of a compiled fasl,
+    ;; but without this we silently mutate *FREE-FUNCTIONS*,
+    ;; INLINE-EXPANSION info, and LEAF-TYPE for a locked-package symbol
+    ;; during compile-file.  Mirror REDEFINING-FUNCTION's PCL filter:
+    ;; PCL's generated accessor/method names are internal and should
+    ;; not trip the lock.
+    (multiple-value-bind (valid block-name)
+	(ext:valid-function-name-p name)
+      (declare (ignore valid))
+      (let ((package (symbol-package block-name)))
+	(when (and package (ext:package-definition-lock package))
+	  (unless (and (consp name)
+		       (member (first name)
+			       '(pcl::slot-accessor
+				 pcl::method
+				 pcl::fast-method
+				 pcl::effective-method
+				 pcl::ctor)))
+	    (lisp::signal-package-locked-error
+	     package :definition
+	     (intl:gettext "defining function ~A")
+	     name)))))
+    (let* ((expansion (unless (eq (info function inlinep name) :notinline)
+			(inline-syntactic-closure-lambda lambda))))
     ;;
     ;; If not in a simple environment or :notinline, then discard any forward
     ;; references to this function.
@@ -3999,4 +4023,4 @@
 		       ,@(when save-expansion `(',save-expansion)))))
 
 	(when *compile-print*
-	  (compiler-mumble (intl:gettext "~&; Converted ~S.~%") name))))))
+	  (compiler-mumble (intl:gettext "~&; Converted ~S.~%") name)))))))
