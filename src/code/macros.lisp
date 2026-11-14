@@ -227,26 +227,6 @@
 				   (intl:gettext "defining type ~A")
 				   name)))
       
-  #+nil
-  (and lisp::*enable-package-locked-errors*
-       (symbol-package name)
-       (ext:package-definition-lock (symbol-package name))
-       (restart-case
-           (error 'lisp::package-locked-error
-                  :package (symbol-package name)
-                  :format-control (intl:gettext "defining type ~A")
-                  :format-arguments (list name))
-         (continue ()
-           :report (lambda (stream)
-		     (write-string (intl:gettext "Ignore the lock and continue") stream)))
-         (unlock-package ()
-           :report (lambda (stream)
-		     (write-string (intl:gettext "Disable package's definition-lock then continue") stream))
-           (setf (ext:package-definition-lock (symbol-package name)) nil))
-         (unlock-all ()
-           :report (lambda (stream)
-		     (write-string (intl:gettext "Unlock all packages, then continue") stream))
-           (lisp::unlock-all-packages))))
   (let ((whole (gensym "WHOLE-")))
     (multiple-value-bind (body local-decs doc)
 			 (parse-defmacro arglist whole body name 'deftype
