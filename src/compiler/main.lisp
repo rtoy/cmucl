@@ -1134,6 +1134,8 @@
 		  (proc (run-git name))
 		  (comment (and proc (zerop (process-exit-code proc))
 				(read-line (process-output proc) nil nil))))
+	     (when proc
+	       (process-close proc))
 	     (if comment
 		 (format nil "$Header: ~A ~A $"
 			 (enough-namestring name)
