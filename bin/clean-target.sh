@@ -43,15 +43,16 @@ do
 done
 
 # Default:  don't keep any libraries, and delete an lisp cores
-GREP="cat"
+GREP=${GREP:-grep}
+FILTER="cat"
 CORE='-o -name "*.core"'
 
 if [ -n "$KEEP" ]; then
     case $KEEP in
-      lib) GREP='grep -Ev'
+      lib) FILTER="$GREP -Ev"
 	   PATTERN='(gray-streams|gray-compat|simple-streams|iodefs|external-formats|clx|hemlock|clm)-library' ;;
       core) CORE='' ;;
-      all) GREP='grep -Ev'
+      all) FILTER="$GREP -Ev"
 	   PATTERN='(gray-streams|gray-compat|simple-streams|iodefs|external-formats|clx|hemlock|clm)-library|(asdf|defsystem)'
 	   CORE='' ;;
     esac
@@ -68,7 +69,7 @@ find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" \
 	-o -name "*.sse2f" \
 	-o -name "*.x86f" \
 	$CORE |
-	$GREP $PATTERN | xargs rm 2> /dev/null
+	$FILTER $PATTERN | xargs rm 2> /dev/null
 
 for d in $TARGET
 do

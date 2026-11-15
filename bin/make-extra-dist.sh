@@ -23,6 +23,7 @@ EOF
 }
 
 GTAR=tar
+GREP=${GREP:-grep}
 while getopts "C:E:G:O:I:t:h?" arg
 do
     case $arg in
@@ -120,12 +121,12 @@ install ${GROUP} ${OWNER} -m 0755 $TARGET/motif/server/motifd \
 #
 # asdf, defsystem and unix are part of the main distribution, so skip
 # these directories.
-for d in `(cd src; find contrib -type d -print | grep -v "asdf\|defsystem")`
+for d in `(cd src; find contrib -type d -print | $GREP -v "asdf\|defsystem")`
 do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/$d
 done
 
-for f in `(cd src/contrib; find . -type f -print | grep -v "asdf\|defsystem\|unix")`
+for f in `(cd src/contrib; find . -type f -print | $GREP -v "asdf\|defsystem\|unix")`
 do
     DIR=`dirname $f`
     install ${GROUP} ${OWNER} -m 0644 src/contrib/$f $DESTDIR/$CMUCLLIBVER/lib/contrib/$DIR
@@ -139,7 +140,7 @@ do
 done
 
 # Install mo files.  Ignore any emacs-style backup files.
-for f in `(cd $TARGET/i18n; find locale -type f -print | grep -v '~.*~\|.*~')`
+for f in `(cd $TARGET/i18n; find locale -type f -print | $GREP -v '~.*~\|.*~')`
 do
     DIR=`dirname $f`
     install ${GROUP} ${OWNER} -m 0644 $TARGET/i18n/$f $DESTDIR/$CMUCLLIBVER/lib/$DIR
