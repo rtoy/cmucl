@@ -52,11 +52,5 @@ git checkout $BRANCH
 
 make LISP="$LISP batch -noinit -nositeinit"
 # There should be no unexpected successes or failures; check these separately
-# Solaris /usr/bin/grep is not POSIX.
-if [ `uname -s` = "SunOS" ]; then
-    POSIX_GREP=/usr/xpg4/bin/grep
-else
-    POSIX_GREP=grep
-fi
-$POSIX_GREP 'No unexpected successes' test.out && $POSIX_GREP 'No unexpected failures' test.out
+grep 'No unexpected successes' test.out && grep 'No unexpected failures' test.out
 
