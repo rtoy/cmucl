@@ -80,6 +80,13 @@ case $ARCH in
 		;;
 esac
 
+# Solaris /usr/bin/grep is not POSIX.
+if [ `uname -s` = "SunOS" ]; then
+    POSIX_GREP=/usr/xpg4/bin/grep
+else
+    POSIX_GREP=grep
+fi
+
 # Frob PATH to use /usr/ucb/install for Solaris
 if [ `uname -s` = "SunOS" ]
 then
@@ -120,12 +127,12 @@ install ${GROUP} ${OWNER} -m 0755 $TARGET/motif/server/motifd \
 #
 # asdf, defsystem and unix are part of the main distribution, so skip
 # these directories.
-for d in `(cd src; find contrib -type d -print | grep -v "asdf\|defsystem")`
+for d in `(cd src; find contrib -type d -print | $POSIX_GREP -Ev "asdf|defsystem")`
 do
     install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/$CMUCLLIBVER/lib/$d
 done
 
-for f in `(cd src/contrib; find . -type f -print | grep -v "asdf\|defsystem\|unix")`
+for f in `(cd src/contrib; find . -type f -print | $POSIX_GREP -Ev "asdf|defsystem|unix")`
 do
     DIR=`dirname $f`
     install ${GROUP} ${OWNER} -m 0644 src/contrib/$f $DESTDIR/$CMUCLLIBVER/lib/contrib/$DIR
@@ -139,7 +146,7 @@ do
 done
 
 # Install mo files.  Ignore any emacs-style backup files.
-for f in `(cd $TARGET/i18n; find locale -type f -print | grep -v '~.*~\|.*~')`
+for f in `(cd $TARGET/i18n; find locale -type f -print | $POSIX_GREP -v '~')`
 do
     DIR=`dirname $f`
     install ${GROUP} ${OWNER} -m 0644 $TARGET/i18n/$f $DESTDIR/$CMUCLLIBVER/lib/$DIR

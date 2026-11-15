@@ -42,16 +42,23 @@ do
     TARGET="$TARGET $D"
 done
 
+# Solaris /usr/bin/grep is not POSIX.
+if [ `uname -s` = "SunOS" ]; then
+    POSIX_GREP=/usr/xpg4/bin/grep
+else
+    POSIX_GREP=grep
+fi
+
 # Default:  don't keep any libraries, and delete an lisp cores
 GREP="cat"
 CORE='-o -name "*.core"'
 
 if [ -n "$KEEP" ]; then
     case $KEEP in
-      lib) GREP='grep -Ev'
+      lib) GREP="$POSIX_GREP -Ev"
 	   PATTERN='(gray-streams|gray-compat|simple-streams|iodefs|external-formats|clx|hemlock|clm)-library' ;;
       core) CORE='' ;;
-      all) GREP='grep -Ev'
+      all) GREP="$POSIX_GREP -Ev"
 	   PATTERN='(gray-streams|gray-compat|simple-streams|iodefs|external-formats|clx|hemlock|clm)-library|(asdf|defsystem)'
 	   CORE='' ;;
     esac
