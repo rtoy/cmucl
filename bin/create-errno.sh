@@ -80,6 +80,12 @@ if [ -n "$DEFAULT" ]; then
     UPDATE=""
 fi
 
+# Solaris cpp doesn't support -dM.
+case `uname -s` in
+    SunOS) CPP="gcc -E" ;;
+    *) CPP=cpp ;;
+esac
+
 find_errno ()
 {
     # Create appropriate DEFCONSTANT forms by reading the preprocessed output of errno.h
@@ -90,10 +96,10 @@ find_errno ()
     {
 	echo "#include <errno.h>"
 	echo "#include <errno.h>" |
-	    cpp -dM - |
+	    $CPP -dM - |
 	    awk '/^#define[ \t]+E[A-Z0-9]+[ \t]/ { printf "\"%s\" %s\n", $2, $2 }'
     } |
-	cpp -P - |
+	$CPP -P - |
 	awk '/^"E[A-Z0-9]+" [0-9]+$/ { gsub(/"/, "", $1); print $1, $2 }' |
 	LC_ALL=C sort -k2,2n -k1,1 |
 	awk '{ printf "(defconstant %s %d)\n", $1, $2 }'
