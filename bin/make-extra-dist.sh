@@ -2,13 +2,12 @@
 
 usage() {
     cat <<EOF
-`basename $0` -C option -E ext [-t tar] [-I destdir] [-G group] [-O owner]
+`basename $0` -C option [-t tar] [-I destdir] [-G group] [-O owner]
   -h           This help
   -?           This help
   -t tar       Tar program to use
-  -C option    Tar option for compressing the tarball; required.
-  -E ext       Extension to use for the tarball.  Must be consistent with
-                 -C option.  Required.
+  -C option    Program for compressing the tarball: xz, bzip2, or gzip;
+                 required.
   -I destdir   Install directly to given directory instead of creating a tarball
   -G group     Group to use
   -O owner     Owner to use
@@ -23,11 +22,10 @@ EOF
 }
 
 GTAR=tar
-while getopts "C:E:G:O:I:t:h?" arg
+while getopts "C:G:O:I:t:h?" arg
 do
     case $arg in
 	C) COMPRESS=$OPTARG ;;
-	E) COMPRESS_EXT=$OPTARG ;;
 	G) GROUP="-g $OPTARG" ;;
 	O) OWNER="-o $OPTARG" ;;
         I) INSTALL_DIR=$OPTARG ;;
@@ -38,16 +36,16 @@ done
 
 shift `expr $OPTIND - 1`
 
-# -C and -E options are required
-if [ -z "$COMPRESS" ]; then
-    echo "-C option is required"
-    exit 2
-fi
-
-if [ -z "$COMPRESS_EXT" ]; then
-    echo "-E option is required"
-    exit 2
-fi
+# -C option is required and determines the extension
+case $COMPRESS in
+    xz) COMPRESS_EXT=xz ;;
+    bzip2) COMPRESS_EXT=bz2 ;;
+    gzip) COMPRESS_EXT=gz ;;
+    "") echo "-C option is required"
+	exit 2 ;;
+    *) echo '-C option "'$COMPRESS'" must be one of bzip2, xz or gzip'
+       exit 2 ;;
+esac
 
 if [ "$1" = "" -o "$2" = "" -o "$3" = "" -o "$4" = "" ]
 then
@@ -155,7 +153,7 @@ done
 if [ -z "$INSTALL_DIR" ]; then
     sync ; sleep 1 ; sync ; sleep 1 ; sync
     echo Tarring extra components
-    $GTAR -C $DESTDIR $COMPRESS -cf cmucl-$VERSION-$ARCH-$OS.extra.tar.$COMPRESS_EXT lib
+    (cd $DESTDIR && $GTAR cf - lib) | $COMPRESS > cmucl-$VERSION-$ARCH-$OS.extra.tar.$COMPRESS_EXT
 
     echo Cleaning $DESTDIR
     [ -d $DESTDIR ] && rm -rf $DESTDIR
