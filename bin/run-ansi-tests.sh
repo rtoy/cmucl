@@ -52,6 +52,5 @@ git checkout $BRANCH
 
 make LISP="$LISP batch -noinit -nositeinit"
 # There should be no unexpected successes or failures; check these separately
-GREP=${GREP:-grep}
-$GREP -a 'No unexpected successes' test.out && $GREP -a 'No unexpected failures' test.out
+grep -a 'No unexpected successes' test.out && grep -a 'No unexpected failures' test.out
 
