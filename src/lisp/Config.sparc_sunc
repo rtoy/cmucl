@@ -28,3 +28,7 @@ CFLAGS += -xlibmieee -O
 DEPEND_FLAGS = -xM
 ASFLAGS = $(AS_V8PLUS)
 OS_LINK_FLAGS = -M /usr/lib/ld/map.noexstk
+
+# Sun C doesn't support -dM.
+ERRNO_DUMP_MACROS = $(CC) -E -xdumpmacros=defs - 2>&1 >/dev/null
+ERRNO_PREPROCESS = $(CC) -E -

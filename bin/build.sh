@@ -137,6 +137,8 @@ buildit ()
     if [ "$ENABLE" = "yes" ]; 
     then
 	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET || { echo "Failed: $TOOLDIR/clean-target.sh"; exit 1; }
+	# Create the errno file containing all the def-unix-error forms.
+	$MAKE -C $TARGET/lisp errno ERRNO_OPT=$ERRNOOPT || { echo "Failed: $MAKE -C $TARGET/lisp errno"; exit 1; }
 	time $BUILDWORLD $TARGET $OLDLISP $BOOT || { echo "Failed: $BUILDWORLD"; exit 1; }
 	if [ "$REBUILD_LISP" = "yes" ]; then
 	    $TOOLDIR/rebuild-lisp.sh $TARGET
@@ -193,10 +195,6 @@ do
 	    ;;
     esac
 done
-
-# Create the errno file containing all the def-unix-error forms.  Exit
-# if there's an error in creating the errno file.
-bin/create-errno.sh $ERRNOOPT || exit 1
 
 # Generate lisp/cmucl-version.h with the appropriate version.  The -v
 # option (if given) overrides the default that git-describe.sh uses.

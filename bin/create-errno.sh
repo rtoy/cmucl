@@ -8,12 +8,16 @@
 usage ()
 {
     cat <<EOF
-create-erno.sh [-h?DS]
+create-erno.sh [-h?DSU] [-m cmd] [-p cmd]
     -h    This help
     -?    This help
     -U    Update the errno file    
     -D	  Do not auto-generate; use default
     -S    Show the resulting generated file; the file is still created.
+    -m cmd  Command that writes the macros defined by its stdin to
+            stdout.  Default is "cpp -dM -".
+    -p cmd  Command that preprocesses its stdin to stdout.  Default
+            is "cpp -P -".
 
 Auto-generates, if possible, the file src/code/errno.lisp that
 contains the def-unix-error forms.
@@ -35,7 +39,10 @@ EOF
     exit 0
 }
 
-while getopts "h?DSU" arg
+DUMP_MACROS="cpp -dM -"
+PREPROCESS="cpp -P -"
+
+while getopts "h?DSUm:p:" arg
 do
     case $arg in
 	h) usage ;;
@@ -43,6 +50,8 @@ do
 	D) DEFAULT=yes ;;
 	S) SHOW=yes ;;
 	U) UPDATE=yes ;;
+	m) DUMP_MACROS=$OPTARG ;;
+	p) PREPROCESS=$OPTARG ;;
     esac
 done
 
@@ -80,21 +89,24 @@ if [ -n "$DEFAULT" ]; then
     UPDATE=""
 fi
 
+# eval so that the commands can contain redirections.
+dump_macros () { eval "$DUMP_MACROS"; }
+preprocess () { eval "$PREPROCESS"; }
+
 find_errno ()
 {
     # Create appropriate DEFCONSTANT forms by reading the preprocessed output of errno.h
-    # containing the C definitions.  This version with cpp works on
-    # Linux, Darwin, and Solaris (with Sun C) to dump the macros
-    # defined in errno.h.  The results are sorted in ascending
-    # numerical order and aliases follow the original definition.
+    # containing the C definitions.  The results are sorted in
+    # ascending numerical order and aliases follow the original
+    # definition.
     {
 	echo "#include <errno.h>"
 	echo "#include <errno.h>" |
-	    cpp -dM - |
+	    dump_macros |
 	    awk '/^#define[ \t]+E[A-Z0-9]+[ \t]/ { printf "\"%s\" %s\n", $2, $2 }'
     } |
-	cpp -P - |
-	awk '/^"E[A-Z0-9]+" [0-9]+$/ { gsub(/"/, "", $1); print $1, $2 }' |
+	preprocess |
+	awk '/^"E[A-Z0-9]+"[ \t]+[0-9]+$/ { gsub(/"/, "", $1); print $1, $2 }' |
 	LC_ALL=C sort -k2,2n -k1,1 |
 	awk '{ printf "(defconstant %s %d)\n", $1, $2 }'
 }

@@ -16,8 +16,17 @@ vpath %.mo  $(CMULOCALE)
 all: lisp.nm
 
 
+# The errno target doesn't need internals.inc, which may not exist yet.
+ifneq ($(MAKECMDGOALS),errno)
 -include internals.inc
+endif
 include Config
+
+# Commands used by bin/create-errno.sh to dump the macros defined in
+# errno.h and to preprocess its input.  The defaults work for gcc and
+# clang.
+ERRNO_DUMP_MACROS ?= $(CC) -E -dM -
+ERRNO_PREPROCESS ?= $(CC) -E -P -
 
 # Need rem_pio2 routines because double-double routines need these for
 # pi reduction.  This is independent of whether we are using core-math
@@ -115,6 +124,13 @@ internals.h internals.inc:
 	@echo "You must run genesis to create internals.h!"
 	@false
 
+# Create src/code/errno.lisp.  ERRNO_OPT is passed to create-errno.sh.
+errno:
+	cd ../.. && bin/create-errno.sh -m '$(ERRNO_DUMP_MACROS)' \
+	  -p '$(ERRNO_PREPROCESS)' $(ERRNO_OPT)
+
+.PHONY : errno
+
 clean:
 	$(RM) Depends $(OBJS) lisp lisp.nm core lisp.a
 	echo 'Map file for lisp version 0' > lisp.nm
@@ -125,7 +141,10 @@ Depends: ${SRCS}
 	$(CC) ${DEPEND_FLAGS} ${CFLAGS} ${CPPFLAGS} $^ > ,depends
 	mv ,depends Depends
 
+# Don't make Depends just to create the errno file.
+ifneq ($(MAKECMDGOALS),errno)
 -include Depends
+endif
 
 # Find all directories in ../i18n/locale.  These are the locales we
 # currently support.
