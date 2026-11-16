@@ -76,4 +76,22 @@
 		stream-read-char stream-read-char-no-hang stream-read-line
 		stream-start-line-p stream-terpri stream-unread-char
 		stream-write-byte stream-write-char stream-write-string
-		stream-read-sequence stream-write-sequence))
+		stream-read-sequence stream-write-sequence
+		stream-file-position (setf stream-file-position)
+		stream-file-length))
+
+;;; Simple-streams functions not defined until simple-streams is loaded.
+(declaim (ftype (function * *)
+		stream:device-close
+		stream::%charpos stream::%clear-input stream::%clear-output
+		stream::%file-length stream::%file-name stream::%file-position
+		stream::%file-rename stream::%file-string-length
+		stream::%finish-output stream::%force-output stream::%fresh-line
+		stream::%input-stream-p stream::%interactive-stream-n
+		stream::%interactive-stream-p stream::%interactive-stream-y
+		stream::%line-length stream::%listen stream::%open-stream-p
+		stream::%output-stream-p stream::%peek-char stream::%read-byte
+		stream::%read-char stream::%read-line stream::%read-sequence
+		stream::%stream-external-format stream::%unread-char
+		stream::%write-byte stream::%write-char stream::%write-sequence
+		stream::%write-string))

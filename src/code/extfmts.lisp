@@ -1296,7 +1296,7 @@ character and illegal outputs are replaced by a question mark.")
 	(#.+ef-en+ (%ef-encode ef))
 	(#.+ef-de+ (%ef-decode ef))
 	(#.+ef-osc+ (%ef-octets-to-string-counted ef))
-	(#.+ef-oc+ (%ef-octet-count ef))))
+	(#.+ef-oc+ (%ef-string-octet-count ef))))
     `(setf (aref (ef-cache (find-external-format ,(ef-name ef))) ,slot)
 	 ,(subst (ef-name ef) ef
 		 (function-lambda-expression (aref (ef-cache ef) slot))))))

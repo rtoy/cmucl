@@ -958,7 +958,10 @@
 	       (stream:dual-channel-simple-stream (t instance stream
 						   stream:simple-stream))
 	       (stream:string-simple-stream (t instance stream
-					     stream:simple-stream))))
+					     stream:simple-stream))
+	       (stream:file-simple-stream (t instance stream
+					   stream:simple-stream
+					   stream:single-channel-simple-stream))))
     (let* ((name (first x))
 	   (inherits (second x))
 	   (class (make-standard-class :name name))
