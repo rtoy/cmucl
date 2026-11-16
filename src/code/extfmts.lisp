@@ -707,8 +707,9 @@ Norwegian, Portuguese, Spanish, Swedish and many others.
 By default, illegal inputs are replaced by the Unicode replacement
 character and illegal outputs are replaced by a question mark.")
   ()
-  (octets-to-code (state input unput error)
-    `(values ,input 1))
+  (octets-to-code (state input unput error c)
+    `(let ((,c ,input))
+       (values ,c 1)))
   (code-to-octets (code state output error)
     `(,output (if (> ,code 255)
 		  (if ,error
