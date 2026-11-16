@@ -8,12 +8,16 @@
 usage ()
 {
     cat <<EOF
-create-erno.sh [-h?DS]
+create-erno.sh [-h?DSU] target
     -h    This help
     -?    This help
     -U    Update the errno file    
     -D	  Do not auto-generate; use default
     -S    Show the resulting generated file; the file is still created.
+
+The errno values are found using the C compiler from the Config file
+in the target build directory.  The environment variable MAKE names
+GNU make; the default is make.
 
 Auto-generates, if possible, the file src/code/errno.lisp that
 contains the def-unix-error forms.
@@ -45,6 +49,19 @@ do
 	U) UPDATE=yes ;;
     esac
 done
+shift `expr $OPTIND - 1`
+
+# The target build directory.  Its Config file determines the C
+# compiler used to find the errno values.
+TARGET="$1"
+if [ -z "$TARGET" ]; then
+    echo "Error:  target build directory is required"
+    exit 1
+fi
+if [ ! -f "$TARGET/lisp/Config" ]; then
+    echo "Error:  $TARGET/lisp/Config not found"
+    exit 1
+fi
 
 # Output file containing the final errno defintions
 OUTPUT="src/code/errno.lisp"
@@ -80,35 +97,23 @@ if [ -n "$DEFAULT" ]; then
     UPDATE=""
 fi
 
-find_errno ()
-{
-    # Create appropriate DEFCONSTANT forms by reading the preprocessed output of errno.h
-    # containing the C definitions.  This version with cpp works on
-    # Linux, Darwin, and Solaris (with Sun C) to dump the macros
-    # defined in errno.h.  The results are sorted in ascending
-    # numerical order and aliases follow the original definition.
-    {
-	echo "#include <errno.h>"
-	echo "#include <errno.h>" |
-	    cpp -dM - |
-	    awk '/^#define[ \t]+E[A-Z0-9]+[ \t]/ { printf "\"%s\" %s\n", $2, $2 }'
-    } |
-	cpp -P - |
-	awk '/^"E[A-Z0-9]+" [0-9]+$/ { gsub(/"/, "", $1); print $1, $2 }' |
-	LC_ALL=C sort -k2,2n -k1,1 |
-	awk '{ printf "(defconstant %s %d)\n", $1, $2 }'
-}
-
-if [ "$UPDATE" = "yes" ]; then
-   find_errno > "$ERRNO_FILE"
-   exit 0
+# Have make generate the errno values using the C compiler from the
+# target's Config file.
+if [ -z "$DEFAULT" ]; then
+    ${MAKE:-make} -C "$TARGET/lisp" errno-defs.lisp || exit 1
+    DEFS="$TARGET/lisp/errno-defs.lisp"
 fi
 
-if [ -z "$DEFAULT" ] && [ -n "$ERRNO_FILE" ]; then
+if [ "$UPDATE" = "yes" ]; then
+    cp "$DEFS" "$ERRNO_FILE"
+    exit 0
+fi
+
+if [ -n "$DEFS" ]; then
     # First check that the errno definitions haven't changed.  If they
     # have, exit with an error.
 
-    if ! (find_errno | diff -u "$ERRNO_FILE" -) ; then
+    if ! diff -u "$ERRNO_FILE" "$DEFS" ; then
 	echo "Error:  Current $ERRNO_FILE differs from header file definitions"
 	exit 1
     fi

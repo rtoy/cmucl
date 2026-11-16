@@ -13,3 +13,7 @@ ARCH_SRC = x86-arch.c
 OS_SRC = solaris-os.c os-common.c undefineds.c elf.c
 OS_LINK_FLAGS=
 OS_LIBS= -lsocket -lnsl -ldl -lrt
+
+# Sun C doesn't support -dM.
+ERRNO_DUMP_MACROS = $(CC) -E -xdumpmacros=defs - 2>&1 >/dev/null
+ERRNO_PREPROCESS = $(CC) -E -

@@ -16,8 +16,16 @@ vpath %.mo  $(CMULOCALE)
 all: lisp.nm
 
 
+# errno-defs.lisp doesn't need internals.inc, which may not exist yet.
+ifneq ($(MAKECMDGOALS),errno-defs.lisp)
 -include internals.inc
+endif
 include Config
+
+# Commands used to dump the macros defined in errno.h and to
+# preprocess its input.  The defaults work for gcc and clang.
+ERRNO_DUMP_MACROS ?= $(CC) -E -dM -
+ERRNO_PREPROCESS ?= $(CC) -E -P -
 
 # Need rem_pio2 routines because double-double routines need these for
 # pi reduction.  This is independent of whether we are using core-math
@@ -115,6 +123,20 @@ internals.h internals.inc:
 	@echo "You must run genesis to create internals.h!"
 	@false
 
+# Create DEFCONSTANT forms for the errno values defined in errno.h.
+# The results are sorted in ascending numerical order and aliases
+# follow the original definition.  Used by bin/create-errno.sh.
+errno-defs.lisp:
+	{ echo "#include <errno.h>"; \
+	  echo "#include <errno.h>" | $(ERRNO_DUMP_MACROS) | \
+	    awk '/^#define[ \t]+E[A-Z0-9]+[ \t]/ { printf "\"%s\" %s\n", $$2, $$2 }'; } | \
+	$(ERRNO_PREPROCESS) | \
+	awk '/^"E[A-Z0-9]+"[ \t]+[0-9]+$$/ { gsub(/"/, "", $$1); print $$1, $$2 }' | \
+	LC_ALL=C sort -k2,2n -k1,1 | \
+	awk '{ printf "(defconstant %s %d)\n", $$1, $$2 }' > $@
+
+.PHONY : errno-defs.lisp
+
 clean:
 	$(RM) Depends $(OBJS) lisp lisp.nm core lisp.a
 	echo 'Map file for lisp version 0' > lisp.nm
@@ -125,7 +147,10 @@ Depends: ${SRCS}
 	$(CC) ${DEPEND_FLAGS} ${CFLAGS} ${CPPFLAGS} $^ > ,depends
 	mv ,depends Depends
 
+# Don't make Depends just for errno-defs.lisp.
+ifneq ($(MAKECMDGOALS),errno-defs.lisp)
 -include Depends
+endif
 
 # Find all directories in ../i18n/locale.  These are the locales we
 # currently support.

@@ -85,7 +85,7 @@ then
 fi
 
 # Create the errno file containing all the def-unix-error forms.
-bin/create-errno.sh
+bin/create-errno.sh $TARGET || exit 1
 
 echo cross boot = $CROSSBOOT
 $LISP "$@" -noinit -nositeinit <<EOF
