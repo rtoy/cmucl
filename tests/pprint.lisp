@@ -122,6 +122,9 @@
                 (format nil "Nothing bad happened.")))
              s))))
 
+;; Test for #297 that we print new-assem:assemble with less
+;; indentation.  This test is only for x86.
+#+x86
 (define-test pprint.assemble
     (:tag :issues)
   (assert-equal
