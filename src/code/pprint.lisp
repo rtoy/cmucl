@@ -1058,7 +1058,6 @@ When annotations are present, invoke them at the right positions."
        (write-char #\space stream)
        (pprint-tab :section-relative 0 (or tabsize 16) stream)
        (pprint-newline :fill stream))))
-
 
 ;;;; Pprint-dispatch tables.
 
@@ -1973,6 +1972,168 @@ When annotations are present, invoke them at the right positions."
     ;; labels are outdented by one to make them easy to see.
     (pprint-newline :mandatory stream)
     (pprint-tagbody-guts stream)))
+
+(defun pprint-define-external-format (stream list &rest noise)
+  (declare (ignore noise))
+  ;; The form is
+  ;;
+  ;;   (define-external-format name (&key base min max size documentation)
+  ;;     (&rest slots)
+  ;;     &optional octets-to-code code-to-octets flush-state copy-state
+  ;;               octet-count)
+  ;;
+  ;; and is printed as
+  ;;
+  ;;   (define-external-format name (options)
+  ;;     (slots)
+  ;;     (octets-to-code (state input unput error ...)
+  ;;       body)
+  ;;     ...)
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; Output "define-external-format"
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    ;; Output the name
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    ;; Output the options as keyword/value pairs.  A multi-line
+    ;; documentation string is printed as in the source: the options
+    ;; stay on the first line and the string starts in the leftmost
+    ;; column on the next line.  Otherwise, the options are moved to
+    ;; the next line, indented by 4, if they don't fit.
+    (flet ((multi-line-string-p (x)
+	     (and (stringp x) (find #\newline x))))
+      (let ((options (pprint-pop)))
+	(unless (and (listp options)
+		     (loop for tail on options
+			   thereis (multi-line-string-p (car tail))))
+	  (pprint-indent :block 3 stream)
+	  (pprint-newline :fill stream))
+	(pprint-logical-block (stream options :prefix "(" :suffix ")")
+	  (pprint-exit-if-list-exhausted)
+	  (loop
+	    ;; Output the keyword
+	    (output-object (pprint-pop) stream)
+	    (pprint-exit-if-list-exhausted)
+	    ;; Output the value
+	    (let ((value (pprint-pop)))
+	      ;; Start a multi-line string on a new line in the leftmost
+	      ;; column.  Writing a newline character makes a literal
+	      ;; newline, which is not followed by any indentation, just
+	      ;; like the newlines within the string itself.
+	      (write-char (if (multi-line-string-p value) #\newline #\space)
+			  stream)
+	      (output-object value stream))
+	    (pprint-exit-if-list-exhausted)
+	    (write-char #\space stream)
+	    (pprint-newline :fill stream)))))
+    ;; Everything else starts on a new line, indented by 2.
+    (pprint-exit-if-list-exhausted)
+    (pprint-indent :block 1 stream)
+    (pprint-newline :mandatory stream)
+    ;; Output the slots, one per line.  Each slot is (name init &key
+    ;; type), so keep the name and init together.  The format
+    ;; directives for each slot are:
+    ;;
+    ;;   ~:< ... ~:>  Logical block with parens around the slot
+    ;;   ~^           Stop if the slot is empty
+    ;;   ~W           Output the slot name
+    ;;   ~^           Stop if there is no init
+    ;;   " ~:I"       Output a space and indent continuation lines to
+    ;;                line up with the init
+    ;;   ~W           Output the init
+    ;;   ~@{ ~_~W~}   For each remaining option (:type and its value),
+    ;;                output a space, a linear newline, and the option
+    (pprint-logical-block (stream (pprint-pop) :prefix "(" :suffix ")")
+      (pprint-exit-if-list-exhausted)
+      (loop
+	(funcall (formatter "~:<~^~W~^ ~:I~W~@{ ~_~W~}~:>") stream (pprint-pop))
+	(pprint-exit-if-list-exhausted)
+	(pprint-newline :mandatory stream)))
+    ;; Output the octets-to-code, code-to-octets, flush-state,
+    ;; copy-state, and octet-count forms, one per line.  Each is
+    ;; printed like a local function definition: the name, the
+    ;; lambda list, and the body on a new line, indented by 2.  An
+    ;; omitted form is ().  The format directives for each form are:
+    ;;
+    ;;   ~:< ... ~:>  Logical block with parens around the form
+    ;;   ~^           Stop if the form is empty
+    ;;   ~W           Output the name, like OCTETS-TO-CODE
+    ;;   ~^           Stop if there is no lambda list
+    ;;   ~3I          Indent continuation lines by 4 from the paren
+    ;;   " ~:_"       Output a space and a fill newline, so the lambda
+    ;;                list moves to the next line if it doesn't fit
+    ;;   ~/PP:PPRINT-LAMBDA-LIST/
+    ;;                Output the lambda list
+    ;;   ~^           Stop if there is no body
+    ;;   ~1I          Indent continuation lines by 2 from the paren
+    ;;   ~:@_         Output a mandatory newline before the body
+    ;;   ~@{~W~^ ~_~} Output each body form, separated by a space and
+    ;;                a linear newline
+    (loop
+      (pprint-exit-if-list-exhausted)
+      (pprint-newline :mandatory stream)
+      (funcall (formatter
+		"~:<~^~W~^~3I ~:_~/PP:PPRINT-LAMBDA-LIST/~^~1I~:@_~@{~W~^ ~_~}~:>")
+	       stream (pprint-pop)))))
+
+(defun pprint-defknown (stream list &rest noise)
+  (declare (ignore noise))
+  ;; The form is
+  ;;
+  ;;   (defknown name arg-types result-type &optional attributes
+  ;;     &rest keys)
+  ;;
+  ;; and is printed with as much as fits on each line, and the rest
+  ;; indented by 2:
+  ;;
+  ;;   (defknown name (arg-types) result-type
+  ;;     (attributes) :key value ...)
+  ;;
+  ;; The name, arg types, result type, and attributes are printed with
+  ;; PPRINT-FILL.  Otherwise, the car of each list would select the
+  ;; printer, so that, for example, a list of names starting with NULL
+  ;; would be printed like a function call, and a type starting with
+  ;; FUNCTION would be printed as #'.
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; Output "defknown"
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    (pprint-indent :block 1 stream)
+    ;; Output the name, which is a symbol or a list of symbols
+    (pprint-fill stream (pprint-pop))
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    (pprint-newline :fill stream)
+    ;; Output the list of arg types
+    (pprint-fill stream (pprint-pop))
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    (pprint-newline :fill stream)
+    ;; Output the result type
+    (pprint-fill stream (pprint-pop))
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    (pprint-newline :fill stream)
+    ;; Output the list of attributes
+    (pprint-fill stream (pprint-pop))
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    (pprint-newline :fill stream)
+    ;; Output the keyword/value pairs, keeping each pair together.
+    (loop
+      ;; Output the keyword
+      (output-object (pprint-pop) stream)
+      (pprint-exit-if-list-exhausted)
+      (write-char #\space stream)
+      ;; Output the value
+      (output-object (pprint-pop) stream)
+      (pprint-exit-if-list-exhausted)
+      (write-char #\space stream)
+      (pprint-newline :fill stream))))
 
 ;;;; Interface seen by regular (ugly) printer and initialization routines.
 
@@ -2092,9 +2253,11 @@ When annotations are present, invoke them at the right positions."
     (c:define-vop pprint-define-vop)
     (c:sc-case pprint-sc-case)
     (c:define-assembly-routine pprint-define-assembly)
+    (stream::define-external-format pprint-define-external-format)
     (new-assem:assemble pprint-multiple-value-bind)
     (c:deftransform pprint-defun)
     (c:defoptimizer pprint-defun)
+    (c:defknown pprint-defknown)
     (ext:with-float-traps-masked pprint-with-like)
     (ext:with-float-traps-enabled pprint-with-like)
     (ext::with-temporary-directory pprint-with-like)))
