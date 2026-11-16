@@ -2133,6 +2133,36 @@ When annotations are present, invoke them at the right positions."
       (write-char #\space stream)
       ;; Output the value
       (output-object (pprint-pop) stream))))
+
+(defun pprint-def-alien-routine (stream list &rest noise)
+  (declare (ignore noise))
+  ;; The form is
+  ;;
+  ;;   (def-alien-routine name result-type &rest args)
+  ;;
+  ;; and is printed with the name and result type on the first line,
+  ;; if they fit, and the args one per line, indented by 2, if the
+  ;; whole form doesn't fit on one line:
+  ;;
+  ;;   (def-alien-routine ("c-name" lisp-name) result-type
+  ;;     (arg type)
+  ;;     ...)
+  ;;
+  ;; The format directives are:
+  ;;
+  ;;   ~:< ... ~:>  Logical block with parens around the form
+  ;;   ~^           Stop if the form is empty
+  ;;   ~W           Output DEF-ALIEN-ROUTINE
+  ;;   ~^           Stop if there is no name
+  ;;   ~3I          Indent continuation lines by 4 from the paren
+  ;;   " ~:_~W"     Output a space, a fill newline, and the name
+  ;;   ~^           Stop if there is no result type
+  ;;   " ~:_~W"     Output a space, a fill newline, and the result type
+  ;;   ~1I          Indent continuation lines by 2 from the paren
+  ;;   ~@{ ~_~W~}   For each arg, output a space, a linear newline,
+  ;;                and the arg
+  (funcall (formatter "~:<~^~W~^~3I ~:_~W~^ ~:_~W~1I~@{ ~_~W~}~:>")
+	   stream list))
 
 ;;;; Interface seen by regular (ugly) printer and initialization routines.
 
@@ -2257,6 +2287,16 @@ When annotations are present, invoke them at the right positions."
     (c:deftransform pprint-defun)
     (c:defoptimizer pprint-defun)
     (c:defknown pprint-defknown)
+    (c:def-source-transform pprint-defun)
+    (c:def-ir1-translator pprint-defun)
+    (c:def-vm-support-routine pprint-defun)
+    (c::do-blocks pprint-with-like)
+    (c::do-uses pprint-with-like)
+    (kernel::define-type-method pprint-defun)
+    (ext:once-only pprint-let)
+    (ext:do-hash pprint-with-like)
+    (alien:with-alien pprint-let)
+    (alien:def-alien-routine pprint-def-alien-routine)
     (ext:with-float-traps-masked pprint-with-like)
     (ext:with-float-traps-enabled pprint-with-like)
     (ext::with-temporary-directory pprint-with-like)))
