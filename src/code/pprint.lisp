@@ -2086,11 +2086,16 @@ When annotations are present, invoke them at the right positions."
   ;;   (defknown name arg-types result-type &optional attributes
   ;;     &rest keys)
   ;;
-  ;; and is printed with as much as fits on each line, and the rest
-  ;; indented by 2:
+  ;; and is printed with the name and arg types on the first line,
+  ;; filling onto following lines indented by 2 if they don't fit.
+  ;; The result type, the attributes, and each keyword/value pair are
+  ;; on their own lines, indented by 2:
   ;;
-  ;;   (defknown name (arg-types) result-type
-  ;;     (attributes) :key value ...)
+  ;;   (defknown name (arg-types)
+  ;;     result-type
+  ;;     (attributes)
+  ;;     :key value
+  ;;     ...)
   ;;
   ;; The name, arg types, result type, and attributes are printed with
   ;; PPRINT-FILL.  Otherwise, the car of each list would select the
@@ -2111,29 +2116,23 @@ When annotations are present, invoke them at the right positions."
     ;; Output the list of arg types
     (pprint-fill stream (pprint-pop))
     (pprint-exit-if-list-exhausted)
-    (write-char #\space stream)
-    (pprint-newline :fill stream)
-    ;; Output the result type
+    ;; Output the result type on a new line
+    (pprint-newline :mandatory stream)
     (pprint-fill stream (pprint-pop))
     (pprint-exit-if-list-exhausted)
-    (write-char #\space stream)
-    (pprint-newline :fill stream)
-    ;; Output the list of attributes
+    ;; Output the list of attributes on a new line
+    (pprint-newline :mandatory stream)
     (pprint-fill stream (pprint-pop))
-    (pprint-exit-if-list-exhausted)
-    (write-char #\space stream)
-    (pprint-newline :fill stream)
-    ;; Output the keyword/value pairs, keeping each pair together.
+    ;; Output each keyword/value pair on a new line, indented by 2.
     (loop
+      (pprint-exit-if-list-exhausted)
+      (pprint-newline :mandatory stream)
       ;; Output the keyword
       (output-object (pprint-pop) stream)
       (pprint-exit-if-list-exhausted)
       (write-char #\space stream)
       ;; Output the value
-      (output-object (pprint-pop) stream)
-      (pprint-exit-if-list-exhausted)
-      (write-char #\space stream)
-      (pprint-newline :fill stream))))
+      (output-object (pprint-pop) stream))))
 
 ;;;; Interface seen by regular (ugly) printer and initialization routines.
 
