@@ -125,3 +125,54 @@
 
     (when *compile-print*
       (compiler-mumble (intl:gettext "~&; Converted ~S.~%") name))))
+
+
+;; Bootstrap file for using the xoroshiro assembly routine on sparc.
+;;
+;; The host compiler needs the ROTLX instruction macro to assemble
+;; assembly/sparc/arith.lisp, and it needs the defknown and the VOP
+;; for KERNEL::RANDOM-XOROSHIRO-UPDATE to compile
+;; code/rand-xoroshiro.lisp.
+
+(in-package "SPARC")
+
+;; DEFINE-ASSEMBLY-ROUTINE isn't in the core, so load it.
+#+(and random-xoroshiro sparc-v9)
+(load "target:assembly/assemfile")
+
+#+(and random-xoroshiro sparc-v9)
+(ext:without-package-locks
+  (define-instruction-macro rotlx (dst src count temp)
+    `(let ((n (mod ,count 64)))
+       (cond ((zerop n)
+              (move ,dst ,src))
+             (t
+              (inst sllx ,temp ,src n)
+              (inst srlx ,dst ,src (- 64 n))
+              (inst or ,dst ,temp))))))
+
+#+(and random-xoroshiro sparc-v9)
+(defknown kernel::random-xoroshiro-update ((simple-array double-float (2)))
+  (values (unsigned-byte 32) (unsigned-byte 32))
+  (movable))
+
+;; Since C::*DO-ASSEMBLY* is NIL, this just defines the VOP that calls
+;; the assembly routine.
+#+(and random-xoroshiro sparc-v9)
+(define-assembly-routine
+  (xoroshiro-update
+   (:translate kernel::random-xoroshiro-update)
+   (:return-style :raw)
+   (:cost 30)
+   (:policy :fast-safe)
+   (:arg-types simple-array-double-float)
+   (:result-types unsigned-num unsigned-num))
+  ((:arg state descriptor-reg a0-offset)
+   (:res r1 unsigned-reg nl1-offset)
+   (:res r0 unsigned-reg nl0-offset)
+   (:temp s0 unsigned-reg nl2-offset)
+   (:temp s1 unsigned-reg nl3-offset)
+   (:temp t0 unsigned-reg nl4-offset)
+   (:temp t1 unsigned-reg nl5-offset)))
+
+(in-package "CL-USER")
