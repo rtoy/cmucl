@@ -2132,19 +2132,36 @@ about function addresses and register values.")
 (define-instruction-macro li64 (reg value &optional temp)
   `(%li64 ,reg ,value ,temp))
 
-;; Rotate 64-bit register SRC by COUNT bits, storing the result in
-;; DST.  TEMP must be different from SRC and DST.  DST may be the same
-;; as SRC.
+;; Rotate the 64-bit register SRC left by COUNT bits, storing the
+;; result in DST.  COUNT is either an integer or an unsigned-reg TN.
+;; TEMP must differ from SRC and DST, and from COUNT if COUNT is a TN.
+;; DST may be the same as SRC or COUNT.
+;;
+;;   dst = rotl(src, n)
+;;       = (src << n) | (src >> (64 - n))
 (define-instruction-macro rotlx (dst src count temp)
-  `(let ((n (mod ,count 64)))
-     (cond ((zerop n)
-	    (move ,dst ,src))
-	   (t
-	    ;; dst = rotl(src, n)
-	    ;;     = (src << n) | (src >> (64 - n))
-	    (inst sllx ,temp ,src n)
-	    (inst srlx ,dst ,src (- 64 n))
-	    (inst or ,dst ,temp)))))
+  `(let ((n ,count))
+     ;; Make sure temp is neither src nor dst
+     (assert (not (location= ,temp ,src)))
+     (assert (not (location= ,temp ,dst)))
+     (etypecase n
+       (integer
+	(let ((n (mod n 64)))
+	  (cond ((zerop n)
+		 (move ,dst ,src))
+		(t
+		 (inst sllx ,temp ,src n)
+		 (inst srlx ,dst ,src (- 64 n))
+		 (inst or ,dst ,temp)))))
+       (tn
+	;; Count is a register.  Temp cannot be the same register.
+	(assert (not (location= ,temp n)))
+	;; The hardware uses only the low 6 bits of the count, so
+	;; -n is the same as 64 - n.
+	(inst neg ,temp n)
+	(inst srlx ,temp ,src ,temp)
+	(inst sllx ,dst ,src n)
+	(inst or ,dst ,temp)))))
 )
 
 ;; Define LDN/STN synthetic instructions to do "natural" loads and
