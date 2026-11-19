@@ -230,7 +230,7 @@
 ;; architectures, we use the portable version until a vop is written.
 #+x86
 (declaim (inline xoroshiro-gen))
-#+x86
+#+(or x86 (or sparc-v9 sparc-v8plus))
 (defun xoroshiro-gen (state)
   _N"Generate the next 64-bit result from the xoroshiro128** generator
   using the state in STATE, a simple-array of 2 double-floats.  The
@@ -240,7 +240,7 @@
 	   (optimize (speed 3) (safety 0)))
   (kernel::random-xoroshiro-update state))
 
-#-x86
+#-(or x86 (or sparc-v9 sparc-v8plus))
 (defun xoroshiro-gen (state)
   _N"Generate the next 64-bit result from the xoroshiro128** generator
   using the state in STATE, a simple-array of 2 double-floats.  The

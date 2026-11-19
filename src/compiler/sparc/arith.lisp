@@ -2591,7 +2591,7 @@
 
 (in-package "VM")
 
-#+random-xoroshiro
+#+(and nil random-xoroshiro)
 (progn
 (defknown xoroshiro-next ((simple-array double-float (2)))
   (values (unsigned-byte 32) (unsigned-byte 32))
@@ -2645,3 +2645,8 @@
 
       (inst stx s1 state s1-offset))))
 )
+
+#+random-xoroshiro
+(defknown kernel::random-xoroshiro-update ((simple-array double-float (2)))
+  (values (unsigned-byte 32) (unsigned-byte 32))
+  (movable))

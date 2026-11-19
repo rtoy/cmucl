@@ -2132,6 +2132,19 @@ about function addresses and register values.")
 (define-instruction-macro li64 (reg value &optional temp)
   `(%li64 ,reg ,value ,temp))
 
+;; Rotate 64-bit register SRC by COUNT bits, storing the result in
+;; DST.  TEMP must be different from SRC and DST.  DST may be the same
+;; as SRC.
+(define-instruction-macro rotlx (dst src count temp)
+  `(let ((n (mod ,count 64)))
+     (cond ((zerop n)
+	    (move ,dst ,src))
+	   (t
+	    ;; dst = rotl(src, n)
+	    ;;     = (src << n) | (src >> (64 - n))
+	    (inst sllx ,temp ,src n)
+	    (inst srlx ,dst ,src (- 64 n))
+	    (inst or ,dst ,temp)))))
 )
 
 ;; Define LDN/STN synthetic instructions to do "natural" loads and

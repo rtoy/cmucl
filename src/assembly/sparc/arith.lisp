@@ -362,3 +362,79 @@
 
   RETURN-NIL
   (inst move res null-tn))
+
+
+;;; Support for the xoroshiro128** generator.  See
+;;; https://prng.di.unimi.it/xoroshiro128starstar.c for the official
+;;; code.
+;;;
+;;; This is what we're implementing, where s[] is our state vector.
+;;;
+;;; static uint64_t s[2];
+;;; static inline uint64_t rotl(const uint64_t x, int k) {
+;;;   return (x << k) | (x >> (64 - k));
+;;; }
+;;;
+;;; uint64_t next(void) {
+;;;   const uint64_t s0 = s[0];
+;;; 	 uint64_t s1 = s[1];
+;;; 	 const uint64_t result = rotl(s0 * 5, 7) * 9;
+;;; 
+;;; 	 s1 ^= s0;
+;;; 	 s[0] = rotl(s0, 24) ^ s1 ^ (s1 << 16); // a, b
+;;; 	 s[1] = rotl(s1, 37); // c
+;;; 
+;;; 	 return result;
+;;; }
+;;;
+;;; A VOP is also generated to call this assembly routine.  This
+;;; routine computes a new 64-bit random number and also updates the
+;;; state, which is (simple-array (double-float) (2)).
+#+(and random-xoroshiro sparc-v9 sparc-v8plus)
+(define-assembly-routine
+  (xoroshiro-update
+   (:translate kernel::random-xoroshiro-update)
+   (:return-style :raw)
+   (:cost 30)
+   (:policy :fast-safe)
+   (:arg-types simple-array-double-float)
+   (:result-types unsigned-num unsigned-num))
+  ((:arg state descriptor-reg a0-offset)
+   (:res r1 unsigned-reg nl1-offset)
+   (:res r0 unsigned-reg nl0-offset)
+   (:temp s0 unsigned-reg nl2-offset)
+   (:temp s1 unsigned-reg nl3-offset)
+   (:temp t0 unsigned-reg nl4-offset)
+   (:temp t1 unsigned-reg nl5-offset))
+
+  ;; s0 = s[0]
+  (inst ldx s0 state (- (* vm:vector-data-offset vm:word-bytes)
+			vm:other-pointer-type))
+  ;; r0 = rotl(s0*5, 7)*9
+  (inst mulx t0 s0 5)
+  (inst rotlx t0 t0 7 t1)
+  (inst mulx r0 t0 9)
+
+  ;; s1 = s[1] ^ s0
+  (inst ldx s1 state (+ (* 1 double-float-bytes)
+			(- (* vm:vector-data-offset vm:word-bytes)
+			   vm:other-pointer-type)))
+  (inst xor s1 s0)
+
+  ;; s[0] = rotl(s0, 24) ^ s1 ^ (s1 << 16)
+  (inst rotlx t0 s0 24 t1)
+  (inst xor t0 s1)
+  (inst sllx t1 s1 16)
+  (inst xor t0 t1)
+  (inst stx t0 state (- (* vm:vector-data-offset vm:word-bytes)
+			vm:other-pointer-type))
+
+  ;; s[1] = rotl(s1, 37)
+  (inst rotlx t0 s1 37 t1)
+  (inst stx t0 state (+ (* 1 double-float-bytes)
+			(- (* vm:vector-data-offset vm:word-bytes)
+			   vm:other-pointer-type)))
+
+  ;; r1 = high 32 bits, r0 = low 32 bits
+  (inst srlx r1 r0 32)
+  (inst clruw r0))
