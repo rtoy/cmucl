@@ -24,6 +24,7 @@
 
 (register-lisp-feature :linux)
 (register-lisp-feature :elf)
+#-ppc
 (register-lisp-runtime-feature :executable)
 
 (setq *software-type* "Linux")
