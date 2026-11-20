@@ -8,6 +8,39 @@
 #ifndef PPC_VALIDATE_H
 #define PPC_VALIDATE_H
 
+/*
+ * Address map:
+ *
+ *  Darwin:
+ *	0x04000000->0x0c000000  128M Read-Only Space.
+ *	0x10000000->0x18000000  128M Static Space.
+ *	0x17000000->0x17800000    8M Foreign Linkage Table (inside the
+ *				     end of the static space).
+ *	0x30000000->0x38000000  128M Control stack growing up.
+ *	0x38000000->0x40000000  128M Binding stack growing up.
+ *	0x40000000->0x80000000 1024M Dynamic Space (GENCGC).
+ *
+ *  Linux:
+ *	0x04000000->0x0c000000  128M Read-Only Space.
+ *	0x10000000->		     C program and malloc heap.
+ *	0x20000000->0x28000000  128M Static Space.
+ *	0x28000000->0x28800000    8M Foreign Linkage Table.
+ *	0x30000000->0x38000000  128M Control stack growing up.
+ *	0x38000000->0x40000000  128M Binding stack growing up.
+ *	0x40000000->0x80000000 1024M Dynamic Space (GENCGC).
+ *	High memory:		     Shared libraries and C stack.
+ *
+ * Without GENCGC, the dynamic space is two 512M spaces at 0x40000000
+ * and 0x60000000.
+ *
+ * The sizes above are the maximums.  Each space except the linkage
+ * table leaves a 32K hole at its end, and the dynamic space actually
+ * allocated defaults to DEFAULT_DYNAMIC_SPACE_SIZE.
+ *
+ * The static space is moved on Linux because ELF executables are
+ * loaded at 0x10000000.
+ */
+
 #ifdef LINKAGE_TABLE
 /*
  * This space start better match the value of
