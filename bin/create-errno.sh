@@ -60,7 +60,10 @@ TEMPLATE="bin/errno-template.lisp"
 if [ -z "$DEFAULT" ]; then
     case $(uname -s) in
 	Linux) ERRNO_HEADERS=/usr/include/asm-generic/errno*.h
-	       ERRNO_FILE="bin/errno-linux.lisp"
+	       case $(uname -m) in
+		   ppc*|powerpc*) ERRNO_FILE="bin/errno-linux-ppc.lisp" ;;
+		   *) ERRNO_FILE="bin/errno-linux.lisp" ;;
+	       esac
 	       ;;
 	Darwin) ERRNO_HEADERS=/usr/include/sys/errno.h
 		ERRNO_FILE="bin/errno-darwin.lisp"
