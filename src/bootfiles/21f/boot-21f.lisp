@@ -134,6 +134,7 @@
 ;; for KERNEL::RANDOM-XOROSHIRO-UPDATE to compile
 ;; code/rand-xoroshiro.lisp.
 
+#+sparc
 (in-package "SPARC")
 
 ;; DEFINE-ASSEMBLY-ROUTINE isn't in the core, so load it.
