@@ -186,7 +186,7 @@
     (when traps-p
       (let ((trap-mask-bits (float-trap-mask traps)))
 	(setf (ldb float-traps-byte modes) trap-mask-bits)
-	#+(and x86 sse2)
+	#+(or (and x86 sse2) ppc)
 	(progn
 	  ;; Clear out any current or accrued exceptions that match
 	  ;; the traps that we are enabling.  If we don't then
@@ -196,7 +196,12 @@
 	  (setf (ldb float-sticky-bits modes)
 		(logandc2 (ldb float-sticky-bits modes) trap-mask-bits))
 	  (setf (ldb float-exceptions-byte modes)
-		(logandc2 (ldb float-exceptions-byte modes) trap-mask-bits)))))
+		(logandc2 (ldb float-exceptions-byte modes) trap-mask-bits)))
+	#+ppc
+	(when (member :invalid traps)
+	  ;; Clear out the bits for the detected invalid operation
+	  (setf (ldb vm:float-invalid-op-1-byte modes) 0)
+	  (setf (ldb vm:float-invalid-op-2-byte modes) 0))))
     (when round-p
       (setf (ldb float-rounding-mode modes)
 	    (or (cdr (assoc rounding-mode rounding-mode-alist))
