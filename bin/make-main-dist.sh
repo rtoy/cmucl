@@ -118,6 +118,13 @@ case $OS in
       ;;
 esac
 
+# ppc doesn't support executables.
+case $ARCH in
+  ppc*)
+      EXECUTABLE=""
+      ;;
+esac
+
 # Frob PATH to use /usr/ucb/install for Solaris
 if [ `uname -s` = "SunOS" ]
 then

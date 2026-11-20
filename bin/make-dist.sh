@@ -70,7 +70,10 @@ def_arch_os () {
 	  OS=solaris$rel
 	  ;;
       Linux)
-	  ARCH=x86
+	  case `uname -m` in
+	      ppc*|powerpc*) ARCH=ppc ;;
+	      *) ARCH=x86 ;;
+	  esac
 	  OS=linux
 	  ;;
       Darwin)
