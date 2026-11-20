@@ -677,6 +677,19 @@ restore_fpu(ucontext_t *context)
 #endif        
     }
 }
+#elif defined(ppc)
+/*
+ * Linux clears the FPSCR before running a signal handler.  Restore it
+ * from the context, since Lisp may throw out of the handler instead
+ * of returning.
+ */
+void
+restore_fpu(ucontext_t *context)
+{
+    double fpscr = context->uc_mcontext.uc_regs->fpregs.fpscr;
+
+    __asm__ __volatile__ ("mtfsf 0xff,%0" : : "f" (fpscr));
+}
 #elif defined(__arm__)
 void
 restore_fpu(ucontext_t *context)

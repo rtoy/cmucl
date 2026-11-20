@@ -382,6 +382,7 @@ sigill_handler(HANDLER_ARGS)
     int opcode;
 
     sigprocmask(SIG_SETMASK, &os_context->uc_sigmask, 0);
+    RESTORE_FPU(os_context);
     opcode = *((int *) SC_PC(os_context));
 
 #if 0

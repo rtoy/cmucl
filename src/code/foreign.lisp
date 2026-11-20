@@ -913,7 +913,9 @@ environment passed to Lisp."
 		 ;; variable, or via the "-m" command-line option. Here we
 		 ;; assume that LDEMULATION will be ignored by the platform
 		 ;; linker on Linux/i386 platforms.
-		 :env `(#+(and x86 linux) (:ldemulation . "elf_i386") ,@env)
+		 :env `(#+(and x86 linux) (:ldemulation . "elf_i386")
+			#+(and ppc linux) (:ldemulation . "elf32ppclinux")
+			,@env)
 		 :input nil
 		 :output error-output
 		 :error :output)))
