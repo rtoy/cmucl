@@ -38,7 +38,9 @@ ASFLAGS = $(ARCH_FLAGS) -g -Wa,-mregnames -Dppc $(LINKAGE) $(GENCGC) $(ELF)
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = ppc-assem.S linux-stubs.S
 ARCH_SRC = ppc-arch.c
-OS_SRC = os-common.c Linux-os.c
+OS_SRC = os-common.c Linux-os.c elf.c
 
 OS_LINK_FLAGS = -m32 -no-pie -rdynamic -Wl,-z,noexecstack
 OS_LIBS = -ldl
+
+EXEC_FINAL_OBJ = exec-final.o

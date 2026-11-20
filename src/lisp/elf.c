@@ -125,7 +125,7 @@ write_elf_header(int fd)
     eh.e_ident[EI_MAG3]		= ELFMAG3;
 
     eh.e_ident[EI_CLASS]	= ELFCLASS32;
-#if defined(sparc) && defined(SOLARIS)
+#if (defined(sparc) && defined(SOLARIS)) || defined(ppc)
     eh.e_ident[EI_DATA]		= ELFDATA2MSB;
 #else
     eh.e_ident[EI_DATA]		= ELFDATA2LSB;
@@ -155,6 +155,8 @@ write_elf_header(int fd)
      * v8plus binaries.
      */
     eh.e_machine	= EM_SPARC32PLUS;
+#elif defined(ppc)
+    eh.e_machine	= EM_PPC;
 #else
     eh.e_machine	= EM_386;
 #endif

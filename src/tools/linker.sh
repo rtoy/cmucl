@@ -66,6 +66,10 @@ case $uname_s in
       # Extra stuff.
 
       OPT_EXTRA="-rdynamic"
+      # Link the same way as the lisp binary.  See Config.ppc_linux.
+      case `uname -m` in
+	ppc*|powerpc*) OPT_EXTRA="$OPT_EXTRA -no-pie -Wl,-z,noexecstack";;
+      esac
 
       # See Config.x86_${uname_s}
       case $uname_s in
