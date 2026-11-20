@@ -1,0 +1,44 @@
+# -*- Mode: makefile -*-
+CPPFLAGS = -iquote . -iquote $(PATH1)
+
+CC = gcc
+NM = nm -gp
+CPP = cpp
+DEPEND_FLAGS = -MM
+
+ifdef FEATURE_LINKAGE_TABLE
+LINKAGE = -DLINKAGE_TABLE
+endif
+
+# Enable support for generational GC
+ifdef FEATURE_GENCGC
+GENCGC = -DGENCGC
+GC_SRC = gencgc.c
+endif
+
+# Enable support for Unicode
+ifdef FEATURE_UNICODE
+UNICODE = -DUNICODE
+endif
+
+ifdef FEATURE_ELF
+ELF = -DFEATURE_ELF
+endif
+
+# Build a 32-bit non-PIE executable.  ppc-assem.S uses absolute
+# addresses for globals, and the Lisp spaces are at fixed addresses.
+# Lisp uses r13 as NFP, so the small data area can't be used.
+ARCH_FLAGS = -m32 -fno-pie -msdata=none
+
+CFLAGS = $(ARCH_FLAGS) -g -O2 -ffp-contract=off -fno-omit-frame-pointer \
+	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
+	-Dppc $(LINKAGE) $(GENCGC) $(UNICODE) $(ELF)
+ASFLAGS = $(ARCH_FLAGS) -g -Wa,-mregnames -Dppc $(LINKAGE) $(GENCGC) $(ELF)
+
+UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
+ASSEM_SRC = ppc-assem.S linux-stubs.S
+ARCH_SRC = ppc-arch.c
+OS_SRC = os-common.c Linux-os.c
+
+OS_LINK_FLAGS = -m32 -no-pie -rdynamic -Wl,-z,noexecstack
+OS_LIBS = -ldl
