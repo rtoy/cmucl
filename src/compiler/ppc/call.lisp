@@ -248,7 +248,7 @@
     
     (inst addi csp-tn csp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
-    (when (ir2-environment-number-stack-p callee)
+    (when (callee-nfp-tn callee)
       (let* ((nbytes (bytes-needed-for-non-descriptor-stack-frame)))
 	(when (> nbytes number-stack-displacement)
 	  (inst stwu nsp-tn nsp-tn (- (bytes-needed-for-non-descriptor-stack-frame)))

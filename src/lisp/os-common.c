@@ -233,7 +233,7 @@ os_foreign_linkage_init(void)
         }
 #endif        
 	if (i == 0) {
-#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
+#if defined(sparc) || defined(ppc)
             if (type != LINKAGE_CODE_TYPE || strcmp(c_symbol_name, EXTERN_ALIEN_NAME("call_into_c"))) {
 		fprintf(stderr, "linkage_data is %s but expected %s\n",
 			c_symbol_name,

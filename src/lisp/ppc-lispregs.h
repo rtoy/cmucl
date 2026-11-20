@@ -86,8 +86,17 @@
 #define reg_FDEFN_NUM     30
 #define reg_LIP_NUM       31	/* Lisp Interior Pointer, e.g., locative */
 
+#ifdef DARWIN
 #define reg_LR		  34    /* LR register.  See Darwin-os.c */
 #define reg_CTR           35    /* CTR register.  See Darwin-os.c */
+#else
+/* Indices of the special registers in gregs; see <asm/ptrace.h> */
+#define PT_NIP		  32
+#define reg_CTR           35
+#define reg_LR		  36    /* PT_LNK */
+#define PT_DAR		  41
+#define PT_DSISR	  42
+#endif
 #define REGNAMES \
         "ZERO",		"NSP",	        "POLL",		"NL0", \
 	"NL1",		"NL2",		"NL3",		"NL4", \
@@ -114,8 +123,8 @@
 #define SC_PC(sc) (sc->uc_mcontext->ss.srr0)
 #endif
 #else
-#define SC_REG(sc,reg) (((unsigned long *)(sc->regs))[(reg)])
-#define SC_PC(sc) (((unsigned long *)(sc->regs))[PT_NIP])
+#define SC_REG(sc,reg) ((sc)->uc_mcontext.uc_regs->gregs[(reg)])
+#define SC_PC(sc) SC_REG(sc, PT_NIP)
 #endif
 
 #endif

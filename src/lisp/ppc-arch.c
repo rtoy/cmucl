@@ -17,6 +17,10 @@
 #include "signal.h"
 #include "interrupt.h"
 #include "interr.h"
+#include "breakpoint.h"
+#ifdef GENCGC
+#include "gencgc.h"
+#endif
 
   /* The header files may not define PT_DAR/PT_DSISR.  This definition
      is correct for all versions of ppc linux >= 2.0.30
@@ -143,7 +147,9 @@ arch_do_displaced_inst(os_context_t * scp, unsigned long orig_inst)
     *pc = TWLLEI_R0(trap_AfterBreakpoint);
     os_flush_icache((os_vm_address_t) pc, sizeof(unsigned int));
 
+#ifdef DARWIN
     sigreturn(scp);
+#endif
 }
 
 #ifdef GENCGC
@@ -442,7 +448,7 @@ sigill_handler(HANDLER_ARGS)
 	      printf("trap_Breakpoint\n");
 	      fflush(stdout);
 #endif
-	      handle_breakpoint(signal, code, os_context);
+	      handle_breakpoint(signal, CODE(code), os_context);
 	      break;
 
 	  case trap_FunctionEndBreakpoint:
@@ -451,7 +457,7 @@ sigill_handler(HANDLER_ARGS)
 	      fflush(stdout);
 #endif
 	      SC_PC(os_context) =
-		  (int) handle_function_end_breakpoint(signal, code, os_context);
+		  (int) handle_function_end_breakpoint(signal, CODE(code), os_context);
 	      break;
 
 	  case trap_AfterBreakpoint:

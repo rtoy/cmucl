@@ -106,7 +106,7 @@
 #define set_current_region_end(value) \
   SetSymbolValue(CURRENT_REGION_END_ADDR, (value))
 
-#elif defined(DARWIN) && defined(__ppc__)
+#elif defined(ppc)
 #ifndef pseudo_atomic_InterruptedValue
 #define pseudo_atomic_InterruptedValue 1
 #endif
@@ -155,7 +155,7 @@ static void *invalid_stack_start, *invalid_stack_end;
 static inline void
 check_escaped_stack_object(lispobj * where, lispobj obj)
 {
-#if !defined(DARWIN) && !defined(__ppc__)
+#if !defined(DARWIN) && !defined(ppc)
     void *p;
 
     if (Pointerp(obj)
@@ -2199,7 +2199,7 @@ signal_space_p(lispobj obj)
 #endif    
 }
 
-#if (defined(DARWIN) && defined(__ppc__))
+#if defined(ppc)
 /*
  * The assembly code defines these as functions, so we make them
  * functions.  We only care about their addresses anyway.
@@ -2248,7 +2248,7 @@ other_space_p(lispobj obj)
     if (obj == (lispobj) 0xffffffe9) {
         in_space = TRUE;
     }
-#elif defined(__ppc__)
+#elif defined(ppc)
     /*
      * For ppc, just ignore anything below fpu_restore, which is
      * currently at the end of ppc-assem.S.
@@ -2998,7 +2998,7 @@ scavenge_interrupt_contexts(void)
  * Aargh!  Why is SPARC so different here?  What is the advantage of
  * making it different from all the other ports?
  */
-#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
+#if defined(sparc) || defined(ppc)
 #define RAW_ADDR_OFFSET 0
 #else
 #define RAW_ADDR_OFFSET (6 * sizeof(lispobj) - type_FunctionPointer)
@@ -4108,7 +4108,7 @@ size_boxed(lispobj * where)
 }
 
 /* Not needed on sparc and ppc because the raw_addr has a function lowtag */
-#if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
+#if !(defined(sparc) || defined(ppc))
 static int
 scav_fdefn(lispobj * where, lispobj object)
 {
@@ -4794,7 +4794,7 @@ scav_hash_vector(lispobj * where, lispobj object)
     }
 #endif
 
-#if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
+#if !(defined(sparc) || defined(ppc))
     if (gc_assert_level > 0) {
         gc_assert(where == (lispobj *) PTR(hash_table->table));
     }
@@ -5637,7 +5637,7 @@ gc_init_tables(void)
      * Note: for sparc and ppc we don't have to do anything special
      * for fdefns, cause the raw-addr has a function lowtag.
      */
-#if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
+#if !(defined(sparc) || defined(ppc))
     scavtab[type_Fdefn] = scav_fdefn;
 #else
     scavtab[type_Fdefn] = scav_boxed;
@@ -7335,7 +7335,7 @@ verify_space(lispobj * start, size_t words)
 	    } else {
 		/* Verify that it points to another valid space */
 		if (!to_readonly_space && !to_static_space 
-#if (defined(DARWIN) && defined(__ppc__))
+#if defined(ppc)
 
 		    && !((thing == (int) &closure_tramp) ||
                          (thing == (int) &undefined_tramp))
@@ -7351,7 +7351,7 @@ verify_space(lispobj * start, size_t words)
 			    (unsigned long) thing, (unsigned long) start,
 			    (unsigned long) &undefined_tramp);
 #endif                    
-#if (defined(DARWIN) && defined(__ppc__))
+#if defined(ppc)
                     fprintf(stderr, " (closure_tramp = %lx)",
 			    (unsigned long) &closure_tramp);
 #endif
@@ -8428,7 +8428,7 @@ alloc(int nbytes)
 {
     void *new_obj;
 
-#if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
+#if !(defined(sparc) || defined(ppc))
     /*
      * *current-region-free-pointer* is the same as alloc-tn (=
      * current_dynamic_space_free_pointer) and therefore contains the

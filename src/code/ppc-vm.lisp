@@ -80,13 +80,17 @@
     (vrvalid unsigned-long)
     (pad5 (array unsigned-long 7))))
 
+;; Use the ucontext_t structure for Linux.  The registers are found
+;; through uc_mcontext.uc_regs.
 #-darwin
 (def-alien-type unix:sigcontext
   (struct nil
-    (sc-unused (array unsigned-long 4))
-    (sc-signal int)
-    (sc-handler unsigned-long)
-    (sc-oldmask unsigned-long)
+    (uc-flags unsigned-long)
+    (uc-link system-area-pointer)
+    (uc-stack-sp system-area-pointer)
+    (uc-stack-flags int)
+    (uc-stack-size unsigned-long)
+    (uc-pad (array int 7))
     (sc-regs (* sigcontext-regs))))
 
 ;; Use the ucontext_t structure for Darwin
@@ -297,7 +301,10 @@
 ;;; 
 (defun extern-alien-name (name)
   (declare (type simple-base-string name))
-  (concatenate 'simple-base-string "_" name))
+  #-elf
+  (concatenate 'simple-base-string "_" name)
+  #+elf
+  name)
 
 #-linkage-table
 (defun lisp::foreign-symbol-address-aux (name flavor)

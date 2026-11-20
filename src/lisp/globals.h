@@ -57,7 +57,7 @@ extern void globals_init(void);
 #ifdef DARWIN
 #define EXTERN(name,bytes) .globl _/**/name
 #else
-#define EXTERN(name,bytes) .globl _/**/name
+#define EXTERN(name,bytes) .globl name
 #endif
 #endif
 #ifdef mips

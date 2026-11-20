@@ -69,7 +69,7 @@ extern void restore_fpu_state(void*);
 #include "x86-arch.h"
 #endif
 
-#if defined(DARWIN) && defined(__ppc__)
+#if defined(ppc)
 #include "ppc-arch.h"
 #endif
 

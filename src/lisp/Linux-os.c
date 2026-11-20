@@ -45,6 +45,9 @@
 #include <dlfcn.h>
 #include <assert.h>
 #include <sys/personality.h>
+#ifdef ppc
+#include <sys/prctl.h>
+#endif
 
 #include "validate.h"
 size_t os_vm_page_size;
@@ -150,6 +153,45 @@ os_init0(const char *argv[], const char *envp[])
     check_personality(&name, (char *const *) argv, (char *const *) envp);
 }
 
+#ifdef ppc
+/*
+ * Factor to convert time base ticks to cycles.  This is accessed by
+ * Lisp; see CYCLE-COUNT/FLOAT in code/time.lisp.
+ */
+int cycles_per_tick = 1;
+
+/*
+ * The time base on PPC is not a cycle counter, so compute the ratio
+ * from the clock and timebase values in /proc/cpuinfo.
+ */
+static void
+timebase_init(void)
+{
+    FILE *f;
+    char line[256];
+    double cpu_mhz = 0;
+    unsigned long tb_freq = 0;
+
+    f = fopen("/proc/cpuinfo", "r");
+    if (f == NULL) {
+	return;
+    }
+    while (fgets(line, sizeof(line), f) != NULL) {
+	if (cpu_mhz == 0) {
+	    sscanf(line, "clock : %lfMHz", &cpu_mhz);
+	}
+	if (tb_freq == 0) {
+	    sscanf(line, "timebase : %lu", &tb_freq);
+	}
+    }
+    fclose(f);
+
+    if (cpu_mhz > 0 && tb_freq > 0) {
+	cycles_per_tick = 0.5 + cpu_mhz * 1e6 / tb_freq;
+    }
+}
+#endif
+
 void
 os_init(const char *argv[], const char *envp[])
 {
@@ -165,6 +207,17 @@ os_init(const char *argv[], const char *envp[])
     }
 
     os_vm_page_size = getpagesize();
+
+#ifdef ppc
+    /*
+     * Linux disables FP exceptions by default.  Enable precise
+     * exceptions so that the trap enable bits in the FPSCR work.
+     */
+    if (prctl(PR_SET_FPEXC, PR_FP_EXC_PRECISE) == -1) {
+	perror("prctl(PR_SET_FPEXC)");
+    }
+    timebase_init();
+#endif
 }
 
 #ifdef __i386
@@ -363,6 +416,8 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 {
     abort();
 }
+#elif defined(ppc)
+/* The sigcontext is accessed directly; see SC_REG in ppc-lispregs.h. */
 #else
 #error "unknown architecture"
 #endif
@@ -410,6 +465,11 @@ os_map(int fd, int offset, os_vm_address_t addr, os_vm_size_t len)
 void
 os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 {
+#ifdef ppc
+    extern void ppc_flush_icache(os_vm_address_t, os_vm_size_t);
+
+    ppc_flush_icache(address, length);
+#endif
 }
 
 void
@@ -468,7 +528,11 @@ void
 sigsegv_handler(HANDLER_ARGS)
 {
     os_context_t *os_context = (os_context_t *) context;
+#if defined(i386) || defined(__x86_64)
     int fault_addr = os_context->uc_mcontext.cr2;
+#else
+    int fault_addr = (int) code->si_addr;
+#endif
 
 #ifdef RED_ZONE_HIT
     if (os_control_stack_overflow((void *) fault_addr, os_context))

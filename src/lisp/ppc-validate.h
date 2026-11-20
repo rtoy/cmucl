@@ -18,6 +18,8 @@
 
 #ifdef LinkageSpaceStart
 #define FOREIGN_LINKAGE_SPACE_START (LinkageSpaceStart)
+#elif defined(__linux__)
+#define FOREIGN_LINKAGE_SPACE_START (0x28000000)
 #else
 #define FOREIGN_LINKAGE_SPACE_START (0x17000000)
 #endif
@@ -38,7 +40,15 @@
 #define READ_ONLY_SPACE_START	(0x04000000)
 #define READ_ONLY_SPACE_SIZE	(0x07ff8000)	/* 128 MB, almost */
 
+/*
+ * These must match target-static-space-start and
+ * target-foreign-linkage-space-start in ppc/parms.lisp.
+ */
+#ifdef __linux__
+#define STATIC_SPACE_START  	(0x20000000)
+#else
 #define STATIC_SPACE_START  	(0x10000000)
+#endif
 #define STATIC_SPACE_SIZE   	(0x07ff8000)	/* 128 MB, almost */
 
 #define CONTROL_STACK_START 	(0x30000000)

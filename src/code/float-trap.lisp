@@ -204,7 +204,7 @@
     (when current-x-p
       (setf (ldb float-exceptions-byte modes)
 	    (float-trap-mask current-exceptions))
-      #+(and darwin ppc)
+      #+ppc
       (when (member :invalid current-exceptions)
  	;; Clear out the bits for the detected invalid operation
  	(setf (ldb vm:float-invalid-op-1-byte modes) 0)
@@ -213,13 +213,13 @@
     (when accrued-x-p
       (setf (ldb float-sticky-bits modes)
 	    (float-trap-mask accrued-exceptions))
-      #+(and darwin ppc)
+      #+ppc
       (when (member :invalid current-exceptions)
  	;; Clear out the bits for the detected invalid operation
  	(setf (ldb vm:float-invalid-op-1-byte modes) 0)
 	(setf (ldb vm:float-invalid-op-2-byte modes) 0)))
 
-    #+(and darwin ppc)
+    #+ppc
     (when (or accrued-x-p current-x-p)
       (setf (ldb vm:float-exceptions-summary-byte modes) 0))
 
@@ -395,7 +395,7 @@
 	(let* ((new-modes modes)
 	       (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
 					 traps)))
-	  #+(and darwin ppc)
+	  #+ppc
 	  (progn
 	    ;; (format t "sigfpe: modes   = #B~32,'0b~%" modes)
 	    ;; (format t "sigfpe: new-exc = #B~32,'0b~%" new-exceptions)
@@ -433,7 +433,7 @@
 		      new-modes (decode-floating-point-modes new-modes)))
 	    (setf (vm:floating-point-modes) new-modes))
 
-	  #-(or sse2 (and darwin ppc))
+	  #-(or sse2 ppc)
 	  (progn
 	    ;; Apparently nothing needed for sparc it seems The FPU
 	    ;; state in the signal handler is unchanged and it seems we

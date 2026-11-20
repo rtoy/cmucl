@@ -84,7 +84,7 @@ static int later_count = 0;
 #define CEILING(x,y) (((x) + ((y) - 1)) & (~((y) - 1)))
 #define NWORDS(x,y) (CEILING((x),(y)) / (y))
 
-#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
+#if defined(sparc) || defined(ppc)
 #define RAW_ADDR_OFFSET 0
 #else
 #define RAW_ADDR_OFFSET (6*sizeof(lispobj) - type_FunctionPointer)
@@ -1788,7 +1788,7 @@ purify(lispobj static_roots, lispobj read_only_roots)
     verify_space((lispobj *) static_space, static_free - static_space);
 #endif
     
-#if !defined(ALLOCATION_POINTER)
+#if !defined(ALLOCATION_POINTER) && !defined(GENCGC)
     current_dynamic_space_free_pointer = current_dynamic_space;
 #else
 #if defined(WANT_CGC) && defined(X86_CGC_ACTIVE_P)

@@ -152,7 +152,7 @@ struct page {
  * allocation trap less often.)
  */
 #define GC_PAGE_SIZE (4*8192)
-#elif defined(DARWIN)
+#elif defined(ppc)
 /*
  * The physical page size is 4K.  Like sparc, this appears to be
  * somewhat slow (but need to verify that), so let's make the page

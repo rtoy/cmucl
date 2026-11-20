@@ -38,7 +38,7 @@
 (setf (backend-page-size *target-backend*) 4096)
 
 (setf (c::backend-foreign-linkage-space-start *target-backend*)
-      #x17000000
+      #-linux #x17000000 #+linux #x28000000
       (c::backend-foreign-linkage-entry-size *target-backend*)
       32)
 
@@ -185,13 +185,16 @@
 
 ;;; Where to put the different spaces.
 ;;; 
+;;; On Linux, a non-PIE 32-bit executable is loaded at #x10000000
+;;; with the brk heap right after it, so static space and the linkage
+;;; table are moved to the free area below the control stack.
 (defparameter target-read-only-space-start #x04000000)
-(defparameter target-static-space-start    #x10000000)
+(defparameter target-static-space-start    #-linux #x10000000 #+linux #x20000000)
 (defparameter target-dynamic-space-start   #x40000000)
 ;; We're sticking this at the end of the static space for now for the
 ;; first linkage-table build because it's mapped with the
 ;; static-space.  We can move it later once linkage-table is built.
-(defparameter target-foreign-linkage-space-start #x17000000)
+(defparameter target-foreign-linkage-space-start #-linux #x17000000 #+linux #x28000000)
 (defconstant target-foreign-linkage-entry-size 32) ;In bytes.  Duh.
 
 

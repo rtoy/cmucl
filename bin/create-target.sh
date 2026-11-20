@@ -39,7 +39,12 @@ uname_s=`uname -s`
 uname_m=`uname -m 2>/dev/null`
 [ -n "$lisp_variant" ] || {
     case $uname_s in
-	Linux) lisp_variant=x86_linux ;;
+	Linux)
+	    case $uname_m in
+		ppc*|powerpc*) lisp_variant=ppc_linux ;;
+		*) lisp_variant=x86_linux ;;
+	    esac
+	    ;;
 	FreeBSD) lisp_variant=x86_freebsd ;;
 	SunOS)
 	    case $uname_m in

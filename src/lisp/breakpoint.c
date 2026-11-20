@@ -114,7 +114,7 @@ find_code(os_context_t * scp)
 }
 #endif
 
-#if (defined(DARWIN) && defined(__ppc__)) || (defined(sparc))
+#if defined(ppc) || (defined(sparc))
 /*
  * During a function-end-breakpoint, the pc is sometimes less than the
  * code address, which bypasses the function end stuff.  Then the

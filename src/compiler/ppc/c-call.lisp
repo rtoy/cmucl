@@ -25,10 +25,9 @@
 ;;; backlink and saved LR (see SB!VM::NUMBER-STACK-DISPLACEMENT).
 
 (defconstant +stack-alignment-bytes+
-  ;; Duh.  PPC Linux (and VxWorks) adhere to the EABI.
-  #-darwin 7
-  ;; But Darwin doesn't
-  #+darwin 15)
+  ;; Both Darwin and the SVR4 ABI used by Linux want 16-byte
+  ;; alignment.
+  15)
 
 (defun my-make-wired-tn (prim-type-name sc-name offset)
   (make-wired-tn (primitive-type-or-lose prim-type-name *backend*)
@@ -251,20 +250,59 @@
 	    (and (alien-integer-type-p result-type)
 		 (> (alien::alien-integer-type-bits result-type) 32)))
 	(collect ((new-args) (lambda-vars) (new-arg-types))
-	  (dolist (type arg-types)
-	    (let ((arg (gensym)))
-	      (lambda-vars arg)
-	      (cond ((and (alien-integer-type-p type)
-			  (> (alien::alien-integer-type-bits type) 32))
-		     (new-args `(ash ,arg -32))
-		     (new-args `(logand ,arg #xffffffff))
-		     (if (alien-integer-type-signed type)
-			 (new-arg-types (parse-alien-type '(signed 32)))
+	  ;; The SVR4 ABI passes a 64-bit integer in an odd/even register
+	  ;; pair starting at an odd register (r3, r5, r7, r9) or in an
+	  ;; 8-byte aligned stack slot.  Track the registers and stack
+	  ;; words used, like the :ARG-TN methods do, and insert a 32-bit
+	  ;; pad arg where needed.
+	  (let ((gprs 0)
+		(fprs 0)
+		(stack 0))
+	    (declare (ignorable gprs fprs stack))
+	    (flet ((pad ()
+		     (new-args 0)
+		     (new-arg-types (parse-alien-type '(unsigned 32)))))
+	      (declare (ignorable #'pad))
+	      (dolist (type arg-types)
+		(let ((arg (gensym)))
+		  (lambda-vars arg)
+		  (cond ((and (alien-integer-type-p type)
+			      (> (alien::alien-integer-type-bits type) 32))
+			 #-darwin
+			 (cond ((< gprs 7)
+				(when (oddp gprs)
+				  (pad)
+				  (incf gprs))
+				(incf gprs 2))
+			       (t
+				(when (< gprs 8)
+				  (pad)
+				  (setf gprs 8))
+				(when (oddp stack)
+				  (pad)
+				  (incf stack))
+				(incf stack 2)))
+			 (new-args `(ash ,arg -32))
+			 (new-args `(logand ,arg #xffffffff))
+			 (if (alien-integer-type-signed type)
+			     (new-arg-types (parse-alien-type '(signed 32)))
+			     (new-arg-types (parse-alien-type '(unsigned 32))))
 			 (new-arg-types (parse-alien-type '(unsigned 32))))
-		     (new-arg-types (parse-alien-type '(unsigned 32))))
-		    (t
-		     (new-args arg)
-		     (new-arg-types type)))))
+			(t
+			 #-darwin
+			 (cond ((alien-float-type-p type)
+				(cond ((< fprs 8)
+				       (incf fprs))
+				      (t
+				       (when (oddp stack)
+					 (incf stack))
+				       (incf stack 2))))
+			       ((< gprs 8)
+				(incf gprs))
+			       (t
+				(incf stack)))
+			 (new-args arg)
+			 (new-arg-types type)))))))
 	  (cond ((and (alien-integer-type-p result-type)
 		      (> (alien::alien-integer-type-bits result-type) 32))
 		 (let ((new-result-type

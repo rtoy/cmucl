@@ -4,6 +4,27 @@
 #include "lispregs.h"
 #include "globals.h"
 
+#if !defined DARWIN
+/* ELF symbols don't have a leading underscore. */
+#define _foreign_function_call_active foreign_function_call_active
+#define _current_dynamic_space_free_pointer current_dynamic_space_free_pointer
+#define _current_binding_stack_pointer current_binding_stack_pointer
+#define _current_control_stack_pointer current_control_stack_pointer
+#define _current_control_frame_pointer current_control_frame_pointer
+#define _undefined_tramp undefined_tramp
+#define _closure_tramp closure_tramp
+#define _function_end_breakpoint_guts function_end_breakpoint_guts
+#define _function_end_breakpoint_trap function_end_breakpoint_trap
+#define _function_end_breakpoint_end function_end_breakpoint_end
+#define _lazy_resolve_linkage lazy_resolve_linkage
+#define _fpu_save fpu_save
+#define _fpu_restore fpu_restore
+
+#define hi16(x) x@h
+#define lo16(x) x@l
+#define ha16(x) x@ha
+#endif
+
 #if defined DARWIN
 #define FUNCDEF(x)	.text @ \
 			.align 3 @ \
@@ -15,7 +36,7 @@ _/**/x:
 			.align 3 ; \
 			.type x,@function ; \
 x:
-#define GFUNCDEF(x)	.globl _/**/x @ \
+#define GFUNCDEF(x)	.globl x ; \
 	FUNCDEF(x)
 #endif
 
@@ -49,7 +70,8 @@ x:
 #define NGPR_SAVE_BYTES(n) ((32-(n))*4)
 #define FRAME_ARG_BYTES(n)  (((((n)+6)*4)+15)&~15)
 #else
-#define NGPR_SAVE_BYTES(n) ((32-(~1&((n)+1)))*4)
+#define NGPR_SAVE_BYTES(n) ((32-(n))*4)
+/* Back chain and LR save word, followed by n words */
 #define FRAME_ARG_BYTES(n)  (((((n)+2)*4)+15)&~15)
 #endif
 
@@ -63,18 +85,16 @@ x:
 #else
 #define FRAME_SIZE(first_g,first_f,out_arg_words,savecr) \
 (NFPR_SAVE_BYTES(first_f)+ NGPR_SAVE_BYTES(first_g)+ FRAME_ARG_BYTES(out_arg_words+savecr))
-#define SAVE_FPR(n) stfd n,-8*(32-(n))(11)
-#define SAVE_GPR(n) stw n,-4*(32-(n))(11)
-#define FULL_FRAME_SIZE FRAME_SIZE(FIRST_SAVE_GPR,FIRST_SAVE_FPR,0,1)
+/* Make sure FULL_FRAME_SIZE is on a 16-byte boundary */
+#define FULL_FRAME_SIZE ((FRAME_SIZE(FIRST_SAVE_GPR,FIRST_SAVE_FPR,0,1) + 15) & ~15)
 #endif
 	
 #if defined DARWIN
 #define RESTORE_FPR(n) lfd f/**/n,-8*(32- n)(r11)
 #define RESTORE_GPR(n) lwz r/**/n,-4*(32- n)(r11)
-#else
-#define RESTORE_FPR(n) lfd f##n,-8*(32-(r##n))(r11)
-#define RESTORE_GPR(n) lwz r##n,-4*(32-(r##n))(r11)
 #endif
+
+#if defined DARWIN
 #define C_FULL_PROLOG \
 	nop @\
 	nop @ \
@@ -170,6 +190,51 @@ x:
 	lwz REG(0),8(REG(1)) @ \
 	mtlr REG(0) @ \
 	
+#else
+/*
+ * SVR4 ABI: LR is saved in the caller's frame at 4(r1).  CR is saved
+ * in our frame at 8(r1), after the back chain and LR save word.
+ */
+	.macro C_FULL_PROLOG
+	mflr 0
+	stw 0,4(1)
+	mr 11,1
+	stwu 1,-FULL_FRAME_SIZE(1)
+	mfcr 0
+	stw 0,8(1)
+	.irp n,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+	stfd \n,-8*(32-\n)(11)
+	.endr
+	la 11,-NFPR_SAVE_BYTES(FIRST_SAVE_FPR)(11)
+	.irp n,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+	stw \n,-4*(32-\n)(11)
+	.endr
+	.endm
+
+	.macro C_FULL_EPILOG
+	la 11,FULL_FRAME_SIZE-NFPR_SAVE_BYTES(FIRST_SAVE_FPR)(1)
+	.irp n,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+	lwz \n,-4*(32-\n)(11)
+	.endr
+	la 11,NFPR_SAVE_BYTES(FIRST_SAVE_FPR)(11)
+	.irp n,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+	lfd \n,-8*(32-\n)(11)
+	.endr
+	lwz 0,8(1)
+	mtcr 0
+	lwz 1,0(1)
+	lwz 0,4(1)
+	mtlr 0
+	.endm
+#endif
+
+#if defined DARWIN
+/* Frame for calling C from resolve_linkage_tramp: linkage area */
+#define TRAMP_FRAME_SIZE (24+4)
+#else
+/* Back chain and LR save word, rounded to 16 bytes */
+#define TRAMP_FRAME_SIZE 16
+#endif
 
 
 	
@@ -331,6 +396,10 @@ lra:
 	/* PowerOpen (i.e. OS X) requires the callee address in r12
            (a.k.a. CFUNC), so move it back there, too. */
 	mfctr reg_CFUNC
+#if !defined DARWIN
+	/* Tell varargs functions that FP args may be in FP registers */
+	creqv 6,6,6
+#endif
         /* Into C we go. */
 	bctrl
 
@@ -549,7 +618,7 @@ _function_end_breakpoint_end:
 	
 	mr	reg_NL0, reg_A0
 
-	stwu	r1, (-(24+4))(r1)
+	stwu	r1, (-TRAMP_FRAME_SIZE)(r1)
 	/*
 	 * At this point reg_NIL should be available to us.  
 	 * Call lazy_resolve_linkage to figure out the real function address.
@@ -560,7 +629,7 @@ _function_end_breakpoint_end:
 	mflr	reg_CODE
 	bctrl
 
-	addi	r1,r1,24+4
+	addi	r1,r1,TRAMP_FRAME_SIZE
 	
 	/*
 	 * The desired function is in r3 (NL0), so save it

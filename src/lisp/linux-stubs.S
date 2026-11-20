@@ -32,12 +32,18 @@ ldso_stub__/**/fct/**/$lazy_ptr:		@\
 gcc2_compiled.:
         .text
 
+#if defined(ppc)
+#define STUB_JUMP b
+#else
+#define STUB_JUMP jmp
+#endif
+
 #define doe(fct) \
 	.balign 4 ;\
 .globl PVE_stub_ ## fct ;\
 	.type	 PVE_stub_ ## fct,@function ;\
 PVE_stub_ ## fct: ;\
-	jmp fct ;\
+	STUB_JUMP fct ;\
 .L ## fct ## e1: ;\
 	.size	 PVE_stub_ ## fct,.L ## fct ## e1-PVE_stub_ ## fct  ;
 
