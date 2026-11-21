@@ -19,6 +19,8 @@ all: lisp.nm
 -include internals.inc
 include Config
 
+MSGFMT ?= msgfmt
+
 FDLIBM = k_sin.c k_cos.c k_tan.c s_sin.c s_cos.c s_tan.c sincos.c \
 	s_log1p.c s_expm1.c e_pow.c e_exp.c e_log.c \
 	e_acos.c e_asin.c s_atan.c \
@@ -114,7 +116,7 @@ translations:
 	    echo ; \
 	    echo '***' Processing $$f.pot:  $$po; \
 	    msgmerge -v ../../src/$$po/$$f.po $$pot -o ../$$po/$$f.po; \
-	    msgfmt -v  ../$$po/$$f.po -o ../$$po/$$f.mo; \
+	    $(MSGFMT) -v  ../$$po/$$f.po -o ../$$po/$$f.mo; \
 	    sort < ../$$po/$$f.po > /tmp/$$$$-updated-$$f.po; \
 	    sort < ../../src/$$po/$$f.po > /tmp/$$$$-orig-$$f.po; \
 	    diff -uwB /tmp/$$$$-orig-$$f.po /tmp/$$$$-updated-$$f.po || echo "Warning:  $$po/$$f.po changed"; \
@@ -136,7 +138,7 @@ translations-update:
 	    echo ; \
 	    echo '***' Processing $$f.pot:  $$po; \
 	    msgmerge -v ../../src/$$po/$$f.po $$pot -o ../../src/$$po/$$f.po; \
-	    msgfmt -v  ../../src/$$po/$$f.po -o ../$$po/$$f.mo; \
+	    $(MSGFMT) -v  ../../src/$$po/$$f.po -o ../$$po/$$f.mo; \
 	  done; done
 
 
