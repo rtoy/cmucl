@@ -247,6 +247,23 @@
 #+random-mt19937
 (declaim (notinline kernel:random-chunk))
 
+;; The host's inline expansion of xoroshiro-gen uses the x86-only
+;; random-xoroshiro-update vop.
+#+random-xoroshiro
+(declaim (notinline kernel::xoroshiro-gen))
+
+;; The host's guess-alignment was compiled for x86, which aligns
+;; 64-bit objects on 32 bits.  Sparc aligns them on 64 bits, so alien
+;; types parsed by the cross-compiler need the target's rule.
+(defun alien::guess-alignment (bits)
+  (cond ((null bits) nil)
+	((> bits 32) 64)
+	((> bits 16) 32)
+	((> bits 8) 16)
+	((> bits 1) 8)
+	(t 1)))
+
+
 (setf c:*backend* c:*target-backend*)
 
 ;;; Extern-alien-name for the new backend.
