@@ -363,8 +363,12 @@ print_list(lispobj obj)
 static void
 brief_struct(lispobj obj)
 {
-    printf("#<ptr to 0x%08lx instance>",
-	   ((struct instance *) PTR(obj))->slots[0]);
+    if (!valid_addr((os_vm_address_t) obj)) {
+	printf("(invalid address)");
+    } else {
+	printf("#<ptr to 0x%08lx instance>",
+	       ((struct instance *) PTR(obj))->slots[0]);
+    }
 }
 
 static void
@@ -374,6 +378,11 @@ print_struct(lispobj obj)
     int i;
     char buffer[32];
 
+    if (!valid_addr((os_vm_address_t) obj)) {
+	printf("(invalid address)");
+	return;
+    }
+    
     print_obj("type: ", ((struct instance *) PTR(obj))->slots[0]);
     for (i = 1; i < HeaderValue(instance->header); i++) {
 	sprintf(buffer, "slot %d: ", i);
