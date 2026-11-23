@@ -337,37 +337,16 @@
 (defun two-sqr (a)
   _N"Compute fl(a*a) and err(a*b).  This is a more efficient
   implementation of two-prod"
-  (declare (double-float a))
+  (declare (double-float a)
+	   (inline split))
+  ;; Don't need to do scaling as was done in TWO-PROD because both
+  ;; args are the same.
   (let ((q (* a a)))
     (multiple-value-bind (a-hi a-lo)
 	(split a)
-      (locally
-	  (declare (optimize (inhibit-warnings 3)))
-	(values q (+ (+ (- (* a-hi a-hi) q)
-			(* 2 a-hi a-lo))
-		     (* a-lo a-lo)))))))
-(defun two-sqr (a)
-  _N"Compute fl(a*a) and err(a*b).  This is a more efficient
-  implementation of two-prod"
-  (declare (double-float a))
-  (let ((aa (if (> a +two970+)
-		(* a +two-53+)
-		a)))
-    (let ((q (* aa aa)))
-      (declare (double-float q)
-	       (inline split))
-      (multiple-value-bind (a-hi a-lo)
-	  (split aa)
-	(locally
-	    (declare (optimize (inhibit-warnings 3)))
-	  (let ((e (+ (+ (- (* a-hi a-hi) q)
-			 (* 2 a-hi a-lo))
-		      (* a-lo a-lo))))
-	    (if (> a +two970+)
-	      (values (* q +two53+)
-		      (* e +two53+))
-	      (values q e))))))))
-
+      (values q (+ (+ (- (* a-hi a-hi) q)
+		      (* 2 a-hi a-lo))
+		   (* a-lo a-lo))))))
 #+ppc
 (defun two-sqr (a)
   _N"Compute fl(a*a) and err(a*b).  This is a more efficient
