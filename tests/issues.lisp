@@ -1308,7 +1308,13 @@
 		  (read-from-string "#s(issue-685-struct #(1 2) 3)"))))
 
 (define-test float-ratio.sticky-bits
-  (:tag :issues)
+    (:tag :issues)
+  ;; 1 + 2^-53 is exactly halfway between 1d0 and the next double, so
+  ;; round-to-even gives 1d0.  Adding 2^-200 puts the value just above
+  ;; halfway, so it must round up.  FLOAT-RATIO-FLOAT used to discard
+  ;; the 2^-200 bit when shifting the numerator and treated both as
+  ;; ties.  The single-float test is the same issue with 2^-24 and
+  ;; 2^-100.
   (assert-eql 1.0000000000000002d0
 	      (float (+ 1 (expt 2 -53) (expt 2 -200)) 1d0))
   (assert-eql 1.0000001f0
