@@ -2,13 +2,12 @@
 
 usage() {
     cat <<EOF
-`basename $0` -C option -E ext [-h?] [-t gnutar] [-I destdir] [version]
+`basename $0` -C option [-h?] [-t tar] [-I destdir] [version]
   -h           This help
   -?           This help
-  -t tar       Name/path to GNU tar
-  -C option    Tar option for compressing the tarball; required.
-  -E ext       Extension to use for the tarball.  Must be consistent with
-                 -C option.  Required.
+  -t tar       Tar program to use
+  -C option    Program for compressing the tarball: xz, bzip2, or gzip;
+                 required.
   -I destdir   Install directly to given directory instead of creating a tarball
    version     The version.  Defaults to the current date
 
@@ -21,11 +20,10 @@ EOF
 
 GTAR=tar
 
-while getopts "C:E:h?t:I:" arg
+while getopts "C:h?t:I:" arg
 do
     case $arg in
 	C) COMPRESS=$OPTARG ;;
-	E) COMPRESS_EXT=$OPTARG ;;
         t) GTAR=$OPTARG ;;
         I) INSTALL_DIR=$OPTARG ;;
 	h | \?) usage; exit 1 ;;
@@ -34,16 +32,16 @@ done
 
 shift `expr $OPTIND - 1`
 
-# -C and -E options are required
-if [ -z "$COMPRESS" ]; then
-    echo "-C option is required"
-    exit 2
-fi
-
-if [ -z "$COMPRESS_EXT" ]; then
-    echo "-E option is required"
-    exit 2
-fi
+# -C option is required and determines the extension
+case $COMPRESS in
+    xz) COMPRESS_EXT=xz ;;
+    bzip2) COMPRESS_EXT=bz2 ;;
+    gzip) COMPRESS_EXT=gz ;;
+    "") echo "-C option is required"
+	exit 2 ;;
+    *) echo '-C option "'$COMPRESS'" must be one of bzip2, xz or gzip'
+       exit 2 ;;
+esac
 
 # If no version is given, default to today's date
 if [ -n "$1" ]; then
@@ -55,15 +53,12 @@ fi
 DESTDIR=${INSTALL_DIR:-release-$$}
 
 echo Creating source distribution
-GTAR_OPTIONS="--exclude=.git --exclude='*.pot.~*~'"
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/share/cmucl/$VERSION/
 install ${GROUP} ${OWNER} -m 0755 bin/run-unit-tests.sh $DESTDIR/bin
-${GTAR} ${GTAR_OPTIONS} -cf - src tests | (cd $DESTDIR/share/cmucl/$VERSION; ${GTAR} xf -)
+${GTAR} cf - src tests | (cd $DESTDIR/share/cmucl/$VERSION; ${GTAR} xf -)
+find $DESTDIR/share/cmucl/$VERSION \( -name .git -o -name '*.pot.~*~' \) -prune -exec rm -rf {} +
 if [ -z "$INSTALL_DIR" ]; then
     # echo "  Compressing with $ZIP"
     ls $DESTDIR/share/cmucl/$VERSION/
-    ${GTAR} ${GTAR_OPTIONS} ${COMPRESS} -C $DESTDIR -cf cmucl-src-$VERSION.tar.$COMPRESS_EXT share/cmucl/$VERSION/src
-else
-    # Install in the specified directory
-    ${GTAR} ${GTAR_OPTIONS} -cf - src tests | (cd $DESTDIR/share/cmucl/$VERSION; ${GTAR:-tar} xf -)
+    (cd $DESTDIR && ${GTAR} cf - share/cmucl/$VERSION/src) | ${COMPRESS} > cmucl-src-$VERSION.tar.$COMPRESS_EXT
 fi
