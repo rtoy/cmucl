@@ -3601,6 +3601,100 @@
    (emit-byte segment #x29)
    (emit-ea segment src (reg-tn-encoding dst))))
 
+;;; FMA3 instructions.  These use a 3-byte VEX prefix (#xC4) with the
+;;; 0F38 opcode map and a 66 implied prefix.  The ModR/M byte would
+;;; make the instruction format 40 bits long, which is longer than a
+;;; dchunk, so the ModR/M byte is read as a suffix by the prefilter of
+;;; the MODRM argument.  The REG and REG/MEM arguments are then
+;;; computed from that.
+
+(eval-when (compile load eval)
+(defun prefilter-vex-modrm (value dstate)
+  (declare (ignore value)
+	   (type disassem:disassem-state dstate))
+  (setf (disassem:dstate-get-prop dstate 'vex-modrm)
+	(disassem:read-suffix 8 dstate)))
+
+(defun prefilter-vex-reg (value dstate)
+  (declare (ignore value)
+	   (type disassem:disassem-state dstate))
+  (ldb (byte 3 3) (disassem:dstate-get-prop dstate 'vex-modrm)))
+
+(defun prefilter-vex-reg/mem (value dstate)
+  (declare (ignore value)
+	   (type disassem:disassem-state dstate))
+  (let ((modrm (disassem:dstate-get-prop dstate 'vex-modrm)))
+    (prefilter-reg/mem (list (ldb (byte 2 6) modrm)
+			     (ldb (byte 3 0) modrm))
+		       dstate)))
+
+;; The VEX.vvvv field holds the register number in inverted form.
+(defun prefilter-vex-vvvv (value dstate)
+  (declare (type (unsigned-byte 4) value)
+	   (ignore dstate))
+  (ldb (byte 3 0) (logxor value #b1111)))
+); eval-when
+
+(disassem:define-argument-type vex-modrm
+  :prefilter #'prefilter-vex-modrm)
+
+(disassem:define-argument-type vex-xmmreg
+  :prefilter #'prefilter-vex-reg
+  :printer #'print-xmmreg)
+
+(disassem:define-argument-type vex-xmmreg/mem
+  :prefilter #'prefilter-vex-reg/mem
+  :printer #'print-xmmreg/mem)
+
+(disassem:define-argument-type vex-vvvv-xmmreg
+  :prefilter #'prefilter-vex-vvvv
+  :printer #'print-xmmreg)
+
+(disassem:define-instruction-format (vex-xmm-xmm-xmm/mem 32
+				     :default-printer
+				     '(:name :tab reg ", " vvvv ", " reg/mem))
+  (vex     :field (byte 8 0)  :value #xc4)
+  (rxb-map :field (byte 8 8)  :value #xe2)
+  (pp      :field (byte 2 16) :value #b01)
+  (l       :field (byte 1 18) :value 0)
+  (vvvv    :field (byte 4 19) :type 'vex-vvvv-xmmreg)
+  (w       :field (byte 1 23))
+  (op      :field (byte 8 24))
+  (modrm   :type 'vex-modrm)
+  (reg     :type 'vex-xmmreg)
+  (reg/mem :type 'vex-xmmreg/mem))
+
+(defun emit-vex-fma-inst (segment dst src1 src2 opcode)
+  (assert (xmm-register-p dst))
+  (assert (xmm-register-p src1))
+  (emit-byte segment #xc4)
+  ;; R, X, B (all inverted, so 1 means unused) and the 0F38 map.
+  (emit-byte segment #b11100010)
+  ;; W = 1, inverted vvvv, L = 0, pp = 01 (66 prefix).
+  (emit-byte segment (logior #b10000000
+			     (ash (logxor (reg-tn-encoding src1) #b1111) 3)
+			     #b01))
+  (emit-byte segment opcode)
+  (emit-ea segment src2 (reg-tn-encoding dst)))
+
+;;; DST, SRC1, and SRC2 are the operands in Intel order.  DST and SRC1
+;;; must be XMM registers; SRC2 can be an XMM register or memory.
+;;;
+;;;   132:  dst = dst*src2 +/- src1
+;;;   213:  dst = src1*dst +/- src2
+;;;   231:  dst = src1*src2 +/- dst
+(macrolet ((define-vex-fma-inst (name opcode)
+	     `(define-instruction ,name (segment dst src1 src2)
+		(:printer vex-xmm-xmm-xmm/mem ((op ,opcode) (w 1)))
+		(:emitter
+		 (emit-vex-fma-inst segment dst src1 src2 ,opcode)))))
+  (define-vex-fma-inst vfmadd132sd #x99)
+  (define-vex-fma-inst vfmadd213sd #xa9)
+  (define-vex-fma-inst vfmadd231sd #xb9)
+  (define-vex-fma-inst vfmsub132sd #x9b)
+  (define-vex-fma-inst vfmsub213sd #xab)
+  (define-vex-fma-inst vfmsub231sd #xbb))
+
 (disassem:define-instruction-format (ext-xmm-mem 32
                                      :default-printer
                                      '(:name :tab reg ", " reg/mem))

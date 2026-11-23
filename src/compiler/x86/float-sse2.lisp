@@ -2382,3 +2382,38 @@
     (inst psllq ztmp 32)		; ztmp = #x80000000|0
     (inst xorps ztmp z)			; ztmp = -xi|xr
     (inst movaps r ztmp)))
+
+;;; FMA support.  These VOPs are only used if :FMA is in the backend
+;;; features, so the user must enable it and only on processors that
+;;; support the FMA3 instructions.
+(defknown (vm::fused-multiply-subtract vm::fused-multiply-add)
+    (double-float double-float double-float)
+  double-float
+  (movable flushable))
+
+(macrolet ((frob (name translate op213 op231)
+	     `(define-vop (,name)
+		(:args (x :scs (double-reg))
+		       (y :scs (double-reg))
+		       (z :scs (double-reg)))
+		(:results (r :scs (double-reg)))
+		(:arg-types double-float double-float double-float)
+		(:result-types double-float)
+		(:translate ,translate)
+		(:policy :fast-safe)
+		(:guard (backend-featurep :fma))
+		(:generator 1
+		  (cond ((location= r z)
+			 (inst ,op231 r x y))
+			((location= r y)
+			 (inst ,op213 r x z))
+			(t
+			 (unless (location= r x)
+			   (inst movq r x))
+			 (inst ,op213 r y z)))))))
+  ;; r = x*y - z
+  (frob fused-multiply-subtract/double vm::fused-multiply-subtract
+	vfmsub213sd vfmsub231sd)
+  ;; r = x*y + z
+  (frob fused-multiply-add/double vm::fused-multiply-add
+	vfmadd213sd vfmadd231sd))

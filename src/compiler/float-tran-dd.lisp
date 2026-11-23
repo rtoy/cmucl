@@ -280,6 +280,15 @@
 
 (declaim (inline two-prod))
 
+;; Expand to FMA-FORM if the FMA instructions can be used.  Otherwise
+;; expand to FORM.  This is decided when the form is macroexpanded, so
+;; an inline expansion uses FMA only if :FMA is in the backend features
+;; when the caller is compiled.
+(defmacro if-fma (fma-form form)
+  (if (backend-featurep '(:and :x86 :sse2 :fma))
+      fma-form
+      form))
+
 ;; This is essentially the algorithm given by Listing 2.7 Mul12Cond
 ;; given in "CR-LIBM: A library of correctly rounded elementary
 ;; functions in double-precision".
@@ -288,39 +297,42 @@
   _N"Compute fl(a*b) and err(a*b)"
   (declare (double-float a b)
 	   (optimize (speed 3)))
-  ;; If the numbers are too big, scale them done so SPLIT doesn't overflow.
-  (multiple-value-bind (aa bb)
-      (values (if (> (abs a) +two970+)
-		  (* a +two-53+)
-		  a)
-	      (if (> (abs b) +two970+)
-		  (* b +two-53+)
-		  b))
-    (let ((p (* aa bb)))
-      (declare (double-float p)
-	       (inline split))
-      (multiple-value-bind (aa-hi aa-lo)
-	  (split aa)
-	;;(format t "aa-hi, aa-lo = ~S ~S~%" aa-hi aa-lo)
-	(multiple-value-bind (bb-hi bb-lo)
-	    (split bb)
-	  ;;(format t "bb-hi, bb-lo = ~S ~S~%" bb-hi bb-lo)
-	  (let ((e (+ (+ (- (* aa-hi bb-hi) p)
-			 (* aa-hi bb-lo)
-			 (* aa-lo bb-hi))
-		      (* aa-lo bb-lo))))
-	    (declare (double-float e))
-	    (locally 
-		(declare (optimize (inhibit-warnings 3)))
-	      ;; If the numbers was scaled down, we need to scale the
-	      ;; result back up.
-	      (when (> (abs a) +two970+)
-		(setf p (* p +two53+)
-		      e (* e +two53+)))
-	      (when (> (abs b) +two970+)
-		(setf p (* p +two53+)
-		      e (* e +two53+)))
-	      (values p e))))))))
+  (if-fma
+   (let ((p (* a b)))
+     (values p (vm::fused-multiply-subtract a b p)))
+   ;; If the numbers are too big, scale them done so SPLIT doesn't overflow.
+   (multiple-value-bind (aa bb)
+       (values (if (> (abs a) +two970+)
+		   (* a +two-53+)
+		   a)
+	       (if (> (abs b) +two970+)
+		   (* b +two-53+)
+		   b))
+     (let ((p (* aa bb)))
+       (declare (double-float p)
+		(inline split))
+       (multiple-value-bind (aa-hi aa-lo)
+	   (split aa)
+	 ;;(format t "aa-hi, aa-lo = ~S ~S~%" aa-hi aa-lo)
+	 (multiple-value-bind (bb-hi bb-lo)
+	     (split bb)
+	   ;;(format t "bb-hi, bb-lo = ~S ~S~%" bb-hi bb-lo)
+	   (let ((e (+ (+ (- (* aa-hi bb-hi) p)
+			  (* aa-hi bb-lo)
+			  (* aa-lo bb-hi))
+		       (* aa-lo bb-lo))))
+	     (declare (double-float e))
+	     (locally 
+		 (declare (optimize (inhibit-warnings 3)))
+	       ;; If the numbers was scaled down, we need to scale the
+	       ;; result back up.
+	       (when (> (abs a) +two970+)
+		 (setf p (* p +two53+)
+		       e (* e +two53+)))
+	       (when (> (abs b) +two970+)
+		 (setf p (* p +two53+)
+		       e (* e +two53+)))
+	       (values p e)))))))))
 
 #+ppc
 (defun two-prod (a b)
