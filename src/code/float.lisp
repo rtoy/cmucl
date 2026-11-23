@@ -1143,7 +1143,8 @@
 	   (delta (- den-len num-len))
 	   (shift (1+ (the fixnum (+ delta digits))))
 	   (shifted-num (ash num shift))
-	   ;; True if nonzero bits were shifted out of the numerator.
+	   ;; Sticky bit: true if nonzero bits were shifted out of
+	   ;; NUM.
 	   (sticky (and (minusp shift)
 			(not (zerop (ldb (byte (- shift) 0) num))))))
       (declare (fixnum delta shift))
