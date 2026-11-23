@@ -1306,3 +1306,10 @@
 		  (read-from-string "#s(issue-685-struct :a 1 . 2)"))
     (assert-error 'reader-error
 		  (read-from-string "#s(issue-685-struct #(1 2) 3)"))))
+
+(define-test float-ratio.sticky-bits
+  (:tag :issues)
+  (assert-eql 1.0000000000000002d0
+	      (float (+ 1 (expt 2 -53) (expt 2 -200)) 1d0))
+  (assert-eql 1.0000001f0
+	      (float (+ 1 (expt 2 -24) (expt 2 -100)) 1f0)))
