@@ -689,6 +689,37 @@
 		       (when src
 			 (list (realpart src)
 			       (imagpart src))))))
+	    ((and (= (sys:sap-ref-8 pc 0) #xc4)
+		  (= (sys:sap-ref-8 pc 1) #xe2)
+		  (= (ldb (byte 1 7) (sys:sap-ref-8 pc 2)) 1)
+		  (= (ldb (byte 3 0) (sys:sap-ref-8 pc 2)) #b001)
+		  (member (sys:sap-ref-8 pc 3)
+			  '(#x99 #xa9 #xb9 #x9b #xab #xbb)))
+	     ;; VFMADD132SD: C4 E2 W1 99
+	     ;; VFMADD213SD: C4 E2 W1 A9
+	     ;; VFMADD231SD: C4 E2 W1 B9
+	     ;; VFMSUB132SD: C4 E2 W1 9B
+	     ;; VFMSUB213SD: C4 E2 W1 AB
+	     ;; VFMSUB231SD: C4 E2 W1 BB
+	     ;;
+	     ;; The operands are returned in the order X, Y, Z for
+	     ;; X*Y+Z or X*Y-Z.
+	     (let* ((opcode (sys:sap-ref-8 pc 3))
+		    (op (if (logbitp 1 opcode)
+			    'fused-multiply-subtract
+			    'fused-multiply-add))
+		    (src1 (sigcontext-float-register
+			   scp
+			   (+ 8 (ldb (byte 3 0)
+				     (logxor (ldb (byte 4 3) (sys:sap-ref-8 pc 2))
+					     #b1111)))
+			   'double-float)))
+	       (multiple-value-bind (dst src2)
+		   (decode-operands 4 'double-float)
+		 (case (ldb (byte 4 4) opcode)
+		   (#x9 (values op dst src2 src1))
+		   (#xa (values op src1 dst src2))
+		   (t (values op src1 src2 dst))))))
 	    ((or (= (sys:sap-ref-8 pc 0) #xf7))
 	     ;; DIV or IDIV.  We don't support 8-bit division
 	     (multiple-value-bind (mod r/m v)
@@ -730,9 +761,8 @@
   ;;
   ;; FIXME: How do we distinguish between an exception caused by SSE2
   ;; and one caused by x87?
-  (multiple-value-bind (fop dst src)
-      (get-fp-operation scp)
-    (values fop (list dst src))))
+  (let ((result (multiple-value-list (get-fp-operation scp))))
+    (values (first result) (rest result))))
 
 ;; See src/compiler/x86/float-sse2.lisp for a description of the x87
 ;; control and status words.

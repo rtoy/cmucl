@@ -2405,7 +2405,11 @@
 		(:policy :fast-safe)
 		(:guard (backend-featurep :fma))
 		(:temporary (:sc double-reg) tmp)
+		(:note _N"inline float arithmetic")
+		(:vop-var vop)
+		(:save-p :compute-only)
 		(:generator 1
+		  (note-this-location vop :internal-error)
 		  ;; Only the last operand of the instruction can be in
 		  ;; memory.
 		  (flet ((mem (tn)
