@@ -2021,7 +2021,7 @@
   ;; WITH-COMPILATION-UNIT; returning from inside it makes the unit
   ;; report that it was aborted.
   (when (and name
-	     (eq form definition)
+	     (functionp definition)
 	     (not (typep definition 'eval:interpreted-function)))
     (return-from compile
       (values name nil nil)))
