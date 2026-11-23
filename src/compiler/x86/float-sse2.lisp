@@ -2391,29 +2391,59 @@
   double-float
   (movable flushable))
 
-(macrolet ((frob (name translate op213 op231)
+(macrolet ((frob (name translate op132 op213 op231)
 	     `(define-vop (,name)
-		(:args (x :scs (double-reg))
-		       (y :scs (double-reg))
-		       (z :scs (double-reg)))
+		(:args (x :scs (double-reg) :target r)
+		       (y :scs (double-reg descriptor-reg)
+			  :load-if (not (sc-is y double-stack)))
+		       (z :scs (double-reg descriptor-reg)
+			  :load-if (not (sc-is z double-stack))))
 		(:results (r :scs (double-reg)))
 		(:arg-types double-float double-float double-float)
 		(:result-types double-float)
 		(:translate ,translate)
 		(:policy :fast-safe)
 		(:guard (backend-featurep :fma))
+		(:temporary (:sc double-reg) tmp)
 		(:generator 1
-		  (cond ((location= r z)
-			 (inst ,op231 r x y))
-			((location= r y)
-			 (inst ,op213 r x z))
-			(t
-			 (unless (location= r x)
-			   (inst movq r x))
-			 (inst ,op213 r y z)))))))
+		  ;; Only the last operand of the instruction can be in
+		  ;; memory.
+		  (flet ((mem (tn)
+			   (sc-case tn
+			     (descriptor-reg (ea-for-df-desc tn))
+			     (double-stack (ea-for-df-stack tn)))))
+		    (cond ((not (sc-is z double-reg))
+			   (cond ((not (sc-is y double-reg))
+				  (cond ((location= r x)
+					 (inst movsd tmp (mem y))
+					 (inst ,op213 r tmp (mem z)))
+					(t
+					 (inst movsd r (mem y))
+					 (inst ,op213 r x (mem z)))))
+				 ((location= r y)
+				  (inst ,op213 r x (mem z)))
+				 (t
+				  (unless (location= r x)
+				    (inst movq r x))
+				  (inst ,op213 r y (mem z)))))
+			  ((not (sc-is y double-reg))
+			   (cond ((location= r z)
+				  (inst ,op231 r x (mem y)))
+				 (t
+				  (unless (location= r x)
+				    (inst movq r x))
+				  (inst ,op132 r z (mem y)))))
+			  ((location= r z)
+			   (inst ,op231 r x y))
+			  ((location= r y)
+			   (inst ,op213 r x z))
+			  (t
+			   (unless (location= r x)
+			     (inst movq r x))
+			   (inst ,op213 r y z))))))))
   ;; r = x*y - z
   (frob fused-multiply-subtract/double vm::fused-multiply-subtract
-	vfmsub213sd vfmsub231sd)
+	vfmsub132sd vfmsub213sd vfmsub231sd)
   ;; r = x*y + z
   (frob fused-multiply-add/double vm::fused-multiply-add
-	vfmadd213sd vfmadd231sd))
+	vfmadd132sd vfmadd213sd vfmadd231sd))
