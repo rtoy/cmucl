@@ -2016,12 +2016,21 @@
   replaces the existing macro-function.  If NAME names a function, the
   compiled expression is placed in the function cell of NAME.  If NAME
   is NIL, the compiled code object is returned."
+  ;; If DEFINITION is already a compiled function, COMPILE is the
+  ;; identity, as permitted by the CLHS.  Return before entering
+  ;; WITH-COMPILATION-UNIT; returning from inside it makes the unit
+  ;; report that it was aborted.
+  (when (and name
+	     (eq form definition)
+	     (not (typep definition 'eval:interpreted-function)))
+    (return-from compile
+      (values name nil nil)))
   (with-compilation-unit ()
     (with-ir1-namespace
       (let* ((*backend* *native-backend*)
 	     (*info-environment*
-	      (or (backend-info-environment *backend*)
-		  *info-environment*))
+	       (or (backend-info-environment *backend*)
+		   *info-environment*))
 	     (start-errors *compiler-error-count*)
 	     (start-warnings *compiler-warning-count*)
 	     (start-notes *compiler-note-count*)
@@ -2049,10 +2058,10 @@
 	     (*coalesce-constants* nil)
 	     (*block-compile* nil)
 	     (*compiler-error-bailout*
-	      #'(lambda ()
-		  (compiler-mumble
-		   (intl:gettext "~2&Fatal error, aborting compilation...~%"))
-		  (return-from compile (values nil t nil))))
+	       #'(lambda ()
+		   (compiler-mumble
+		    (intl:gettext "~2&Fatal error, aborting compilation...~%"))
+		   (return-from compile (values nil t nil))))
 	     (*compiler-error-output* *error-output*)
 	     (*compiler-trace-output* nil)
 	     (*current-path* nil)
@@ -2066,14 +2075,6 @@
 	     (*gensym-counter* 0)
 	     (*current-function-names* (list name))
 	     (intl::*default-domain* intl::*default-domain*))
-	;; As mentioned above, we can return the same function if the
-	;; function was already compiled.  We do this when FORM is EQ
-	;; to DEFINITION (which happens above if we have a compiled
-	;; function that we don't have the source for or was defined
-	;; in a non-null environment.
-	(when (and name (eq form definition))
-	  (return-from compile
-	    (values name nil nil)))
 	(with-debug-counters
 	  (clear-stuff)
 	  (find-source-paths form 0)
@@ -2083,7 +2084,7 @@
 	    ;; call COMPILE-FIX-FUNCTION-NAME?
 	    (compile-fix-function-name lambda name)
 	    (let* ((component
-		    (block-component (node-block (lambda-bind lambda))))
+		     (block-component (node-block (lambda-bind lambda))))
 		   (*all-components* (list component)))
 	      (local-call-analyze component))
 
