@@ -1108,7 +1108,9 @@
 	((run-git (path)
 	   (when *file-comment-from-git*
 	     (let ((cwd (default-directory))
-		   (new (make-pathname :directory (pathname-directory path))))
+		   (new (make-pathname :directory (pathname-directory path)))
+		   (filename (make-pathname :directory nil :defaults path))
+		   proc)
 	       (unwind-protect
 		    (progn
 		      ;; Cd to the directory containing the file so that
@@ -1119,23 +1121,24 @@
 		      ;; error messages from git.  We only use the
 		      ;; result if git returns a zero exit code, anyway.
 		      (handler-case
-			  (run-program "git"
-				       (list "log"
-					     "-1"
-					     "--pretty=format:%h %ai %an"
-					     (namestring path))
-				       :output :stream
-				       :error nil)
+			  (progn
+			    (setf proc (run-program "git"
+						    (list "log"
+							  "-1"
+							  "--pretty=format:%h %ai %an"
+							  (namestring filename))
+						    :output :stream
+						    :error nil))
+			    (when (and proc (zerop (process-exit-code proc)))
+			      (read-line (process-output proc) nil nil)))
 			(error ()
 			  nil)))
+		 (when proc
+		   (process-close proc))
 		 (setf (default-directory) cwd)))))
 	 (generate-comment (file-info)
 	   (let* ((name (pathname (source-info-stream file-info)))
-		  (proc (run-git name))
-		  (comment (and proc (zerop (process-exit-code proc))
-				(read-line (process-output proc) nil nil))))
-	     (when proc
-	       (process-close proc))
+		  (comment (run-git name)))
 	     (if comment
 		 (format nil "$Header: ~A ~A $"
 			 (enough-namestring name)
