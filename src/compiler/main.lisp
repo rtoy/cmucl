@@ -2016,100 +2016,105 @@
   replaces the existing macro-function.  If NAME names a function, the
   compiled expression is placed in the function cell of NAME.  If NAME
   is NIL, the compiled code object is returned."
-  ;; If DEFINITION is already a compiled function, COMPILE is the
-  ;; identity, as permitted by the CLHS.  Return before entering
-  ;; WITH-COMPILATION-UNIT; returning from inside it makes the unit
-  ;; report that it was aborted.
-  (when (and name
-	     (functionp definition)
-	     (not (typep definition 'eval:interpreted-function)))
-    (return-from compile
-      (values name nil nil)))
-  (with-compilation-unit ()
-    (with-ir1-namespace
-      (let* ((*backend* *native-backend*)
-	     (*info-environment*
-	       (or (backend-info-environment *backend*)
-		   *info-environment*))
-	     (start-errors *compiler-error-count*)
-	     (start-warnings *compiler-warning-count*)
-	     (start-notes *compiler-note-count*)
-	     (*lexical-environment* (make-null-environment))
-	     ;; From Helmut Eller: ... we don't need the
-	     ;; lambda-expression. To quote the CLHS entry for
-	     ;; compile:
-	     ;;
-	     ;;   If the definition is already a compiled function,
-	     ;;   compile either produces that function itself (i.e.,
-	     ;;   is an identity operation) or an equivalent function.
-	     ;;
-	     ;; But if the function lambda expression is available,
-	     ;; and if the expression is defined in a null lexical
-	     ;; environment, recompile from sources.  (This was the
-	     ;; old behavior, which is quite useful.)
-	     (form (etypecase definition
-		     ((or cons eval:interpreted-function)
-		      `#',(get-lambda-to-compile definition))
-		     (function
-		      definition)))
-	     (*source-info* (make-lisp-source-info form))
-	     (*top-level-lambdas* ())
-	     (*converting-for-interpreter* nil)
-	     (*coalesce-constants* nil)
-	     (*block-compile* nil)
-	     (*compiler-error-bailout*
-	       #'(lambda ()
-		   (compiler-mumble
-		    (intl:gettext "~2&Fatal error, aborting compilation...~%"))
-		   (return-from compile (values nil t nil))))
-	     (*compiler-error-output* *error-output*)
-	     (*compiler-trace-output* nil)
-	     (*current-path* nil)
-	     (*last-source-context* nil)
-	     (*last-original-source* nil)
-	     (*last-source-form* nil)
-	     (*last-format-string* nil)
-	     (*last-format-args* nil)
-	     (*last-message-count* 0)
-	     (*compile-object* (make-core-object))
-	     (*gensym-counter* 0)
-	     (*current-function-names* (list name))
-	     (intl::*default-domain* intl::*default-domain*))
-	(with-debug-counters
-	  (clear-stuff)
-	  (find-source-paths form 0)
-	  (let ((lambda (ir1-top-level form '(original-source-start 0 0) t)))
+  (let ((form
+	  ;; From Helmut Eller: ... we don't need the
+	  ;; lambda-expression. To quote the CLHS entry for compile:
+	  ;;
+	  ;;   If the definition is already a compiled function,
+	  ;;   compile either produces that function itself (i.e., is
+	  ;;   an identity operation) or an equivalent function.
+	  ;;
+	  ;; But if the function lambda expression is available, and
+	  ;; if the expression is defined in a null lexical
+	  ;; environment, recompile from sources.  (This was the old
+	  ;; behavior, which is quite useful.)
+	  (etypecase definition
+	    ((or cons eval:interpreted-function)
+	     `#',(get-lambda-to-compile definition))
+	    (function
+	     (multiple-value-bind (exp lexenv)
+		 (function-lambda-expression definition)
+	       (if (and exp (not lexenv))
+		   `#',exp
+		   definition))))))
+    ;; As mentioned above, we can return the same function if the
+    ;; function was already compiled.  We do this when FORM is EQ to
+    ;; DEFINITION (which happens above if we have a compiled function
+    ;; that we don't have the source for or was defined in a non-null
+    ;; environment).  Return before entering WITH-COMPILATION-UNIT;
+    ;; returning from inside it makes the unit report that it was
+    ;; aborted.
+    (when (and name (eq form definition))
+      (return-from compile
+	(values name nil nil)))
+    (with-compilation-unit ()
+      (with-ir1-namespace
+	(let* ((*backend* *native-backend*)
+	       (*info-environment*
+		 (or (backend-info-environment *backend*)
+		     *info-environment*))
+	       (start-errors *compiler-error-count*)
+	       (start-warnings *compiler-warning-count*)
+	       (start-notes *compiler-note-count*)
+	       (*lexical-environment* (make-null-environment))
+	       (*source-info* (make-lisp-source-info form))
+	       (*top-level-lambdas* ())
+	       (*converting-for-interpreter* nil)
+	       (*coalesce-constants* nil)
+	       (*block-compile* nil)
+	       (*compiler-error-bailout*
+		 #'(lambda ()
+		     (compiler-mumble
+		      (intl:gettext "~2&Fatal error, aborting compilation...~%"))
+		     (return-from compile (values nil t nil))))
+	       (*compiler-error-output* *error-output*)
+	       (*compiler-trace-output* nil)
+	       (*current-path* nil)
+	       (*last-source-context* nil)
+	       (*last-original-source* nil)
+	       (*last-source-form* nil)
+	       (*last-format-string* nil)
+	       (*last-format-args* nil)
+	       (*last-message-count* 0)
+	       (*compile-object* (make-core-object))
+	       (*gensym-counter* 0)
+	       (*current-function-names* (list name))
+	       (intl::*default-domain* intl::*default-domain*))
+	  (with-debug-counters
+	    (clear-stuff)
+	    (find-source-paths form 0)
+	    (let ((lambda (ir1-top-level form '(original-source-start 0 0) t)))
 
-	    ;; XXX: If NAME is a macro function, do we need to do
-	    ;; call COMPILE-FIX-FUNCTION-NAME?
-	    (compile-fix-function-name lambda name)
-	    (let* ((component
-		     (block-component (node-block (lambda-bind lambda))))
-		   (*all-components* (list component)))
-	      (local-call-analyze component))
+	      ;; XXX: If NAME is a macro function, do we need to do
+	      ;; call COMPILE-FIX-FUNCTION-NAME?
+	      (compile-fix-function-name lambda name)
+	      (let* ((component
+		       (block-component (node-block (lambda-bind lambda))))
+		     (*all-components* (list component)))
+		(local-call-analyze component))
 
-	    (multiple-value-bind (components top-components)
-		(find-initial-dfo (list lambda))
-	      (let ((*all-components* (append components top-components)))
-		(dolist (component *all-components*)
-		  (compile-component component))))
+	      (multiple-value-bind (components top-components)
+		  (find-initial-dfo (list lambda))
+		(let ((*all-components* (append components top-components)))
+		  (dolist (component *all-components*)
+		    (compile-component component))))
 
-	    (let* ((res (core-call-top-level-lambda lambda *compile-object*))
-		   (return (or name res)))
-	      (fix-core-source-info *source-info* *compile-object* res)
-	      (when name
-		(if (and (symbolp name)
-			 (macro-function name))
-		    (setf (macro-function name) res)
-		    (setf (fdefinition name) res)))
+	      (let* ((res (core-call-top-level-lambda lambda *compile-object*))
+		     (return (or name res)))
+		(fix-core-source-info *source-info* *compile-object* res)
+		(when name
+		  (if (and (symbolp name)
+			   (macro-function name))
+		      (setf (macro-function name) res)
+		      (setf (fdefinition name) res)))
 
-	      (cond ((or (> *compiler-error-count* start-errors)
-			 (> *compiler-warning-count* start-warnings))
-		     (values return t t))
-		    ((> *compiler-note-count* start-notes)
-		     (values return t nil))
-		    (t
-		     (values return nil nil))))))))))
+		(cond ((or (> *compiler-error-count* start-errors)
+			   (> *compiler-warning-count* start-warnings))
+		       (values return t t))
+		      ((> *compiler-note-count* start-notes)
+		       (values return t nil))
+		      (t
+		       (values return nil nil)))))))))))
 
 ;;; UNCOMPILE  --  Public
 ;;;

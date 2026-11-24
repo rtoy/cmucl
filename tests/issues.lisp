@@ -1306,3 +1306,25 @@
 		  (read-from-string "#s(issue-685-struct :a 1 . 2)"))
     (assert-error 'reader-error
 		  (read-from-string "#s(issue-685-struct #(1 2) 3)"))))
+
+(define-test issue-711.recompile-from-source
+  (:tag :issues)
+  ;; COMPILE of a compiled function recompiles it from its source
+  ;; when the source is available.  Changing the macro between
+  ;; compiles shows whether the function was really recompiled.
+  (eval '(defmacro issue-711-macro () 1))
+  (eval '(defun issue-711-fun () (issue-711-macro)))
+  (assert-true (eval:interpreted-function-p (fdefinition 'issue-711-fun)))
+  (assert-equal 1 (funcall 'issue-711-fun))
+  (eval '(defmacro issue-711-macro () 2))
+  (compile 'issue-711-fun)
+  (assert-false (eval:interpreted-function-p (fdefinition 'issue-711-fun)))
+  (assert-equal 2 (funcall 'issue-711-fun))
+  (eval '(defmacro issue-711-macro () 3))
+  ;; Test that we don't get the compilation aborted message anymore.
+  (assert-false (search "aborted"
+			(with-output-to-string (*error-output*)
+			  (compile 'issue-711-fun))))
+  ;; Test that after compiling issue-711-fun, we actaully recompiled
+  ;; the function with the new macro so we get 3 instead of 2.
+  (assert-equal 3 (funcall 'issue-711-fun))))
