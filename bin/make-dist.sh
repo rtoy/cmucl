@@ -46,9 +46,8 @@ usage() {
     echo "If arch and os are not given, the script will attempt to figure an"
     echo "appropriate value for arch and os from the running system."
     echo ""
-    echo "Creating a source distribution requires GNU tar.  If 'tar' is not GNU"
-    echo "tar, use the environment variable 'GTAR' to specify GNU tar.  You can"
-    echo "use 'GTAR=gtar make-dist.sh -S ...' in this case."
+    echo "To use a tar other than 'tar', set the environment variable 'GTAR',"
+    echo "e.g., 'GTAR=gtar make-dist.sh ...'."
     exit 1
 }
 
@@ -59,8 +58,7 @@ def_arch_os () {
 	    sun*)
 		ARCH=sparc ;;
 	    i*)
-		ARCH=x86
-		GTAR=gtar ;;
+		ARCH=x86 ;;
 	  esac
 	  uname_r=`uname -r`
 	  case $uname_r in
@@ -94,11 +92,9 @@ def_arch_os () {
 # Figure out the architecture and OS in case options aren't given
 def_arch_os
 
-# Default compression is -J (xz).  These variables are passed to the
+# Default compression is xz.  These variables are passed to the
 # other scripts via the environmen, so export them.
-COMPRESS=-J
-COMPRESS_EXT=xz
-COMPRESS_NAME=xz
+COMPRESS=xz
 
 while getopts "C:G:O:I:M:hSA:o:V:?" arg
 do
@@ -126,17 +122,8 @@ fi
 # Verify that the -C option is valid
 if [ -n "$COMPRESS_ARG" ]; then
     case $COMPRESS_ARG in
-	bzip2)
-	    COMPRESS=-j
-	    COMPRESS_EXT=bz2
-	    COMPRESS_NAME=bzip2
-	    ;;
-	xz) # Defaults work
-	    ;;
-	gzip)
-	    COMPRESS=-z
-	    COMPRESS_EXT=gz
-	    COMPRESS_NAME=gzip
+	bzip2|xz|gzip)
+	    COMPRESS=$COMPRESS_ARG
 	    ;;
 	*) echo '-C option "'$COMPRESS_ARG'" must be one of bzip2, xz or gzip'
 	   exit 1
@@ -185,7 +172,7 @@ echo INSTALL_DIR = $INSTALL_DIR
 echo cmucl-$VERSION-$ARCH-$OS
 ROOT=`dirname $0`
 
-GTAR_OPTS="-t ${GTAR:-tar}"
+GTAR_OPTS="${GTAR:+-t $GTAR}"
 EXTRA_OPTS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}}"
 INSTALL_OPTS="${INSTALL_DIR:+ -I ${INSTALL_DIR}}"
 MANDIR="${MANDIR:+ -M ${MANDIR}}"
@@ -193,9 +180,9 @@ OPTIONS="${GTAR_OPTS} ${EXTRA_OPTS} ${INSTALL_OPTS}"
 
 set -x
 echo Creating distribution for $ARCH $OS
-$ROOT/make-main-dist.sh -C $COMPRESS -E $COMPRESS_EXT $OPTIONS ${MANDIR} $TARGET $VERSION $ARCH $OS || exit 1
-$ROOT/make-extra-dist.sh -C $COMPRESS -E $COMPRESS_EXT $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
+$ROOT/make-main-dist.sh -C $COMPRESS $OPTIONS ${MANDIR} $TARGET $VERSION $ARCH $OS || exit 1
+$ROOT/make-extra-dist.sh -C $COMPRESS $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
 
 if [ X"$MAKE_SRC_DIST" = "Xyes" ]; then
-    $ROOT/make-src-dist.sh -C $COMPRESS -E $COMPRESS_EXT ${GTAR_OPTS} ${INSTALL_OPTS} $VERSION
+    $ROOT/make-src-dist.sh -C $COMPRESS ${GTAR_OPTS} ${INSTALL_OPTS} $VERSION
 fi

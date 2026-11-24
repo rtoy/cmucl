@@ -1788,7 +1788,7 @@ purify(lispobj static_roots, lispobj read_only_roots)
     verify_space((lispobj *) static_space, static_free - static_space);
 #endif
     
-#if !defined(ALLOCATION_POINTER)
+#if !defined(ALLOCATION_POINTER) && !defined(GENCGC)
     current_dynamic_space_free_pointer = current_dynamic_space;
 #else
 #if defined(WANT_CGC) && defined(X86_CGC_ACTIVE_P)

@@ -1142,7 +1142,11 @@
 	   (den-len (integer-length den))
 	   (delta (- den-len num-len))
 	   (shift (1+ (the fixnum (+ delta digits))))
-	   (shifted-num (ash num shift)))
+	   (shifted-num (ash num shift))
+	   ;; Sticky bit: true if nonzero bits were shifted out of
+	   ;; NUM.
+	   (sticky (and (minusp shift)
+			(not (zerop (ldb (byte (- shift) 0) num))))))
       (declare (fixnum delta shift))
       (decf scale delta)
       (labels ((float-and-scale (bits)
@@ -1233,6 +1237,8 @@
 	(loop
 	  (multiple-value-bind (fraction-and-guard rem)
 			       (truncate shifted-num den)
+	    (when sticky
+	      (setf rem 1))
 	    (let ((extra (- (integer-length fraction-and-guard) digits)))
 	      (declare (fixnum extra))
 	      (cond ((/= extra 1)
@@ -1267,6 +1273,8 @@
 						  excess)))
 			     (declare (type unsigned-byte mantissa))
 			     (denormal-from-bits mantissa excess)))))))))
+	    (when (oddp shifted-num)
+	      (setf sticky t))
 	    (setq shifted-num (ash shifted-num -1))
 	    (incf scale)))))))
 
